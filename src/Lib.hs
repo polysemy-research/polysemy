@@ -15,6 +15,7 @@ import Data.Functor.Compose
 import Control.Monad.ST
 import Data.STRef
 import Control.Arrow (second)
+import Unsafe.Coerce
 
 newtype Freer f a = Freer
   { runFreer :: forall m. Monad m => (forall t. f t -> m t) -> m a
@@ -59,10 +60,10 @@ put :: Member (State s) r => s -> Eff r ()
 put = send . Put
 
 
-foom :: Eff '[State String, IO] ()
+foom :: Eff '[State String, IO] String
 foom = do
+  put "nice!"
   get @String
-  send $ print $ "hello"
 
 type f ~> g = forall x. f x -> g x
 infixr 1 ~>
@@ -82,39 +83,27 @@ runTeletype = interpret bind
     bind (Put s) = send $ putStrLn s
 
 main :: IO ()
-main = runM (runTeletype foom)
+main = runM (runState "ok" foom) >>= print
 
--- interpretS
---     :: ((,) s `Compose` eff ~> (,) s `Compose` Eff r)
---     -> s
---     -> Eff (eff ': r) ~> Eff r
--- interpretS f s mm =
---   let (Freer m) = freeMap (\z -> Compose (s, z)) mm
---    in freeMap (snd . getCompose) $ Freer $ \k -> trace "yo" $ m $ \(Compose (s', u)) ->
---         case decomp $ trace "u" u of
---           Left x -> k $ Compose (s', x)
---           Right y ->
---             let (s'', e) = trace "hi" $ getCompose $ f $ Compose (s', y)
---              in runFreer (freeMap (\z -> Compose (s'', z)) e) k
+interpretS
+    :: ((,) s `Compose` eff ~> (,) s `Compose` Eff r)
+    -> s
+    -> Eff (eff ': r) ~> Eff r
+interpretS f s mm =
+  let (Freer m) = freeMap (\z -> Compose (unsafeCoerce "hi", z)) mm
+   in freeMap (snd . getCompose) $ Freer $ \k -> m $ \(Compose (s', u)) ->
+        case decomp $ u of
+          Left x -> k $ Compose (s', x)
+          Right y ->
+            let (s'', e) = getCompose $ f $ Compose (s', y)
+             in runFreer (freeMap (\z -> Compose (s'', z)) e) k
 
 
--- runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r a
--- runState = interpretS nat
---   where
---     nat :: (,) s `Compose` State s ~> (,) s `Compose` Eff r
---     nat (Compose (s, Get))    = Compose (s, pure s)
---     nat (Compose (_, Put s')) = Compose (s', pure ())
-
--- interpretS
---     :: s
---     -> ((,) s `Compose` eff ~> (,) s `Compose` Eff r)
---     -> Eff (eff ': r)
---     ~> Eff r
--- interpretS s f (Freer m) = Freer $ \k -> m $ \u -> do
---   case decomp u of
---     Left x -> k x
---     Right y ->
---       let (s', m') = getCompose $ f $ Compose (s, y)
---        in runFreer m' k
+runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r a
+runState = interpretS nat
+  where
+    nat :: (,) s `Compose` State s ~> (,) s `Compose` Eff r
+    nat (Compose (s, Get))    = Compose (s, pure s)
+    nat (Compose (_, Put s')) = Compose (s', pure ())
 
 
