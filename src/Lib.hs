@@ -12,10 +12,10 @@ module Lib where
 import Debug.Trace
 import Data.OpenUnion
 import Data.Functor.Compose
-import Control.Monad.ST
-import Data.STRef
+import Data.IORef
 import Control.Arrow (second)
-import Unsafe.Coerce
+import System.IO.Unsafe
+
 
 newtype Freer f a = Freer
   { runFreer :: forall m. Monad m => (forall t. f t -> m t) -> m a
@@ -63,6 +63,8 @@ put = send . Put
 foom :: Eff '[State String, IO] String
 foom = do
   put "nice!"
+  put "nice!"
+  put "nice!"
   get @String
 
 type f ~> g = forall x. f x -> g x
@@ -82,28 +84,39 @@ runTeletype = interpret bind
     bind Get     = send getLine
     bind (Put s) = send $ putStrLn s
 
+
 main :: IO ()
-main = runM (runState "ok" foom) >>= print
+main = runM (runState "fuck" foom) >>= print
+
+
+raise :: Eff r a -> Eff (u ': r) a
+raise = freeMap weaken
+
+
+introduce :: Eff (eff ': r) a -> Eff (eff ': u ': r) a
+introduce = freeMap (shuffle . weaken)
+
 
 interpretS
-    :: ((,) s `Compose` eff ~> (,) s `Compose` Eff r)
+    :: forall eff s r
+     . (forall x. s -> eff x -> (s, Eff r x))
     -> s
     -> Eff (eff ': r) ~> Eff r
-interpretS f s mm =
-  let (Freer m) = freeMap (\z -> Compose (unsafeCoerce "hi", z)) mm
-   in freeMap (snd . getCompose) $ Freer $ \k -> m $ \(Compose (s', u)) ->
-        case decomp $ u of
-          Left x -> k $ Compose (s', x)
+interpretS f s (Freer m) =
+  let !ioref = unsafePerformIO $ newIORef s
+   in Freer $ \k -> m $ \u -> do
+        case decomp u of
+          Left x -> k x
           Right y ->
-            let (s'', e) = getCompose $ f $ Compose (s', y)
-             in runFreer (freeMap (\z -> Compose (s'', z)) e) k
+            let !s' = unsafePerformIO $ readIORef ioref
+                (s'', m') = f s' y
+             in unsafePerformIO (writeIORef ioref s'') `seq` runFreer m' k
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r a
 runState = interpretS nat
   where
-    nat :: (,) s `Compose` State s ~> (,) s `Compose` Eff r
-    nat (Compose (s, Get))    = Compose (s, pure s)
-    nat (Compose (_, Put s')) = Compose (s', pure ())
-
+    nat :: s -> State s x -> (s, Eff r x)
+    nat s Get      = (s, pure s)
+    nat _ (Put s') = (s', pure ())
 

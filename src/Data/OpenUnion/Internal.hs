@@ -208,6 +208,12 @@ weaken :: Union r a -> Union (any ': r) a
 weaken (Union n a) = Union (n + 1) a
 {-# INLINE weaken #-}
 
+shuffle :: Union (u ': v ': r) a -> Union (v ': u ': r) a
+shuffle (Union 0 a) = Union 1 a
+shuffle (Union 1 a) = Union 0 a
+shuffle (Union n a) = Union n a
+{-# INLINE shuffle #-}
+
 infixr 5 :++:
 type family xs :++: ys where
   '[] :++: ys = ys
