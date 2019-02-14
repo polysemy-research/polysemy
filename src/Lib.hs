@@ -1,42 +1,54 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE KindSignatures        #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE ViewPatterns          #-}
-{-# OPTIONS_GHC -Wall              #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE LambdaCase             #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE QuantifiedConstraints  #-}
+{-# LANGUAGE RankNTypes             #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TupleSections          #-}
+{-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE ViewPatterns           #-}
+{-# OPTIONS_GHC -Wall               #-}
 
 module Lib where
 
-import qualified Control.Monad.Trans.Except as E
 import           Control.Monad.Morph
 import           Control.Monad.Trans (MonadTrans (..))
+import           Control.Monad.Trans.Cont
+import qualified Control.Monad.Trans.Except as E
 import qualified Control.Monad.Trans.State.Strict as S
 import           Data.Functor.Identity
 import           Data.OpenUnion
 import           Data.OpenUnion.Internal
-import Control.Monad.Trans.Cont
 
 
 newtype Freer f a = Freer
   { runFreer :: forall m. Monad m => (forall t. f t -> m t) -> m a
   }
 
+instance MonadTrans Freer where
+  lift = liftEff
 
-freeMap :: (f ~> g) -> Freer f ~> Freer g
-freeMap nat (Freer m) = Freer $ \k -> m $ k . nat
-{-# INLINE freeMap #-}
+instance MFunctor Freer where
+  hoist = hoistEff
 
 
-hoistEff :: Union r x -> Eff r x
-hoistEff u = Freer $ \k -> k u
+hoistEff :: (f ~> g) -> Freer f ~> Freer g
+hoistEff nat (Freer m) = Freer $ \k -> m $ k . nat
 {-# INLINE hoistEff #-}
+
+
+
+liftEff :: f x -> Freer f x
+liftEff u = Freer $ \k -> k u
+{-# INLINE liftEff #-}
 
 
 instance Functor (Freer f) where
@@ -66,6 +78,7 @@ type Eff r = Freer (Union r)
 send :: Member eff r => eff a -> Eff r a
 send t = Freer $ \k -> k $ inj t
 {-# INLINE send #-}
+
 
 unsafeSend :: Word -> eff a -> Eff r a
 unsafeSend w t = Freer $ \k -> k $ unsafeInj w t
@@ -115,22 +128,23 @@ interpret f (Freer m) = Freer $ \k -> m $ \u -> do
     Right y -> runFreer (f y) k
 {-# INLINE interpret #-}
 
+
+runIt :: Monad m => (forall t. f t -> m t) -> Freer f a -> m a
+runIt k m = runFreer m k
+
+
 relay
     :: (a -> Eff r b)
     -> (forall x. eff x -> (x -> Eff r b) -> Eff r b)
     -> Eff (eff ': r) a
     -> Eff r b
 relay pure' bind' (Freer m) = Freer $ \k -> do
-  (\z -> runFreer z k) $ runContT (m $ \u ->
+  runIt k $ flip runContT pure' $ m $ \u ->
     case decomp u of
-      Left x -> lift $ hoistEff x
+      Left  x -> lift $ liftEff x
       Right y -> ContT $ bind' y
-           ) $ \a -> pure' a
 {-# INLINE relay #-}
 
-
-runErrorRelay :: Eff (Error e ': r) a -> Eff r (Either e a)
-runErrorRelay = relay (pure . Right) $ \(Error e) _ -> pure $ Left e
 
 
 
@@ -147,12 +161,12 @@ runTeletype = interpret bind
 
 
 raise :: Eff r a -> Eff (u ': r) a
-raise = freeMap weaken
+raise = hoistEff weaken
 {-# INLINE raise #-}
 
 
 introduce :: Eff (eff ': r) a -> Eff (eff ': u ': r) a
-introduce = freeMap intro
+introduce = hoistEff intro
 {-# INLINE introduce #-}
 
 
@@ -175,14 +189,20 @@ transform
 transform lower f (Freer m) = Freer $ \k -> lower $ m $ \u ->
   case decomp u of
     Left  x -> lift $ k x
-    Right y -> hoist (\z -> runFreer z k) $ f y
+    Right y -> hoist (runIt k) $ f y
 {-# INLINE transform #-}
 
+lowerFreer :: Freer (Freer m) a -> Freer m a
+lowerFreer m = runFreer m id
 
--- natural
---     :: Member eff' r
---     => (eff ~> eff') -> Eff (eff ': r) a -> Eff r a
--- natural
+
+natural
+    :: Member eff' r
+    => (eff ~> eff') -> Eff (eff ': r) a -> Eff r a
+natural f (Freer m) = Freer $ \k -> m $ \u ->
+  case decomp u of
+    Left x  -> k x
+    Right y -> k $ inj $ f y
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r a
@@ -190,13 +210,20 @@ runState = interpretS $ \case
   Get    -> S.get
   Put s' -> S.put s'
 
+
 newtype Error e r where
   Error :: e -> Error e r
+
 
 throwError :: Member (Error e) r => e -> Eff r a
 throwError = send . Error
 {-# INLINE throwError #-}
 
+
 runError :: Eff (Error e ': r) a -> Eff r (Either e a)
 runError = transform E.runExceptT $ \(Error e) -> E.throwE e
+
+
+runErrorRelay :: Eff (Error e ': r) a -> Eff r (Either e a)
+runErrorRelay = relay (pure . Right) $ \(Error e) _ -> pure $ Left e
 
