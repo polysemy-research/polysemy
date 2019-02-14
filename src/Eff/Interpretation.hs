@@ -69,7 +69,7 @@ transform
 transform lower f (Freer m) = Freer $ \k -> lower $ m $ \u ->
   case decomp u of
     Left  x -> lift $ k x
-    Right y -> hoist (runIt k) $ f y
+    Right y -> hoist (usingFreer k) $ f y
 {-# INLINE[3] transform #-}
 
 
@@ -92,7 +92,7 @@ intercept
 intercept f (Freer m) = Freer $ \k -> m $ \u ->
   case prj u of
     Nothing -> k u
-    Just e  -> runIt k $ f e
+    Just e  -> usingFreer k $ f e
 {-# INLINE intercept #-}
 
 
@@ -109,7 +109,7 @@ relay
     -> Eff (eff ': r) a
     -> Eff r b
 relay pure' bind' (Freer m) = Freer $ \k ->
-  runIt k $ flip runContT pure' $ m $ \u ->
+  usingFreer k $ flip runContT pure' $ m $ \u ->
     case decomp u of
       Left  x -> lift $ liftEff x
       Right y -> ContT $ bind' y

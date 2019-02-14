@@ -3,12 +3,13 @@
 {-# LANGUAGE RankNTypes     #-}
 {-# LANGUAGE TypeOperators  #-}
 
-{-# OPTIONS_GHC -Wall               #-}
+{-# OPTIONS_GHC -Wall       #-}
 
 module Eff.Type
   ( module Eff.Type
   , MFunctor (..)
   , MonadTrans (..)
+  , Identity ()
   ) where
 
 import Control.Monad.Morph
@@ -54,37 +55,54 @@ instance MFunctor Freer where
   hoist = hoistEff
 
 
+------------------------------------------------------------------------------
+-- | Run a natural transformation over `Freer`.
 hoistEff :: (f ~> g) -> Freer f ~> Freer g
 hoistEff nat (Freer m) = Freer $ \k -> m $ k . nat
 {-# INLINE hoistEff #-}
 
 
+------------------------------------------------------------------------------
+-- | Lift a value into 'Freer'. When 'f' is 'Union', this specializes as
+-- @Union -- r x -> Eff r x@
 liftEff :: f x -> Freer f x
 liftEff u = Freer $ \k -> k u
 {-# INLINE liftEff #-}
 
 
+------------------------------------------------------------------------------
+-- | A natural transformation from 'f' to 'g' (that is, @forall x. f x -> g x@)
 type f ~> g = forall x. f x -> g x
 infixr 1 ~>
 
 
+------------------------------------------------------------------------------
+-- | Embed the action of an effect into 'Eff'.
 send :: Member eff r => eff a -> Eff r a
 send = liftEff . inj
 {-# INLINE[3] send #-}
 
 
-runM :: Monad m => Freer (Union '[m]) a -> m a
-runM = runIt extract
+------------------------------------------------------------------------------
+-- | Drop out of an 'Eff' stack into the only remaining monadic effect inside
+-- it.
+runM :: Monad m => Eff '[m] a -> m a
+runM = usingFreer extract
 {-# INLINE runM #-}
 
 
-run :: Freer (Union '[Identity]) a -> a
+------------------------------------------------------------------------------
+-- | Like 'runM' but for pure computations.
+run :: Eff '[Identity] a -> a
 run = runIdentity . runM
 {-# INLINE run #-}
 
 
-runIt :: Monad m => (forall t. f t -> m t) -> Freer f a -> m a
-runIt k m = runFreer m k
+------------------------------------------------------------------------------
+-- | @'flip' 'runFreer'@
+usingFreer :: Monad m => (forall t. f t -> m t) -> Freer f a -> m a
+usingFreer k m = runFreer m k
+
 
 ------------------------------------------------------------------------------
 -- | Analogous to MTL's 'lift'.
