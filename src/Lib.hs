@@ -21,7 +21,7 @@ import qualified Control.Monad.Trans.State.Strict as S
 import           Data.Functor.Identity
 import           Data.OpenUnion
 import           Data.OpenUnion.Internal
-import Control.Monad.Operational
+import Control.Monad.Trans.Cont
 
 
 newtype Freer f a = Freer
@@ -121,22 +121,12 @@ relay
     -> Eff (eff ': r) a
     -> Eff r b
 relay pure' bind' (Freer m) = Freer $ \k -> do
-  runFreer (operational pure' bind' $ m $ \u ->
+  (\z -> runFreer z k) $ runContT (m $ \u ->
     case decomp u of
       Left x -> lift $ hoistEff x
-      Right y -> singleton y
-    ) k
-
-
-operational
-    :: (a -> Eff r b)
-    -> (forall x. eff x -> (x -> Eff r b) -> Eff r b)
-    -> ProgramT eff (Eff r) a -> Eff r b
-operational pure' bind' p = do
-  m <- viewT p
-  case m of
-    Return a -> pure' a
-    e :>>= f -> bind' e $ operational pure' bind' . f
+      Right y -> ContT $ bind' y
+           ) $ \a -> pure' a
+{-# INLINE relay #-}
 
 
 runErrorRelay :: Eff (Error e ': r) a -> Eff r (Either e a)
@@ -187,6 +177,12 @@ transform lower f (Freer m) = Freer $ \k -> lower $ m $ \u ->
     Left  x -> lift $ k x
     Right y -> hoist (\z -> runFreer z k) $ f y
 {-# INLINE transform #-}
+
+
+-- natural
+--     :: Member eff' r
+--     => (eff ~> eff') -> Eff (eff ': r) a -> Eff r a
+-- natural
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r a
