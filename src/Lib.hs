@@ -4,6 +4,7 @@
 {-# LANGUAGE KindSignatures      #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 
@@ -15,6 +16,9 @@ import Data.Functor.Compose
 import Data.IORef
 import Control.Arrow (second)
 import System.IO.Unsafe
+import qualified Control.Monad.Trans.State as S
+import Data.Functor.Identity
+import Control.Monad.Trans (lift)
 
 
 newtype Freer f a = Freer
@@ -23,6 +27,9 @@ newtype Freer f a = Freer
 
 freeMap :: (f ~> g) -> Freer f ~> Freer g
 freeMap nat (Freer m) = Freer $ \k -> m $ k . nat
+
+hoistEff :: Union r x -> Eff r x
+hoistEff u = Freer $ \k -> k u
 
 instance Functor (Freer f) where
   fmap f (Freer z) = Freer $ \z' -> fmap f $ z z'
@@ -47,6 +54,9 @@ send t = Freer $ \k -> k $ inj t
 
 runM :: Monad m => Freer (Union '[m]) a -> m a
 runM z = runFreer z extract
+
+run :: Freer (Union '[Identity]) a -> a
+run = runIdentity . runM
 
 
 data State s a where
@@ -85,6 +95,13 @@ runTeletype = interpret bind
     bind (Put s) = send $ putStrLn s
 
 
+interpretState :: s -> Eff (S.State s ': r) ~> Eff r
+interpretState s m = flip S.evalStateT s $ runFreer m $ \u ->
+  case decomp u of
+    Left x  -> S.StateT $ \s -> fmap (, s) $hoistEff x
+    Right y -> S.mapStateT (pure . runIdentity) y
+
+
 main :: IO ()
 main = runM (runState "fuck" foom) >>= print
 
@@ -102,15 +119,15 @@ interpretS
      . (forall x. s -> eff x -> (s, Eff r x))
     -> s
     -> Eff (eff ': r) ~> Eff r
-interpretS f s (Freer m) =
-  let !ioref = unsafePerformIO $ newIORef s
-   in Freer $ \k -> m $ \u -> do
-        case decomp u of
-          Left x -> k x
-          Right y ->
-            let !s' = unsafePerformIO $ readIORef ioref
-                (s'', m') = f s' y
-             in unsafePerformIO (writeIORef ioref s'') `seq` runFreer m' k
+interpretS f s = interpretState s . interpret bind . introduce
+  where
+    bind :: eff x -> Eff (S.State s ': r) x
+    bind e = do
+      s <- send $ S.get @Identity
+      let (s', e') = f s e
+      send $ S.put @Identity s'
+      raise e'
+
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r a
