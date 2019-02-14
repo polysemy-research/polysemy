@@ -24,6 +24,7 @@ dependencies:
 - transformers
 - mtl
 - mmorph
+- operational
 
 library:
   source-dirs: src
