@@ -1,15 +1,18 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE KindSignatures      #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections       #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeOperators       #-}
+-- {-# OPTIONS_GHC -ddump-simpl -dsuppress-all       #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Lib where
 
+import Data.OpenUnion.Internal
 import Debug.Trace
 import Data.OpenUnion
 import Data.Functor.Compose
@@ -18,7 +21,9 @@ import Control.Arrow (second)
 import System.IO.Unsafe
 import qualified Control.Monad.Trans.State.Strict as S
 import Data.Functor.Identity
-import Control.Monad.Trans (lift)
+import Control.Monad.Trans (MonadTrans (..))
+import Data.Coerce
+import Control.Monad.Morph
 
 
 newtype Freer f a = Freer
@@ -63,6 +68,10 @@ type Eff r = Freer (Union r)
 send :: Member eff r => eff a -> Eff r a
 send t = Freer $ \k -> k $ inj t
 {-# INLINE send #-}
+
+unsafeSend :: Word -> eff a -> Eff r a
+unsafeSend w t = Freer $ \k -> k $ unsafeInj w t
+{-# INLINE unsafeSend #-}
 
 
 runM :: Monad m => Freer (Union '[m]) a -> m a
@@ -117,14 +126,6 @@ runTeletype = interpret bind
     bind (Put s) = send $ putStrLn s
 
 
-interpretState :: s -> Eff (S.State s ': r) ~> Eff r
-interpretState s m = flip S.evalStateT s $ runFreer m $ \u ->
-  case decomp u of
-    Left x  -> S.StateT $ \s -> fmap (, s) $hoistEff x
-    Right y -> S.mapStateT (pure . runIdentity) y
-{-# INLINE interpretState #-}
-
-
 -- main :: IO ()
 -- main = runM (runState "fuck" foom) >>= print
 
@@ -135,33 +136,38 @@ raise = freeMap weaken
 
 
 introduce :: Eff (eff ': r) a -> Eff (eff ': u ': r) a
-introduce = freeMap (shuffle . weaken)
+introduce = freeMap intro
 {-# INLINE introduce #-}
 
 
 interpretS
-    :: forall eff s r
-     . (forall x. s -> eff x -> (s, Eff r x))
+    :: (eff ~> S.StateT s (Eff r))
     -> s
     -> Eff (eff ': r) ~> Eff r
-interpretS f s = interpretState s . interpret bind . introduce
-  where
-    bind :: eff x -> Eff (S.State s ': r) x
-    bind e = do
-      s <- send $ S.get @Identity
-      let (s', e') = f s e
-      send $ S.put @Identity s'
-      raise e'
-    {-# INLINE bind #-}
+interpretS f s = transform (flip S.evalStateT s) f
 {-# INLINE interpretS #-}
+
+
+transform
+    :: ( MonadTrans t
+       , MFunctor t
+       , forall m. Monad m => Monad (t m)
+       )
+    => (forall m. Monad m => t m ~> m)
+    -> (eff ~> t (Eff r))
+    -> Eff (eff ': r) ~> Eff r
+transform lower f (Freer m) = Freer $ \k -> lower $ m $ \u ->
+  case decomp u of
+    Left  x -> lift $ k x
+    Right y -> hoist (\z -> runFreer z k) $ f y
+{-# INLINE transform #-}
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r a
 runState = interpretS nat
   where
-    nat :: s -> State s x -> (s, Eff r x)
-    nat s Get      = (s, pure s)
-    nat _ (Put s') = (s', pure ())
-    {-# INLINE nat #-}
-{-# INLINE runState #-}
+    nat :: State s ~> S.StateT s (Eff r)
+    nat Get      = S.get
+    nat (Put s') = S.put s'
+
 
