@@ -1,29 +1,26 @@
--- {-# OPTIONS_GHC -ddump-simpl -dsuppress-all       #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE ViewPatterns          #-}
+{-# OPTIONS_GHC -Wall              #-}
 
 module Lib where
 
-import Data.OpenUnion.Internal
-import Debug.Trace
-import Data.OpenUnion
-import Data.Functor.Compose
-import Data.IORef
-import Control.Arrow (second)
-import System.IO.Unsafe
+import qualified Control.Monad.Trans.Except as E
+import           Control.Monad.Morph
+import           Control.Monad.Trans (MonadTrans (..))
 import qualified Control.Monad.Trans.State.Strict as S
-import Data.Functor.Identity
-import Control.Monad.Trans (MonadTrans (..))
-import Data.Coerce
-import Control.Monad.Morph
+import           Data.Functor.Identity
+import           Data.OpenUnion
+import           Data.OpenUnion.Internal
 
 
 newtype Freer f a = Freer
@@ -153,9 +150,9 @@ transform
        , MFunctor t
        , forall m. Monad m => Monad (t m)
        )
-    => (forall m. Monad m => t m ~> m)
+    => (forall m. Monad m => t m a -> m b)
     -> (eff ~> t (Eff r))
-    -> Eff (eff ': r) ~> Eff r
+    -> Eff (eff ': r) a -> Eff r b
 transform lower f (Freer m) = Freer $ \k -> lower $ m $ \u ->
   case decomp u of
     Left  x -> lift $ k x
@@ -164,10 +161,17 @@ transform lower f (Freer m) = Freer $ \k -> lower $ m $ \u ->
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r a
-runState = interpretS nat
-  where
-    nat :: State s ~> S.StateT s (Eff r)
-    nat Get      = S.get
-    nat (Put s') = S.put s'
+runState = interpretS $ \case
+  Get    -> S.get
+  Put s' -> S.put s'
 
+newtype Error e r where
+  Error :: e -> Error e r
+
+throwError :: Member (Error e) r => e -> Eff r a
+throwError = send . Error
+{-# INLINE throwError #-}
+
+runError :: Eff (Error e ': r) a -> Eff r (Either e a)
+runError = transform E.runExceptT $ \(Error e) -> E.throwE e
 
