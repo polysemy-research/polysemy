@@ -58,6 +58,7 @@ liftEff :: f x -> Freer f x
 liftEff u = Freer $ \k -> k u
 {-# INLINE liftEff #-}
 
+
 type f ~> g = forall x. f x -> g x
 infixr 1 ~>
 
@@ -68,7 +69,7 @@ send t = Freer $ \k -> k $ inj t
 
 
 runM :: Monad m => Freer (Union '[m]) a -> m a
-runM z = runFreer z extract
+runM = runIt extract
 {-# INLINE runM #-}
 
 
@@ -79,3 +80,10 @@ run = runIdentity . runM
 
 runIt :: Monad m => (forall t. f t -> m t) -> Freer f a -> m a
 runIt k m = runFreer m k
+
+------------------------------------------------------------------------------
+-- | Analogous to MTL's 'lift'.
+raise :: Eff r a -> Eff (u ': r) a
+raise = hoistEff weaken
+{-# INLINE raise #-}
+

@@ -4,7 +4,7 @@
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Eff.Combinators where
+module Eff.Interpretation where
 
 import qualified Control.Monad.Trans.Except as E
 import           Control.Monad.Trans.Cont
@@ -35,12 +35,12 @@ interpret f (Freer m) = Freer $ \k -> m $ \u ->
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but with access to intermediate state.
-interpretS
+stateful
     :: (eff ~> S.StateT s (Eff r))
     -> s
     -> Eff (eff ': r) ~> Eff r
-interpretS f s = transform (flip S.evalStateT s) f
-{-# INLINE interpretS #-}
+stateful f s = transform (flip S.evalStateT s) f
+{-# INLINE stateful #-}
 
 
 ------------------------------------------------------------------------------
@@ -48,8 +48,8 @@ interpretS f s = transform (flip S.evalStateT s) f
 -- useful for interpreters which would like to introduce some intermediate
 -- effects before immediately handling them.
 replace
-    :: (eff ~> eff')
-    -> Eff (eff ': r) ~> Eff (eff' ': r)
+    :: (eff1 ~> eff2)
+    -> Eff (eff1 ': r) ~> Eff (eff2 ': r)
 replace = naturally weaken
 {-# INLINE replace #-}
 
@@ -80,6 +80,20 @@ shortCircuit
     -> Eff (eff ': r) a
     -> Eff r (Either e a)
 shortCircuit f = transform E.runExceptT $ \e -> f e
+{-# INLINE shortCircuit #-}
+
+
+------------------------------------------------------------------------------
+-- | Intercept an effect without removing it from the effect stack.
+intercept
+    :: Member eff r
+    => (eff ~> Eff r)
+    -> Eff r ~> Eff r
+intercept f (Freer m) = Freer $ \k -> m $ \u ->
+  case prj u of
+    Nothing -> k u
+    Just e  -> runIt k $ f e
+{-# INLINE intercept #-}
 
 
 ------------------------------------------------------------------------------
@@ -114,13 +128,6 @@ naturally z f (Freer m) = Freer $ \k -> m $ \u ->
     Left x  -> k $ z x
     Right y -> k . inj $ f y
 {-# INLINE naturally #-}
-
-
-------------------------------------------------------------------------------
--- | Analogous to MTL's 'lift'.
-raise :: Eff r a -> Eff (u ': r) a
-raise = hoistEff weaken
-{-# INLINE raise #-}
 
 
 ------------------------------------------------------------------------------
