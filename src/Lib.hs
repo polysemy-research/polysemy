@@ -25,23 +25,28 @@ newtype Freer f a = Freer
   { runFreer :: forall m. Monad m => (forall t. f t -> m t) -> m a
   }
 
+
 freeMap :: (f ~> g) -> Freer f ~> Freer g
 freeMap nat (Freer m) = Freer $ \k -> m $ k . nat
 {-# INLINE freeMap #-}
+
 
 hoistEff :: Union r x -> Eff r x
 hoistEff u = Freer $ \k -> k u
 {-# INLINE hoistEff #-}
 
+
 instance Functor (Freer f) where
   fmap f (Freer z) = Freer $ \z' -> fmap f $ z z'
   {-# INLINE fmap #-}
+
 
 instance Applicative (Freer f) where
   pure a = Freer $ const $ pure a
   {-# INLINE pure #-}
   Freer f <*> Freer a = Freer $ \k -> f k <*> a k
   {-# INLINE (<*>) #-}
+
 
 instance Monad (Freer f) where
   return = pure
@@ -64,6 +69,7 @@ runM :: Monad m => Freer (Union '[m]) a -> m a
 runM z = runFreer z extract
 {-# INLINE runM #-}
 
+
 run :: Freer (Union '[Identity]) a -> a
 run = runIdentity . runM
 {-# INLINE run #-}
@@ -73,9 +79,11 @@ data State s a where
   Get :: State s s
   Put :: s -> State s ()
 
+
 get :: Member (State s) r => Eff r s
 get = send Get
 {-# INLINE get #-}
+
 
 put :: Member (State s) r => s -> Eff r ()
 put = send . Put
@@ -91,6 +99,7 @@ foom = do
 
 type f ~> g = forall x. f x -> g x
 infixr 1 ~>
+
 
 interpret :: (eff ~> Eff r) -> Eff (eff ': r) ~> Eff r
 interpret f (Freer m) = Freer $ \k -> m $ \u -> do
@@ -145,7 +154,6 @@ interpretS f s = interpretState s . interpret bind . introduce
       raise e'
     {-# INLINE bind #-}
 {-# INLINE interpretS #-}
-
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r a

@@ -1,4 +1,7 @@
 module Main where
 
+import Wtf
+import Control.Monad
+
 main :: IO ()
-main = pure ()
+main = replicateM_ 1000000 $ print $ countDown 10000
