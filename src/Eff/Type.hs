@@ -24,13 +24,14 @@ newtype Freer f a = Freer
   }
 
 instance Functor (Freer f) where
-  fmap f (Freer z) = Freer $ \z' -> fmap f $ z z'
+  fmap f (Freer m) = Freer $ \k -> fmap f $ m k
   {-# INLINE fmap #-}
 
 
 instance Applicative (Freer f) where
   pure a = Freer $ const $ pure a
   {-# INLINE pure #-}
+
   Freer f <*> Freer a = Freer $ \k -> f k <*> a k
   {-# INLINE (<*>) #-}
 
@@ -38,16 +39,20 @@ instance Applicative (Freer f) where
 instance Monad (Freer f) where
   return = pure
   {-# INLINE return #-}
+
   Freer ma >>= f = Freer $ \k -> do
     z <- ma k
     runFreer (f z) k
   {-# INLINE (>>=) #-}
 
+
 instance MonadTrans Freer where
   lift = liftEff
 
+
 instance MFunctor Freer where
   hoist = hoistEff
+
 
 hoistEff :: (f ~> g) -> Freer f ~> Freer g
 hoistEff nat (Freer m) = Freer $ \k -> m $ k . nat
@@ -64,8 +69,8 @@ infixr 1 ~>
 
 
 send :: Member eff r => eff a -> Eff r a
-send t = Freer $ \k -> k $ inj t
-{-# INLINE send #-}
+send = liftEff . inj
+{-# INLINE[3] send #-}
 
 
 runM :: Monad m => Freer (Union '[m]) a -> m a

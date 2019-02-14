@@ -30,7 +30,7 @@ interpret f (Freer m) = Freer $ \k -> m $ \u ->
   case decomp u of
     Left x -> k x
     Right y -> runFreer (f y) k
-{-# INLINE interpret #-}
+{-# INLINE[3] interpret #-}
 
 
 ------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ transform lower f (Freer m) = Freer $ \k -> lower $ m $ \u ->
   case decomp u of
     Left  x -> lift $ k x
     Right y -> hoist (runIt k) $ f y
-{-# INLINE transform #-}
+{-# INLINE[3] transform #-}
 
 
 ------------------------------------------------------------------------------
@@ -79,7 +79,7 @@ shortCircuit
     :: (eff ~> E.ExceptT e (Eff r))
     -> Eff (eff ': r) a
     -> Eff r (Either e a)
-shortCircuit f = transform E.runExceptT $ \e -> f e
+shortCircuit f = transform E.runExceptT f
 {-# INLINE shortCircuit #-}
 
 
@@ -139,4 +139,33 @@ naturally z f (Freer m) = Freer $ \k -> m $ \u ->
 introduce :: Eff (eff ': r) a -> Eff (eff ': u ': r) a
 introduce = hoistEff intro
 {-# INLINE introduce #-}
+
+
+------------------------------------------------------------------------------
+
+{-# RULES
+
+"interpret/send"
+  forall (f :: f ~> g).
+    interpret (\e -> send (f e)) = natural f
+    ;
+
+"interpret/send/id pointfree"
+    interpret send = natural id
+    ;
+
+"interpret/send/id"
+    interpret (\e -> send e) = natural id
+    ;
+
+-- "transform/transform"
+--   forall (m :: Eff (eff1 ': eff2 ': r) a)
+--          (lower1 :: forall m. Monad m => t1 m a -> m b)
+--          (f1 :: eff1 ~> t1 (Eff (eff2 ': r)))
+--          (lower2 :: forall m. Monad m => t2 m b -> m c)
+--          (f2 :: eff2 ~> t2 (Eff r)).
+--     transform lower2 f2 (transform lower1 f1 m) = transform (lower2 . lower1) (f2 . f1) m
+--     ;
+
+#-}
 

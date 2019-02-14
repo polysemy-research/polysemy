@@ -53,6 +53,7 @@ runState :: s -> Eff (State s ': r) a -> Eff r a
 runState = stateful $ \case
   Get    -> S.get
   Put s' -> S.put s'
+{-# INLINE runState #-}
 
 
 newtype Error e r where
