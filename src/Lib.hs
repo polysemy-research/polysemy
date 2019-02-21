@@ -49,7 +49,7 @@ runTeletype = interpret $ \case
 -- main = runM (runState "fuck" foom) >>= print
 
 
-runState :: s -> Eff (State s ': r) a -> Eff r a
+runState :: s -> Eff (State s ': r) a -> Eff r (a, s)
 runState = stateful $ \case
   Get    -> S.get
   Put s' -> S.put s'
