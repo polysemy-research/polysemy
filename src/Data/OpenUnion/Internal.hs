@@ -208,10 +208,30 @@ weaken :: Union r a -> Union (any ': r) a
 weaken (Union n a) = Union (n + 1) a
 {-# INLINE weaken #-}
 
-intro :: Union (u ': r) a -> Union (u ': v ': r) a
-intro (Union 0 a) = Union 0 a
-intro (Union n a) = Union (n + 1) a
-{-# INLINE intro #-}
+-- | Introduce a type directly under the head of the 'Union'.
+intro1 :: Union (u ': r) a -> Union (u ': v ': r) a
+intro1 (Union 0 a) = Union 0 a
+intro1 (Union n a) = Union (n + 1) a
+{-# INLINE intro1 #-}
+
+-- | Introduce two types directly under the head of the 'Union'.
+intro2 :: Union (u ': r) a -> Union (u ': v ': x ': r) a
+intro2 (Union 0 a) = Union 0 a
+intro2 (Union n a) = Union (n + 2) a
+{-# INLINE intro2 #-}
+
+-- | Introduce three type directly under the head of the 'Union'.
+intro3 :: Union (u ': r) a -> Union (u ': v ': x ': y ': r) a
+intro3 (Union 0 a) = Union 0 a
+intro3 (Union n a) = Union (n + 3) a
+{-# INLINE intro3 #-}
+
+-- | Introduce three type directly under the head of the 'Union'.
+intro4 :: Union (u ': r) a -> Union (u ': v ': x ': y ': z ': r) a
+intro4 (Union 0 a) = Union 0 a
+intro4 (Union n a) = Union (n + 4) a
+{-# INLINE intro4 #-}
+
 
 infixr 5 :++:
 type family xs :++: ys where

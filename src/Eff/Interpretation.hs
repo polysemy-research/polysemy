@@ -1,15 +1,20 @@
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE MonoLocalBinds        #-}
+#if __GLASGOW_HASKELL__ >= 806
 {-# LANGUAGE QuantifiedConstraints #-}
+#endif
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Eff.Interpretation where
 
-import qualified Control.Monad.Trans.Except as E
+import           Control.Monad.Morph (MFunctor (..))
+import           Control.Monad.Trans.Class (MonadTrans (..))
 import           Control.Monad.Trans.Cont
+import qualified Control.Monad.Trans.Except as E
 import qualified Control.Monad.Trans.State.Strict as S
-import           Data.OpenUnion
+import           Data.OpenUnion.Internal
 import           Eff.Type
 
 
@@ -38,9 +43,24 @@ interpret f (Freer m) = Freer $ \k -> m $ \u ->
 stateful
     :: (eff ~> S.StateT s (Eff r))
     -> s
-    -> Eff (eff ': r) ~> Eff r
-stateful f s = transform (flip S.evalStateT s) f
+    -> Eff (eff ': r) a -> Eff r (a, s)
+stateful f s (Freer m) = Freer $ \k -> flip S.runStateT s $ m $ \u ->
+  case decomp u of
+    Left  x -> lift $ k x
+    Right y -> hoist (usingFreer k) $ f y
 {-# INLINE stateful #-}
+-- NB: @stateful f s = transform (flip S.runStateT s) f@, but is not
+-- implemented as such, since 'transform' is available only >= 8.6.0
+
+
+------------------------------------------------------------------------------
+-- | Like 'interpret', but with access to intermediate state.
+withStateful
+    :: s
+    -> (eff ~> S.StateT s (Eff r))
+    -> Eff (eff ': r) a -> Eff r (a, s)
+withStateful s f = stateful f s
+{-# INLINE withStateful #-}
 
 
 ------------------------------------------------------------------------------
@@ -54,6 +74,7 @@ replace = naturally weaken
 {-# INLINE replace #-}
 
 
+#if __GLASGOW_HASKELL__ >= 806
 ------------------------------------------------------------------------------
 -- | Run an effect via the side-effects of a monad transformer.
 transform
@@ -71,6 +92,7 @@ transform lower f (Freer m) = Freer $ \k -> lower $ m $ \u ->
     Left  x -> lift $ k x
     Right y -> hoist (usingFreer k) $ f y
 {-# INLINE[3] transform #-}
+#endif
 
 
 ------------------------------------------------------------------------------
@@ -79,8 +101,13 @@ shortCircuit
     :: (eff ~> E.ExceptT e (Eff r))
     -> Eff (eff ': r) a
     -> Eff r (Either e a)
-shortCircuit f = transform E.runExceptT f
+shortCircuit f (Freer m) = Freer $ \k -> E.runExceptT $ m $ \u ->
+  case decomp u of
+    Left  x -> lift $ k x
+    Right y -> hoist (usingFreer k) $ f y
 {-# INLINE shortCircuit #-}
+-- NB: @shortCircuit = transform E.runExceptT@, but is not implemented as such,
+-- since 'transform' is available only >= 8.6.0
 
 
 ------------------------------------------------------------------------------
@@ -94,6 +121,21 @@ intercept f (Freer m) = Freer $ \k -> m $ \u ->
     Nothing -> k u
     Just e  -> usingFreer k $ f e
 {-# INLINE intercept #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'interpret', but with access to intermediate state.
+interceptS
+    :: Member eff r
+    => (eff ~> S.StateT s (Eff r))
+    -> s
+    -> Eff r a -> Eff r (a, s)
+interceptS f s (Freer m) = Freer $ \k ->
+  usingFreer k $ flip S.runStateT s $ m $ \u ->
+    case prj u of
+      Nothing -> lift $ liftEff u
+      Just e  -> f e
+{-# INLINE interceptS #-}
 
 
 ------------------------------------------------------------------------------
@@ -117,6 +159,22 @@ relay pure' bind' (Freer m) = Freer $ \k ->
 
 
 ------------------------------------------------------------------------------
+-- | Like 'interpret' and 'relay'.
+interceptRelay
+    :: Member eff r
+    => (a -> Eff r b)
+    -> (forall x. eff x -> (x -> Eff r b) -> Eff r b)
+    -> Eff r a
+    -> Eff r b
+interceptRelay pure' bind' (Freer m) = Freer $ \k ->
+  usingFreer k $ flip runContT pure' $ m $ \u ->
+    case prj u of
+      Nothing -> lift $ liftEff u
+      Just y  -> ContT $ bind' y
+{-# INLINE interceptRelay #-}
+
+
+------------------------------------------------------------------------------
 -- | Run an effect, potentially changing the entire effect stack underneath it.
 naturally
     :: Member eff' r'
@@ -137,35 +195,21 @@ naturally z f (Freer m) = Freer $ \k -> m $ \u ->
 --
 -- Also see 'replace'.
 introduce :: Eff (eff ': r) a -> Eff (eff ': u ': r) a
-introduce = hoistEff intro
+introduce = hoistEff intro1
 {-# INLINE introduce #-}
 
 
-------------------------------------------------------------------------------
+introduce2 :: Eff (eff ': r) a -> Eff (eff ': u ': v ': r) a
+introduce2 = hoistEff intro2
+{-# INLINE introduce2 #-}
 
-{-# RULES
 
-"interpret/send"
-  forall (f :: f ~> g).
-    interpret (\e -> send (f e)) = natural f
-    ;
+introduce3 :: Eff (eff ': r) a -> Eff (eff ': u ': v ': x ': r) a
+introduce3 = hoistEff intro3
+{-# INLINE introduce3 #-}
 
-"interpret/send/id pointfree"
-    interpret send = natural id
-    ;
 
-"interpret/send/id"
-    interpret (\e -> send e) = natural id
-    ;
-
--- "transform/transform"
---   forall (m :: Eff (eff1 ': eff2 ': r) a)
---          (lower1 :: forall m. Monad m => t1 m a -> m b)
---          (f1 :: eff1 ~> t1 (Eff (eff2 ': r)))
---          (lower2 :: forall m. Monad m => t2 m b -> m c)
---          (f2 :: eff2 ~> t2 (Eff r)).
---     transform lower2 f2 (transform lower1 f1 m) = transform (lower2 . lower1) (f2 . f1) m
---     ;
-
-#-}
+introduce4 :: Eff (eff ': r) a -> Eff (eff ': u ': v ':x ': y ': r) a
+introduce4 = hoistEff intro4
+{-# INLINE introduce4 #-}
 

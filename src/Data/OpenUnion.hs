@@ -28,7 +28,6 @@ module Data.OpenUnion
   , (:++:)
   , decomp
   , weaken
-  , intro
   , extract
 
     -- * Open Union Membership Constraints
@@ -47,7 +46,6 @@ import Data.OpenUnion.Internal
   , decomp
   , extract
   , weaken
-  , intro
   )
 
 -- | A shorthand constraint that represents a combination of multiple 'Member'
