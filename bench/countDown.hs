@@ -9,13 +9,15 @@ import qualified Control.Monad.Free as Free
 
 import Criterion (bench, bgroup, whnf)
 import Criterion.Main (defaultMain)
+import Data.Functor.Identity
 
 import Control.Monad.Freer (Member, Eff, run, send)
 import Control.Monad.Freer.Internal (Eff(..), decomp, qApp, tsingleton)
 import Control.Monad.Freer.Error (runError, throwError)
 import Control.Monad.Freer.State (get, put, runState)
 
-import qualified Wtf as TFTF
+import qualified Lib as TFTF
+import qualified Eff.Type as TFTF
 
 --------------------------------------------------------------------------------
                         -- State Benchmarks --
@@ -34,6 +36,12 @@ countDown start = run (runState start go)
 countDownMTL :: Int -> (Int, Int)
 countDownMTL = MTL.runState go
   where go = MTL.get >>= (\n -> if n <= 0 then pure n else MTL.put (n-1) >> go)
+
+countDownTFTF :: Int -> Int
+countDownTFTF start = fst $ fst $ TFTF.run $ TFTF.runState "hello" $ TFTF.runState start go
+  where
+    go :: TFTF.Eff '[TFTF.State Int, TFTF.State String, Identity] Int
+    go = TFTF.get >>= (\n -> if n <= 0 then (pure n) else (TFTF.put (n-1)) >> go)
 
 --------------------------------------------------------------------------------
                        -- Exception + State --
@@ -128,6 +136,6 @@ main =
     bgroup "Countdown Bench" [
         bench "freer-simple"      $ whnf countDown 10000
       , bench "mtl"               $ whnf countDownMTL 10000
-      , bench "too-fast-too-free" $ whnf TFTF.countDown 10000
+      , bench "too-fast-too-free" $ whnf countDownTFTF 10000
     ]
   ]
