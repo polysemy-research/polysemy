@@ -79,18 +79,22 @@ replace = naturally weaken
 -- | Run an effect via the side-effects of a monad transformer.
 transform
     :: ( MonadTrans t
-       , MFunctor t
        , forall m. Monad m => Monad (t m)
        )
-    => (forall m. Monad m => t m a -> m b)
-       -- ^ The strategy for getting out of the monad transformer.
+    => (forall m. Eff r ~> m -> t (Eff r) ~> t m)
+       -- ^ The strategy for hoisting a natural transformation. This is usually
+       -- just 'hoist'.
+    -> (forall m. t m a -> m b)
+       -- ^ The strategy for getting out of the monad transformer. This is
+       -- usually just @runWhateverT@.
     -> (eff ~> t (Eff r))
     -> Eff (eff ': r) a
     -> Eff r b
-transform lower f (Freer m) = Freer $ \k -> lower $ m $ \u ->
-  case decomp u of
-    Left  x -> lift $ k x
-    Right y -> hoist (usingFreer k) $ f y
+transform hoist' lower f (Freer m) =
+  Freer $ \k -> lower $ m $ \u ->
+    case decomp u of
+      Left  x -> lift $ k x
+      Right y -> hoist' (usingFreer k) $ f y
 {-# INLINE[3] transform #-}
 #endif
 
