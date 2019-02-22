@@ -26,6 +26,7 @@ dependencies:
 - mmorph
 
 library:
+  ghc-options: -O2
   source-dirs: src
 
 executables:
@@ -54,7 +55,6 @@ benchmarks:
   too-fast-too-free-bench:
     source-dirs: bench
     main: countDown.hs
-    ghc-options: -O2
     dependencies:
     - criterion
     - free
