@@ -123,23 +123,8 @@ p' count  = fopen' "cats" >> replicateM_ count (fget' >> fpost' "cats") >> fclos
 main :: IO ()
 main =
   defaultMain [
-    bgroup "State" [
-        bench "freer.get"          $ whnf oneGet 0
-      , bench "mtl.get"            $ whnf oneGetMTL 0
-    ],
     bgroup "Countdown Bench" [
         bench "freer.State"    $ whnf countDown 10000
       , bench "mtl.State"      $ whnf countDownMTL 10000
-    ],
-    bgroup "Countdown+Except Bench" [
-        bench "freer.ExcState"  $ whnf countDownExc 10000
-      , bench "mtl.ExceptState" $ whnf countDownExcMTL 10000
-    ],
-    bgroup "HTTP Simple DSL" [
-        bench "freer" $ whnf (run . runHttp) prog
-      , bench "free" $ whnf runFHttp prog'
-
-      , bench "freerN"      $ whnf (run . runHttp . p) 1000
-      , bench "freeN"       $ whnf (runFHttp . p')     1000
     ]
   ]
