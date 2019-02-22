@@ -15,6 +15,8 @@ import Control.Monad.Freer.Internal (Eff(..), decomp, qApp, tsingleton)
 import Control.Monad.Freer.Error (runError, throwError)
 import Control.Monad.Freer.State (get, put, runState)
 
+import qualified Wtf as TFTF
+
 --------------------------------------------------------------------------------
                         -- State Benchmarks --
 --------------------------------------------------------------------------------
@@ -126,5 +128,6 @@ main =
     bgroup "Countdown Bench" [
         bench "freer.State"    $ whnf countDown 10000
       , bench "mtl.State"      $ whnf countDownMTL 10000
+      , bench "tftf.State"     $ whnf TFTF.countDown 10000
     ]
   ]
