@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds, DeriveFunctor, FlexibleContexts, GADTs, TypeOperators #-}
 module Main (main) where
 
 import Control.Monad (replicateM_)
