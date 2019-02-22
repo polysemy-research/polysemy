@@ -38,9 +38,9 @@ countDownMTL = MTL.runState go
   where go = MTL.get >>= (\n -> if n <= 0 then pure n else MTL.put (n-1) >> go)
 
 countDownTFTF :: Int -> Int
-countDownTFTF start = fst $ fst $ TFTF.run $ TFTF.runState "hello" $ TFTF.runState start go
+countDownTFTF start = fst $ TFTF.run $ TFTF.runState start go
   where
-    go :: TFTF.Eff '[TFTF.State Int, TFTF.State String, Identity] Int
+    go :: TFTF.Eff '[TFTF.State Int, Identity] Int
     go = TFTF.get >>= (\n -> if n <= 0 then (pure n) else (TFTF.put (n-1)) >> go)
 
 --------------------------------------------------------------------------------
