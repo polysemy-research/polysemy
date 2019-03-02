@@ -24,6 +24,7 @@ dependencies:
 - transformers
 - mtl
 - mmorph
+- kan-extensions
 
 library:
   ghc-options: -O2
