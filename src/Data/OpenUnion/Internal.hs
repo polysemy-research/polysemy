@@ -50,7 +50,7 @@ type f ~> g = forall x. f x -> g x
 infixr 1 ~>
 
 class HFunctor t where
-  hoist :: (f ~> g) -> t f ~> t g
+  hoist :: Functor g => (f ~> g) -> t f ~> t g
 
 
 -- | Open union is a strong sum (existential with an evidence).
@@ -65,13 +65,15 @@ instance HFunctor (Union r) where
 
 
 data FreeYo e m a where
-  FreeYo :: Monad m => e m x
+  FreeYo :: (Monad m, Functor n)
+         => e m x
          -> (m ~> n)
          -> (x -> a)
          -> FreeYo e n a
 
 instance Functor (FreeYo e m) where
-  fmap f (FreeYo e n k) = FreeYo e n $ f . k
+  fmap f (FreeYo e n k) =
+    FreeYo e n $ f . k
 
 instance HFunctor (FreeYo e) where
   hoist f (FreeYo e n k) = FreeYo e (f . n) k
