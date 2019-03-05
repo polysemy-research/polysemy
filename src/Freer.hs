@@ -19,6 +19,7 @@ module Freer where
 import Control.Monad
 
 
+
 class HFunctor h where
   hmap
       :: (Functor f, Functor g)
@@ -31,7 +32,6 @@ class HFunctor r => Syntax r where
       :: (m a -> m b)
       -> r m a
       -> r m b
-
   weave
       :: (Monad m, Monad n, Functor s)
       => s ()
@@ -48,6 +48,16 @@ data Exc e m a where
         -> Exc e m a
 
 
+instance Functor m => Functor (Exc e m) where
+  fmap _ (Throw e) = Throw e
+  fmap f (Catch a b c) = Catch a b (fmap f . c)
+
+
+instance HFunctor (Exc e) where
+  hmap _ (Throw e) = Throw e
+  hmap f (Catch a b c) = Catch (f a) (f . b) (f . c)
+
+
 instance Syntax (Exc e) where
   emap _ (Throw e) = Throw e
   emap f (Catch a b c) = Catch a b $ fmap f c
@@ -58,6 +68,18 @@ instance Syntax (Exc e) where
       (distrib (a <$ s))
       (\e -> distrib $ b e <$ s)
       (distrib . fmap c)
+
+
+instance Functor (Yo e m) where
+  fmap f (Yo e k) = Yo e (fmap f . k)
+
+instance HFunctor (Yo e) where
+  hmap f (Yo e k) = Yo e (f . k)
+
+instance Syntax (Yo e) where
+  emap f (Yo e k) = Yo e (f . k)
+  -- TODO(sandy): maybe this is not a good implementation?
+  weave s distrib (Yo e k) = Yo e $ distrib . (<$ s) . k
 
 
 
@@ -121,13 +143,7 @@ project :: (Member f r) => Free r a -> Maybe (f (Free r) a)
 project (Free s) = prj s
 project _ = Nothing
 
-deriving instance Functor m => Functor (Exc e m)
-
 type (~>) f g = forall x. f x -> g x
-
-instance HFunctor (Exc e) where
-  hmap _ (Throw e) = Throw e
-  hmap f (Catch a b c) = Catch (f a) (f . b) (f . c)
 
 data State s a where
   Get :: (s -> a) -> State s a
