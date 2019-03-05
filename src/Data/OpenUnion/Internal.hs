@@ -40,6 +40,7 @@
 -- substitution for @Typeable@.
 module Data.OpenUnion.Internal where
 
+import Data.Functor.Identity
 import GHC.TypeLits (TypeError, ErrorMessage(..))
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -54,33 +55,33 @@ class HFunctor t where
 
 
 -- | Open union is a strong sum (existential with an evidence).
-data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
-  Union :: {-# UNPACK #-} !Word -> FreeYo t m a -> Union r m a
+data Union (r :: [(* -> *) -> * -> *]) f (m :: * -> *) a where
+  Union :: {-# UNPACK #-} !Word -> FreeYo t f m a -> Union r f m a
 
-instance Functor (Union r m) where
+instance Functor (Union r f m) where
   fmap f (Union w t) = Union w $ fmap f t
 
-instance HFunctor (Union r) where
+instance HFunctor (Union f r) where
   hoist f (Union w t) = Union w $ hoist f t
 
 
-data FreeYo e m a where
-  FreeYo :: (Monad m, Functor n)
+data FreeYo e f m a where
+  FreeYo :: (Monad m, Functor n, Functor f)
          => e m x
-         -> (m ~> n)
+         -> (forall i. m i -> n (f i))
          -> (x -> a)
-         -> FreeYo e n a
+         -> FreeYo e n f a
 
-instance Functor (FreeYo e m) where
+instance Functor (FreeYo e f m) where
   fmap f (FreeYo e n k) =
     FreeYo e n $ f . k
 
-instance HFunctor (FreeYo e) where
-  hoist f (FreeYo e n k) = FreeYo e (f . n) k
+instance HFunctor (FreeYo f e) where
+  hoist f (FreeYo e n k) = FreeYo e (fmap f . n) k
 
 
-freeYo :: Monad m => e m a -> FreeYo e m a
-freeYo e = FreeYo e id id
+freeYo :: Monad m => e m a -> FreeYo e Identity m a
+freeYo e = FreeYo e Identity id
 
 
 -- | Takes a request of type @t :: * -> *@, and injects it into the 'Union'.
@@ -91,7 +92,7 @@ freeYo e = FreeYo e id id
 -- __This function is unsafe.__
 --
 -- /O(1)/
-unsafeInj :: Monad m => Word -> t m a -> Union r m a
+unsafeInj :: Monad m => Word -> t m a -> Union r Identity m a
 unsafeInj w = Union w . freeYo
 {-# INLINE unsafeInj #-}
 
@@ -105,7 +106,7 @@ unsafeInj w = Union w . freeYo
 -- __This function is unsafe.__
 --
 -- /O(1)/
-unsafePrj :: Word -> Union r m a -> Maybe (t m a)
+unsafePrj :: Word -> Union r f m a -> Maybe (t m a)
 unsafePrj n (Union n' x)
   | n == n'   = Just (unsafeCoerce x)
   | otherwise = Nothing
@@ -191,14 +192,14 @@ class FindElem eff effs => Member (eff :: (* -> *) -> * -> *) (effs :: [(* -> *)
   -- 'Union'.
   --
   -- /O(1)/
-  inj :: Monad m => eff m a -> Union effs m a
+  inj :: Monad m => eff m a -> Union effs Identity m a
 
   -- | Project a value of type @'Union' (t ': r) :: * -> *@ into a possible
   -- summand of the type @t :: * -> *@. 'Nothing' means that @t :: * -> *@ is
   -- not the value stored in the @'Union' (t ': r) :: * -> *@.
   --
   -- /O(1)/
-  prj :: Union effs m a -> Maybe (eff m a)
+  prj :: Union effs f m a -> Maybe (eff m a)
 
 instance (FindElem t r, IfNotFound t r r) => Member t r where
   inj = unsafeInj $ unP (elemNo :: P t r)
@@ -213,7 +214,7 @@ instance (FindElem t r, IfNotFound t r r) => Member t r where
 -- @Union r :: * -> *@, i.e. it can not contain @t :: * -> *@.
 --
 -- /O(1)/
-decomp :: Union (t ': r) m a -> Either (Union r m a) (FreeYo t m a)
+decomp :: Union (t ': r) f m a -> Either (Union r f m a) (FreeYo t f m a)
 decomp (Union 0 a) = Right $ unsafeCoerce a
 decomp (Union n a) = Left  $ Union (n - 1) a
 {-# INLINE [2] decomp #-}
@@ -223,7 +224,7 @@ decomp (Union n a) = Left  $ Union (n - 1) a
 -- /O(1)/
 --
 -- TODO: Check that it actually adds on efficiency.
-decomp0 :: Union '[t] m a -> Either (Union '[] m a) (FreeYo t m a)
+decomp0 :: Union '[t] f m a -> Either (Union '[] f m a) (FreeYo t f m a)
 decomp0 (Union _ a) = Right $ unsafeCoerce a
 {-# INLINE decomp0 #-}
 {-# RULES "decomp/singleton"  decomp = decomp0 #-}
@@ -233,7 +234,7 @@ decomp0 (Union _ a) = Right $ unsafeCoerce a
 -- absence of 'Maybe', and 'Either'.
 --
 -- /O(1)/
-extract :: Union '[t] m a -> FreeYo t m a
+extract :: Union '[t] f m a -> FreeYo t f m a
 extract (Union _ a) = unsafeCoerce a
 {-# INLINE extract #-}
 
@@ -241,30 +242,30 @@ extract (Union _ a) = unsafeCoerce a
 -- more summand.
 --
 -- /O(1)/
-weaken :: Union r m a -> Union (any ': r) m a
+weaken :: Union r f m a -> Union (any ': r) f m a
 weaken (Union n a) = Union (n + 1) a
 {-# INLINE weaken #-}
 
 -- | Introduce a type directly under the head of the 'Union'.
-intro1 :: Union (u ': r) m a -> Union (u ': v ': r) m a
+intro1 :: Union (u ': r) f m a -> Union (u ': v ': r) f m a
 intro1 (Union 0 a) = Union 0 a
 intro1 (Union n a) = Union (n + 1) a
 {-# INLINE intro1 #-}
 
 -- | Introduce two types directly under the head of the 'Union'.
-intro2 :: Union (u ': r) m a -> Union (u ': v ': x ': r) m a
+intro2 :: Union (u ': r) f m a -> Union (u ': v ': x ': r) f m a
 intro2 (Union 0 a) = Union 0 a
 intro2 (Union n a) = Union (n + 2) a
 {-# INLINE intro2 #-}
 
 -- | Introduce three type directly under the head of the 'Union'.
-intro3 :: Union (u ': r) m a -> Union (u ': v ': x ': y ': r) m a
+intro3 :: Union (u ': r) f m a -> Union (u ': v ': x ': y ': r) f m a
 intro3 (Union 0 a) = Union 0 a
 intro3 (Union n a) = Union (n + 3) a
 {-# INLINE intro3 #-}
 
 -- | Introduce three type directly under the head of the 'Union'.
-intro4 :: Union (u ': r) m a -> Union (u ': v ': x ': y ': z ': r) m a
+intro4 :: Union (u ': r) f m a -> Union (u ': v ': x ': y ': z ': r) f m a
 intro4 (Union 0 a) = Union 0 a
 intro4 (Union n a) = Union (n + 4) a
 {-# INLINE intro4 #-}
@@ -276,7 +277,7 @@ type family xs :++: ys where
   (x ': xs) :++: ys = x ': (xs :++: ys)
 
 class Weakens q where
-  weakens :: Union r m a -> Union (q :++: r) m a
+  weakens :: Union r f m a -> Union (q :++: r) f m a
 
 instance Weakens '[] where
   weakens = id

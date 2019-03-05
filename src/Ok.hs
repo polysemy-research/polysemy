@@ -15,6 +15,7 @@
 
 module Ok where
 
+import Data.Functor.Identity
 import qualified Control.Exception as X
 import           Control.Monad.Trans
 import qualified Control.Monad.Trans.Except as E
@@ -30,12 +31,15 @@ newtype Lift m (n :: * -> *) a = Lift
   { unLift :: m a
   }
 
-newtype Eff r a = Eff
-  { runEff :: forall m. Monad m => (Union r (Eff r) ~> m) -> m a
-  }
+data Eff r a where
+  Eff ::
+    { runEff :: forall m. Monad m => (Union r f (Eff r) ~> m) -> m (f a)
+    } -> Eff r (f a)
 
-usingEff :: Monad m => (Union r (Eff r) ~> m) -> Eff r ~> m
+
+usingEff :: Monad m => (Union r f (Eff r) ~> m) -> Eff r (f a) -> m (f a)
 usingEff k e = runEff e k
+
 
 instance Functor (Eff f) where
   fmap f (Eff m) = Eff $ \k -> fmap f $ m k
@@ -63,7 +67,7 @@ instance Monad (Eff f) where
 
 
 
-voidIt :: Union '[] m a -> Void
+voidIt :: Union '[] f m a -> Void
 voidIt = error "it's a void you dip"
 
 
@@ -108,21 +112,26 @@ sendM :: Member (Lift m) r => m a -> Eff r a
 sendM m = send $ Lift m
 
 
-runState :: s -> Eff (State s ': r) a -> Eff r a
-runState s (Eff m) = Eff $ \k -> flip evalStateT s $ m $ \u ->
-  case decomp u of
-    Left  x -> do
-      s' <- get
-      lift $ usingEff k $ liftEff $ hoist (runState s') x
-    Right (FreeYo Get _ f)      -> fmap f get
-    Right (FreeYo (Put s') _ f) -> fmap f $ put s'
+-- runState :: s -> Eff (State s ': r) a -> Eff r a
+-- runState s (Eff m) = Eff $ \k -> flip evalStateT s $ m $ \u ->
+--   case decomp u of
+--     Left  x -> do
+--       s' <- get
+--       lift $ usingEff k $ liftEff $ hoist (runState s') x
+--     Right (FreeYo Get _ f)      -> fmap f get
+--     Right (FreeYo (Put s') _ f) -> fmap f $ put s'
 
 
 -- runError :: Eff (Error e ': r) a -> Eff r (Either e a)
 -- runError (Eff m) = Eff $ \k -> E.runExceptT $ m $ \u ->
 --   case decomp u of
---     Left  x -> E.ExceptT $ usingEff k $ liftEff $ foist Right runError x
+--     Left  x -> E.ExceptT $ undefined
 --     Right (FreeYo (Throw e) _ _) -> E.throwE e
+
+
+
+
+
 
 
 
@@ -138,21 +147,17 @@ runState s (Eff m) = Eff $ \k -> flip evalStateT s $ m $ \u ->
 --       -- usingEff k $ runScoped end $ nt $ first <* final
 
 
--- foist :: Functor n => (forall x. x -> f x) -> (m a -> n (f a)) -> Union r m a -> Union r n (f a)
--- foist p f (Union w (FreeYo e nt k)) = Union w $ FreeYo e
---   (\s z -> f $ nt s z)
---   (p . k)
-
-
 runM :: Monad m => Eff '[Lift m] a -> m a
-runM (Eff m) = m $ \(extract -> FreeYo (Lift e) _ f) -> fmap f e
+runM (Eff m) = m $ \u ->
+  case extract u of
+    FreeYo (Lift n) f -> _
 
 
 -- main :: IO ()
 -- main = (print =<<) . runM . runScoped runM . runError @Bool . runState "first" $ foo
 
 
-liftEff :: Union r (Eff r) a -> Eff r a
+liftEff :: Union r Identity (Eff r) a -> Eff r a
 liftEff u = Eff $ \k -> k u
 
 
@@ -160,6 +165,14 @@ send :: Member e r => e (Eff r) a -> Eff r a
 send e = Eff $ \k -> k $ inj e
 
 
-weaken :: Union r m a -> Union (e ': r) m a
+weaken :: Union r f m a -> Union (e ': r) f m a
 weaken (Union w e) = Union (w + 1) e
+
+
+-- emap :: (m a → m b) → (sig m a → sig m b)
+-- weave
+--    :: (Monad m, Monad n, Functor s)
+--    => s ()
+--    -> (forall x. s (m x) -> n (s x))
+--     → (sig m a → sig n (s a))
 
