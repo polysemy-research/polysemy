@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments             #-}
 {-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -16,20 +17,20 @@
 module Ok where
 
 
-import Control.Monad
-import Data.Tuple
-import Eff.Type
-import Data.OpenUnion.Internal
-import Data.Functor.Identity
 import qualified Control.Exception as X
+import           Control.Monad
 import           Control.Monad.Trans
 import qualified Control.Monad.Trans.Except as E
 import           Control.Monad.Trans.State hiding (State (..), runState)
 import           Data.Functor.Compose
 import           Data.Functor.Coyoneda
+import           Data.Functor.Identity
 import           Data.Kind
 import           Data.OpenUnion.Internal
+import           Data.OpenUnion.Internal
+import           Data.Tuple
 import           Data.Void
+import           Eff.Type
 import           Unsafe.Coerce
 
 
@@ -40,40 +41,67 @@ data State s (m :: * -> *) a where
 
 data Error e (m :: * -> *) a where
   Throw :: e -> Error e m a
+  Catch :: m a -> (e -> m a) -> Error e m a
 
 
 data Scoped (m :: * -> *) a where
   Scoped :: m () -> m a -> Scoped m a
 
 
-foo :: (Member (State String) r, Member (Error Bool) r, Member Scoped r, Member (Lift IO) r) => Eff r ()
-foo = send $ Scoped (sendM $ putStrLn "DYING") $ do
+foo
+    :: ( Member (State String) r
+       , Member (Error Bool) r
+       , Member (Lift IO) r
+       )
+    => Eff r ()
+foo = do
+  z <- send $ Catch
+    do
+      send Get >>= sendM . putStrLn
+      send $ Put "works"
+      send Get >>= sendM . putStrLn
+      send $ Put "done"
+      send $ Throw False
+      sendM $ putStrLn "inside"
+      pure False
+    \False -> do
+      send Get >>= sendM . putStrLn
+      send $ Put "caught"
+      pure True
   send Get >>= sendM . putStrLn
-  send $ Put "works"
-  send Get >>= sendM . putStrLn
-  send $ Put "done"
-  send $ Throw False
-  sendM $ putStrLn "inside"
+  sendM $ print z
+
+
+main :: IO ()
+main = (print =<<) . runM . runState "first" . runError @Bool $ foo
 
 
 
 runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
-runState s (Freer m) = Freer $ \k -> m $ \u ->
+runState s (Freer m) = Freer $ \k -> fmap swap $ flip runStateT s $ m $ \u ->
   case decomp u of
-    Left  x -> do
-      usingFreer k $ liftEff $ weave (s, ()) (uncurry runState) x
+    Left  x -> StateT $ \s' ->
+      fmap swap $ usingFreer k $ liftEff $ weave (s', ()) (uncurry runState) x
+    Right (Yo Get f) ->
+      StateT $ \s' -> usingFreer k $ fmap swap $ runState s' $ f $ pure s'
+    Right (Yo (Put s') f) ->
+      StateT $ \_ -> usingFreer k $ fmap swap $ runState s' $ f $ pure ()
 
---     Right (Yo Get f) -> do
---       s' <- get
---       StateT $ \_ -> usingFreer k $ f $ pure s'
---     -- Right (Yo (Put s') f) -> f $ put s'
+
+runError :: Eff (Error e ': r) a -> Eff r (Either e a)
+runError (Freer m) = Freer $ \k -> E.runExceptT $ m $ \u ->
+  case decomp u of
+    Left  x -> E.ExceptT $
+      usingFreer k $ liftEff $ weave (Right ()) (either (pure . Left) runError) x
+    Right (Yo (Throw e) _) -> E.throwE e
+    Right (Yo (Catch try handle) f) -> E.ExceptT $ do
+      a <- usingFreer k $ runError $ f try
+      case a of
+        Right a' -> pure a
+        Left e -> usingFreer k $ runError $ f $ handle e
 
 
--- runError :: Eff (Error e ': r) a -> Eff r (Either e a)
--- runError (Eff m) = Eff $ \k -> E.runExceptT $ m $ \u ->
---   case decomp u of
---     Left  x -> E.ExceptT $ undefined
---     Right (Yo (Throw e) _ _) -> E.throwE e
+
 
 
 
@@ -94,9 +122,6 @@ runState s (Freer m) = Freer $ \k -> m $ \u ->
 --       -- usingEff k $ runScoped end $ nt $ first <* final
 
 
-
--- main :: IO ()
--- main = (print =<<) . runM . runScoped runM . runError @Bool . runState "first" $ foo
 
 
 -- emap :: (m a → m b) → (sig m a → sig m b)
