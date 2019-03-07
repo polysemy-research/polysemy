@@ -44,6 +44,7 @@ module Data.OpenUnion.Internal where
 
 import GHC.TypeLits (TypeError, ErrorMessage(..))
 import Unsafe.Coerce (unsafeCoerce)
+import Data.Functor.Identity
 
 
 ------------------------------------------------------------------------------
@@ -64,17 +65,20 @@ instance HFunctor (Union r) where
 
 
 data Yo e m a where
-  Yo :: (Monad m, Monad n, Functor n)
+  Yo :: (Monad m, Monad n, Functor f)
      => e m a
-     -> (m a -> n b)
+     -> (forall x. m x -> n (f x))
+     -- -> (forall x. n (f x) -> p x)
+     -> (f a -> b)
      -> Yo e n b
 
 instance HFunctor (Yo e) where
-  hoist f (Yo e nt) = Yo e (f . nt)
+  hoist f (Yo e nt z) = Yo e (f . nt) z
+
 
 
 freeYo :: Monad m => e m a -> Yo e m a
-freeYo e = Yo e id
+freeYo e = Yo e (fmap Identity) runIdentity
 
 
 -- | Takes a request of type @t :: * -> *@, and injects it into the 'Union'.
