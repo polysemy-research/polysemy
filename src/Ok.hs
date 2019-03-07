@@ -90,6 +90,26 @@ reassoc distrib assoc = assoc . weave distrib
 -- distribute :: (forall x. Union r (t m) x -> t (Union r m) x)
 
 
+transform
+    :: forall e t m r a f
+     . (forall m. Monad m => Monad (t m))
+    => (forall x m. t m x -> m (f x))
+    -> (forall x m. m (f x) -> t m x)
+    -> (forall m. e m ~> t (Eff r))
+    -> Eff (e ': r) a
+    -> Eff r (f a)
+transform lower raise f  = lower . go
+  where
+    go :: forall x. Eff (e ': r) x -> t (Eff r) x
+    go (Freer m) = m $ \u ->
+      case decomp u of
+        Left  x -> raise . liftEff . weave lower $ hoist go x
+        Right (Yo z nt) -> do
+          a <- f z
+          go $ nt $ pure a
+
+
+
 runState' :: Eff (State s ': r) a -> StateT s (Eff r) a
 runState' (Freer m) = m $ \u ->
   case decomp u of
