@@ -68,7 +68,6 @@ liftEff u = Freer $ \k -> k u
 {-# INLINE liftEff #-}
 
 
-
 ------------------------------------------------------------------------------
 -- | Embed the action of an effect into 'Eff'.
 send :: Member eff r => eff (Eff r) a -> Eff r a
@@ -87,8 +86,9 @@ sendM = liftEff . inj . Lift
 -- | Drop out of an 'Eff' stack into the only remaining monadic effect inside
 -- it.
 runM :: Monad m => Eff '[Lift m] a -> m a
-runM = usingFreer $ \(extract -> Yo (Lift m) f) -> do
-  m >>= runM . f . pure
+runM = usingFreer $ \(extract -> Yo (Lift m) nt) -> do
+  z <- m
+  runM $ nt $ pure z
 {-# INLINE runM #-}
 
 ------------------------------------------------------------------------------

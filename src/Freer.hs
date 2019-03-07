@@ -69,6 +69,13 @@ instance Syntax (Exc e) where
       (\e -> distrib $ b e <$ s)
       (distrib . fmap c)
 
+data Yo e m a where
+  Yo :: (Functor m, Functor n)
+     => e m a
+     -> (m a -> n b)
+     -> Yo e n b
+
+
 
 instance Functor (Yo e m) where
   fmap f (Yo e k) = Yo e (fmap f . k)

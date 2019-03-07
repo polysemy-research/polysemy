@@ -1,6 +1,7 @@
 {-# LANGUAGE BlockArguments             #-}
 {-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -75,59 +76,53 @@ foo = do
 main :: IO ()
 main = (print =<<) . runM . runState "first" . runError @Bool $ foo
 
+weave :: Monad m => (forall x. t m x -> m (f x)) -> Union r (t m) a -> Union r m (f a)
+weave distrib (Union w (Yo e nt)) = Union w $ Yo e $ distrib . nt
+
+reassoc
+    :: Monad m
+    => (forall x. t m x -> m (f x))
+    -> (forall x n. n (f x) -> t n x)
+    -> Union r (t m) a
+    -> t (Union r m) a
+reassoc distrib assoc = assoc . weave distrib
+
+-- distribute :: (forall x. Union r (t m) x -> t (Union r m) x)
+
+
+runState' :: Eff (State s ': r) a -> StateT s (Eff r) a
+runState' (Freer m) = m $ \u ->
+  case decomp u of
+    Left x -> do
+      StateT $ \s -> fmap swap . liftEff . weave (fmap swap . flip runStateT s) $ hoist runState' x
+    Right (Yo Get f) -> do
+      z <- get
+      runState' $ f $ pure z
+    Right (Yo (Put s) f) -> do
+      put s
+      runState' $ f $ pure ()
 
 
 runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
-runState s (Freer m) = Freer $ \k -> fmap swap $ flip runStateT s $ m $ \u ->
-  case decomp u of
-    Left  x -> StateT $ \s' ->
-      fmap swap $ usingFreer k $ liftEff $ weave (s', ()) (uncurry runState) x
-    Right (Yo Get f) ->
-      StateT $ \s' -> usingFreer k $ fmap swap $ runState s' $ f $ pure s'
-    Right (Yo (Put s') f) ->
-      StateT $ \_ -> usingFreer k $ fmap swap $ runState s' $ f $ pure ()
+runState s = fmap swap . flip runStateT s . runState'
 
+
+runError' :: Eff (Error e ': r) a -> E.ExceptT e (Eff r) a
+runError' (Freer m) = m $ \u ->
+  case decomp u of
+    Left x -> do
+      E.ExceptT . liftEff . weave E.runExceptT $ hoist runError' x
+    Right (Yo (Throw e) _) -> E.throwE e
+    Right (Yo (Catch try catch) f) -> E.ExceptT $ do
+      err <- E.runExceptT $ runError' $ f try
+      case err of
+        Right a -> pure (Right a)
+        Left e -> do
+          err' <- E.runExceptT $ runError' $ f $ catch e
+          case err' of
+            Left e' -> pure (Left e')
+            Right a -> pure (Right a)
 
 runError :: Eff (Error e ': r) a -> Eff r (Either e a)
-runError (Freer m) = Freer $ \k -> E.runExceptT $ m $ \u ->
-  case decomp u of
-    Left  x -> E.ExceptT $
-      usingFreer k $ liftEff $ weave (Right ()) (either (pure . Left) runError) x
-    Right (Yo (Throw e) _) -> E.throwE e
-    Right (Yo (Catch try handle) f) -> E.ExceptT $ do
-      a <- usingFreer k $ runError $ f try
-      case a of
-        Right a' -> pure a
-        Left e -> usingFreer k $ runError $ f $ handle e
-
-
-
-
-
-
-
-
-
-
-
--- runScoped :: Member (Lift IO) r => (Eff r ~> IO) -> Eff (Scoped ': r) a -> Eff r a
--- runScoped end (Eff m) = Eff $ \k -> m $ \u ->
---   case decomp u of
---     Left x -> k $ hoist (runScoped end) x
---     Right (Yo (Scoped final first) nt f) -> do
---       usingEff k $ sendM $ X.bracket
---         (end $ runScoped end $ nt $ first)
---         (\a -> end $ runScoped end $ nt $ final)
---         undefined
---       -- usingEff k $ runScoped end $ nt $ first <* final
-
-
-
-
--- emap :: (m a → m b) → (sig m a → sig m b)
--- weave
---    :: (Monad m, Monad n, Functor s)
---    => s ()
---    -> (forall x. s (m x) -> n (s x))
---     → (sig m a → sig n (s a))
+runError = E.runExceptT . runError'
 

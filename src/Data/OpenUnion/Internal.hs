@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -12,6 +13,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-} -- Due to use of TypeError.
+{-# OPTIONS_GHC -Wall #-} -- Due to use of TypeError.
 {-# OPTIONS_HADDOCK not-home               #-}
 
 -- |
@@ -53,49 +55,22 @@ class HFunctor t where
   hoist :: Monad g => (f ~> g) -> t f ~> t g
 
 
-class HFunctor r => Syntax r where
-  emap
-      :: (m a -> m b)
-      -> r m a
-      -> r m b
-  weave
-      :: (Monad m, Monad n, Functor s)
-      => s ()
-      -> (forall x. s (m x) -> n (s x))
-      -> r m a
-      -> r n (s a)
-
 -- | Open union is a strong sum (existential with an evidence).
 data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
   Union :: {-# UNPACK #-} !Word -> Yo t m a -> Union r m a
 
-instance Functor (Union r m) where
-  fmap f (Union w t) = Union w $ fmap f t
-
 instance HFunctor (Union r) where
   hoist f (Union w t) = Union w $ hoist f t
 
-instance Syntax (Union r) where
-  emap f (Union w t) = Union w $ emap f t
-  weave s distrib (Union w t) = Union w $ weave s distrib t
-
 
 data Yo e m a where
-  Yo :: (Monad m, Monad n)
+  Yo :: (Monad m, Monad n, Functor n)
      => e m a
      -> (m a -> n b)
      -> Yo e n b
 
-instance Functor (Yo e m) where
-  fmap f (Yo e k) = Yo e (fmap f . k)
-
 instance HFunctor (Yo e) where
-  hoist f (Yo e k) = Yo e (f . k)
-
-instance Syntax (Yo e) where
-  emap f (Yo e k) = Yo e (f . k)
-  -- TODO(sandy): maybe this is not a good implementation?
-  weave s distrib (Yo e k) = Yo e $ distrib . (<$ s) . k
+  hoist f (Yo e nt) = Yo e (f . nt)
 
 
 freeYo :: Monad m => e m a -> Yo e m a
