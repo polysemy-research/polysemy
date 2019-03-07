@@ -103,138 +103,83 @@ bar = do
 -- main :: IO ()
 -- main = (print =<<) . runM . runError @Bool . runState "first" $ foo
 
-main :: IO ()
-main = (print =<<) . runM . runState "both" . runScoped $ bar
+-- main :: IO ()
+-- main = (print =<<) . runM . runState "both" . runScoped $ bar
 
 
 weave
-    :: (Monad m, Functor f)
-    => (forall x. t m x -> m (f x))
-    -> Union r (t m) a
-    -> Union r m (f a)
-weave distrib (Union w (Yo e nt f)) =
+    :: (Monad m, Monad n, Functor f)
+    => (forall x. f (m x) -> n (f x))
+    -> Union r m a
+    -> Union r n a
+weave distrib (Union w (Yo e nt)) =
   Union w $
-    Yo e (fmap Compose . distrib . nt)
-         (fmap f . getCompose)
+    Yo e (fmap Compose . distrib . fmap nt . getCompose)
 
 
-translateSimple
-    :: forall e r a
-     . (forall m. e m ~> Eff r)
-    -> Eff (e ': r) a
-    -> Eff r a
-translateSimple f
-    = fmap runIdentity
-    . transformSimple
-          (fmap Identity . runIdentityT)
-          (IdentityT . fmap runIdentity)
-          (IdentityT . f)
+distribute :: Union r (StateT s (Eff r)) x -> StateT s (Eff r) x
+distribute (Union w (Yo e f)) = StateT $ \s -> Freer $ \k ->
+  k $ Union w $ _
 
 
-runScoped :: Eff (Scoped ': r) a -> Eff r a
-runScoped = translate $ \nt b -> \case
-  Scoped after before -> fmap b $ do
-    runScoped (nt before) <* runScoped (nt after)
+-- runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
+-- runState s = fmap swap . flip runStateT s . go
+--   where
+--     go :: forall x. Eff (State s ': r) x -> StateT s (Eff r) x
+--     go (Freer m) = m $ \u ->
+--       case decomp u of
+--         Left x -> hoist go x
 
 
-runBracket
-    :: Member (Lift IO) r
-    => (Eff r ~> IO)
-    -> Eff (Bracket ': r) a
-    -> Eff r a
-runBracket finish = translate $ \nt b -> \case
-  Bracket alloc dealloc use -> sendM $ do
-    X.bracket
-      (finish $ runBracket finish $ nt alloc)
-      (\a -> _ $ fmap (finish . runBracket finish . nt . dealloc) a)
-      undefined
 
 
-translate
-    :: forall e r a
-     . (forall m f u v
-             . Functor f
-            => (forall x. m x -> Eff (e ': r) (f x))
-            -> (f u -> v)
-            -> e m u
-            -> Eff r v
-       )
-    -> Eff (e ': r) a
-    -> Eff r a
-translate f
-    = fmap runIdentity
-    . transform
-          (fmap Identity . runIdentityT)
-          (IdentityT . fmap coerce)
-          (\nt b z -> IdentityT $ f nt b z)
+
+-- transform
+--     :: forall e t r a f
+--      . ( forall m. Monad m => Monad (t m)
+--        , Functor f
+--        )
+--     => (forall x m. Functor m => t m x -> m (f x))
+--     -> (forall x m. Functor m => m (f x) -> t m x)
+--     -> (forall m f u v
+--              . Functor f
+--             => (forall x. m x -> Eff (e ': r) (f x))
+--             -> (f u -> v)
+--             -> e m u
+--             -> t (Eff r) v
+--        )
+--     -> Eff (e ': r) a
+--     -> Eff r (f a)
+-- transform lower raise f  = lower . go
+--   where
+--     go :: forall x. Eff (e ': r) x -> t (Eff r) x
+--     go (Freer m) = m $ \u ->
+--       case decomp u of
+--         Left  x -> raise . liftEff . weave lower $ hoist go x
+--         Right (Yo z nt b) -> do
+--           e <- f nt b z
+--           go $ pure e
 
 
-transform
-    :: forall e t r a f
-     . ( forall m. Monad m => Monad (t m)
-       , Functor f
-       )
-    => (forall x m. Functor m => t m x -> m (f x))
-    -> (forall x m. Functor m => m (f x) -> t m x)
-    -> (forall m f u v
-             . Functor f
-            => (forall x. m x -> Eff (e ': r) (f x))
-            -> (f u -> v)
-            -> e m u
-            -> t (Eff r) v
-       )
-    -> Eff (e ': r) a
-    -> Eff r (f a)
-transform lower raise f  = lower . go
-  where
-    go :: forall x. Eff (e ': r) x -> t (Eff r) x
-    go (Freer m) = m $ \u ->
-      case decomp u of
-        Left  x -> raise . liftEff . weave lower $ hoist go x
-        Right (Yo z nt b) -> do
-          e <- f nt b z
-          go $ pure e
+
+-- runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
+-- runState s = transformSimple (fmap swap . flip runStateT s) (StateT . const . fmap swap) $
+--   \case
+--     Get    -> get
+--     Put s' -> put s'
 
 
-transformSimple
-    :: forall e t r a f
-     . ( forall m. Monad m => Monad (t m)
-       , Functor f
-       )
-    => (forall x m. Monad m => t m x -> m (f x))
-    -> (forall x m. Functor m => m (f x) -> t m x)
-    -> (forall m. e m ~> t (Eff r))
-    -> Eff (e ': r) a
-    -> Eff r (f a)
-transformSimple lower raise f  = lower . go
-  where
-    go :: forall x. Eff (e ': r) x -> t (Eff r) x
-    go (Freer m) = m $ \u ->
-      case decomp u of
-        Left  x -> raise . liftEff . weave lower $ hoist go x
-        Right (Yo (z) nt b) -> do
-          e <- f z
-          go $ fmap b $ nt $ pure e
-
-
-runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
-runState s = transformSimple (fmap swap . flip runStateT s) (StateT . const . fmap swap) $
-  \case
-    Get    -> get
-    Put s' -> put s'
-
-
-runError :: Eff (Error e ': r) a -> Eff r (Either e a)
-runError = transform E.runExceptT E.ExceptT $ \nt b ->
-  \case
-    Throw e -> E.throwE e
-    Catch try catch -> fmap b $ E.ExceptT $ do
-      err <- runError $ nt $ try
-      case err of
-        Right a -> pure $ Right a
-        Left e -> do
-          err' <- runError $ nt $ catch e
-          case err' of
-            Left e' -> pure (Left e')
-            Right a -> pure $ Right a
+-- runError :: Eff (Error e ': r) a -> Eff r (Either e a)
+-- runError = transform E.runExceptT E.ExceptT $ \nt b ->
+--   \case
+--     Throw e -> E.throwE e
+--     Catch try catch -> fmap b $ E.ExceptT $ do
+--       err <- runError $ nt $ try
+--       case err of
+--         Right a -> pure $ Right a
+--         Left e -> do
+--           err' <- runError $ nt $ catch e
+--           case err' of
+--             Left e' -> pure (Left e')
+--             Right a -> pure $ Right a
 

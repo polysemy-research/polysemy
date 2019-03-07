@@ -64,21 +64,20 @@ instance HFunctor (Union r) where
   hoist f (Union w t) = Union w $ hoist f t
 
 
+-- track f in the type and give a `f ()`?
 data Yo e m a where
   Yo :: (Monad m, Monad n, Functor f)
      => e m a
-     -> (forall x. m x -> n (f x))
-     -- -> (forall x. n (f x) -> p x)
-     -> (f a -> b)
-     -> Yo e n b
+     -> (forall x. f (m x) -> n (f x))
+     -> Yo e n a
 
 instance HFunctor (Yo e) where
-  hoist f (Yo e nt z) = Yo e (f . nt) z
+  hoist f (Yo e nt) = Yo e (f . nt)
 
 
 
 freeYo :: Monad m => e m a -> Yo e m a
-freeYo e = Yo e (fmap Identity) runIdentity
+freeYo e = Yo e (fmap Identity . runIdentity)
 
 
 -- | Takes a request of type @t :: * -> *@, and injects it into the 'Union'.
