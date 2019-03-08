@@ -142,15 +142,43 @@ runBracket
     => (Eff r ~> IO)
     -> Eff (Bracket ': r) a
     -> Eff r a
-runBracket finish (Freer m) = m $ \u ->
+runBracket finish = interpret $ \start continue -> \case
+  Bracket alloc dealloc use ->
+    sendM $
+      X.bracket
+        (finish $ start alloc)
+        (\sa -> finish $ continue dealloc sa)
+        (\sa -> finish $ continue use sa)
+
+
+interpret
+    :: (forall m f. Functor f
+                 => (     m ~> Eff r .: f)
+                 -> (forall a b. (a -> m b) -> f a -> Eff r (f b))
+                 -> e m
+                 ~> Eff r .: f)
+    -> Eff (e ': r)
+    ~> Eff r
+interpret f (Freer m) = m $ \u ->
   case decomp u of
-    Left x -> liftEff $ hoist (runBracket finish) x
-    Right (Yo (Bracket alloc dealloc use) s nt f) -> fmap f $ do
-      sendM $
-        X.bracket
-          (finish . runBracket finish . nt $ alloc <$ s)
-          (\sa -> finish . runBracket finish . nt $ fmap dealloc sa)
-          (\sa -> finish . runBracket finish . nt $ fmap use sa)
+    Left  x -> liftEff $ hoist (interpret f) x
+    Right (Yo e s nt z) ->
+      fmap z $ f (interpret f . nt . (<$ s))
+                 (\ff sf -> interpret f . nt $ fmap ff sf )
+                 e
+
+
+interpretLift
+    :: (e ~> Eff r)
+    -> Eff (Lift e ': r)
+    ~> Eff r
+interpretLift f (Freer m) = m $ \u ->
+  case decomp u of
+    Left  x -> liftEff $ hoist (interpretLift f) x
+    Right (Yo (Lift e) s _ z) ->
+      fmap (z . (<$ s)) $ f e
+
+type (.:) f g a = f (g a)
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
