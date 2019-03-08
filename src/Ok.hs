@@ -14,27 +14,22 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE ViewPatterns               #-}
+{-# OPTIONS_GHC -Wall               #-}
 
 module Ok where
 
 
 import qualified Control.Exception as X
 import           Control.Monad
-import           Control.Monad.Trans
 import qualified Control.Monad.Trans.Except as E
-import           Control.Monad.Trans.State hiding (State (..), runState)
 import           Control.Monad.Trans.Identity
+import           Control.Monad.Trans.State hiding (State, runState)
+import           Data.Coerce
 import           Data.Functor.Compose
-import           Data.Functor.Coyoneda
 import           Data.Functor.Identity
-import           Data.Kind
-import           Data.OpenUnion.Internal
 import           Data.OpenUnion.Internal
 import           Data.Tuple
-import           Data.Void
 import           Eff.Type
-import           Unsafe.Coerce
-import Data.Coerce
 
 
 data State s (m :: * -> *) a where
@@ -72,7 +67,7 @@ foo = do
       send $ Put "works"
       send Get >>= sendM . putStrLn
       send $ Put "done"
-      send $ Throw False
+      void . send $ Throw False
       sendM $ putStrLn "inside"
       pure False
     \False -> do
@@ -84,102 +79,118 @@ foo = do
 
 bar
     :: ( Member (State String) r
-       , Member Scoped r
+       , Member Bracket r
+       , Member (Error Bool) r
        , Member (Lift IO) r
        )
     => Eff r ()
 bar = do
-  send $ Scoped
+  res <- send $ Bracket
     do
-      sendM $ putStrLn "closing"
-      send Get >>= sendM . putStrLn
-      send $ Put "NO"
-    do
-      send Get >>= sendM . putStrLn
-      send $ Put "YES"
+      send Get <* send (Put "allocated")
+    ( \a -> do
+        sendM $ putStrLn $ "deallocing: " ++ a
+        send Get >>= sendM . putStrLn
+    )
+    ( \a -> do
+        sendM $ putStrLn $ "using: " ++ a
+        send Get >>= sendM . putStrLn
+        send $ Throw False
+        send $ Put "used"
+        pure True
+    )
+  sendM $ putStrLn $ show res
   send Get >>= sendM . putStrLn
+    -- \a -> do
+    --   send Get >>= sendM . putStrLn
+    --   send $ Put "YES"
 
 
 -- main :: IO ()
--- main = (print =<<) . runM . runError @Bool . runState "first" $ foo
+-- main = (print =<<) . runM . runState "first" . runError @Bool $ foo >> foo
 
 -- main :: IO ()
--- main = (print =<<) . runM . runState "both" . runScoped $ bar
+-- main = (print =<<) . runM . runState "first" . runState True $ send (Put "changed") >> send (Put False) >> send Get >>= sendM . putStrLn
+
+main :: IO ()
+main = (print =<<)
+     . runM
+     . runBracket runM
+     . runState "both"
+     . runError @Bool
+     $ bar
 
 
 weave
     :: (Monad m, Monad n, Functor f)
-    => (forall x. f (m x) -> n (f x))
+    => f ()
+    -> (forall x. f (m x) -> n (f x))
     -> Union r m a
-    -> Union r n a
-weave distrib (Union w (Yo e nt)) =
+    -> Union r n (f a)
+weave s' distrib (Union w (Yo e s nt f)) =
   Union w $
-    Yo e (fmap Compose . distrib . fmap nt . getCompose)
+    Yo e (Compose $ s <$ s')
+         (fmap Compose . distrib . fmap nt . getCompose)
+         (fmap f . getCompose)
 
 
-distribute :: Union r (StateT s (Eff r)) x -> StateT s (Eff r) x
-distribute (Union w (Yo e f)) = StateT $ \s -> Freer $ \k ->
-  k $ Union w $ _
+runBracket
+    :: forall r a
+     . Member (Lift IO) r
+    => (Eff r ~> IO)
+    -> Eff (Bracket ': r) a
+    -> Eff r a
+runBracket finish = runIdentityT . go
+  where
+    go :: Eff (Bracket ': r) ~> IdentityT (Eff r)
+    go (Freer m) = m $ \u ->
+      case decomp u of
+        Left x -> IdentityT $ do
+          fmap coerce . liftEff
+                      . weave (Identity ())
+                              (fmap coerce . runIdentityT . runIdentity)
+                      $ hoist go x
+        Right (Yo (Bracket alloc dealloc use) s nt f) -> fmap f $ IdentityT $ do
+          sendM $
+            X.bracket
+              (finish $ runBracket finish $ nt $ alloc <$ s)
+              (\sa -> finish $ runBracket finish $ nt $ fmap dealloc sa)
+              (\sa -> finish $ runBracket finish $ nt $ fmap use sa)
 
 
--- runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
--- runState s = fmap swap . flip runStateT s . go
---   where
---     go :: forall x. Eff (State s ': r) x -> StateT s (Eff r) x
---     go (Freer m) = m $ \u ->
---       case decomp u of
---         Left x -> hoist go x
+runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
+runState s = fmap swap . flip runStateT s . go
+  where
+    go :: forall x. Eff (State s ': r) x -> StateT s (Eff r) x
+    go (Freer m) = m $ \u ->
+      case decomp u of
+        Left x -> StateT $ \s' ->
+          fmap swap . liftEff
+                    . weave (s', ())
+                            (uncurry ((fmap swap .) . flip runStateT))
+                    $ hoist go x
+        Right (Yo Get sf nt f) -> do
+          s' <- get
+          go $ fmap f $ nt $ pure s' <$ sf
+        Right (Yo (Put s') sf nt f) -> do
+          put s'
+          go $ fmap f $ nt $ pure () <$ sf
 
 
-
-
-
--- transform
---     :: forall e t r a f
---      . ( forall m. Monad m => Monad (t m)
---        , Functor f
---        )
---     => (forall x m. Functor m => t m x -> m (f x))
---     -> (forall x m. Functor m => m (f x) -> t m x)
---     -> (forall m f u v
---              . Functor f
---             => (forall x. m x -> Eff (e ': r) (f x))
---             -> (f u -> v)
---             -> e m u
---             -> t (Eff r) v
---        )
---     -> Eff (e ': r) a
---     -> Eff r (f a)
--- transform lower raise f  = lower . go
---   where
---     go :: forall x. Eff (e ': r) x -> t (Eff r) x
---     go (Freer m) = m $ \u ->
---       case decomp u of
---         Left  x -> raise . liftEff . weave lower $ hoist go x
---         Right (Yo z nt b) -> do
---           e <- f nt b z
---           go $ pure e
-
-
-
--- runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
--- runState s = transformSimple (fmap swap . flip runStateT s) (StateT . const . fmap swap) $
---   \case
---     Get    -> get
---     Put s' -> put s'
-
-
--- runError :: Eff (Error e ': r) a -> Eff r (Either e a)
--- runError = transform E.runExceptT E.ExceptT $ \nt b ->
---   \case
---     Throw e -> E.throwE e
---     Catch try catch -> fmap b $ E.ExceptT $ do
---       err <- runError $ nt $ try
---       case err of
---         Right a -> pure $ Right a
---         Left e -> do
---           err' <- runError $ nt $ catch e
---           case err' of
---             Left e' -> pure (Left e')
---             Right a -> pure $ Right a
+runError :: forall e r a. Eff (Error e ': r) a -> Eff r (Either e a)
+runError = E.runExceptT . go
+  where
+    go :: forall x. Eff (Error e ': r) x -> E.ExceptT e (Eff r) x
+    go (Freer m) = m $ \u ->
+      case decomp u of
+        Left x -> E.ExceptT  $
+          liftEff . weave (Right ()) (either (pure . Left) E.runExceptT)
+                  $ hoist go x
+        Right (Yo (Throw e) _ _ _) -> E.throwE e
+        Right (Yo (Catch try handle) sf nt f) -> fmap f $ E.ExceptT $ do
+          ma <- runError $ nt $ (try <$ sf)
+          case ma of
+            Right _ -> pure ma
+            Left e -> do
+              runError $ nt $ (handle e <$ sf)
 
