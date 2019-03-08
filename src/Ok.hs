@@ -22,11 +22,8 @@ module Ok where
 import qualified Control.Exception as X
 import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
-import           Control.Monad.Trans.Identity
 import           Control.Monad.Trans.State hiding (State, runState)
-import           Data.Coerce
 import           Data.Functor.Compose
-import           Data.Functor.Identity
 import           Data.OpenUnion.Internal
 import           Data.Tuple
 import           Eff.Type
@@ -85,20 +82,25 @@ bar
        )
     => Eff r ()
 bar = do
-  res <- send $ Bracket
+  res <- send $ Catch
     do
-      send Get <* send (Put "allocated")
-    ( \a -> do
-        sendM $ putStrLn $ "deallocing: " ++ a
-        send Get >>= sendM . putStrLn
-    )
-    ( \a -> do
-        sendM $ putStrLn $ "using: " ++ a
-        send Get >>= sendM . putStrLn
-        send $ Throw False
-        send $ Put "used"
-        pure True
-    )
+      send $ Bracket
+        do
+          send Get <* send (Put "allocated")
+        ( \a -> do
+            sendM $ putStrLn $ "deallocing: " ++ a
+            send Get >>= sendM . putStrLn
+        )
+        ( \a -> do
+            sendM $ putStrLn $ "using: " ++ a
+            send Get >>= sendM . putStrLn
+            void . send $ Throw False
+            send $ Put "used"
+            pure True
+        )
+    \(_ :: Bool) -> do
+      sendM $ putStrLn "fucking caught it!"
+      pure False
   sendM $ putStrLn $ show res
   send Get >>= sendM . putStrLn
     -- \a -> do
@@ -140,22 +142,15 @@ runBracket
     => (Eff r ~> IO)
     -> Eff (Bracket ': r) a
     -> Eff r a
-runBracket finish = runIdentityT . go
-  where
-    go :: Eff (Bracket ': r) ~> IdentityT (Eff r)
-    go (Freer m) = m $ \u ->
-      case decomp u of
-        Left x -> IdentityT $ do
-          fmap coerce . liftEff
-                      . weave (Identity ())
-                              (fmap coerce . runIdentityT . runIdentity)
-                      $ hoist go x
-        Right (Yo (Bracket alloc dealloc use) s nt f) -> fmap f $ IdentityT $ do
-          sendM $
-            X.bracket
-              (finish $ runBracket finish $ nt $ alloc <$ s)
-              (\sa -> finish $ runBracket finish $ nt $ fmap dealloc sa)
-              (\sa -> finish $ runBracket finish $ nt $ fmap use sa)
+runBracket finish (Freer m) = m $ \u ->
+  case decomp u of
+    Left x -> liftEff $ hoist (runBracket finish) x
+    Right (Yo (Bracket alloc dealloc use) s nt f) -> fmap f $ do
+      sendM $
+        X.bracket
+          (finish . runBracket finish . nt $ alloc <$ s)
+          (\sa -> finish . runBracket finish . nt $ fmap dealloc sa)
+          (\sa -> finish . runBracket finish . nt $ fmap use sa)
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
