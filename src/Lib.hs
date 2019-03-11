@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE UnicodeSyntax         #-}
 {-# OPTIONS_GHC -Wall              #-}
 
 module Lib where
@@ -37,8 +38,7 @@ data Bracket (m :: * -> *) a where
 
 
 runBracket
-    :: forall r a
-     . Member (Lift IO) r
+    :: Member (Lift IO) r
     => (Eff r ~> IO)
     -> Eff (Bracket ': r) a
     -> Eff r a
@@ -51,10 +51,10 @@ runBracket finish = interpret $ \start continue -> \case
 
 
 interpret
-    :: (forall m tk
+    :: (∀ m tk
            . Functor tk
           => (m ~> Eff r .: tk)
-          -> (forall a b. (a -> m b) -> tk a -> Eff r (tk b))
+          -> (∀ a b. (a -> m b) -> tk a -> Eff r (tk b))
           -> e m
           ~> Eff r .: tk
        )
@@ -81,7 +81,7 @@ interpretLift f (Freer m) = m $ \u ->
 
 
 interpretSimple
-    :: (forall m. e m ~> Eff r)
+    :: (∀ m. e m ~> Eff r)
     -> Eff (e ': r)
     ~> Eff r
 interpretSimple f (Freer m) = m $ \u ->
@@ -91,19 +91,32 @@ interpretSimple f (Freer m) = m $ \u ->
       fmap (z . (<$ tk)) $ f e
 
 
+statefully
+    :: (∀ m. e m ~> StateT s (Eff r))
+    -> s
+    -> Eff (e ': r) a
+    -> Eff r (s, a)
+statefully f s =
+  shundle
+    (StateT . const)
+    (flip runStateT s)
+    (uncurry $ flip runStateT)
+    (s, ()) $ \_ tk -> fmap (<$ tk) . f
+
+
 shundle
-   :: forall r a e t f
+   :: ∀ a f t e r
     . ( MonadTrans t
-      , forall m. Monad m => Monad (t m)
+      , ∀ m. Monad m => Monad (t m)
       , Functor f
       )
-   => (forall x. Eff r (f x) -> t (Eff r) x)
-   -> (forall x. t (Eff r) x -> Eff r (f x))
-   -> (forall x. f (t (Eff r) x) -> Eff r (f x))
+   => (∀ x. Eff r (f x) -> t (Eff r) x)
+   -> (∀ x. t (Eff r) x -> Eff r (f x))
+   -> (∀ x. f (t (Eff r) x) -> Eff r (f x))
    -> f ()
-   -> (forall m tk y
+   -> (∀ m tk y
           . Functor tk
-         => (forall x. f () -> tk (m x) -> Eff r (f (tk x)))
+         => (∀ x. f () -> tk (m x) -> Eff r (f (tk x)))
          -> tk ()
          -> e m y
          -> t (Eff r) (tk y)
@@ -112,7 +125,7 @@ shundle
    -> Eff r (f a)
 shundle intro finish dist tk zonk = finish . go
   where
-    go :: forall x. Eff (e ': r) x -> t (Eff r) x
+    go :: ∀ x. Eff (e ': r) x -> t (Eff r) x
     go (Freer m) = m $ \u ->
       case decomp u of
         Left x -> intro . liftEff . weave tk dist $ hoist go x
@@ -135,7 +148,7 @@ runError =
             Left e -> E.ExceptT $ start (Right ()) $ (handle e <$ tk)
 
 
-runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
+runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
 runState s =
   shundle
     (StateT . const)
