@@ -1,29 +1,17 @@
-{-# LANGUAGE BlockArguments             #-}
-{-# LANGUAGE ConstraintKinds            #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures             #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE QuantifiedConstraints      #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE ViewPatterns               #-}
-{-# OPTIONS_GHC -Wall                   #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# OPTIONS_GHC -Wall              #-}
 
 module Lib where
 
-
 import qualified Control.Exception as X
-import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
 import           Data.OpenUnion.Internal
 import           Eff.Type
@@ -38,10 +26,6 @@ data State s (m :: * -> *) a where
 data Error e (m :: * -> *) a where
   Throw :: e -> Error e m a
   Catch :: m a -> (e -> m a) -> Error e m a
-
-
-data Scoped (m :: * -> *) a where
-  Scoped :: m () -> m a -> Scoped m a
 
 
 data Bracket (m :: * -> *) a where
@@ -96,38 +80,68 @@ interpretLift f (Freer m) = m $ \u ->
       fmap (z . (<$ tk)) $ f e
 
 
-runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
-runState s = flip runStateT s . go
-  where
-    go :: forall x. Eff (State s ': r) x -> StateT s (Eff r) x
-    go (Freer m) = m $ \u ->
-      case decomp u of
-        Left x -> StateT $ \s' ->
-          liftEff . weave (s', ())
-                          (uncurry (flip runStateT))
-                  $ hoist go x
-        Right (Yo Get sf nt f) -> fmap f $ do
-          s' <- get
-          go $ nt $ pure s' <$ sf
-        Right (Yo (Put s') sf nt f) -> fmap f $ do
-          put s'
-          go $ nt $ pure () <$ sf
+interpretSimple
+    :: (forall m. e m ~> Eff r)
+    -> Eff (e ': r)
+    ~> Eff r
+interpretSimple f (Freer m) = m $ \u ->
+  case decomp u of
+    Left  x -> liftEff $ hoist (interpretSimple f) x
+    Right (Yo e tk _ z) ->
+      fmap (z . (<$ tk)) $ f e
 
 
-runError :: forall e r a. Eff (Error e ': r) a -> Eff r (Either e a)
-runError = E.runExceptT . go
+shundle
+   :: forall r a e t f
+    . ( MonadTrans t
+      , forall m. Monad m => Monad (t m)
+      , Functor f
+      )
+   => (forall x. Eff r (f x) -> t (Eff r) x)
+   -> (forall x. t (Eff r) x -> Eff r (f x))
+   -> (forall x. f (t (Eff r) x) -> Eff r (f x))
+   -> f ()
+   -> (forall m tk y
+          . Functor tk
+         => (forall x. f () -> tk (m x) -> Eff r (f (tk x)))
+         -> tk ()
+         -> e m y
+         -> t (Eff r) (tk y)
+      )
+   -> Eff (e ': r) a
+   -> Eff r (f a)
+shundle intro finish dist tk zonk = finish . go
   where
-    go :: forall x. Eff (Error e ': r) x -> E.ExceptT e (Eff r) x
+    go :: forall x. Eff (e ': r) x -> t (Eff r) x
     go (Freer m) = m $ \u ->
       case decomp u of
-        Left x -> E.ExceptT  $
-          liftEff . weave (Right ()) (either (pure . Left) E.runExceptT)
-                  $ hoist go x
-        Right (Yo (Throw e) _ _ _) -> E.throwE e
-        Right (Yo (Catch try handle) sf nt f) -> fmap f $ E.ExceptT $ do
-          ma <- runError $ nt $ (try <$ sf)
+        Left x -> intro . liftEff . weave tk dist $ hoist go x
+        Right (Yo e sf nt f) -> fmap f $
+          zonk (\r -> shundle intro finish dist r zonk . nt) sf e
+
+
+runError :: Eff (Error e ': r) a -> Eff r (Either e a)
+runError =
+  shundle
+    E.ExceptT
+    E.runExceptT
+    (either (pure . Left) E.runExceptT)
+    (Right ()) $ \start tk -> \case
+        Throw e -> E.throwE e
+        Catch try handle -> do
+          ma <- lift $ start (Right ()) $ (try <$ tk)
           case ma of
-            Right _ -> pure ma
-            Left e -> do
-              runError $ nt $ (handle e <$ sf)
+            Right a -> pure a
+            Left e -> E.ExceptT $ start (Right ()) $ (handle e <$ tk)
+
+
+runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
+runState s =
+  shundle
+    (StateT . const)
+    (flip runStateT s)
+    (uncurry $ flip runStateT)
+    (s, ()) $ \_ tk -> \case
+        Get -> get >>= pure . (<$ tk)
+        Put s' -> put s' >> pure tk
 
