@@ -112,9 +112,18 @@ usingFreer :: Monad m => (f (Freer f) ~> m) -> Freer f a -> m a
 usingFreer k m = runFreer m k
 
 
---------------------------------------------------------------------------------
----- | Analogous to MTL's 'lift'.
---raise :: Eff r a -> Eff (u ': r) a
---raise = hoistEff weaken
---{-# INLINE raise #-}
+-- | Inject whole @'Union' r@ into a weaker @'Union' (any ': r)@ that has one
+-- more summand.
+--
+-- /O(1)/
+weaken :: Union r (Eff r) a -> Union (any ': r) (Eff (any ': r)) a
+weaken (Union n (Yo e tk f z)) = Union (n + 1) $
+  Yo e tk (\a -> raise $ f a) z
+{-# INLINE weaken #-}
+
+------------------------------------------------------------------------------
+-- | Analogous to MTL's 'lift'.
+raise :: Eff r a -> Eff (u ': r) a
+raise = hoistEff weaken
+{-# INLINE raise #-}
 

@@ -9,8 +9,8 @@ import Data.Functor.Identity
 countDown :: Int -> Int
 countDown start = fst $ run $ runState start go
   where
-    go :: Eff '[State Int, Identity] Int
-    go = get >>= (\n -> if n <= 0 then (pure n) else (put (n-1)) >> go)
+    go :: Eff '[State Int, Lift (Identity)] Int
+    go = send Get >>= (\n -> if n <= 0 then (pure n) else (send $ Put (n-1)) >> go)
 
 
 

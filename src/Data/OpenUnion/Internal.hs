@@ -45,6 +45,7 @@ module Data.OpenUnion.Internal where
 import GHC.TypeLits (TypeError, ErrorMessage(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Functor.Identity
+import Data.Functor.Compose
 
 
 ------------------------------------------------------------------------------
@@ -67,6 +68,7 @@ instance HFunctor (Union r) where
 type (.:) f g a = f (g a)
 infixr 9 .:
 
+
 data Yo e m a where
   Yo :: (Monad m, Monad n, Functor tk)
      => e m a
@@ -77,6 +79,19 @@ data Yo e m a where
 
 instance HFunctor (Yo e) where
   hoist f (Yo e s nt z) = Yo e s (f . nt) z
+
+
+weave
+    :: (Monad m, Monad n, Functor f)
+    => f ()
+    -> (forall x. f (m x) -> n (f x))
+    -> Union r m a
+    -> Union r n (f a)
+weave s' distrib (Union w (Yo e s nt f)) =
+  Union w $
+    Yo e (Compose $ s <$ s')
+         (fmap Compose . distrib . fmap nt . getCompose)
+         (fmap f . getCompose)
 
 
 
@@ -238,14 +253,6 @@ extract :: Union '[t] m a -> Yo t m a
 extract (Union _ a) = unsafeCoerce a
 {-# INLINE extract #-}
 
--- | Inject whole @'Union' r@ into a weaker @'Union' (any ': r)@ that has one
--- more summand.
---
--- /O(1)/
-weaken :: Union r m a -> Union (any ': r) m a
-weaken (Union n a) = Union (n + 1) a
-{-# INLINE weaken #-}
-
 -- | Introduce a type directly under the head of the 'Union'.
 intro1 :: Union (u ': r) m a -> Union (u ': v ': r) m a
 intro1 (Union 0 a) = Union 0 a
@@ -276,13 +283,13 @@ type family xs :++: ys where
   '[] :++: ys = ys
   (x ': xs) :++: ys = x ': (xs :++: ys)
 
-class Weakens q where
-  weakens :: Union r m a -> Union (q :++: r) m a
+-- class Weakens q where
+--   weakens :: Union r m a -> Union (q :++: r) m a
 
-instance Weakens '[] where
-  weakens = id
-  {-# INLINE weakens #-}
+-- instance Weakens '[] where
+--   weakens = id
+--   {-# INLINE weakens #-}
 
-instance Weakens xs => Weakens (x ': xs) where
-  weakens u = weaken (weakens @xs u)
-  {-# INLINEABLE weakens #-}
+-- instance Weakens xs => Weakens (x ': xs) where
+--   weakens u = weaken (weakens @xs u)
+--   {-# INLINEABLE weakens #-}

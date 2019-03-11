@@ -1,78 +1,207 @@
-{-# LANGUAGE DataKinds              #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE LambdaCase             #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TypeApplications       #-}
-{-# LANGUAGE TypeOperators          #-}
-{-# OPTIONS_GHC -Wall               #-}
+{-# LANGUAGE BlockArguments             #-}
+{-# LANGUAGE ConstraintKinds            #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingVia                #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE QuantifiedConstraints      #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE ViewPatterns               #-}
+{-# OPTIONS_GHC -Wall                   #-}
 
 module Lib where
 
+
+import qualified Control.Exception as X
+import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
-import qualified Control.Monad.Trans.State.Strict as S
-import           Data.OpenUnion
-import           Eff.Interpretation
+import           Data.OpenUnion.Internal
 import           Eff.Type
+import           StateT
 
 
-data State s a where
-  Get :: State s s
-  Put :: s -> State s ()
+data State s (m :: * -> *) a where
+  Get :: State s m s
+  Put :: s -> State s m ()
 
 
-get :: Member (State s) r => Eff r s
-get = send Get
-{-# INLINE get #-}
+data Error e (m :: * -> *) a where
+  Throw :: e -> Error e m a
+  Catch :: m a -> (e -> m a) -> Error e m a
 
 
-put :: Member (State s) r => s -> Eff r ()
-put = send . Put
-{-# INLINE put #-}
+data Scoped (m :: * -> *) a where
+  Scoped :: m () -> m a -> Scoped m a
 
 
-foom :: Eff '[State String, IO] String
-foom = do
-  put "nice!"
-  put "nice!"
-  put "nice!"
-  get @String
+data Bracket (m :: * -> *) a where
+  Bracket
+      :: m a
+      -> (a -> m ())
+      -> (a -> m r)
+      -> Bracket m r
 
 
-runTeletype :: Member IO r => Eff (State String ': r) a -> Eff r a
-runTeletype = interpret $ \case
-    Get   -> send getLine
-    Put s -> send $ putStrLn s
+foo
+    :: ( Member (State String) r
+       , Member (Error Bool) r
+       , Member (Lift IO) r
+       )
+    => Eff r ()
+foo = do
+  z <- send $ Catch
+    do
+      send Get >>= sendM . putStrLn
+      send $ Put "works"
+      send Get >>= sendM . putStrLn
+      send $ Put "done"
+      void . send $ Throw False
+      sendM $ putStrLn "inside"
+      pure False
+    \False -> do
+      send Get >>= sendM . putStrLn
+      send $ Put "caught"
+      pure True
+  send Get >>= sendM . putStrLn
+  sendM $ print z
+
+
+bar
+    :: ( Member (State String) r
+       , Member Bracket r
+       , Member (Error Bool) r
+       , Member (Lift IO) r
+       )
+    => Eff r ()
+bar = do
+  res <- send $ Catch
+    do
+      send $ Bracket
+        do
+          send Get <* send (Put "allocated")
+        ( \a -> do
+            sendM $ putStrLn $ "deallocing: " ++ a
+            send Get >>= sendM . putStrLn
+        )
+        ( \a -> do
+            sendM $ putStrLn $ "using: " ++ a
+            send Get >>= sendM . putStrLn
+            void . send $ Throw False
+            send $ Put "used"
+            pure True
+        )
+    \(_ :: Bool) -> do
+      sendM $ putStrLn "fucking caught it!"
+      pure False
+  sendM $ putStrLn $ show res
+  send Get >>= sendM . putStrLn
+    -- \a -> do
+    --   send Get >>= sendM . putStrLn
+    --   send $ Put "YES"
 
 
 -- main :: IO ()
--- main = runM (runState "fuck" foom) >>= print
+-- main = (print =<<) . runM . runState "first" . runError @Bool $ foo >> foo
+
+-- main :: IO ()
+-- main = (print =<<) . runM . runState "first" . runState True $ send (Put "changed") >> send (Put False) >> send Get >>= sendM . putStrLn
+
+main :: IO ()
+main = (print =<<)
+     . runM
+     . runBracket runM
+     . runState "both"
+     . runError @Bool
+     $ bar
 
 
-runState :: s -> Eff (State s ': r) a -> Eff r (a, s)
-runState = stateful $ \case
-  Get    -> S.get
-  Put s' -> S.put s'
-{-# INLINE runState #-}
+runBracket
+    :: forall r a
+     . Member (Lift IO) r
+    => (Eff r ~> IO)
+    -> Eff (Bracket ': r) a
+    -> Eff r a
+runBracket finish = interpret $ \start continue -> \case
+  Bracket alloc dealloc use -> sendM $
+    X.bracket
+      (finish $ start alloc)
+      (finish . continue dealloc)
+      (finish . continue use)
 
 
-newtype Error e r where
-  Error :: e -> Error e r
+interpret
+    :: (forall m tk
+           . Functor tk
+          => (m ~> Eff r .: tk)
+          -> (forall a b. (a -> m b) -> tk a -> Eff r (tk b))
+          -> e m
+          ~> Eff r .: tk
+       )
+    -> Eff (e ': r)
+    ~> Eff r
+interpret f (Freer m) = m $ \u ->
+  case decomp u of
+    Left  x -> liftEff $ hoist (interpret f) x
+    Right (Yo e tk nt z) -> fmap z $
+      f (interpret f . nt . (<$ tk))
+        (\ff -> interpret f . nt . fmap ff)
+        e
 
 
-throwError :: Member (Error e) r => e -> Eff r a
-throwError = send . Error
-{-# INLINE throwError #-}
+
+interpretLift
+    :: (e ~> Eff r)
+    -> Eff (Lift e ': r)
+    ~> Eff r
+interpretLift f (Freer m) = m $ \u ->
+  case decomp u of
+    Left  x -> liftEff $ hoist (interpretLift f) x
+    Right (Yo (Lift e) tk _ z) ->
+      fmap (z . (<$ tk)) $ f e
 
 
-runError :: Eff (Error e ': r) a -> Eff r (Either e a)
-runError = shortCircuit $ \(Error e) -> E.throwE e
+runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
+runState s = flip runStateT s . go
+  where
+    go :: forall x. Eff (State s ': r) x -> StateT s (Eff r) x
+    go (Freer m) = m $ \u ->
+      case decomp u of
+        Left x -> StateT $ \s' ->
+          liftEff . weave (s', ())
+                          (uncurry (flip runStateT))
+                  $ hoist go x
+        Right (Yo Get sf nt f) -> fmap f $ do
+          s' <- get
+          go $ nt $ pure s' <$ sf
+        Right (Yo (Put s') sf nt f) -> fmap f $ do
+          put s'
+          go $ nt $ pure () <$ sf
 
 
-runErrorRelay :: Eff (Error e ': r) a -> Eff r (Either e a)
-runErrorRelay = relay (pure . Right) $ \(Error e) _ -> pure $ Left e
-
-
-subsume :: Member eff r => Eff (eff ': r) ~> Eff r
-subsume = interpret send
+runError :: forall e r a. Eff (Error e ': r) a -> Eff r (Either e a)
+runError = E.runExceptT . go
+  where
+    go :: forall x. Eff (Error e ': r) x -> E.ExceptT e (Eff r) x
+    go (Freer m) = m $ \u ->
+      case decomp u of
+        Left x -> E.ExceptT  $
+          liftEff . weave (Right ()) (either (pure . Left) E.runExceptT)
+                  $ hoist go x
+        Right (Yo (Throw e) _ _ _) -> E.throwE e
+        Right (Yo (Catch try handle) sf nt f) -> fmap f $ E.ExceptT $ do
+          ma <- runError $ nt $ (try <$ sf)
+          case ma of
+            Right _ -> pure ma
+            Left e -> do
+              runError $ nt $ (handle e <$ sf)
 
