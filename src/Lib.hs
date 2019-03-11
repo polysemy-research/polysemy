@@ -42,7 +42,7 @@ runBracket
     => (Eff r ~> IO)
     -> Eff (Bracket ': r) a
     -> Eff r a
-runBracket finish = interpret $ \start continue -> \case
+runBracket finish = deep $ \start continue -> \case
   Bracket alloc dealloc use -> sendM $
     X.bracket
       (finish $ start alloc)
@@ -50,7 +50,7 @@ runBracket finish = interpret $ \start continue -> \case
       (finish . continue use)
 
 
-interpret
+deep
     :: (∀ m tk
            . Functor tk
           => (m ~> Eff r .: tk)
@@ -60,12 +60,12 @@ interpret
        )
     -> Eff (e ': r)
     ~> Eff r
-interpret f (Freer m) = m $ \u ->
+deep f (Freer m) = m $ \u ->
   case decomp u of
-    Left  x -> liftEff $ hoist (interpret f) x
+    Left  x -> liftEff $ hoist (deep f) x
     Right (Yo e tk nt z) -> fmap z $
-      f (interpret f . nt . (<$ tk))
-        (\ff -> interpret f . nt . fmap ff)
+      f (deep f . nt . (<$ tk))
+        (\ff -> deep f . nt . fmap ff)
         e
 
 
@@ -73,11 +73,7 @@ interpretLift
     :: (e ~> Eff r)
     -> Eff (Lift e ': r)
     ~> Eff r
-interpretLift f (Freer m) = m $ \u ->
-  case decomp u of
-    Left  x -> liftEff $ hoist (interpretLift f) x
-    Right (Yo (Lift e) tk _ z) ->
-      fmap (z . (<$ tk)) $ f e
+interpretLift f = interpretSimple $ f . unLift
 
 
 interpretSimple
@@ -149,12 +145,7 @@ runError =
 
 
 runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
-runState s =
-  shundle
-    (StateT . const)
-    (flip runStateT s)
-    (uncurry $ flip runStateT)
-    (s, ()) $ \_ tk -> \case
-        Get -> get >>= pure . (<$ tk)
-        Put s' -> put s' >> pure tk
+runState = statefully $ \case
+  Get    -> get
+  Put s' -> put s'
 
