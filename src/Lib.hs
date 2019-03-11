@@ -52,79 +52,6 @@ data Bracket (m :: * -> *) a where
       -> Bracket m r
 
 
-foo
-    :: ( Member (State String) r
-       , Member (Error Bool) r
-       , Member (Lift IO) r
-       )
-    => Eff r ()
-foo = do
-  z <- send $ Catch
-    do
-      send Get >>= sendM . putStrLn
-      send $ Put "works"
-      send Get >>= sendM . putStrLn
-      send $ Put "done"
-      void . send $ Throw False
-      sendM $ putStrLn "inside"
-      pure False
-    \False -> do
-      send Get >>= sendM . putStrLn
-      send $ Put "caught"
-      pure True
-  send Get >>= sendM . putStrLn
-  sendM $ print z
-
-
-bar
-    :: ( Member (State String) r
-       , Member Bracket r
-       , Member (Error Bool) r
-       , Member (Lift IO) r
-       )
-    => Eff r ()
-bar = do
-  res <- send $ Catch
-    do
-      send $ Bracket
-        do
-          send Get <* send (Put "allocated")
-        ( \a -> do
-            sendM $ putStrLn $ "deallocing: " ++ a
-            send Get >>= sendM . putStrLn
-        )
-        ( \a -> do
-            sendM $ putStrLn $ "using: " ++ a
-            send Get >>= sendM . putStrLn
-            void . send $ Throw False
-            send $ Put "used"
-            pure True
-        )
-    \(_ :: Bool) -> do
-      sendM $ putStrLn "fucking caught it!"
-      pure False
-  sendM $ putStrLn $ show res
-  send Get >>= sendM . putStrLn
-    -- \a -> do
-    --   send Get >>= sendM . putStrLn
-    --   send $ Put "YES"
-
-
--- main :: IO ()
--- main = (print =<<) . runM . runState "first" . runError @Bool $ foo >> foo
-
--- main :: IO ()
--- main = (print =<<) . runM . runState "first" . runState True $ send (Put "changed") >> send (Put False) >> send Get >>= sendM . putStrLn
-
-main :: IO ()
-main = (print =<<)
-     . runM
-     . runBracket runM
-     . runState "both"
-     . runError @Bool
-     $ bar
-
-
 runBracket
     :: forall r a
      . Member (Lift IO) r
@@ -156,7 +83,6 @@ interpret f (Freer m) = m $ \u ->
       f (interpret f . nt . (<$ tk))
         (\ff -> interpret f . nt . fmap ff)
         e
-
 
 
 interpretLift
