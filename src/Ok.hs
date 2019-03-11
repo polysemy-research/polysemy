@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
@@ -14,7 +15,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE ViewPatterns               #-}
-{-# OPTIONS_GHC -Wall               #-}
+{-# OPTIONS_GHC -Wall                   #-}
 
 module Ok where
 
@@ -123,6 +124,39 @@ main = (print =<<)
      $ bar
 
 
+runBracket
+    :: forall r a
+     . Member (Lift IO) r
+    => (Eff r ~> IO)
+    -> Eff (Bracket ': r) a
+    -> Eff r a
+runBracket finish = interpret $ \start continue -> \case
+  Bracket alloc dealloc use -> sendM $
+    X.bracket
+      (finish $ start alloc)
+      (finish . continue dealloc)
+      (finish . continue use)
+
+
+interpret
+    :: (forall m tk
+           . Functor tk
+          => (m ~> Eff r .: tk)
+          -> (forall a b. (a -> m b) -> tk a -> Eff r (tk b))
+          -> e m
+          ~> Eff r .: tk
+       )
+    -> Eff (e ': r)
+    ~> Eff r
+interpret f (Freer m) = m $ \u ->
+  case decomp u of
+    Left  x -> liftEff $ hoist (interpret f) x
+    Right (Yo e tk nt z) -> fmap z $
+      f (interpret f . nt . (<$ tk))
+        (\ff -> interpret f . nt . fmap ff)
+        e
+
+
 weave
     :: (Monad m, Monad n, Functor f)
     => f ()
@@ -136,36 +170,28 @@ weave s' distrib (Union w (Yo e s nt f)) =
          (fmap f . getCompose)
 
 
-runBracket
-    :: forall r a
-     . Member (Lift IO) r
-    => (Eff r ~> IO)
-    -> Eff (Bracket ': r) a
-    -> Eff r a
-runBracket finish = interpret $ \start continue -> \case
-  Bracket alloc dealloc use ->
-    sendM $
-      X.bracket
-        (finish $ start alloc)
-        (\sa -> finish $ continue dealloc sa)
-        (\sa -> finish $ continue use sa)
+-- shundle ::
 
 
-interpret
-    :: (forall m f. Functor f
-                 => (     m ~> Eff r .: f)
-                 -> (forall a b. (a -> m b) -> f a -> Eff r (f b))
-                 -> e m
-                 ~> Eff r .: f)
-    -> Eff (e ': r)
-    ~> Eff r
-interpret f (Freer m) = m $ \u ->
-  case decomp u of
-    Left  x -> liftEff $ hoist (interpret f) x
-    Right (Yo e s nt z) ->
-      fmap z $ f (interpret f . nt . (<$ s))
-                 (\ff sf -> interpret f . nt $ fmap ff sf )
-                 e
+-- thread
+--     :: Functor s
+--     => (forall m tk y
+--            . Functor tk
+--           => (forall x. m x -> Eff r (s (tk x)))
+--           -> (forall a b. (a -> m b) -> s (tk a) -> Eff r (s (tk b)))
+--           -> e m y
+--           -> Eff r (s (tk y))
+--        )
+--     -> s ()
+--     -> Eff (e ': r) a
+--     -> Eff r (s a)
+-- thread f tk (fmap (<$ tk) -> Freer m) = m $ \u ->
+--   case decomp u of
+--     Left  x -> liftEff $ _  $ hoist (thread f tk) x
+--     -- Right (Yo e tk nt z) -> fmap z $
+--     --   f (thread f . nt . (<$ tk))
+--     --     (\ff -> thread f . nt . fmap ff)
+--     --     e
 
 
 interpretLift
@@ -175,10 +201,8 @@ interpretLift
 interpretLift f (Freer m) = m $ \u ->
   case decomp u of
     Left  x -> liftEff $ hoist (interpretLift f) x
-    Right (Yo (Lift e) s _ z) ->
-      fmap (z . (<$ s)) $ f e
-
-type (.:) f g a = f (g a)
+    Right (Yo (Lift e) tk _ z) ->
+      fmap (z . (<$ tk)) $ f e
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)

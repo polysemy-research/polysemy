@@ -86,9 +86,9 @@ sendM = liftEff . inj . Lift
 -- | Drop out of an 'Eff' stack into the only remaining monadic effect inside
 -- it.
 runM :: Monad m => Eff '[Lift m] a -> m a
-runM = usingFreer $ \(extract -> Yo (Lift m) s nt f) -> do
+runM = usingFreer $ \(extract -> Yo (Lift m) tk nt f) -> do
   z <- m
-  fmap f $ runM $ nt $ pure z <$ s
+  fmap f $ runM $ nt $ pure z <$ tk
 {-# INLINE runM #-}
 
 ------------------------------------------------------------------------------

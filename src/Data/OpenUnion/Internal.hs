@@ -64,13 +64,15 @@ instance HFunctor (Union r) where
   hoist f (Union w t) = Union w $ hoist f t
 
 
--- track f in the type and give a `f ()`?
+type (.:) f g a = f (g a)
+infixr 9 .:
+
 data Yo e m a where
-  Yo :: (Monad m, Monad n, Functor f)
+  Yo :: (Monad m, Monad n, Functor tk)
      => e m a
-     -> f ()
-     -> (forall x. f (m x) -> n (f x))
-     -> (f a -> b)
+     -> tk ()
+     -> (tk .: m ~> n .: tk)
+     -> (tk a -> b)
      -> Yo e n b
 
 instance HFunctor (Yo e) where
