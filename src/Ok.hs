@@ -2,6 +2,8 @@
 {-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
@@ -23,11 +25,10 @@ module Ok where
 import qualified Control.Exception as X
 import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
-import           Control.Monad.Trans.State hiding (State, runState)
 import           Data.Functor.Compose
 import           Data.OpenUnion.Internal
-import           Data.Tuple
 import           Eff.Type
+import           StateT
 
 
 data State s (m :: * -> *) a where
@@ -170,28 +171,31 @@ weave s' distrib (Union w (Yo e s nt f)) =
          (fmap f . getCompose)
 
 
--- shundle ::
 
 
--- thread
---     :: Functor s
---     => (forall m tk y
---            . Functor tk
---           => (forall x. m x -> Eff r (s (tk x)))
---           -> (forall a b. (a -> m b) -> s (tk a) -> Eff r (s (tk b)))
---           -> e m y
---           -> Eff r (s (tk y))
+-- transform
+--     :: (Monad m, MonadTrans t)
+--     => Union r m a
+--     -> Union r (t m) a
+-- trnasform (Union w (Yo e s nt f)) =
+--   Union w $
+--     Yo e (Compose $ s <$ s')
+--          (fmap Compose . distrib . fmap nt . getCompose)
+--          (fmap f . getCompose)
+
+
+-- shundle
+--     :: forall s t e r
+--      . ( Functor s
 --        )
+--     => (forall m. Monad m => s .: m ~> m .: s)
 --     -> s ()
---     -> Eff (e ': r) a
---     -> Eff r (s a)
--- thread f tk (fmap (<$ tk) -> Freer m) = m $ \u ->
---   case decomp u of
---     Left  x -> liftEff $ _  $ hoist (thread f tk) x
---     -- Right (Yo e tk nt z) -> fmap z $
---     --   f (thread f . nt . (<$ tk))
---     --     (\ff -> thread f . nt . fmap ff)
---     --     e
+--     -> Eff (e ': r)
+--     ~> Eff (e ': r) .: s
+-- shundle distrib tk' = usingFreer _
+--   -- where
+--   --   go :: Eff (e ': r) ~> Freer (Lift (Compose m f))
+--   --   go = undefined
 
 
 interpretLift
@@ -206,22 +210,21 @@ interpretLift f (Freer m) = m $ \u ->
 
 
 runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
-runState s = fmap swap . flip runStateT s . go
+runState s = flip runStateT s . go
   where
     go :: forall x. Eff (State s ': r) x -> StateT s (Eff r) x
     go (Freer m) = m $ \u ->
       case decomp u of
         Left x -> StateT $ \s' ->
-          fmap swap . liftEff
-                    . weave (s', ())
-                            (uncurry ((fmap swap .) . flip runStateT))
-                    $ hoist go x
-        Right (Yo Get sf nt f) -> do
+          liftEff . weave (s', ())
+                          (uncurry (flip runStateT))
+                  $ hoist go x
+        Right (Yo Get sf nt f) -> fmap f $ do
           s' <- get
-          go $ fmap f $ nt $ pure s' <$ sf
-        Right (Yo (Put s') sf nt f) -> do
+          go $ nt $ pure s' <$ sf
+        Right (Yo (Put s') sf nt f) -> fmap f $ do
           put s'
-          go $ fmap f $ nt $ pure () <$ sf
+          go $ nt $ pure () <$ sf
 
 
 runError :: forall e r a. Eff (Error e ': r) a -> Eff r (Either e a)

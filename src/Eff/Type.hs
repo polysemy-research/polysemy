@@ -1,11 +1,14 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE KindSignatures   #-}
-{-# LANGUAGE MonoLocalBinds   #-}
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE TypeOperators    #-}
-{-# LANGUAGE ViewPatterns     #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveFunctor      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia        #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE KindSignatures     #-}
+{-# LANGUAGE MonoLocalBinds     #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -Wall       #-}
 
@@ -22,7 +25,12 @@ import Data.Functor.Identity
 import Data.OpenUnion.Internal
 
 
-newtype Lift m (n :: * -> *) a = Lift { unLift :: m a }
+newtype Lift m (n :: * -> *) a = Lift
+  { unLift :: m a
+  }
+  deriving Functor
+  deriving (Applicative, Monad) via m
+
 
 type Eff (r :: [(* -> *) -> * -> *]) = Freer (Union r)
 
