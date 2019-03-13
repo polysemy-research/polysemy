@@ -75,6 +75,9 @@ instance MonadTrans (StateT s) where
 
 instance Monad m => MonadState s (StateT s m) where
   get   = StateT $ \s -> pure (s, s)
+  {-# INLINE get #-}
   put s = StateT $ \_ -> pure (s, ())
+  {-# INLINE put #-}
   state = StateT . fmap (pure . swap)
+  {-# INLINE state #-}
 

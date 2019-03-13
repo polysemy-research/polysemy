@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -ddump-simpl -dsuppress-all #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE GADTs                 #-}
@@ -48,6 +49,7 @@ runBracket finish = deep $ \start continue -> \case
       (finish $ start alloc)
       (finish . continue dealloc)
       (finish . continue use)
+{-# INLINE runBracket #-}
 
 
 deep
@@ -67,6 +69,7 @@ deep f (Freer m) = m $ \u ->
       f (deep f . nt . (<$ tk))
         (\ff -> deep f . nt . fmap ff)
         e
+{-# INLINE deep #-}
 
 
 interpretLift
@@ -74,6 +77,7 @@ interpretLift
     -> Eff (Lift e ': r)
     ~> Eff r
 interpretLift f = interpretSimple $ f . unLift
+{-# INLINE interpretLift #-}
 
 
 interpretSimple
@@ -85,6 +89,7 @@ interpretSimple f (Freer m) = m $ \u ->
     Left  x -> liftEff $ hoist (interpretSimple f) x
     Right (Yo e tk _ z) ->
       fmap (z . (<$ tk)) $ f e
+{-# INLINE interpretSimple #-}
 
 
 statefully
@@ -98,6 +103,7 @@ statefully f s =
     (flip runStateT s)
     (uncurry $ flip runStateT)
     (s, ()) $ \_ tk -> fmap (<$ tk) . f
+{-# INLINE statefully #-}
 
 
 shundle
@@ -127,6 +133,7 @@ shundle intro finish dist tk zonk = finish . go
         Left x -> intro . liftEff . weave tk dist $ hoist go x
         Right (Yo e sf nt f) -> fmap f $
           zonk (\r -> shundle intro finish dist r zonk . nt) sf e
+{-# INLINE shundle #-}
 
 
 runError :: Eff (Error e ': r) a -> Eff r (Either e a)
@@ -142,10 +149,29 @@ runError =
           case ma of
             Right a -> pure a
             Left e -> E.ExceptT $ start (Right ()) $ (handle e <$ tk)
+{-# INLINE runError #-}
 
 
-runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
-runState = statefully $ \case
-  Get    -> get
-  Put s' -> put s'
+-- runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
+-- runState = statefully $ \case
+--   Get    -> get
+--   Put s' -> put s'
+{-# INLINE runState #-}
 
+
+runState :: forall s r a. s -> Eff (State s ': r) a -> Eff r (s, a)
+runState s = flip runStateT s . go
+  where
+    go :: forall x. Eff (State s ': r) x -> StateT s (Eff r) x
+    go (Freer m) = m $ \u ->
+      case decomp u of
+        Left x -> StateT $ \s' ->
+          liftEff . weave (s', ())
+                          (uncurry (flip runStateT))
+                  $ hoist go x
+        Right (Yo Get sf nt f) -> fmap f $ do
+          s' <- get
+          go $ nt $ pure s' <$ sf
+        Right (Yo (Put s') sf nt f) -> fmap f $ do
+          put s'
+          go $ nt $ pure () <$ sf

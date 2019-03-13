@@ -63,6 +63,7 @@ data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
 
 instance HFunctor (Union r) where
   hoist f (Union w t) = Union w $ hoist f t
+  {-# INLINE hoist #-}
 
 
 type (.:) f g a = f (g a)
@@ -79,6 +80,7 @@ data Yo e m a where
 
 instance HFunctor (Yo e) where
   hoist f (Yo e s nt z) = Yo e s (f . nt) z
+  {-# INLINE hoist #-}
 
 
 weave
@@ -92,11 +94,13 @@ weave s' distrib (Union w (Yo e s nt f)) =
     Yo e (Compose $ s <$ s')
          (fmap Compose . distrib . fmap nt . getCompose)
          (fmap f . getCompose)
+{-# INLINE weave #-}
 
 
 
 freeYo :: Monad m => e m a -> Yo e m a
 freeYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity
+{-# INLINE freeYo #-}
 
 
 -- | Takes a request of type @t :: * -> *@, and injects it into the 'Union'.

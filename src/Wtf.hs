@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                      #-}
+{-# OPTIONS_GHC -ddump-simpl -dsuppress-all #-}
 
 module Wtf where
 

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -ddump-simpl -dsuppress-all #-}
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -99,6 +100,7 @@ runM = usingFreer $ \(extract -> Yo (Lift m) tk nt f) -> do
   fmap f $ runM $ nt $ pure z <$ tk
 {-# INLINE runM #-}
 
+
 ------------------------------------------------------------------------------
 -- | Like 'runM' but for pure computations.
 run :: Eff '[Lift Identity] a -> a
@@ -110,6 +112,7 @@ run = runIdentity . runM
 -- | @'flip' 'runFreer'@
 usingFreer :: Monad m => (f (Freer f) ~> m) -> Freer f a -> m a
 usingFreer k m = runFreer m k
+{-# INLINE usingFreer #-}
 
 
 -- | Inject whole @'Union' r@ into a weaker @'Union' (any ': r)@ that has one
