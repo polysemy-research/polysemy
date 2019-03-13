@@ -23,6 +23,7 @@ dependencies:
 - base >= 4.7 && < 5
 - transformers
 - mtl
+- free
 
 library:
   ghc-options: -O2

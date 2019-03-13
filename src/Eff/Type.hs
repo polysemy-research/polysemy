@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -ddump-simpl -dsuppress-all #-}
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -36,7 +35,11 @@ newtype Lift m (n :: * -> *) a = Lift
 type Eff (r :: [(* -> *) -> * -> *]) = Freer (Union r)
 
 newtype Freer f a = Freer
-  { runFreer :: forall m. Monad m => (f (Freer f) ~> m) -> m a
+  { runFreer :: forall m z b
+              . Monad m
+             => (forall x. f z (Freer f) x -> m (z x))
+             -> (m (z a) -> b)
+             -> m b
   }
 
 instance Functor (Freer f) where
