@@ -11,13 +11,15 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# OPTIONS_GHC -Wall              #-}
 
 module TRYAGAIN where
 
-import Control.Monad.Trans.Class
 import Control.Monad
 import Unsafe.Coerce
 
@@ -107,9 +109,22 @@ data State s (m :: * -> *) a
   | Put s a
   deriving Functor
 
+
+data Error e (m :: * -> *) a
+  = Throw e
+  | forall x. Catch (m x) (e -> m x) (x -> a)
+
+deriving instance Functor (Error e m)
+
 instance Effect (State s) where
   weave s _ (Get k) = Get $ fmap (<$ s) k
   weave s _ (Put z k) = Put z $ k <$ s
+
+
+instance Effect (Error e) where
+  weave _ _ (Throw e) = Throw e
+  weave s f (Catch try handle k) =
+    Catch (f $ try <$ s) (\e -> f $ handle e <$ s) $ fmap k
 
 
 runState :: Eff (State s ': r) a -> s -> Eff r (s, a)
@@ -118,6 +133,24 @@ runState e = runF e (\a s -> pure (s, a)) $ \u ->
     Left x  -> \s' -> zoop $ fmap (uncurry (flip id)) $ weave (s', ()) (uncurry $ flip runState) x
     Right (Get k) -> \s' -> k s' s'
     Right (Put s' k) -> const $ k s'
+
+
+runError :: Eff (Error e ': r) a -> Eff r (Either e a)
+runError err = runF err (pure . Right) $ \u ->
+  case decomp u of
+    Left x  -> zoop
+             . fmap (either (pure . Left) id)
+             $ weave (Right ()) (either (pure . Left) runError) x
+    Right (Throw e) -> pure $ Left e
+    Right (Catch try handle k) -> do
+      ma <- runError try
+      case ma of
+        Right a -> k a
+        Left e -> do
+          ma' <- runError $ handle e
+          case ma' of
+            Left e' -> pure (Left e')
+            Right a -> k a
 
 
 runM :: Monad m => Eff '[Lift m] a -> m a
@@ -131,10 +164,17 @@ sendM = liftEff . inj . Lift
 
 
 main :: IO ()
-main = (print =<<) $ runM $ flip runState True $ flip runState "1" $ do
+main = (print =<<) $ runM $ flip runState "1" $ runError @Bool $ flip runState True $ do
   send $ Put "2" ()
-  sendM $ putStrLn "hello"
-  send $ Put False ()
+  send $ Catch @Bool
+    ( do
+      sendM $ putStrLn "hello"
+      send $ Put False ()
+      send $ Throw True
+    )
+    ( \e -> do
+      sendM $ putStrLn "caught"
+    ) id
 
 
 extract :: Union '[e] m a -> e m a
