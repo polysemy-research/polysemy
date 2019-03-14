@@ -152,6 +152,7 @@ instance Effect (Error e) where
     Catch (f $ try <$ s) (\e -> f $ handle e <$ s) $ fmap k
   {-# INLINE weave #-}
 
+
 throw :: Member (Error e) r => e -> Eff r a
 throw = send . Throw
 
@@ -166,6 +167,29 @@ runState e = runF e (\a s -> pure (s, a)) $ \u ->
     Right (Get k) -> \s' -> k s' s'
     Right (Put s' k) -> const $ k s'
 {-# INLINE runState #-}
+
+
+runRelayS'
+    :: (forall x. s -> x -> Eff r (s, x))
+    -> (forall x. e (Eff (e ': r)) (s -> Eff r (s, x)) -> s -> Eff r (s, x))
+    -> Eff (e ': r) a
+    -> s
+    -> Eff r (s, a)
+runRelayS' pure' bind' e = runF e (flip pure') $ \u ->
+  case decomp u of
+    Left x  -> \s' ->
+      zoop $ fmap (uncurry (flip id))
+           $ weave (s', ()) (uncurry $ runRelayS pure' bind') x
+    Right eff -> \s' -> bind' eff s'
+
+
+runRelayS
+    :: (forall x. s -> x -> Eff r (s, x))
+    -> (forall x. e (Eff (e ': r)) (s -> Eff r (s, x)) -> s -> Eff r (s, x))
+    -> s
+    -> Eff (e ': r) a
+    -> Eff r (s, a)
+runRelayS pure' bind' = flip $ runRelayS' pure' bind'
 
 
 runError :: Eff (Error e ': r) a -> Eff r (Either e a)
