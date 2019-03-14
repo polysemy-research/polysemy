@@ -22,6 +22,7 @@ module TRYAGAIN where
 
 import Control.Monad
 import Unsafe.Coerce
+import Data.Functor.Identity
 
 
 newtype Lift m (z :: * -> *) a = Lift
@@ -31,6 +32,7 @@ newtype Lift m (z :: * -> *) a = Lift
 
 instance Monad m => Effect (Lift m) where
   weave s _ (Lift a) = Lift $ fmap (<$ s) a
+  {-# INLINE weave #-}
 
 newtype F f a = F
   { runF
@@ -60,9 +62,11 @@ class FindElem (t :: k) (r :: [k]) where
 
 instance FindElem t (t ': r) where
   elemNo = P 0
+  {-# INLINE elemNo #-}
 
 instance {-# OVERLAPPABLE #-} FindElem t r => FindElem t (t' ': r) where
   elemNo = P $ 1 + unP (elemNo :: P t r)
+  {-# INLINE elemNo #-}
 
 class FindElem eff effs
       => Member (eff :: (* -> *) -> * -> *)
@@ -85,7 +89,7 @@ decomp (Union n a) = Left  $ Union (n - 1) a
 
 instance Monad m => Functor (Union r m) where
   fmap f (Union w t) = Union w $ fmap f t
-
+  {-# INLINE fmap #-}
 
 
 class (forall m. Monad m => Functor (e m)) => Effect e where
@@ -96,9 +100,10 @@ class (forall m. Monad m => Functor (e m)) => Effect e where
       -> e m a
       -> e n (s a)
 
+
 instance Effect (Union r) where
   weave s f (Union w e) = Union w $ weave s f e
-
+  {-# INLINE weave #-}
 
 
 type Eff r = F (Union r)
@@ -119,12 +124,14 @@ deriving instance Functor (Error e m)
 instance Effect (State s) where
   weave s _ (Get k) = Get $ fmap (<$ s) k
   weave s _ (Put z k) = Put z $ k <$ s
+  {-# INLINE weave #-}
 
 
 instance Effect (Error e) where
   weave _ _ (Throw e) = Throw e
   weave s f (Catch try handle k) =
     Catch (f $ try <$ s) (\e -> f $ handle e <$ s) $ fmap k
+  {-# INLINE weave #-}
 
 
 runState :: Eff (State s ': r) a -> s -> Eff r (s, a)
@@ -133,6 +140,7 @@ runState e = runF e (\a s -> pure (s, a)) $ \u ->
     Left x  -> \s' -> zoop $ fmap (uncurry (flip id)) $ weave (s', ()) (uncurry $ flip runState) x
     Right (Get k) -> \s' -> k s' s'
     Right (Put s' k) -> const $ k s'
+{-# INLINE runState #-}
 
 
 runError :: Eff (Error e ': r) a -> Eff r (Either e a)
@@ -151,16 +159,24 @@ runError err = runF err (pure . Right) $ \u ->
           case ma' of
             Left e' -> pure (Left e')
             Right a -> k a
+{-# INLINE runError #-}
 
 
 runM :: Monad m => Eff '[Lift m] a -> m a
 runM e = runF e pure $ join . unLift . extract
+{-# INLINE runM #-}
+
+run :: Eff '[Lift Identity] a -> a
+run = runIdentity . runM
+{-# INLINE run #-}
 
 send :: Member eff r => eff (Eff r) a -> Eff r a
 send = liftEff . inj
+{-# INLINE send #-}
 
 sendM :: Member (Lift m) r => m a -> Eff r a
 sendM = liftEff . inj . Lift
+{-# INLINE sendM #-}
 
 
 main :: IO ()
@@ -185,30 +201,39 @@ extract (Union _ a) = unsafeCoerce a
 
 liftEff :: Union r (Eff r) a -> Eff r a
 liftEff u = F $ \kp kf -> kf $ fmap kp u
+{-# INLINE liftEff #-}
 
 
 zoop :: Union r (Eff r) (Eff r a) -> Eff r a
 zoop m = join $ liftEff m
+{-# INLINE zoop #-}
 
 
 iter :: (f (F f) a -> a) -> F f a -> a
 iter phi xs = runF xs id phi
+{-# INLINE iter #-}
 
 
 iterM :: Monad m => (f (F f) (m a) -> m a) -> F f a -> m a
 iterM phi xs = runF xs pure phi
+{-# INLINE iterM #-}
 
 
 instance Functor (F f) where
   fmap f (F g) = F (\kp -> g (kp . f))
+  {-# INLINE fmap #-}
 
 
 instance Applicative (F f) where
   pure a = F (\kp _ -> kp a)
+  {-# INLINE pure #-}
   F f <*> F g = F (\kp kf -> f (\a -> g (kp . a) kf) kf)
+  {-# INLINE (<*>) #-}
 
 
 instance Monad (F f) where
   return = pure
+  {-# INLINE return #-}
   F m >>= f = F (\kp kf -> m (\a -> runF (f a) kp kf) kf)
+  {-# INLINE (>>=) #-}
 

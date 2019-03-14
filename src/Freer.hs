@@ -155,7 +155,7 @@ runState
 runState s (Pure a) = Pure (s, a)
 runState s (Free (L (Lift (Get k)))) = runState s $ k s
 runState _ (Free (L (Lift (Put s k)))) = runState s k
-runState s (Free (R k)) = Free $ _ $ weave (s, ()) (uncurry runState) k
+runState s (Free (R k)) = Free $ weave (s, ()) (uncurry runState) k
 
 
 runExc
