@@ -117,6 +117,7 @@ class (forall m. Monad m => Functor (e m)) => Effect e where
       -> e m a
       -> e n (s a)
   weave s _ = coerce . fmap (<$ s)
+  {-# INLINE weave #-}
 
 
 instance Effect (Union r) where
@@ -127,7 +128,7 @@ instance Effect (Union r) where
 type Eff r = F (Union r)
 
 
-data State s (m :: * -> *) a
+data State s m a
   = Get (s -> a)
   | Put s a
   deriving (Functor, Effect)
@@ -139,25 +140,23 @@ put :: Member (State s) r => s -> Eff r ()
 put s = send $ Put s ()
 
 
-data Error e (m :: * -> *) a
+data Error e m a
   = Throw e
   | forall x. Catch (m x) (e -> m x) (x -> a)
 
-throw :: Member (Error e) r => e -> Eff r a
-throw = send . Throw
-
-catch :: Member (Error e) r => Eff r a -> (e -> Eff r a) -> Eff r a
-catch try handle = send $ Catch try handle id
-
-
 deriving instance Functor (Error e m)
-
 
 instance Effect (Error e) where
   weave _ _ (Throw e) = Throw e
   weave s f (Catch try handle k) =
     Catch (f $ try <$ s) (\e -> f $ handle e <$ s) $ fmap k
   {-# INLINE weave #-}
+
+throw :: Member (Error e) r => e -> Eff r a
+throw = send . Throw
+
+catch :: Member (Error e) r => Eff r a -> (e -> Eff r a) -> Eff r a
+catch try handle = send $ Catch try handle id
 
 
 runState :: Eff (State s ': r) a -> s -> Eff r (s, a)
