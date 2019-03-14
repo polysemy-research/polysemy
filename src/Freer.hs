@@ -20,14 +20,8 @@ import Control.Monad
 
 
 
-class HFunctor h where
-  hmap
-      :: (Functor f, Functor g)
-      => (f ~> g)
-      -> h f ~> h g
 
-
-class HFunctor r => Syntax r where
+class Syntax r where
   emap
       :: (m a -> m b)
       -> r m a
@@ -52,10 +46,6 @@ instance Functor m => Functor (Exc e m) where
   fmap _ (Throw e) = Throw e
   fmap f (Catch a b c) = Catch a b (fmap f . c)
 
-
-instance HFunctor (Exc e) where
-  hmap _ (Throw e) = Throw e
-  hmap f (Catch a b c) = Catch (f a) (f . b) (f . c)
 
 
 instance Syntax (Exc e) where
@@ -93,10 +83,6 @@ instance Syntax r => Monad (Free r) where
   Pure v >>= prog = prog v
   Free op >>= prog = Free (emap (>>= prog) op)
 
-
-instance (HFunctor f, HFunctor g) => HFunctor (f :+: g) where
-  hmap f (L l) = L $ hmap f l
-  hmap f (R r) = R $ hmap f r
 
 instance (Syntax f, Syntax g) => Syntax (f :+: g) where
   emap f (L l) = L $ emap f l
@@ -139,9 +125,6 @@ data State s a where
 
 newtype Lift r (m :: * -> *) a = Lift (r (m a))
   deriving Functor
-
-instance Functor r => HFunctor (Lift r) where
-  hmap f (Lift op) = Lift $ fmap f op
 
 instance Functor r => Syntax (Lift r) where
   emap f (Lift op) = Lift $ fmap f op

@@ -1,6 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE BlockArguments        #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DerivingVia           #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -14,15 +18,18 @@
 {-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
+
 {-# OPTIONS_GHC -Wall              #-}
 
 module TRYAGAIN where
 
 import Control.Monad
-import Unsafe.Coerce
 import Data.Functor.Identity
+import Unsafe.Coerce
+import Data.Coerce
 
 
 newtype Lift m (z :: * -> *) a = Lift
@@ -94,11 +101,22 @@ instance Monad m => Functor (Union r m) where
 
 class (forall m. Monad m => Functor (e m)) => Effect e where
   weave
-      :: (Monad m, Monad n, Functor s)
+      :: (Functor s, Monad m)
       => s ()
       -> (forall x. s (m x) -> n (s x))
       -> e m a
       -> e n (s a)
+
+  default weave
+      :: ( Coercible (e m (s a)) (e n (s a))
+         , Functor s
+         , Monad m
+         )
+      => s ()
+      -> (forall x. s (m x) -> n (s x))
+      -> e m a
+      -> e n (s a)
+  weave s _ = coerce . fmap (<$ s)
 
 
 instance Effect (Union r) where
@@ -112,19 +130,27 @@ type Eff r = F (Union r)
 data State s (m :: * -> *) a
   = Get (s -> a)
   | Put s a
-  deriving Functor
+  deriving (Functor, Effect)
+
+get :: Member (State s) r => Eff r s
+get = send $ Get id
+
+put :: Member (State s) r => s -> Eff r ()
+put s = send $ Put s ()
 
 
 data Error e (m :: * -> *) a
   = Throw e
   | forall x. Catch (m x) (e -> m x) (x -> a)
 
-deriving instance Functor (Error e m)
+throw :: Member (Error e) r => e -> Eff r a
+throw = send . Throw
 
-instance Effect (State s) where
-  weave s _ (Get k) = Get $ fmap (<$ s) k
-  weave s _ (Put z k) = Put z $ k <$ s
-  {-# INLINE weave #-}
+catch :: Member (Error e) r => Eff r a -> (e -> Eff r a) -> Eff r a
+catch try handle = send $ Catch try handle id
+
+
+deriving instance Functor (Error e m)
 
 
 instance Effect (Error e) where
@@ -181,16 +207,15 @@ sendM = liftEff . inj . Lift
 
 main :: IO ()
 main = (print =<<) $ runM $ flip runState "1" $ runError @Bool $ flip runState True $ do
-  send $ Put "2" ()
-  send $ Catch @Bool
-    ( do
+  put "2"
+  catch
+    do
       sendM $ putStrLn "hello"
-      send $ Put False ()
-      send $ Throw True
-    )
-    ( \e -> do
+      put False
+      throw True
+    \(_ :: Bool) -> do
       sendM $ putStrLn "caught"
-    ) id
+
 
 
 extract :: Union '[e] m a -> e m a
