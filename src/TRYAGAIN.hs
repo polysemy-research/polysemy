@@ -41,7 +41,7 @@ newtype Lift m (z :: * -> *) a = Lift
   deriving (Functor, Applicative, Monad) via m
 
 
-instance Monad m => Effect (Lift m) where
+instance Functor m => Effect (Lift m) where
   weave s _ (Lift a) = Lift $ fmap (<$ s) a
   {-# INLINE weave #-}
 
@@ -63,7 +63,7 @@ data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
   Union :: Effect e => Word -> e m a -> Union r m a
 
 
-unsafeInj :: (Monad m, Effect e) => Word -> e m a -> Union r m a
+unsafeInj :: Effect e => Word -> e m a -> Union r m a
 unsafeInj w = Union w
 {-# INLINE unsafeInj #-}
 
@@ -121,16 +121,16 @@ raise :: Eff r a -> Eff (e ': r) a
 raise = runEff pure $ zoop . hoist raise . weaken
 
 
-instance Monad m => Functor (Union r m) where
+instance Functor m => Functor (Union r m) where
   fmap f (Union w t) = Union w $ fmap f t
   {-# INLINE fmap #-}
 
 
 
 
-class (∀ m. Monad m => Functor (e m)) => Effect e where
+class (∀ m. Functor m => Functor (e m)) => Effect e where
   weave
-      :: (Functor s, Monad m, Monad n)
+      :: (Functor s, Functor m)
       => s ()
       -> (∀ x. s (m x) -> n (s x))
       -> e m a
@@ -139,7 +139,7 @@ class (∀ m. Monad m => Functor (e m)) => Effect e where
   default weave
       :: ( Coercible (e m (s a)) (e n (s a))
          , Functor s
-         , Monad m
+         , Functor m
          )
       => s ()
       -> (∀ x. s (m x) -> n (s x))
@@ -148,7 +148,7 @@ class (∀ m. Monad m => Functor (e m)) => Effect e where
   weave s _ = coerce . fmap (<$ s)
   {-# INLINE weave #-}
 
-  hoist :: (Monad m, Monad n) => (∀ x. m x -> n x) -> e m a -> e n a
+  hoist :: (Functor m, Functor n) => (∀ x. m x -> n x) -> e m a -> e n a
   hoist f = fmap runIdentity . weave (Identity ()) (fmap Identity . f . runIdentity)
   {-# INLINE hoist #-}
 
