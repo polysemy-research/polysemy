@@ -10,6 +10,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -21,8 +22,10 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE UnicodeSyntax         #-}
 
-{-# OPTIONS_GHC -Wall              #-}
+{-# OPTIONS_GHC -Wall #-}
+-- {-# OPTIONS_GHC -ddump-simpl -dsuppress-all             #-}
 
 module TRYAGAIN where
 
@@ -37,24 +40,33 @@ newtype Lift m (z :: * -> *) a = Lift
   }
   deriving (Functor, Applicative, Monad) via m
 
+
 instance Monad m => Effect (Lift m) where
   weave s _ (Lift a) = Lift $ fmap (<$ s) a
   {-# INLINE weave #-}
 
+
 newtype F f a = F
   { runF
-        :: forall r
+        :: ∀ r
          . (a -> r)
         -> (f (F f) r -> r)
         -> r
+  -- TODO(sandy): If I can final encode this, we'll get hot speed gainz.
   }
+
+runEff :: (a -> r) -> (f (F f) r -> r) -> F f a -> r
+runEff kp kf e = runF e kp kf
+
 
 data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
   Union :: Effect e => Word -> e m a -> Union r m a
 
+
 unsafeInj :: (Monad m, Effect e) => Word -> e m a -> Union r m a
 unsafeInj w = Union w
 {-# INLINE unsafeInj #-}
+
 
 unsafePrj :: Word -> Union r m a -> Maybe (t m a)
 unsafePrj n (Union n' x)
@@ -62,24 +74,30 @@ unsafePrj n (Union n' x)
   | otherwise = Nothing
 {-# INLINE unsafePrj #-}
 
+
 newtype P t r = P {unP :: Word}
+
 
 class FindElem (t :: k) (r :: [k]) where
   elemNo :: P t r
+
 
 instance FindElem t (t ': r) where
   elemNo = P 0
   {-# INLINE elemNo #-}
 
+
 instance {-# OVERLAPPABLE #-} FindElem t r => FindElem t (t' ': r) where
   elemNo = P $ 1 + unP (elemNo :: P t r)
   {-# INLINE elemNo #-}
+
 
 class FindElem eff effs
       => Member (eff :: (* -> *) -> * -> *)
                 (effs :: [(* -> *) -> * -> *]) where
   inj :: Monad m => eff m a -> Union effs m a
   prj :: Union effs m a -> Maybe (eff m a)
+
 
 instance (Effect t, FindElem t r) => Member t r where
   inj = unsafeInj $ unP (elemNo :: P t r)
@@ -88,10 +106,19 @@ instance (Effect t, FindElem t r) => Member t r where
   prj = unsafePrj $ unP (elemNo :: P t r)
   {-# INLINE prj #-}
 
+
 decomp :: Union (t ': r) m a -> Either (Union r m a) (e m a)
 decomp (Union 0 a) = Right $ unsafeCoerce a
 decomp (Union n a) = Left  $ Union (n - 1) a
 {-# INLINE [2] decomp #-}
+
+
+weaken :: Union r m a -> Union (e ': r) m a
+weaken (Union n a) = Union (n + 1) a
+
+
+raise :: Eff r a -> Eff (e ': r) a
+raise = runEff pure $ zoop . hoist raise . weaken
 
 
 instance Monad m => Functor (Union r m) where
@@ -99,11 +126,13 @@ instance Monad m => Functor (Union r m) where
   {-# INLINE fmap #-}
 
 
-class (forall m. Monad m => Functor (e m)) => Effect e where
+
+
+class (∀ m. Monad m => Functor (e m)) => Effect e where
   weave
-      :: (Functor s, Monad m)
+      :: (Functor s, Monad m, Monad n)
       => s ()
-      -> (forall x. s (m x) -> n (s x))
+      -> (∀ x. s (m x) -> n (s x))
       -> e m a
       -> e n (s a)
 
@@ -113,11 +142,16 @@ class (forall m. Monad m => Functor (e m)) => Effect e where
          , Monad m
          )
       => s ()
-      -> (forall x. s (m x) -> n (s x))
+      -> (∀ x. s (m x) -> n (s x))
       -> e m a
       -> e n (s a)
   weave s _ = coerce . fmap (<$ s)
   {-# INLINE weave #-}
+
+  hoist :: (Monad m, Monad n) => (∀ x. m x -> n x) -> e m a -> e n a
+  hoist f = fmap runIdentity . weave (Identity ()) (fmap Identity . f . runIdentity)
+  {-# INLINE hoist #-}
+
 
 
 instance Effect (Union r) where
@@ -133,8 +167,10 @@ data State s m a
   | Put s a
   deriving (Functor, Effect)
 
+
 get :: Member (State s) r => Eff r s
 get = send $ Get id
+
 
 put :: Member (State s) r => s -> Eff r ()
 put s = send $ Put s ()
@@ -142,7 +178,7 @@ put s = send $ Put s ()
 
 data Error e m a
   = Throw e
-  | forall x. Catch (m x) (e -> m x) (x -> a)
+  | ∀ x. Catch (m x) (e -> m x) (x -> a)
 
 deriving instance Functor (Error e m)
 
@@ -156,44 +192,51 @@ instance Effect (Error e) where
 throw :: Member (Error e) r => e -> Eff r a
 throw = send . Throw
 
+
 catch :: Member (Error e) r => Eff r a -> (e -> Eff r a) -> Eff r a
 catch try handle = send $ Catch try handle id
 
 
-runState :: Eff (State s ': r) a -> s -> Eff r (s, a)
-runState e = runF e (\a s -> pure (s, a)) $ \u ->
-  case decomp u of
-    Left x  -> \s' -> zoop $ fmap (uncurry (flip id)) $ weave (s', ()) (uncurry $ flip runState) x
-    Right (Get k) -> \s' -> k s' s'
-    Right (Put s' k) -> const $ k s'
+runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
+runState = runRelayS (\s x -> pure (s, x)) $ \case
+  Get k   -> \s -> k s s
+  Put s k -> const $ k s
 {-# INLINE runState #-}
 
 
-runRelayS'
-    :: (forall x. s -> x -> Eff r (s, x))
-    -> (forall x. e (Eff (e ': r)) (s -> Eff r (s, x)) -> s -> Eff r (s, x))
+interpret
+    :: (∀ x. e (Eff (e ': r)) (Eff r x) -> Eff r x)
     -> Eff (e ': r) a
-    -> s
-    -> Eff r (s, a)
-runRelayS' pure' bind' e = runF e (flip pure') $ \u ->
+    -> Eff r a
+interpret f = runEff pure $ \u ->
   case decomp u of
-    Left x  -> \s' ->
-      zoop $ fmap (uncurry (flip id))
-           $ weave (s', ()) (uncurry $ runRelayS pure' bind') x
-    Right eff -> \s' -> bind' eff s'
+    Left x -> zoop $ hoist (interpret f) x
+    Right eff -> f eff
+
 
 
 runRelayS
-    :: (forall x. s -> x -> Eff r (s, x))
-    -> (forall x. e (Eff (e ': r)) (s -> Eff r (s, x)) -> s -> Eff r (s, x))
+    :: ∀ s e a r
+     . (∀ x. s -> x -> Eff r (s, x))
+    -> (∀ x. e (Eff (e ': r)) (s -> Eff r (s, x))
+          -> s
+          -> Eff r (s, x))
     -> s
     -> Eff (e ': r) a
     -> Eff r (s, a)
-runRelayS pure' bind' = flip $ runRelayS' pure' bind'
+runRelayS pure' bind' = flip go
+  where
+    go :: Eff (e ': r) x -> s -> Eff r (s, x)
+    go = runEff (flip pure') $ \u ->
+      case decomp u of
+        Left x  -> \s' ->
+          zoop $ fmap (uncurry (flip id))
+               $ weave (s', ()) (uncurry $ flip go) x
+        Right eff -> bind' eff
 
 
 runError :: Eff (Error e ': r) a -> Eff r (Either e a)
-runError err = runF err (pure . Right) $ \u ->
+runError = runEff (pure . Right) $ \u ->
   case decomp u of
     Left x  -> zoop
              . fmap (either (pure . Left) id)
@@ -215,13 +258,16 @@ runM :: Monad m => Eff '[Lift m] a -> m a
 runM e = runF e pure $ join . unLift . extract
 {-# INLINE runM #-}
 
+
 run :: Eff '[Lift Identity] a -> a
 run = runIdentity . runM
 {-# INLINE run #-}
 
+
 send :: Member eff r => eff (Eff r) a -> Eff r a
 send = liftEff . inj
 {-# INLINE send #-}
+
 
 sendM :: Member (Lift m) r => m a -> Eff r a
 sendM = liftEff . inj . Lift
@@ -229,7 +275,7 @@ sendM = liftEff . inj . Lift
 
 
 main :: IO ()
-main = (print =<<) $ runM $ flip runState "1" $ runError @Bool $ flip runState True $ do
+main = (print =<<) $ runM $ runState "1" $ runError @Bool $ runState True $ do
   put "2"
   catch
     do
@@ -240,11 +286,9 @@ main = (print =<<) $ runM $ flip runState "1" $ runError @Bool $ flip runState T
       sendM $ putStrLn "caught"
 
 
-
 extract :: Union '[e] m a -> e m a
 extract (Union _ a) = unsafeCoerce a
 {-# INLINE extract #-}
-
 
 
 liftEff :: Union r (Eff r) a -> Eff r a
