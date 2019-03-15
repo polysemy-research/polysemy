@@ -45,6 +45,9 @@ instance Functor m => Effect (Lift m) where
   weave s _ (Lift a) = Lift $ fmap (<$ s) a
   {-# INLINE weave #-}
 
+  hoist _ a = coerce a
+  {-# INLINE hoist #-}
+
 
 newtype F f a = F
   { runF
@@ -118,14 +121,12 @@ weaken (Union n a) = Union (n + 1) a
 
 
 raise :: Eff r a -> Eff (e ': r) a
-raise = runEff pure $ zoop . hoist raise . weaken
+raise = runEff pure $ join . liftEff . hoist raise . weaken
 
 
 instance Functor m => Functor (Union r m) where
   fmap f (Union w t) = Union w $ fmap f t
   {-# INLINE fmap #-}
-
-
 
 
 class (∀ m. Functor m => Functor (e m)) => Effect e where
@@ -149,7 +150,9 @@ class (∀ m. Functor m => Functor (e m)) => Effect e where
   {-# INLINE weave #-}
 
   hoist :: (Functor m, Functor n) => (∀ x. m x -> n x) -> e m a -> e n a
-  hoist f = fmap runIdentity . weave (Identity ()) (fmap Identity . f . runIdentity)
+  hoist f = fmap runIdentity
+          . weave (Identity ())
+                  (fmap Identity . f . runIdentity)
   {-# INLINE hoist #-}
 
 
@@ -210,9 +213,8 @@ interpret
     -> Eff r a
 interpret f = runEff pure $ \u ->
   case decomp u of
-    Left x -> zoop $ hoist (interpret f) x
+    Left x -> join . liftEff $ hoist (interpret f) x
     Right eff -> f eff
-
 
 
 runRelayS
@@ -230,7 +232,8 @@ runRelayS pure' bind' = flip go
     go = runEff (flip pure') $ \u ->
       case decomp u of
         Left x  -> \s' ->
-          zoop $ fmap (uncurry (flip id))
+          join . liftEff
+               $ fmap (uncurry (flip id))
                $ weave (s', ()) (uncurry $ flip go) x
         Right eff -> bind' eff
 
@@ -238,7 +241,8 @@ runRelayS pure' bind' = flip go
 runError :: Eff (Error e ': r) a -> Eff r (Either e a)
 runError = runEff (pure . Right) $ \u ->
   case decomp u of
-    Left x  -> zoop
+    Left x  -> join
+             . liftEff
              . fmap (either (pure . Left) id)
              $ weave (Right ()) (either (pure . Left) runError) x
     Right (Throw e) -> pure $ Left e
@@ -294,21 +298,6 @@ extract (Union _ a) = unsafeCoerce a
 liftEff :: Union r (Eff r) a -> Eff r a
 liftEff u = F $ \kp kf -> kf $ fmap kp u
 {-# INLINE liftEff #-}
-
-
-zoop :: Union r (Eff r) (Eff r a) -> Eff r a
-zoop m = join $ liftEff m
-{-# INLINE zoop #-}
-
-
-iter :: (f (F f) a -> a) -> F f a -> a
-iter phi xs = runF xs id phi
-{-# INLINE iter #-}
-
-
-iterM :: Monad m => (f (F f) (m a) -> m a) -> F f a -> m a
-iterM phi xs = runF xs pure phi
-{-# INLINE iterM #-}
 
 
 instance Functor (F f) where
