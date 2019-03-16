@@ -217,6 +217,49 @@ interpret f = runEff pure $ \u ->
     Right eff -> f eff
 
 
+interpose
+    :: Member e r
+    => (∀ x. e (Eff r) x -> Eff r x)
+    -> Eff r a
+    -> Eff r a
+interpose f = runEff pure $ \u ->
+  join $ case prj u of
+    Just x  -> f x
+    Nothing -> liftEff u
+
+
+subsume
+    :: (Member e r, Effect e)
+    => Eff (e ': r) a
+    -> Eff r a
+subsume = interpret $ join . send . hoist subsume
+
+
+reinterpret
+    :: Effect f
+    => (∀ x. f (Eff (g ': r)) x -> Eff (g ': r) x)
+    -> Eff (f ': r) a
+    -> Eff (g ': r) a
+reinterpret f = runEff pure $ \u ->
+  join $ case decomp u of
+    Left  x -> liftEff $ weaken $ hoist (reinterpret f) x
+    Right y -> f $ hoist (reinterpret f) $ y
+
+
+-- TODO(sandy): does this have the right semantics for INSIDE MONADS?
+translate
+    :: ( Effect f
+       , Effect g
+       )
+    => (∀ x. f (Eff (f ': r)) x -> g (Eff (g ': r)) x)
+    -> Eff (f ': r) a
+    -> Eff (g ': r) a
+translate f = runEff pure $ \u ->
+  join $ case decomp u of
+    Left  x -> liftEff $ weaken $ hoist (translate f) x
+    Right y -> send $ f y
+
+
 runRelayS
     :: ∀ s e a r
      . (∀ x. s -> x -> Eff r (s, x))
