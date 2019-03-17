@@ -126,8 +126,8 @@ main :: IO ()
 main =
   defaultMain [
     bgroup "Countdown Bench" [
-        bench "faster"            $ whnf TFTF.countDownFast 10000
-      , bench "discount"          $ whnf TFTF.countDown 10000
+        -- bench "faster"            $ whnf TFTF.countDownFast 10000
+        bench "discount"          $ whnf TFTF.countDown 10000
       , bench "freer-simple"      $ whnf countDown 10000
       , bench "mtl"               $ whnf countDownMTL 10000
     ]
