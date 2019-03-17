@@ -12,14 +12,12 @@ module Control.Monad.Discount
   , Member
   , decomp
   , prj
-  , Identity (..)
   ) where
 
 import Data.OpenUnion
 import Control.Monad.Discount.Effect
 import Control.Monad (join)
 import Control.Monad.Discount.Lift
-import Data.Functor.Identity
 
 
 type Eff r = F (Union r)
@@ -130,8 +128,8 @@ runM e = runF e pure $ join . unLift . extract
 {-# INLINE runM #-}
 
 
-run :: Eff '[Lift Identity] a -> a
-run = runIdentity . runM
+run :: Eff '[] a -> a
+run = runEff id absurdU
 {-# INLINE run #-}
 
 

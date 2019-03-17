@@ -15,13 +15,17 @@ import Control.Monad.Discount.Effect
 import Unsafe.Coerce
 
 
+data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
+  Union :: Effect e => Word -> e m a -> Union r m a
+
+
 extract :: Union '[e] m a -> e m a
 extract (Union _ a) = unsafeCoerce a
 {-# INLINE extract #-}
 
 
-data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
-  Union :: Effect e => Word -> e m a -> Union r m a
+absurdU :: Union '[] m a -> b
+absurdU = error "absurd, empty union"
 
 
 unsafeInj :: Effect e => Word -> e m a -> Union r m a
