@@ -31,10 +31,12 @@ data State s m a
 
 get :: Member (State s) r => Eff r s
 get = send $ Get id
+{-# INLINE get #-}
 
 
 put :: Member (State s) r => s -> Eff r ()
 put s = send $ Put s ()
+{-# INLINE put #-}
 
 
 data Error e m a
@@ -85,6 +87,7 @@ runRelayS pure' bind' = flip go
                $ fmap (uncurry (flip id))
                $ weave (s', ()) (uncurry $ flip go) x
         Right eff -> bind' eff
+{-# INLINE runRelayS #-}
 
 
 runError :: Eff (Error e ': r) a -> Eff r (Either e a)

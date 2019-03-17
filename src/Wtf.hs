@@ -3,10 +3,11 @@
 
 module Wtf where
 
+import Control.Monad.Discount
 import TRYAGAIN
 import Data.Functor.Identity
 
-go :: Eff '[State Int, Lift (Identity)] Int
+go :: Eff '[State Int] Int
 go = do
   n <- send (Get id)
   if n <= 0

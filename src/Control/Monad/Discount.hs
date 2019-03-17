@@ -1,9 +1,12 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MonoLocalBinds   #-}
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE TypeOperators    #-}
-{-# LANGUAGE UnicodeSyntax    #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE MonoLocalBinds      #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeOperators       #-}
+{-# LANGUAGE UnicodeSyntax       #-}
 
 module Control.Monad.Discount
   ( module Control.Monad.Discount
@@ -59,6 +62,7 @@ runEff kp kf e = runF e kp kf
 liftEff :: Union r (Eff r) a -> Eff r a
 liftEff u = F $ \kp kf -> kf $ fmap kp u
 {-# INLINE liftEff #-}
+
 
 raise :: Eff r a -> Eff (e ': r) a
 raise = runEff pure $ join . liftEff . hoist raise . weaken
@@ -129,11 +133,11 @@ runM e = runF e pure $ join . unLift . extract
 
 
 run :: Eff '[] a -> a
-run = runEff id absurdU
+run = runEff id $ error "lol"
 {-# INLINE run #-}
 
 
-send :: Member eff r => eff (Eff r) a -> Eff r a
+send :: Member e r => e (Eff r) a -> Eff r a
 send = liftEff . inj
 {-# INLINE send #-}
 
