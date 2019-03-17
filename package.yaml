@@ -50,6 +50,8 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - too-fast-too-free
+    - inspection-testing
+    - hspec
 
 benchmarks:
   too-fast-too-free-bench:
