@@ -64,9 +64,11 @@ instance Monad (Freer f) where
     runFreer (f z) k
   {-# INLINE (>>=) #-}
 
+
 liftEff :: f (Freer f) a -> Freer f a
 liftEff u = Freer $ \k -> k u
 {-# INLINE liftEff #-}
+
 
 hoistEff :: (∀ x. f (Freer f) x -> g (Freer g) x) -> Freer f a -> Freer g a
 hoistEff nat (Freer m) = Freer $ \k -> m $ \u -> k $ nat u
@@ -75,7 +77,7 @@ hoistEff nat (Freer m) = Freer $ \k -> m $ \u -> k $ nat u
 
 send :: Member e r => e (Eff r) a -> Eff r a
 send = liftEff . inj
-{-# INLINE send #-}
+{-# INLINE[3] send #-}
 
 
 sendM :: Member (Lift m) r => m a -> Eff r a
@@ -84,12 +86,12 @@ sendM = send . Lift
 
 
 run :: Eff '[] a -> a
-run (Freer m) = runIdentity $ m $ \u -> error "absurd"
+run (Freer m) = runIdentity $ m absurdU
 {-# INLINE run #-}
 
 
 runM :: Monad m => Eff '[Lift m] a -> m a
-runM (Freer m) = m $ \u -> error "absurd"
+runM (Freer m) = m $ unLift . extract
 {-# INLINE runM #-}
 
 
@@ -104,9 +106,9 @@ interpret f (Freer m) = m $ \u ->
     Right y -> f y
 {-# INLINE interpret #-}
 
+
 stateful
-    :: forall s r a e
-     . Effect e
+    :: Effect e
     => (∀ x. e (Eff (e ': r)) x -> StateT s (Eff r) x)
     -> s
     -> Eff (e ': r) a
@@ -121,9 +123,9 @@ stateful f s (Freer m) = Freer $ \k ->
         Right y -> S.mapStateT (usingFreer k) $ f y
 {-# INLINE stateful #-}
 
+
 stateful'
-    :: forall s r a e
-     . Effect e
+    :: Effect e
     => (∀ x. e (Eff (e ': r)) x -> StateT s (Eff r) x)
     -> s
     -> Eff (e ': r) a
@@ -137,9 +139,21 @@ reinterpret
     => (∀ x. f (Eff (g ': r)) x -> Eff (g ': r) x)
     -> Eff (f ': r) a
     -> Eff (g ': r) a
-reinterpret f (Freer m) = m $ \u ->
+reinterpret f (Freer m) = Freer $ \k -> m $ \u ->
   case decomp u of
-    Left  x -> liftEff $ weaken $ hoist (reinterpret f) x
-    Right y -> f $ hoist (reinterpret f) $ y
-{-# INLINE reinterpret #-}
+    Left  x -> k . weaken $ hoist (reinterpret' f) x
+    Right y -> usingFreer k . f $ hoist (reinterpret' f) y
+{-# INLINE[3] reinterpret #-}
+
+{-# RULES "reinterpret/send" reinterpret send = id #-}
+{-# RULES "hoist/id" hoist (reinterpret send) = id #-}
+
+
+reinterpret'
+    :: Effect f
+    => (∀ x. f (Eff (g ': r)) x -> Eff (g ': r) x)
+    -> Eff (f ': r) a
+    -> Eff (g ': r) a
+reinterpret' = reinterpret
+{-# NOINLINE reinterpret' #-}
 

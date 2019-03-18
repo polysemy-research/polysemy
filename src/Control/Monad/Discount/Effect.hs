@@ -40,5 +40,5 @@ class (∀ m. Functor m => Functor (e m)) => Effect e where
   hoist f = fmap runIdentity
           . weave (Identity ())
                   (fmap Identity . f . runIdentity)
-  {-# INLINE hoist #-}
+  {-# INLINE[3] hoist #-}
 

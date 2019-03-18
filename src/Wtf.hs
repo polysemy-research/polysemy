@@ -16,5 +16,5 @@ go = do
        go
 
 countDown :: Int -> Int
-countDown start = fst $ run $ runState start go
+countDown start = fst $ run $ runState start $ reinterpret send $ go
 

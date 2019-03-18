@@ -82,6 +82,10 @@ extract _ = error "impossible"
 {-# INLINE extract #-}
 
 
+absurdU :: Union '[] m a -> b
+absurdU = absurdU
+
+
 weaken :: Union r m a -> Union (e ': r) m a
 weaken (Union n a) =
   case induceTypeable n of
