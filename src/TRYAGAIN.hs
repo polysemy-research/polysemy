@@ -53,6 +53,9 @@ instance Effect (Error e) where
     Catch (f $ try <$ s) (\e -> f $ handle e <$ s) $ fmap k
   {-# INLINE weave #-}
 
+  hoist = slowDefaultHoist
+  {-# INLINE hoist #-}
+
 
 throw :: Member (Error e) r => e -> Eff r a
 throw = send . Throw

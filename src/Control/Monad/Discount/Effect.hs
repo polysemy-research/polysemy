@@ -37,8 +37,29 @@ class (∀ m. Functor m => Functor (e m)) => Effect e where
         => (∀ x. m x -> n x)
         -> e m a
         -> e n a
-  hoist f = fmap runIdentity
-          . weave (Identity ())
-                  (fmap Identity . f . runIdentity)
-  {-# INLINE[3] hoist #-}
+
+  default hoist
+      :: ( Coercible (e m a) (e n a)
+         , Functor m
+         )
+      => (∀ x. m x -> n x)
+      -> e m a
+      -> e n a
+  hoist _ = coerce
+  {-# INLINE hoist #-}
+
+
+slowDefaultHoist
+      :: ( Functor m
+         , Functor n
+         , Effect e
+         )
+      => (∀ x. m x -> n x)
+      -> e m a
+      -> e n a
+slowDefaultHoist f
+  = fmap runIdentity
+  . weave (Identity ())
+          (fmap Identity . f . runIdentity)
+{-# INLINE slowDefaultHoist #-}
 

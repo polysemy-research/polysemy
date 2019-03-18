@@ -142,6 +142,9 @@ instance Effect (Union r) where
   weave s f (Union w e) = Union w $ weave s f e
   {-# INLINE weave #-}
 
+  hoist f (Union w e) = Union w $ hoist f e
+  {-# INLINE hoist #-}
+
 
 instance (Functor m) => Functor (Union r m) where
   fmap f (Union w t) = Union w $ fmap' f t
