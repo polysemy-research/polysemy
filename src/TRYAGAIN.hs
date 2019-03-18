@@ -65,11 +65,18 @@ catch :: Member (Error e) r => Eff r a -> (e -> Eff r a) -> Eff r a
 catch try handle = send $ Catch try handle id
 
 
+
 runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
 runState = stateful $ \case
   Get k   -> fmap k S.get
   Put s k -> S.put s >> pure k
-{-# INLINE runState #-}
+{-# INLINE[3] runState #-}
+
+
+{-# RULES "runState/reinterpret"
+   forall s e (f :: forall x. e (Eff (e ': r)) x -> Eff (State s ': r) x).
+     runState s (reinterpret f e) = runRelayS (\x s' -> runState s' $ f x) s e
+     #-}
 
 
 runError :: Eff (Error e ': r) a -> Eff r (Either e a)

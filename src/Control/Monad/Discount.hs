@@ -143,7 +143,7 @@ reinterpret f (Freer m) = Freer $ \k -> m $ \u ->
   case prjCoerce u of
     Left x -> k $ hoist (reinterpret' f) $ x
     Right y  -> usingFreer k $ f y
-{-# INLINE reinterpret #-}
+{-# INLINE[3] reinterpret #-}
 
 
 reinterpret'
@@ -153,4 +153,14 @@ reinterpret'
     -> Eff (g ': r) a
 reinterpret' = reinterpret
 {-# NOINLINE reinterpret' #-}
+
+
+runRelayS
+    :: Effect e
+    => (∀ x. e (Eff (e ': r)) x -> s -> Eff r (s, x))
+    -> s
+    -> Eff (e ': r) a
+    -> Eff r (s, a)
+runRelayS f = stateful $ \e -> S.StateT $ fmap swap . f e
+{-# INLINE runRelayS #-}
 
