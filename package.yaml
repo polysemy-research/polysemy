@@ -23,7 +23,7 @@ dependencies:
 - base >= 4.7 && < 5
 - transformers
 - mtl
-- template-haskell
+# - ghc-lib
 
 flags:
   dump-core:

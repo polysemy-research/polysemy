@@ -104,25 +104,32 @@ interpret f (Freer m) = m $ \u ->
     Right y -> f y
 {-# INLINE interpret #-}
 
-
 stateful
-    :: forall e s r a
+    :: forall s r a e
      . Effect e
-    => (∀ x. e (StateT s (Eff r)) x -> StateT s (Eff r) x)
+    => (∀ x. e (Eff (e ': r)) x -> StateT s (Eff r) x)
     -> s
     -> Eff (e ': r) a
     -> Eff r (s, a)
-stateful f s = \e -> fmap swap $ S.runStateT (go e) s
-  where
-    go :: Eff (e ': r) x -> StateT s (Eff r) x
-    go (Freer m) = m $ \u ->
-      case decomp u of
+stateful f s (Freer m) = Freer $ \k ->
+  fmap swap $ flip S.runStateT s $ m $ \u ->
+    case decomp u of
         Left x -> S.StateT $ \s' ->
-          liftEff . fmap swap
-                  . weave (s', ()) (uncurry $ stateful f)
-                  $ x
-        Right y -> f $ hoist go y
+          k . fmap swap
+            . weave (s', ()) (uncurry $ stateful' f)
+            $ x
+        Right y -> S.mapStateT (usingFreer k) $ f y
 {-# INLINE stateful #-}
+
+stateful'
+    :: forall s r a e
+     . Effect e
+    => (∀ x. e (Eff (e ': r)) x -> StateT s (Eff r) x)
+    -> s
+    -> Eff (e ': r) a
+    -> Eff r (s, a)
+stateful' = stateful
+{-# NOINLINE stateful' #-}
 
 
 reinterpret
