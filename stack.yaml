@@ -3,3 +3,7 @@ resolver: lts-13.0
 packages:
 - .
 
+extra-deps:
+- dump-core-0.1.3.2
+- monadLib-3.9
+

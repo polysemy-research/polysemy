@@ -10,13 +10,22 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE StrictData            #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -Wall              #-}
 
-module Data.OpenUnion where
+module Data.OpenUnion
+  ( Member
+  , inj
+  , weaken
+  , Union (..)
+  , decomp
+  , extract
+  , prj
+  ) where
 
 import Control.Monad.Discount.Effect
 import Data.Typeable
