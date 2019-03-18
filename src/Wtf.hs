@@ -18,3 +18,6 @@ go = do
 countDown :: Int -> Int
 countDown start = fst $ run $ runState start go
 
+countDownFast :: Int -> Int
+countDownFast start = fst $ run $ runStateFast start go
+

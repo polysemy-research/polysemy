@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE MonoLocalBinds      #-}
 {-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 {-# LANGUAGE UnicodeSyntax       #-}
@@ -17,124 +18,59 @@ module Control.Monad.Discount
   , prj
   ) where
 
+import Data.Functor.Identity
+import Data.Tuple
 import Data.OpenUnion
 import Control.Monad.Discount.Effect
 import Control.Monad (join)
 import Control.Monad.Discount.Lift
+import qualified Control.Monad.Trans.State.Strict as S
+import Control.Monad.Trans.State.Strict (StateT)
 
+type Eff r = Freer (Union r)
 
-type Eff r = F (Union r)
-
-
-newtype F f a = F
-  { runF
-        :: ∀ r
-         . (a -> r)
-        -> (f (F f) r -> r)
-        -> r
+newtype Freer f a = Freer
+  { runFreer
+        :: ∀ m
+         . Monad m
+        => (∀ x. f (Freer f) x -> m x)
+        -> m a
   }
 
+usingFreer :: Monad m => (∀ x. f (Freer f) x -> m x) -> Freer f a -> m a
+usingFreer k m = runFreer m k
+{-# INLINE usingFreer #-}
 
-instance Functor (F f) where
-  fmap f (F g) = F (\kp -> g (kp . f))
+
+instance Functor (Freer f) where
+  fmap f (Freer m) = Freer $ \k -> fmap f $ m k
   {-# INLINE fmap #-}
 
 
-instance Applicative (F f) where
-  pure a = F (\kp _ -> kp a)
+instance Applicative (Freer f) where
+  pure a = Freer $ const $ pure a
   {-# INLINE pure #-}
-  F f <*> F g = F (\kp kf -> f (\a -> g (kp . a) kf) kf)
+
+  Freer f <*> Freer a = Freer $ \k -> f k <*> a k
   {-# INLINE (<*>) #-}
 
 
-instance Monad (F f) where
+instance Monad (Freer f) where
   return = pure
   {-# INLINE return #-}
-  F m >>= f = F (\kp kf -> m (\a -> runF (f a) kp kf) kf)
+
+  Freer ma >>= f = Freer $ \k -> do
+    z <- ma k
+    runFreer (f z) k
   {-# INLINE (>>=) #-}
 
-
-runEff :: (a -> r) -> (f (F f) r -> r) -> F f a -> r
-runEff kp kf e = runF e kp kf
-{-# INLINE runEff #-}
-
-
-liftEff :: Union r (Eff r) a -> Eff r a
-liftEff u = F $ \kp kf -> kf $ fmap kp u
+liftEff :: f (Freer f) a -> Freer f a
+liftEff u = Freer $ \k -> k u
 {-# INLINE liftEff #-}
 
-
-raise :: Eff r a -> Eff (e ': r) a
-raise = runEff pure $ join . liftEff . hoist raise . weaken
-{-# INLINE raise #-}
-
-
-interpret
-    :: (∀ x. e (Eff (e ': r)) (Eff r x) -> Eff r x)
-    -> Eff (e ': r) a
-    -> Eff r a
-interpret f = runEff pure $ \u ->
-  case decomp u of
-    Left x -> join . liftEff $ hoist (interpret f) x
-    Right eff -> f eff
-{-# INLINE interpret #-}
-
-
-interpose
-    :: Member e r
-    => (∀ x. e (Eff r) x -> Eff r x)
-    -> Eff r a
-    -> Eff r a
-interpose f = runEff pure $ \u ->
-  join $ case prj u of
-    Just x  -> f x
-    Nothing -> liftEff u
-{-# INLINE interpose #-}
-
-
-subsume
-    :: (Member e r, Effect e)
-    => Eff (e ': r) a
-    -> Eff r a
-subsume = interpret $ join . send . hoist subsume
-{-# INLINE subsume #-}
-
-
-reinterpret
-    :: Effect f
-    => (∀ x. f (Eff (g ': r)) x -> Eff (g ': r) x)
-    -> Eff (f ': r) a
-    -> Eff (g ': r) a
-reinterpret f = runEff pure $ \u ->
-  join $ case decomp u of
-    Left  x -> liftEff $ weaken $ hoist (reinterpret f) x
-    Right y -> f $ hoist (reinterpret f) $ y
-{-# INLINE reinterpret #-}
-
-
--- TODO(sandy): does this have the right semantics for INSIDE MONADS?
-translate
-    :: ( Effect f
-       , Effect g
-       )
-    => (∀ x. f (Eff (f ': r)) x -> g (Eff (g ': r)) x)
-    -> Eff (f ': r) a
-    -> Eff (g ': r) a
-translate f = runEff pure $ \u ->
-  join $ case decomp u of
-    Left  x -> liftEff $ weaken $ hoist (translate f) x
-    Right y -> send $ f y
-{-# INLINE translate #-}
-
-
-runM :: Monad m => Eff '[Lift m] a -> m a
-runM e = runF e pure $ join . unLift . extract
-{-# INLINE runM #-}
-
-
-run :: Eff '[] a -> a
-run = runEff id $ error "lol"
-{-# INLINE run #-}
+hoistEff :: (∀ x. f (Freer f) x -> g (Freer g) x) -> Freer f a -> Freer g a
+hoistEff nat (Freer m) = Freer $ \k -> m $ \u -> k $ nat u
+{-# INLINE hoistEff #-}
 
 
 send :: Member e r => e (Eff r) a -> Eff r a
@@ -143,6 +79,60 @@ send = liftEff . inj
 
 
 sendM :: Member (Lift m) r => m a -> Eff r a
-sendM = liftEff . inj . Lift
+sendM = send . Lift
 {-# INLINE sendM #-}
+
+
+run :: Eff '[] a -> a
+run (Freer m) = runIdentity $ m $ \u -> error "absurd"
+{-# INLINE run #-}
+
+
+runM :: Monad m => Eff '[Lift m] a -> m a
+runM (Freer m) = m $ \u -> error "absurd"
+{-# INLINE runM #-}
+
+
+interpret
+    :: Effect e
+    => (∀ x. e (Eff (e ': r)) x -> Eff r x)
+    -> Eff (e ': r) a
+    -> Eff r a
+interpret f (Freer m) = m $ \u ->
+  case decomp u of
+    Left  x -> liftEff $ hoist (interpret f) x
+    Right y -> f y
+{-# INLINE interpret #-}
+
+
+stateful
+    :: forall e s r a
+     . Effect e
+    => (∀ x. e (StateT s (Eff r)) x -> StateT s (Eff r) x)
+    -> s
+    -> Eff (e ': r) a
+    -> Eff r (s, a)
+stateful f s = \e -> fmap swap $ S.runStateT (go e) s
+  where
+    go :: Eff (e ': r) x -> StateT s (Eff r) x
+    go (Freer m) = m $ \u ->
+      case decomp u of
+        Left x -> S.StateT $ \s' ->
+          liftEff . fmap swap
+                  . weave (s', ()) (uncurry $ stateful f)
+                  $ x
+        Right y -> f $ hoist go y
+{-# INLINE stateful #-}
+
+
+reinterpret
+    :: Effect f
+    => (∀ x. f (Eff (g ': r)) x -> Eff (g ': r) x)
+    -> Eff (f ': r) a
+    -> Eff (g ': r) a
+reinterpret f (Freer m) = m $ \u ->
+  case decomp u of
+    Left  x -> liftEff $ weaken $ hoist (reinterpret f) x
+    Right y -> f $ hoist (reinterpret f) $ y
+{-# INLINE reinterpret #-}
 

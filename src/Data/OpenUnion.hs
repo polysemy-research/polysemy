@@ -17,15 +17,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -Wall              #-}
 
-module Data.OpenUnion
-  ( Member
-  , inj
-  , weaken
-  , Union (..)
-  , decomp
-  , extract
-  , prj
-  ) where
+module Data.OpenUnion where
 
 import Control.Monad.Discount.Effect
 import Data.Typeable
