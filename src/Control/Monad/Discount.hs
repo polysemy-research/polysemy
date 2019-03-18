@@ -136,22 +136,19 @@ stateful' = stateful
 
 reinterpret
     :: Effect f
-    => (∀ x. f (Eff (g ': r)) x -> Eff (g ': r) x)
+    => (∀ x. f (Eff (f ': r)) x -> Eff (g ': r) x)
     -> Eff (f ': r) a
     -> Eff (g ': r) a
 reinterpret f (Freer m) = Freer $ \k -> m $ \u ->
-  case decomp u of
-    Left  x -> k . weaken $ hoist (reinterpret' f) x
-    Right y -> usingFreer k . f $ hoist (reinterpret' f) y
-{-# INLINE[3] reinterpret #-}
-
-{-# RULES "reinterpret/send" reinterpret send = id #-}
-{-# RULES "hoist/id" hoist (reinterpret send) = id #-}
+  case prjCoerce u of
+    Left x -> k $ hoist (reinterpret' f) $ x
+    Right y  -> usingFreer k $ f y
+{-# INLINE reinterpret #-}
 
 
 reinterpret'
     :: Effect f
-    => (∀ x. f (Eff (g ': r)) x -> Eff (g ': r) x)
+    => (∀ x. f (Eff (f ': r)) x -> Eff (g ': r) x)
     -> Eff (f ': r) a
     -> Eff (g ': r) a
 reinterpret' = reinterpret

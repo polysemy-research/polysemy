@@ -96,9 +96,7 @@ weaken (Union n a) =
 inj
     :: forall r e a m
      . ( Functor m
-       , Find r e
-       , Effect e
-       , e ~ IndexOf r (Found r e)
+       , Member e r
        )
     => e m a
     -> Union r m a
@@ -115,11 +113,9 @@ induceTypeable (SS _) = Dict
 type Member e r = (Find r e, e ~ IndexOf r (Found r e), Effect e)
 
 
-
 prj
     :: forall r e a m
-     . ( Find r e
-       , e ~ IndexOf r (Found r e)
+     . ( Member e r
        )
     => Union r m a
     -> Maybe (e m a)
@@ -130,6 +126,16 @@ prj (Union (s :: SNat n) a) =
         Just Refl -> Just a
         Nothing -> Nothing
 {-# INLINE prj #-}
+
+
+prjCoerce
+    :: Union (e ': r) m a
+    -> Either (Union (f ': r) m a) (e m a)
+prjCoerce (Union p a) =
+  case p of
+    SZ -> Right a
+    SS n -> Left (Union (SS n) a)
+{-# INLINE prjCoerce #-}
 
 
 instance Effect (Union r) where
