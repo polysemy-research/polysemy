@@ -6,8 +6,6 @@
 * benchmarks
 * pick a name dangit
 * rename core functions
-* error messages
-    * possible to get "you probably need a ty app"?
 * add commentary
 * more effects
     * all the STANDARD ONES

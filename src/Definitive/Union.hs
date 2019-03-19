@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -14,19 +13,28 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE UndecidableInstances  #-}
-{-# OPTIONS_GHC -Wall              #-}
 
 module Definitive.Union where
 
-import Definitive.Effect
 import Data.Typeable
+import Definitive.Effect
+import Definitive.Union.TypeErrors
+
+
+type Member e r =
+  ( Find r e
+  , Break (AmbiguousSend r e) (IndexOf r (Found r e))
+  , e ~ IndexOf r (Found r e)
+  , Effect e
+  )
+
 
 data Dict c where Dict :: c => Dict c
 
 
 data Nat = Z | S Nat
   deriving Typeable
+
 
 data SNat :: Nat -> * where
   SZ :: SNat 'Z
@@ -108,9 +116,6 @@ induceTypeable :: SNat n -> Dict (Typeable n)
 induceTypeable SZ = Dict
 induceTypeable (SS _) = Dict
 {-# INLINE induceTypeable #-}
-
-
-type Member e r = (Find r e, e ~ IndexOf r (Found r e), Effect e)
 
 
 prj

@@ -1,5 +1,7 @@
-{-# LANGUAGE DataKinds                      #-}
-{-# OPTIONS_GHC -ddump-simpl -dsuppress-all #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs            #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Wtf where
 
@@ -8,12 +10,13 @@ import Definitive.State
 
 go :: Def '[State Int] Int
 go = do
-  n <- send (Get id)
+  n <- get
   if n <= 0
      then pure n
      else do
-       send $ Put (n-1) ()
+       put $ n - 1
        go
+
 
 countDown :: Int -> Int
 countDown start = fst $ run $ runState start $ reinterpret send $ go
