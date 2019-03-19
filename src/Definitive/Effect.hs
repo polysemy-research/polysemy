@@ -1,0 +1,66 @@
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE UnicodeSyntax         #-}
+
+module Definitive.Effect where
+
+import Data.Coerce
+import Data.Functor.Identity
+
+
+class (∀ m. Functor m => Functor (e m)) => Effect e where
+  weave
+      :: (Functor s, Functor m, Functor n)
+      => s ()
+      -> (∀ x. s (m x) -> n (s x))
+      -> e m a
+      -> e n (s a)
+
+  default weave
+      :: ( Coercible (e m (s a)) (e n (s a))
+         , Functor s
+         , Functor m
+         , Functor n
+         )
+      => s ()
+      -> (∀ x. s (m x) -> n (s x))
+      -> e m a
+      -> e n (s a)
+  weave s _ = coerce . fmap (<$ s)
+  {-# INLINE weave #-}
+
+  hoist
+        :: ( Functor m
+           , Functor n
+           )
+        => (∀ x. m x -> n x)
+        -> e m a
+        -> e n a
+
+  default hoist
+      :: ( Coercible (e m a) (e n a)
+         , Functor m
+         )
+      => (∀ x. m x -> n x)
+      -> e m a
+      -> e n a
+  hoist _ = coerce
+  {-# INLINE hoist #-}
+
+
+slowDefaultHoist
+      :: ( Functor m
+         , Functor n
+         , Effect e
+         )
+      => (∀ x. m x -> n x)
+      -> e m a
+      -> e n a
+slowDefaultHoist f
+  = fmap runIdentity
+  . weave (Identity ())
+          (fmap Identity . f . runIdentity)
+{-# INLINE slowDefaultHoist #-}
+

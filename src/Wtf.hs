@@ -1,16 +1,20 @@
 {-# LANGUAGE DataKinds                      #-}
+{-# OPTIONS_GHC -ddump-simpl -dsuppress-all #-}
 
 module Wtf where
 
-import Lib
-import Eff.Type
-import Data.Functor.Identity
+import Definitive
+import Definitive.State
+
+go :: Def '[State Int] Int
+go = do
+  n <- send (Get id)
+  if n <= 0
+     then pure n
+     else do
+       send $ Put (n-1) ()
+       go
 
 countDown :: Int -> Int
-countDown start = fst $ run $ runState start go
-  where
-    go :: Eff '[State Int, Identity] Int
-    go = get >>= (\n -> if n <= 0 then (pure n) else (put (n-1)) >> go)
-
-
+countDown start = fst $ run $ runState start $ reinterpret send $ go
 
