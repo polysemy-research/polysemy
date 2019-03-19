@@ -18,9 +18,9 @@ module Definitive.Resource
   ) where
 
 import qualified Control.Exception as X
-import Definitive
-import Definitive.Effect
-import Control.Monad (void)
+import           Control.Monad (void)
+import           Definitive
+import           Definitive.Effect
 
 
 data Resource m a
@@ -48,6 +48,7 @@ bracket
     -> (a -> Def r b)
     -> Def r b
 bracket alloc dealloc use = send $ Bracket alloc dealloc use id
+{-# INLINE bracket #-}
 
 
 runResource
