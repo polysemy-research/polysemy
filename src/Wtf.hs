@@ -4,7 +4,7 @@
 module Wtf where
 
 import Definitive
-import TRYAGAIN
+import Definitive.State
 
 go :: Def '[State Int] Int
 go = do

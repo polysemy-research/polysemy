@@ -6,13 +6,14 @@
 
 module FusionSpec where
 
-import Test.Inspection
-import Definitive
-import Definitive.Union
-import TRYAGAIN hiding (main)
-import qualified Control.Monad.Trans.State.Strict as S
 import qualified Control.Monad.Trans.Except as E
-import Test.Hspec
+import qualified Control.Monad.Trans.State.Strict as S
+import           Definitive
+import           Definitive.Error
+import           Definitive.State
+import           Definitive.Union
+import           Test.Hspec
+import           Test.Inspection
 
 
 isSuccess :: Result -> Bool
