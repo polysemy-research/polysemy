@@ -7,7 +7,13 @@
 {-# LANGUAGE PolyKinds        #-}
 {-# LANGUAGE TypeOperators    #-}
 
-module Definitive.State where
+module Definitive.State
+  ( State (..)
+  , get
+  , put
+  , modify
+  , runState
+  ) where
 
 import qualified Control.Monad.Trans.State.Strict as S
 import           Definitive

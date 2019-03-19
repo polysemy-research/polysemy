@@ -12,7 +12,7 @@ import Data.Functor.Identity
 
 class (∀ m. Functor m => Functor (e m)) => Effect e where
   weave
-      :: (Functor s, Functor m)
+      :: (Functor s, Functor m, Functor n)
       => s ()
       -> (∀ x. s (m x) -> n (s x))
       -> e m a
@@ -22,6 +22,7 @@ class (∀ m. Functor m => Functor (e m)) => Effect e where
       :: ( Coercible (e m (s a)) (e n (s a))
          , Functor s
          , Functor m
+         , Functor n
          )
       => s ()
       -> (∀ x. s (m x) -> n (s x))
