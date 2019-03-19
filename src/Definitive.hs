@@ -9,25 +9,25 @@
 {-# LANGUAGE TypeOperators       #-}
 {-# LANGUAGE UnicodeSyntax       #-}
 
-module Control.Monad.Discount
-  ( module Control.Monad.Discount
-  , module Control.Monad.Discount.Effect
-  , module Control.Monad.Discount.Lift
+module Definitive
+  ( module Definitive
+  , module Definitive.Effect
+  , module Definitive.Lift
   , Member
   , decomp
   , prj
   ) where
 
-import Data.Functor.Identity
-import Data.Tuple
-import Data.OpenUnion
-import Control.Monad.Discount.Effect
-import Control.Monad (join)
-import Control.Monad.Discount.Lift
+import           Control.Monad (join)
+import           Control.Monad.Trans.State.Strict (StateT)
 import qualified Control.Monad.Trans.State.Strict as S
-import Control.Monad.Trans.State.Strict (StateT)
+import           Data.Functor.Identity
+import           Data.Tuple
+import           Definitive.Effect
+import           Definitive.Lift
+import           Definitive.Union
 
-type Eff r = Freer (Union r)
+type Def r = Freer (Union r)
 
 newtype Freer f a = Freer
   { runFreer
@@ -75,31 +75,31 @@ hoistEff nat (Freer m) = Freer $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistEff #-}
 
 
-send :: Member e r => e (Eff r) a -> Eff r a
+send :: Member e r => e (Def r) a -> Def r a
 send = liftEff . inj
 {-# INLINE[3] send #-}
 
 
-sendM :: Member (Lift m) r => m a -> Eff r a
+sendM :: Member (Lift m) r => m a -> Def r a
 sendM = send . Lift
 {-# INLINE sendM #-}
 
 
-run :: Eff '[] a -> a
+run :: Def '[] a -> a
 run (Freer m) = runIdentity $ m absurdU
 {-# INLINE run #-}
 
 
-runM :: Monad m => Eff '[Lift m] a -> m a
+runM :: Monad m => Def '[Lift m] a -> m a
 runM (Freer m) = m $ unLift . extract
 {-# INLINE runM #-}
 
 
 interpret
     :: Effect e
-    => (∀ x. e (Eff (e ': r)) x -> Eff r x)
-    -> Eff (e ': r) a
-    -> Eff r a
+    => (∀ x. e (Def (e ': r)) x -> Def r x)
+    -> Def (e ': r) a
+    -> Def r a
 interpret f (Freer m) = m $ \u ->
   case decomp u of
     Left  x -> liftEff $ hoist (interpret f) x
@@ -109,10 +109,10 @@ interpret f (Freer m) = m $ \u ->
 
 stateful
     :: Effect e
-    => (∀ x. e (Eff (e ': r)) x -> StateT s (Eff r) x)
+    => (∀ x. e (Def (e ': r)) x -> StateT s (Def r) x)
     -> s
-    -> Eff (e ': r) a
-    -> Eff r (s, a)
+    -> Def (e ': r) a
+    -> Def r (s, a)
 stateful f s (Freer m) = Freer $ \k ->
   fmap swap $ flip S.runStateT s $ m $ \u ->
     case decomp u of
@@ -126,19 +126,19 @@ stateful f s (Freer m) = Freer $ \k ->
 
 stateful'
     :: Effect e
-    => (∀ x. e (Eff (e ': r)) x -> StateT s (Eff r) x)
+    => (∀ x. e (Def (e ': r)) x -> StateT s (Def r) x)
     -> s
-    -> Eff (e ': r) a
-    -> Eff r (s, a)
+    -> Def (e ': r) a
+    -> Def r (s, a)
 stateful' = stateful
 {-# NOINLINE stateful' #-}
 
 
 reinterpret
     :: Effect f
-    => (∀ x. f (Eff (f ': r)) x -> Eff (g ': r) x)
-    -> Eff (f ': r) a
-    -> Eff (g ': r) a
+    => (∀ x. f (Def (f ': r)) x -> Def (g ': r) x)
+    -> Def (f ': r) a
+    -> Def (g ': r) a
 reinterpret f (Freer m) = Freer $ \k -> m $ \u ->
   case prjCoerce u of
     Left x -> k $ hoist (reinterpret' f) $ x
@@ -148,19 +148,19 @@ reinterpret f (Freer m) = Freer $ \k -> m $ \u ->
 
 reinterpret'
     :: Effect f
-    => (∀ x. f (Eff (f ': r)) x -> Eff (g ': r) x)
-    -> Eff (f ': r) a
-    -> Eff (g ': r) a
+    => (∀ x. f (Def (f ': r)) x -> Def (g ': r) x)
+    -> Def (f ': r) a
+    -> Def (g ': r) a
 reinterpret' = reinterpret
 {-# NOINLINE reinterpret' #-}
 
 
 runRelayS
     :: Effect e
-    => (∀ x. e (Eff (e ': r)) x -> s -> Eff r (s, x))
+    => (∀ x. e (Def (e ': r)) x -> s -> Def r (s, x))
     -> s
-    -> Eff (e ': r) a
-    -> Eff r (s, a)
+    -> Def (e ': r) a
+    -> Def r (s, a)
 runRelayS f = stateful $ \e -> S.StateT $ fmap swap . f e
 {-# INLINE runRelayS #-}
 

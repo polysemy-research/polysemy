@@ -2,9 +2,9 @@
 {-# LANGUAGE DerivingVia    #-}
 {-# LANGUAGE KindSignatures #-}
 
-module Control.Monad.Discount.Lift where
+module Definitive.Lift where
 
-import Control.Monad.Discount.Effect
+import Definitive.Effect
 import Data.Coerce
 
 

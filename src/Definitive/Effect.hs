@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE UnicodeSyntax         #-}
 
-module Control.Monad.Discount.Effect where
+module Definitive.Effect where
 
 import Data.Coerce
 import Data.Functor.Identity

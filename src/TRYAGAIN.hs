@@ -20,7 +20,7 @@
 
 module TRYAGAIN where
 
-import           Control.Monad.Discount
+import           Definitive
 import qualified Control.Monad.Trans.Except as E
 import qualified Control.Monad.Trans.State.Strict as S
 
@@ -31,12 +31,12 @@ data State s m a
   deriving (Functor, Effect)
 
 
-get :: Member (State s) r => Eff r s
+get :: Member (State s) r => Def r s
 get = send $ Get id
 {-# INLINE get #-}
 
 
-put :: Member (State s) r => s -> Eff r ()
+put :: Member (State s) r => s -> Def r ()
 put s = send $ Put s ()
 {-# INLINE put #-}
 
@@ -57,16 +57,16 @@ instance Effect (Error e) where
   {-# INLINE hoist #-}
 
 
-throw :: Member (Error e) r => e -> Eff r a
+throw :: Member (Error e) r => e -> Def r a
 throw = send . Throw
 
 
-catch :: Member (Error e) r => Eff r a -> (e -> Eff r a) -> Eff r a
+catch :: Member (Error e) r => Def r a -> (e -> Def r a) -> Def r a
 catch try handle = send $ Catch try handle id
 
 
 
-runState :: s -> Eff (State s ': r) a -> Eff r (s, a)
+runState :: s -> Def (State s ': r) a -> Def r (s, a)
 runState = stateful $ \case
   Get k   -> fmap k S.get
   Put s k -> S.put s >> pure k
@@ -74,12 +74,12 @@ runState = stateful $ \case
 
 
 {-# RULES "runState/reinterpret"
-   forall s e (f :: forall x. e (Eff (e ': r)) x -> Eff (State s ': r) x).
+   forall s e (f :: forall x. e (Def (e ': r)) x -> Def (State s ': r) x).
      runState s (reinterpret f e) = runRelayS (\x s' -> runState s' $ f x) s e
      #-}
 
 
-runError :: Eff (Error e ': r) a -> Eff r (Either e a)
+runError :: Def (Error e ': r) a -> Def r (Either e a)
 runError (Freer m) = Freer $ \k -> E.runExceptT $ m $ \u ->
   case decomp u of
     Left x -> E.ExceptT $ k $ weave (Right ()) (either (pure . Left) runError') x
@@ -97,7 +97,7 @@ runError (Freer m) = Freer $ \k -> E.runExceptT $ m $ \u ->
 {-# INLINE runError #-}
 
 
-runError' :: Eff (Error e ': r) a -> Eff r (Either e a)
+runError' :: Def (Error e ': r) a -> Def r (Either e a)
 runError' = runError
 {-# NOINLINE runError' #-}
 

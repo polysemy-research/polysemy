@@ -7,8 +7,8 @@
 module FusionSpec where
 
 import Test.Inspection
-import Control.Monad.Discount
-import Data.OpenUnion
+import Definitive
+import Definitive.Union
 import TRYAGAIN hiding (main)
 import qualified Control.Monad.Trans.State.Strict as S
 import qualified Control.Monad.Trans.Except as E
@@ -40,7 +40,8 @@ spec = do
       shouldSucceed $(inspectTest $ 'jank      `doesNotUse` 'reinterpret)
       shouldSucceed $(inspectTest $ 'jank      `doesNotUse` 'hoist)
 
-go :: Eff '[State Int] Int
+
+go :: Def '[State Int] Int
 go = do
   n <- send (Get id)
   if n <= 0
@@ -49,6 +50,7 @@ go = do
        send $ Put (n-1) ()
        go
 
+
 tryIt :: Either Bool String
 tryIt = run . runError @Bool $ do
   catch @Bool
@@ -56,8 +58,10 @@ tryIt = run . runError @Bool $ do
       throw False
     \_ -> pure "hello"
 
+
 countDown :: Int -> Int
 countDown start = fst $ run $ runState start go
+
 
 jank :: Int -> Int
 jank start = fst $ run $ runState start $ reinterpret send $ go

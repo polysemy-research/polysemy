@@ -17,9 +17,9 @@
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -Wall              #-}
 
-module Data.OpenUnion where
+module Definitive.Union where
 
-import Control.Monad.Discount.Effect
+import Definitive.Effect
 import Data.Typeable
 
 data Dict c where Dict :: c => Dict c

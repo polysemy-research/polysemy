@@ -3,10 +3,10 @@
 
 module Wtf where
 
-import Control.Monad.Discount
+import Definitive
 import TRYAGAIN
 
-go :: Eff '[State Int] Int
+go :: Def '[State Int] Int
 go = do
   n <- send (Get id)
   if n <= 0
