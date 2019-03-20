@@ -19,15 +19,7 @@ data State s m a
   | Put s a
   deriving (Functor, Effect)
 
-
-get :: Member (State s) r => Semantic r s
-get = send $ Get id
-{-# INLINE get #-}
-
-
-put :: Member (State s) r => s -> Semantic r ()
-put s = send $ Put s ()
-{-# INLINE put #-}
+makeSemantic ''State
 
 
 modify :: Member (State s) r => (s -> s) -> Semantic r ()

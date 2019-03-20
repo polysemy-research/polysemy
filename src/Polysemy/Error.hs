@@ -30,19 +30,7 @@ instance Effect (Error e) where
     Catch (f try) (fmap f handle) k
   {-# INLINE hoist #-}
 
-
-throw :: Member (Error e) r => e -> Semantic r a
-throw = send . Throw
-{-# INLINE throw #-}
-
-
-catch
-    :: Member (Error e) r
-    => Semantic r a
-    -> (e -> Semantic r a)
-    -> Semantic r a
-catch try handle = send $ Catch try handle id
-{-# INLINE catch #-}
+makeSemantic ''Error
 
 
 runError :: Semantic (Error e ': r) a -> Semantic r (Either e a)

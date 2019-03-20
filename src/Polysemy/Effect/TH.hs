@@ -216,8 +216,10 @@ liftCon' typeSig tvbs cx f n nns cn tts = do
       exprs = zipExprs (map VarE xs) es args  -- this is what ctor would be applied to
       fval = foldl AppE (ConE cn) exprs       -- this is RHS without liftF
       ns' = nub (concatMap extractVars ns)
-      q = filter nonNext tvbs ++ map PlainTV (qa ++ r : ns')
-      qa = case retType of VarT b | a == b -> [a]; _ -> []
+      q = map PlainTV (ns' ++ r : qa) ++ filter nonNext tvbs
+      qa = case retType of
+             VarT b | a == b -> [a]
+             _ -> []
       f' = foldl AppT f ns
   return $ concat
     [ if typeSig
