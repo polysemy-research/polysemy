@@ -1,8 +1,3 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE RankNTypes    #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UnicodeSyntax #-}
-
 -- | Everything you need in order to define new effects.
 module Polysemy.Effect.New
   ( Effect (..)

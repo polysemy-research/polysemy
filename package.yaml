@@ -35,6 +35,21 @@ flags:
 library:
   ghc-options: -O2 -Wall
   source-dirs: src
+  default-extensions:
+    - DataKinds
+    - DeriveFunctor
+    - FlexibleContexts
+    - GADTs
+    - LambdaCase
+    - PolyKinds
+    - RankNTypes
+    - ScopedTypeVariables
+    - StandaloneDeriving
+    - TypeApplications
+    - TypeOperators
+
+    - UnicodeSyntax
+
   when:
     - condition: flag(dump-core)
       then:

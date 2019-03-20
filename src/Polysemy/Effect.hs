@@ -1,8 +1,5 @@
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE UnicodeSyntax         #-}
 
 module Polysemy.Effect where
 

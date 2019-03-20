@@ -4,7 +4,6 @@
 
 * tests to prove fusion
 * benchmarks
-* rename core functions
 * add commentary
 * more effects
     * all the STANDARD ONES
