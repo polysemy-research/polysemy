@@ -15,9 +15,8 @@ module Polysemy.State
   , runState
   ) where
 
-import qualified Control.Monad.Trans.State.Strict as S
-import           Polysemy
-import           Polysemy.Effect
+import Polysemy
+import Polysemy.Effect.New
 
 
 data State s m a
@@ -45,12 +44,12 @@ modify f = do
 
 runState :: s -> Semantic (State s ': r) a -> Semantic r (s, a)
 runState = stateful $ \case
-  Get k   -> fmap k S.get
-  Put s k -> S.put s >> pure k
+  Get k   -> \s -> pure (s, k s)
+  Put s k -> const $ pure (s, k)
 {-# INLINE[3] runState #-}
 
 {-# RULES "runState/reinterpret"
    forall s e (f :: forall x. e (Semantic (e ': r)) x -> Semantic (State s ': r) x).
-     runState s (reinterpret f e) = runRelayS (\x s' -> runState s' $ f x) s e
+     runState s (reinterpret f e) = stateful (\x s' -> runState s' $ f x) s e
      #-}
 

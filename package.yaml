@@ -33,7 +33,7 @@ flags:
     manual:      True
 
 library:
-  ghc-options: -O2
+  ghc-options: -O2 -Wall
   source-dirs: src
   when:
     - condition: flag(dump-core)

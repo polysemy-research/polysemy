@@ -18,7 +18,7 @@ module Polysemy.Error
 
 import qualified Control.Monad.Trans.Except as E
 import           Polysemy
-import           Polysemy.Effect
+import           Polysemy.Effect.New
 
 
 data Error e m a
@@ -33,6 +33,7 @@ instance Effect (Error e) where
     Catch (f $ try <$ s) (\e -> f $ handle e <$ s) $ fmap k
   {-# INLINE weave #-}
 
+  hoist _ (Throw e) = Throw e
   hoist f (Catch try handle k) =
     Catch (f try) (fmap f handle) k
   {-# INLINE hoist #-}

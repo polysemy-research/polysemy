@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveFunctor       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
@@ -20,7 +19,7 @@ module Polysemy.Resource
 import qualified Control.Exception as X
 import           Control.Monad (void)
 import           Polysemy
-import           Polysemy.Effect
+import           Polysemy.Effect.New
 
 
 data Resource m a

@@ -19,10 +19,10 @@
 module Polysemy.Effect.TH
   (
    -- * Free monadic actions
-   makeFree,
-   makeFree_,
-   makeFreeCon,
-   makeFreeCon_,
+   makeSemantic,
+   makeSemantic_,
+   makeSemanticCon,
+   makeSemanticCon_,
 
    -- * Documentation
    -- $doc
@@ -302,7 +302,7 @@ liftDec typeSig onlyCons (DataD _ tyName tyVarBndrs cons _)
       nextTy  = last tys
       con        = ConT tyName
 liftDec _ _ dec = fail $ unlines
-  [ "failed to derive makeFree operations:"
+  [ "failed to derive makeSemantic operations:"
   , "expected a data type constructor"
   , "but got " ++ pprint dec ]
 
@@ -315,7 +315,7 @@ genFree typeSig cnames tyCon = do
   info <- reify tyCon
   case info of
     TyConI dec -> liftDec typeSig cnames dec
-    _ -> fail "makeFree expects a type constructor"
+    _ -> fail "makeSemantic expects a type constructor"
 
 -- | Generate monadic action for a single constructor of a data type.
 genFreeCon :: Bool         -- ^ Include type signature?
@@ -333,19 +333,19 @@ genFreeCon typeSig cname = do
           [ "expected a data constructor"
           , "but got " ++ pprint info ]
 
--- | @$('makeFree' ''T)@ provides free monadic actions for the
+-- | @$('makeSemantic' ''T)@ provides free monadic actions for the
 -- constructors of the given data type @T@.
-makeFree :: Name -> Q [Dec]
-makeFree = genFree True Nothing
+makeSemantic :: Name -> Q [Dec]
+makeSemantic = genFree True Nothing
 
--- | Like 'makeFree', but does not provide type signatures.
+-- | Like 'makeSemantic', but does not provide type signatures.
 -- This can be used to attach Haddock comments to individual arguments
 -- for each generated function.
 --
 -- @
 -- data LangF x = Output String x
 --
--- makeFree_ 'LangF
+-- makeSemantic_ 'LangF
 --
 -- -- | Output a string.
 -- output :: Member LangF m =>
@@ -353,29 +353,29 @@ makeFree = genFree True Nothing
 --        -> m ()     -- ^ No result.
 -- @
 --
--- 'makeFree_' must be called *before* the explicit type signatures.
-makeFree_ :: Name -> Q [Dec]
-makeFree_ = genFree False Nothing
+-- 'makeSemantic_' must be called *before* the explicit type signatures.
+makeSemantic_ :: Name -> Q [Dec]
+makeSemantic_ = genFree False Nothing
 
--- | @$('makeFreeCon' 'Con)@ provides free monadic action for a data
+-- | @$('makeSemanticCon' 'Con)@ provides free monadic action for a data
 -- constructor @Con@. Note that you can attach Haddock comment to the
 -- generated function by placing it before the top-level invocation of
--- 'makeFreeCon':
+-- 'makeSemanticCon':
 --
 -- @
 -- -- | Output a string.
--- makeFreeCon 'Output
+-- makeSemanticCon 'Output
 -- @
-makeFreeCon :: Name -> Q [Dec]
-makeFreeCon = genFreeCon True
+makeSemanticCon :: Name -> Q [Dec]
+makeSemanticCon = genFreeCon True
 
--- | Like 'makeFreeCon', but does not provide a type signature.
+-- | Like 'makeSemanticCon', but does not provide a type signature.
 -- This can be used to attach Haddock comments to individual arguments.
 --
 -- @
 -- data LangF x = Output String x
 --
--- makeFreeCon_ 'Output
+-- makeSemanticCon_ 'Output
 --
 -- -- | Output a string.
 -- output :: Member LangF m =>
@@ -383,9 +383,9 @@ makeFreeCon = genFreeCon True
 --        -> m ()     -- ^ No result.
 -- @
 --
--- 'makeFreeCon_' must be called *before* the explicit type signature.
-makeFreeCon_ :: Name -> Q [Dec]
-makeFreeCon_ = genFreeCon False
+-- 'makeSemanticCon_' must be called *before* the explicit type signature.
+makeSemanticCon_ :: Name -> Q [Dec]
+makeSemanticCon_ = genFreeCon False
 
 {- $doc
  To generate free monadic actions from a @Type@, it must be a @data@
