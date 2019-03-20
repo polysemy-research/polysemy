@@ -6,6 +6,7 @@
 -- | Everything you need in order to define new effects.
 module Polysemy.Effect.New
   ( Effect (..)
+  , defaultHoist
   , makeSemantic
   , makeSemantic_
   , interpret

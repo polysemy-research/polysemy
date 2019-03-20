@@ -348,9 +348,9 @@ makeSemantic = genFree True Nothing
 -- makeSemantic_ 'LangF
 --
 -- -- | Output a string.
--- output :: Member LangF m =>
+-- output :: Member LangF r =>
 --           String   -- ^ String to output.
---        -> m ()     -- ^ No result.
+--        -> Semantic r ()     -- ^ No result.
 -- @
 --
 -- 'makeSemantic_' must be called *before* the explicit type signatures.
@@ -378,9 +378,9 @@ makeSemanticCon = genFreeCon True
 -- makeSemanticCon_ 'Output
 --
 -- -- | Output a string.
--- output :: Member LangF m =>
+-- output :: Member LangF r =>
 --           String   -- ^ String to output.
---        -> m ()     -- ^ No result.
+--        -> Semantic r ()     -- ^ No result.
 -- @
 --
 -- 'makeSemanticCon_' must be called *before* the explicit type signature.
