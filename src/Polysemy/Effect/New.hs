@@ -78,7 +78,8 @@ interpretInStateT' = interpretInStateT
 --
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 reinterpret
-    :: Effect e
+    :: forall f e r a
+     . Effect e
     => (∀ x. e (Semantic (e ': r)) x -> Semantic (f ': r) x)
     -> Semantic (e ': r) a
     -> Semantic (f ': r) a
@@ -92,10 +93,11 @@ reinterpret f (Semantic m) = Semantic $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Lopo breaker so that GHC will properly inline 'reinterpret'.
 reinterpret'
-    :: Effect f
-    => (∀ x. f (Semantic (f ': r)) x -> Semantic (g ': r) x)
+    :: forall f e r a
+     . Effect e
+    => (∀ x. e (Semantic (e ': r)) x -> Semantic (f ': r) x)
+    -> Semantic (e ': r) a
     -> Semantic (f ': r) a
-    -> Semantic (g ': r) a
 reinterpret' = reinterpret
 {-# NOINLINE reinterpret' #-}
 

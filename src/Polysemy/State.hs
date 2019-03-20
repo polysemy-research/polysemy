@@ -5,6 +5,7 @@
 module Polysemy.State
   ( State (..)
   , get
+  , gets
   , put
   , modify
   , runState
@@ -20,6 +21,11 @@ data State s m a
   deriving (Functor, Effect)
 
 makeSemantic ''State
+
+
+gets :: Member (State s) r => (s -> a) -> Semantic r a
+gets f = fmap f get
+{-# INLINE gets #-}
 
 
 modify :: Member (State s) r => (s -> s) -> Semantic r ()
