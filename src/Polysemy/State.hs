@@ -5,7 +5,6 @@
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE PolyKinds        #-}
-{-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeOperators    #-}
 
 module Polysemy.State
@@ -19,7 +18,6 @@ module Polysemy.State
 import qualified Control.Monad.Trans.State.Strict as S
 import           Polysemy
 import           Polysemy.Effect
-import Polysemy.Effect.TH
 
 
 data State s m a
