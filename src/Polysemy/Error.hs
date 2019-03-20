@@ -40,6 +40,7 @@ instance Effect (Error e) where
 
 throw :: Member (Error e) r => e -> Semantic r a
 throw = send . Throw
+{-# INLINE throw #-}
 
 
 catch
@@ -48,6 +49,7 @@ catch
     -> (e -> Semantic r a)
     -> Semantic r a
 catch try handle = send $ Catch try handle id
+{-# INLINE catch #-}
 
 
 runError :: Semantic (Error e ': r) a -> Semantic r (Either e a)
