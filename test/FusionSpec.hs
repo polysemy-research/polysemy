@@ -2,7 +2,7 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -O2 #-}
+{-# OPTIONS_GHC -O2           #-}
 
 module FusionSpec where
 
@@ -39,8 +39,13 @@ spec = do
       shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` ''E.ExceptT)
 
     it "`runState . reinterpret` should fuse" $ do
-      shouldSucceed $(inspectTest $ 'jank      `doesNotUse` 'reinterpret)
-      shouldSucceed $(inspectTest $ 'jank      `doesNotUse` 'hoist)
+      shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'reinterpret)
+      shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'hoist)
+
+    it "who needs Sematic even?" $ do
+      shouldSucceed $(inspectTest $ 'countDown `doesNotUse` ''Semantic)
+      shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Semantic)
+      shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Semantic)
 
 
 go :: Semantic '[State Int] Int

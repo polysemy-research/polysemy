@@ -1,5 +1,6 @@
-{-# LANGUAGE DeriveAnyClass  #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 module Polysemy.State
   ( State (..)
@@ -18,7 +19,15 @@ data State s m a
   | Put s a
   deriving (Functor, Effect)
 
-makeSemantic ''State
+
+get :: Member (State s) r => Semantic r s
+get = send $ Get id
+{-# INLINE get #-}
+
+
+put :: Member (State s) r => s -> Semantic r ()
+put s = send $ Put s ()
+{-# INLINE put #-}
 
 
 modify :: Member (State s) r => (s -> s) -> Semantic r ()
