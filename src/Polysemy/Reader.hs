@@ -31,6 +31,8 @@ runReader i = interpret $ \case
 {-# INLINE runReader #-}
 
 
+------------------------------------------------------------------------------
+-- | Look breaker so GHC will inline 'runReader' correctly.
 runReader' :: i -> Semantic (Reader i ': r) a -> Semantic r a
 runReader' = runReader
 {-# NOINLINE runReader' #-}

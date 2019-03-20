@@ -8,6 +8,7 @@ import Polysemy
 import Polysemy.Effect.New
 import Polysemy.State
 
+
 data Output o m a = Output o a
   deriving (Functor, Effect)
 
@@ -26,9 +27,7 @@ runFoldMapOutput f = runState mempty . reinterpret \case
 {-# INLINE runFoldMapOutput #-}
 
 
-runIgnoringOutput
-    :: Semantic (Output o ': r) a
-    -> Semantic r a
+runIgnoringOutput :: Semantic (Output o ': r) a -> Semantic r a
 runIgnoringOutput = interpret \case
   Output _ k -> pure k
 {-# INLINE runIgnoringOutput #-}

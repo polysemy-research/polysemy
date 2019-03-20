@@ -62,9 +62,11 @@ instance Effect (Union r) where
 
 
 
+-- TODO(sandy): This type error gets in the way of real type errors, eg if you
+-- put a $ in the wrong place
 type Member e r =
   ( Find r e
-  , Break (AmbiguousSend r e) (IndexOf r (Found r e))
+  -- , Break (AmbiguousSend r e) (IndexOf r (Found r e))
   , e ~ IndexOf r (Found r e)
   , Effect e
   )
