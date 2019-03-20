@@ -26,17 +26,21 @@ type AmbigousEffectMessage r e t vs =
     ':<>: 'ShowType e
     ':<>: 'Text "'"
     ':$$: 'Text "Possible fix:"
-    ':$$: 'Text "  add 'Member ("
+    ':$$: 'Text "  add (Member ("
     ':<>: 'ShowType t
     ':<>: 'Text ") "
     ':<>: 'ShowType r
-    ':<>: 'Text "' to the context of "
+    ':<>: 'Text ") to the context of "
     ':$$: 'Text "    the type signature"
-    ':$$: 'Text "If you already have the constraint you want,"
-    ':$$: 'Text "  instead add a type application to specify"
+    ':$$: 'Text "If you already have the constraint you want, instead"
+    ':$$: 'Text "  add a type application to specify"
     ':$$: 'Text "    "
     ':<>: PrettyPrint vs
     ':<>: 'Text " directly"
+    ':$$: 'Text "If you are seeing this error at the interpretation site,"
+    ':$$: 'Text "  it means you forgot to handle the '"
+    ':<>: 'ShowType t
+    ':<>: 'Text "' effect"
         )
 
 type family PrettyPrint (vs :: [k]) where

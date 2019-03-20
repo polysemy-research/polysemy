@@ -8,7 +8,7 @@ module Wtf where
 import Definitive
 import Definitive.State
 
-go :: Def '[State Int] Int
+go :: Member (State Int) r => Def r Int
 go = do
   n <- get
   if n <= 0
@@ -19,5 +19,6 @@ go = do
 
 
 countDown :: Int -> Int
-countDown start = fst $ run $ runState start $ reinterpret send $ go
+countDown start =
+  fst . run . runState start . reinterpret send $ go
 
