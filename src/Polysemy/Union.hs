@@ -14,11 +14,60 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Polysemy.Union where
+module Polysemy.Union
+  ( Union (..)
+  , Member
+  -- * Building Unions
+  , inj
+  , weaken
+  -- * Using Unions
+  , decomp
+  , prj
+  , extract
+  , absurdU
+  , decompCoerce
+  -- * Witnesses
+  , SNat (..)
+  , Nat (..)
+  ) where
 
 import Data.Typeable
 import Polysemy.Effect
 import Polysemy.Union.TypeErrors
+
+
+------------------------------------------------------------------------------
+-- | An extensible, type-safe union. The @r@ type parameter is a type-level
+-- list of effects, any one of which may be held within the 'Union'.
+data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
+  Union
+      :: Effect (IndexOf r n)
+      =>  SNat n
+         -- ^ A proof that the effect is actually in @r@.
+      -> IndexOf r n m a
+         -- ^ The effect to wrap. The functions 'prj' and 'decomp' can help
+         -- retrieve this value later.
+      -> Union r m a
+
+
+instance (Functor m) => Functor (Union r m) where
+  fmap f (Union w t) = Union w $ fmap' f t
+    where
+      -- This is necessary to delay the interaction between the type family
+      -- 'IndexOf' and the quantified superclass constraint on 'Effect'.
+      fmap' :: (Functor m, Effect f) => (a -> b) -> f m a -> f m b
+      fmap' = fmap
+      {-# INLINE fmap' #-}
+  {-# INLINE fmap #-}
+
+
+instance Effect (Union r) where
+  weave s f (Union w e) = Union w $ weave s f e
+  {-# INLINE weave #-}
+
+  hoist f (Union w e) = Union w $ hoist f e
+  {-# INLINE hoist #-}
+
 
 
 type Member e r =
@@ -32,10 +81,20 @@ type Member e r =
 data Dict c where Dict :: c => Dict c
 
 
+induceTypeable :: SNat n -> Dict (Typeable n)
+induceTypeable SZ = Dict
+induceTypeable (SS _) = Dict
+{-# INLINE induceTypeable #-}
+
+
+------------------------------------------------------------------------------
+-- | The kind of type-level natural numbers.
 data Nat = Z | S Nat
   deriving Typeable
 
 
+------------------------------------------------------------------------------
+-- | A singleton for 'Nat'.
 data SNat :: Nat -> * where
   SZ :: SNat 'Z
   SS :: Typeable n => SNat n -> SNat ('S n)
@@ -66,16 +125,9 @@ instance ( Find z t
   {-# INLINE finder #-}
 
 
-
-
-data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
-  Union
-      :: Effect (IndexOf r n)
-      => SNat n
-      -> IndexOf r n m a
-      -> Union r m a
-
-
+------------------------------------------------------------------------------
+-- | Decompose a 'Union'. Either this union contains an effect @e@---the head
+-- of the @r@ list---or it doesn't.
 decomp :: Union (e ': r) m a -> Either (Union r m a) (e m a)
 decomp (Union p a) =
   case p of
@@ -84,16 +136,22 @@ decomp (Union p a) =
 {-# INLINE decomp #-}
 
 
+------------------------------------------------------------------------------
+-- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> e m a
 extract (Union SZ a) = a
 extract _ = error "impossible"
 {-# INLINE extract #-}
 
 
+------------------------------------------------------------------------------
+-- | An empty union contains nothing, so this function is uncallable.
 absurdU :: Union '[] m a -> b
 absurdU = absurdU
 
 
+------------------------------------------------------------------------------
+-- | Weaken a 'Union' so it is capable of storing a new sort of effect.
 weaken :: Union r m a -> Union (e ': r) m a
 weaken (Union n a) =
   case induceTypeable n of
@@ -101,25 +159,16 @@ weaken (Union n a) =
 {-# INLINE weaken #-}
 
 
-inj
-    :: forall r e a m
-     . ( Functor m
-       , Member e r
-       )
-    => e m a
-    -> Union r m a
+------------------------------------------------------------------------------
+-- | Lift an effect @e@ into a 'Union' capable of holding it.
+inj :: forall r e a m. (Functor m , Member e r) => e m a -> Union r m a
 inj e = Union (finder @_ @r @e) e
 {-# INLINE inj #-}
 
 
-induceTypeable :: SNat n -> Dict (Typeable n)
-induceTypeable SZ = Dict
-induceTypeable (SS _) = Dict
-{-# INLINE induceTypeable #-}
-
-
-prj
-    :: forall r e a m
+------------------------------------------------------------------------------
+-- | Attempt to take an @e@ effect out of a 'Union'.
+prj :: forall r e a m
      . ( Member e r
        )
     => Union r m a
@@ -133,29 +182,16 @@ prj (Union (s :: SNat n) a) =
 {-# INLINE prj #-}
 
 
-prjCoerce
+------------------------------------------------------------------------------
+-- | Like 'decomp', but allows for a more efficient
+-- 'Polysemy.Effect.New.reinterpret' function.
+decompCoerce
     :: Union (e ': r) m a
     -> Either (Union (f ': r) m a) (e m a)
-prjCoerce (Union p a) =
+decompCoerce (Union p a) =
   case p of
     SZ -> Right a
     SS n -> Left (Union (SS n) a)
-{-# INLINE prjCoerce #-}
+{-# INLINE decompCoerce #-}
 
-
-instance Effect (Union r) where
-  weave s f (Union w e) = Union w $ weave s f e
-  {-# INLINE weave #-}
-
-  hoist f (Union w e) = Union w $ hoist f e
-  {-# INLINE hoist #-}
-
-
-instance (Functor m) => Functor (Union r m) where
-  fmap f (Union w t) = Union w $ fmap' f t
-    where
-      fmap' :: (Functor m, Effect f) => (a -> b) -> f m a -> f m b
-      fmap' = fmap
-      {-# INLINE fmap' #-}
-  {-# INLINE fmap #-}
 

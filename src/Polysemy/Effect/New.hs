@@ -15,7 +15,7 @@ module Polysemy.Effect.New
   , Union ()
   , decomp
   , prj
-  , prjCoerce
+  , decompCoerce
   , weaken
   ) where
 
@@ -88,7 +88,7 @@ reinterpret
     -> Semantic (e ': r) a
     -> Semantic (f ': r) a
 reinterpret f (Semantic m) = Semantic $ \k -> m $ \u ->
-  case prjCoerce u of
+  case decompCoerce u of
     Left x -> k $ hoist (reinterpret' f) $ x
     Right y  -> usingSemantic k $ f y
 {-# INLINE[3] reinterpret #-}
