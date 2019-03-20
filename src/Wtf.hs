@@ -5,10 +5,10 @@
 
 module Wtf where
 
-import Definitive
-import Definitive.State
+import Polysemy
+import Polysemy.State
 
-go :: Member (State Int) r => Def r Int
+go :: Member (State Int) r => Poly r Int
 go = do
   n <- get
   if n <= 0

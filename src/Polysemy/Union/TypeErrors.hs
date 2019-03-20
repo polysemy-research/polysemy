@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Definitive.Union.TypeErrors
+module Polysemy.Union.TypeErrors
   ( AmbiguousSend
   , Break
   ) where

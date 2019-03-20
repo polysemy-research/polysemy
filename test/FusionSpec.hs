@@ -8,10 +8,10 @@ module FusionSpec where
 
 import qualified Control.Monad.Trans.Except as E
 import qualified Control.Monad.Trans.State.Strict as S
-import           Definitive
-import           Definitive.Error
-import           Definitive.State
-import           Definitive.Union
+import           Polysemy
+import           Polysemy.Error
+import           Polysemy.State
+import           Polysemy.Union
 import           Test.Hspec
 import           Test.Inspection
 
@@ -42,7 +42,7 @@ spec = do
       shouldSucceed $(inspectTest $ 'jank      `doesNotUse` 'hoist)
 
 
-go :: Def '[State Int] Int
+go :: Poly '[State Int] Int
 go = do
   n <- send (Get id)
   if n <= 0

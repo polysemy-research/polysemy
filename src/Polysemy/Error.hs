@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE UnicodeSyntax      #-}
 
-module Definitive.Error
+module Polysemy.Error
   ( Error (..)
   , throw
   , catch
@@ -17,8 +17,8 @@ module Definitive.Error
   ) where
 
 import qualified Control.Monad.Trans.Except as E
-import           Definitive
-import           Definitive.Effect
+import           Polysemy
+import           Polysemy.Effect
 
 
 data Error e m a
@@ -38,22 +38,22 @@ instance Effect (Error e) where
   {-# INLINE hoist #-}
 
 
-throw :: Member (Error e) r => e -> Def r a
+throw :: Member (Error e) r => e -> Poly r a
 throw = send . Throw
 
 
-catch :: Member (Error e) r => Def r a -> (e -> Def r a) -> Def r a
+catch :: Member (Error e) r => Poly r a -> (e -> Poly r a) -> Poly r a
 catch try handle = send $ Catch try handle id
 
 
-runError :: Def (Error e ': r) a -> Def r (Either e a)
-runError (Freer m) = Freer $ \k -> E.runExceptT $ m $ \u ->
+runError :: Poly (Error e ': r) a -> Poly r (Either e a)
+runError (Poly m) = Poly $ \k -> E.runExceptT $ m $ \u ->
   case decomp u of
     Left x -> E.ExceptT $ k $
       weave (Right ()) (either (pure . Left) runError') x
     Right (Throw e) -> E.throwE e
     Right (Catch try handle kt) -> E.ExceptT $ do
-      let runIt = usingFreer k . runError'
+      let runIt = usingPoly k . runError'
       ma <- runIt try
       case ma of
         Right a -> pure . Right $ kt a
@@ -65,7 +65,7 @@ runError (Freer m) = Freer $ \k -> E.runExceptT $ m $ \u ->
 {-# INLINE runError #-}
 
 
-runError' :: Def (Error e ': r) a -> Def r (Either e a)
+runError' :: Poly (Error e ': r) a -> Poly r (Either e a)
 runError' = runError
 {-# NOINLINE runError' #-}
 

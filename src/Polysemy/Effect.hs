@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE UnicodeSyntax         #-}
 
-module Definitive.Effect where
+module Polysemy.Effect where
 
 import Data.Coerce
 import Data.Functor.Identity

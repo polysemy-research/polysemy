@@ -2,10 +2,9 @@
 {-# LANGUAGE DerivingVia    #-}
 {-# LANGUAGE KindSignatures #-}
 
-module Definitive.Lift where
+module Polysemy.Lift where
 
-import Definitive.Effect
-import Data.Coerce
+import Polysemy.Effect
 
 
 newtype Lift m (z :: * -> *) a = Lift

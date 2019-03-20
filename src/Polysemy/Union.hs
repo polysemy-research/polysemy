@@ -14,11 +14,11 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Definitive.Union where
+module Polysemy.Union where
 
 import Data.Typeable
-import Definitive.Effect
-import Definitive.Union.TypeErrors
+import Polysemy.Effect
+import Polysemy.Union.TypeErrors
 
 
 type Member e r =

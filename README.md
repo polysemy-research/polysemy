@@ -1,10 +1,9 @@
-# too-fast-too-free
+# polysemy
 
 ## TODO
 
 * tests to prove fusion
 * benchmarks
-* pick a name dangit
 * rename core functions
 * add commentary
 * more effects

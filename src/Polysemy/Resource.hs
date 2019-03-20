@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeOperators       #-}
 {-# LANGUAGE UnicodeSyntax       #-}
 
-module Definitive.Resource
+module Polysemy.Resource
   ( Resource (..)
   , bracket
   , runResource
@@ -19,8 +19,8 @@ module Definitive.Resource
 
 import qualified Control.Exception as X
 import           Control.Monad (void)
-import           Definitive
-import           Definitive.Effect
+import           Polysemy
+import           Polysemy.Effect
 
 
 data Resource m a
@@ -43,10 +43,10 @@ instance Effect Resource where
 
 bracket
     :: Member Resource r
-    => Def r a
-    -> (a -> Def r ())
-    -> (a -> Def r b)
-    -> Def r b
+    => Poly r a
+    -> (a -> Poly r ())
+    -> (a -> Poly r b)
+    -> Poly r b
 bracket alloc dealloc use = send $ Bracket alloc dealloc use id
 {-# INLINE bracket #-}
 
@@ -54,12 +54,12 @@ bracket alloc dealloc use = send $ Bracket alloc dealloc use id
 runResource
     :: forall r a
      . Member (Lift IO) r
-    => (∀ x. Def r x -> IO x)
-    -> Def (Resource ': r) a
-    -> Def r a
+    => (∀ x. Poly r x -> IO x)
+    -> Poly (Resource ': r) a
+    -> Poly r a
 runResource finish = interpret $ \case
   Bracket alloc dealloc use k -> fmap k . sendM $
-    let runIt :: Def (Resource ': r) x -> IO x
+    let runIt :: Poly (Resource ': r) x -> IO x
         runIt = finish . runResource' finish
      in X.bracket
           (runIt alloc)
@@ -70,9 +70,9 @@ runResource finish = interpret $ \case
 
 runResource'
     :: Member (Lift IO) r
-    => (∀ x. Def r x -> IO x)
-    -> Def (Resource ': r) a
-    -> Def r a
+    => (∀ x. Poly r x -> IO x)
+    -> Poly (Resource ': r) a
+    -> Poly r a
 runResource' = runResource
 {-# NOINLINE runResource' #-}
 
