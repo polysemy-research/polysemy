@@ -43,10 +43,10 @@ instance Effect Resource where
 
 bracket
     :: Member Resource r
-    => Poly r a
-    -> (a -> Poly r ())
-    -> (a -> Poly r b)
-    -> Poly r b
+    => Semantic r a
+    -> (a -> Semantic r ())
+    -> (a -> Semantic r b)
+    -> Semantic r b
 bracket alloc dealloc use = send $ Bracket alloc dealloc use id
 {-# INLINE bracket #-}
 
@@ -54,12 +54,12 @@ bracket alloc dealloc use = send $ Bracket alloc dealloc use id
 runResource
     :: forall r a
      . Member (Lift IO) r
-    => (∀ x. Poly r x -> IO x)
-    -> Poly (Resource ': r) a
-    -> Poly r a
+    => (∀ x. Semantic r x -> IO x)
+    -> Semantic (Resource ': r) a
+    -> Semantic r a
 runResource finish = interpret $ \case
   Bracket alloc dealloc use k -> fmap k . sendM $
-    let runIt :: Poly (Resource ': r) x -> IO x
+    let runIt :: Semantic (Resource ': r) x -> IO x
         runIt = finish . runResource' finish
      in X.bracket
           (runIt alloc)
@@ -70,9 +70,9 @@ runResource finish = interpret $ \case
 
 runResource'
     :: Member (Lift IO) r
-    => (∀ x. Poly r x -> IO x)
-    -> Poly (Resource ': r) a
-    -> Poly r a
+    => (∀ x. Semantic r x -> IO x)
+    -> Semantic (Resource ': r) a
+    -> Semantic r a
 runResource' = runResource
 {-# NOINLINE runResource' #-}
 

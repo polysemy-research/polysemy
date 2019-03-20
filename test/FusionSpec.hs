@@ -42,7 +42,7 @@ spec = do
       shouldSucceed $(inspectTest $ 'jank      `doesNotUse` 'hoist)
 
 
-go :: Poly '[State Int] Int
+go :: Semantic '[State Int] Int
 go = do
   n <- send (Get id)
   if n <= 0

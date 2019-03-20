@@ -8,7 +8,7 @@ module Wtf where
 import Polysemy
 import Polysemy.State
 
-go :: Member (State Int) r => Poly r Int
+go :: Member (State Int) r => Semantic r Int
 go = do
   n <- get
   if n <= 0

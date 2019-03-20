@@ -38,22 +38,26 @@ instance Effect (Error e) where
   {-# INLINE hoist #-}
 
 
-throw :: Member (Error e) r => e -> Poly r a
+throw :: Member (Error e) r => e -> Semantic r a
 throw = send . Throw
 
 
-catch :: Member (Error e) r => Poly r a -> (e -> Poly r a) -> Poly r a
+catch
+    :: Member (Error e) r
+    => Semantic r a
+    -> (e -> Semantic r a)
+    -> Semantic r a
 catch try handle = send $ Catch try handle id
 
 
-runError :: Poly (Error e ': r) a -> Poly r (Either e a)
-runError (Poly m) = Poly $ \k -> E.runExceptT $ m $ \u ->
+runError :: Semantic (Error e ': r) a -> Semantic r (Either e a)
+runError (Semantic m) = Semantic $ \k -> E.runExceptT $ m $ \u ->
   case decomp u of
     Left x -> E.ExceptT $ k $
       weave (Right ()) (either (pure . Left) runError') x
     Right (Throw e) -> E.throwE e
     Right (Catch try handle kt) -> E.ExceptT $ do
-      let runIt = usingPoly k . runError'
+      let runIt = usingSemantic k . runError'
       ma <- runIt try
       case ma of
         Right a -> pure . Right $ kt a
@@ -65,7 +69,7 @@ runError (Poly m) = Poly $ \k -> E.runExceptT $ m $ \u ->
 {-# INLINE runError #-}
 
 
-runError' :: Poly (Error e ': r) a -> Poly r (Either e a)
+runError' :: Semantic (Error e ': r) a -> Semantic r (Either e a)
 runError' = runError
 {-# NOINLINE runError' #-}
 
