@@ -39,7 +39,13 @@ newtype Semantic r a = Semantic
         -> m a
   }
 
-usingSemantic :: Monad m => (∀ x. Union r (Semantic r) x -> m x) -> Semantic r a -> m a
+------------------------------------------------------------------------------
+-- | Like 'runSemantic' but flipped for better ergonomics sometimes.
+usingSemantic
+    :: Monad m
+    => (∀ x. Union r (Semantic r) x -> m x)
+    -> Semantic r a
+    -> m a
 usingSemantic k m = runSemantic m k
 {-# INLINE usingSemantic #-}
 
@@ -95,16 +101,23 @@ send = liftSemantic . inj
 {-# INLINE[3] send #-}
 
 
+------------------------------------------------------------------------------
+-- | Lift a monadic action @m@ into 'Semantic'.
 sendM :: Member (Lift m) r => m a -> Semantic r a
 sendM = send . Lift
 {-# INLINE sendM #-}
 
 
+------------------------------------------------------------------------------
+-- | Run a 'Semantic' containing no effects as a pure value.
 run :: Semantic '[] a -> a
 run (Semantic m) = runIdentity $ m absurdU
 {-# INLINE run #-}
 
 
+------------------------------------------------------------------------------
+-- | Lower a 'Semantic' containing only a single lifted 'Monad' into that
+-- monad.
 runM :: Monad m => Semantic '[Lift m] a -> m a
 runM (Semantic m) = m $ unLift . extract
 {-# INLINE runM #-}
