@@ -8,6 +8,7 @@
 * more effects
     * all the STANDARD ONES
     * also `Input` and `Output`
+* the TH barfs if semantic isn't in scope
 * readme
 * CI
 * launch!

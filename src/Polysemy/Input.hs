@@ -10,7 +10,7 @@ import Polysemy
 import Polysemy.Effect.New
 import Polysemy.State
 
-data Input i m a = Input (i -> a)
+newtype Input i m a = Input (i -> a)
   deriving (Functor, Effect)
 
 makeSemantic ''Input

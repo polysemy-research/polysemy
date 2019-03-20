@@ -293,6 +293,17 @@ liftDec :: Bool             -- ^ Include type signature?
         -> Dec              -- ^ Data type declaration.
         -> Q [Dec]
 #if MIN_VERSION_template_haskell(2,11,0)
+liftDec typeSig onlyCons (NewtypeD _ tyName tyVarBndrs _ cons _)
+#else
+liftDec typeSig onlyCons (NewtypeD _ tyName tyVarBndrs cons _)
+#endif
+  | null tyVarBndrs = fail $ "Type constructor " ++ pprint tyName ++ " needs at least one type parameter"
+  | otherwise = concat <$> mapM (liftCon typeSig [] [] con nextTy (init tys) onlyCons) [cons]
+    where
+      tys     = map (VarT . tyVarBndrName) tyVarBndrs
+      nextTy  = last tys
+      con        = ConT tyName
+#if MIN_VERSION_template_haskell(2,11,0)
 liftDec typeSig onlyCons (DataD _ tyName tyVarBndrs _ cons _)
 #else
 liftDec typeSig onlyCons (DataD _ tyName tyVarBndrs cons _)
