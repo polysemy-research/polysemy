@@ -24,16 +24,9 @@ instance Effect (Reader i) where
 makeSemantic ''Reader
 
 
-runReader :: i -> Semantic (Reader i ': r) a -> Semantic r a
-runReader i = interpret $ \case
-  Ask k -> pure $ k i
-  Local f m k -> fmap k $ runReader' (f i) m
-{-# INLINE runReader #-}
-
-
-------------------------------------------------------------------------------
--- | Look breaker so GHC will inline 'runReader' correctly.
-runReader' :: i -> Semantic (Reader i ': r) a -> Semantic r a
-runReader' = runReader
-{-# NOINLINE runReader' #-}
-
+inlineRecursiveCalls [d|
+  runReader :: i -> Semantic (Reader i ': r) a -> Semantic r a
+  runReader i = interpret $ \case
+    Ask k -> pure $ k i
+    Local f m k -> fmap k $ runReader (f i) m
+  |]

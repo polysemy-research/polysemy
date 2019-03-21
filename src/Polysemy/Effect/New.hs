@@ -12,6 +12,7 @@ module Polysemy.Effect.New
   , prj
   , decompCoerce
   , weaken
+  , inlineRecursiveCalls
   ) where
 
 import           Control.Monad.Trans.State.Strict (StateT)
@@ -20,6 +21,7 @@ import           Data.Tuple
 import           Polysemy
 import           Polysemy.Effect
 import           Polysemy.Effect.TH
+import           Polysemy.Performance.TH
 import           Polysemy.Union
 
 
@@ -33,7 +35,7 @@ interpret
     -> Semantic r a
 interpret f (Semantic m) = m $ \u ->
   case decomp u of
-    Left  x -> liftSemantic $ hoist (interpret f) x
+    Left  x -> liftSemantic $ hoist (___interpret___loop_breaker f) x
     Right y -> f y
 {-# INLINE interpret #-}
 
@@ -52,22 +54,12 @@ interpretInStateT f s (Semantic m) = Semantic $ \k ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ interpretInStateT' f)
+            . weave (s', ()) (uncurry $ ___interpretInStateT___loop_breaker f)
             $ x
         Right y -> S.mapStateT (usingSemantic k) $ f y
 {-# INLINE interpretInStateT #-}
 
 
-------------------------------------------------------------------------------
--- | Loop breaker so that GHC will properly inline 'interpretInStateT'.
-interpretInStateT'
-    :: Effect e
-    => (∀ x. e (Semantic (e ': r)) x -> StateT s (Semantic r) x)
-    -> s
-    -> Semantic (e ': r) a
-    -> Semantic r (s, a)
-interpretInStateT' = interpretInStateT
-{-# NOINLINE interpretInStateT' #-}
 
 
 ------------------------------------------------------------------------------
@@ -85,21 +77,10 @@ reinterpret
     -> Semantic (f ': r) a
 reinterpret f (Semantic m) = Semantic $ \k -> m $ \u ->
   case decompCoerce u of
-    Left x -> k $ hoist (reinterpret' f) $ x
+    Left x -> k $ hoist (___reinterpret___loop_breaker f) $ x
     Right y  -> usingSemantic k $ f y
 {-# INLINE[3] reinterpret #-}
 
-
-------------------------------------------------------------------------------
--- | Lopo breaker so that GHC will properly inline 'reinterpret'.
-reinterpret'
-    :: forall f e r a
-     . Effect e
-    => (∀ x. e (Semantic (e ': r)) x -> Semantic (f ': r) x)
-    -> Semantic (e ': r) a
-    -> Semantic (f ': r) a
-reinterpret' = reinterpret
-{-# NOINLINE reinterpret' #-}
 
 
 ------------------------------------------------------------------------------
@@ -112,4 +93,33 @@ stateful
     -> Semantic r (s, a)
 stateful f = interpretInStateT $ \e -> S.StateT $ fmap swap . f e
 {-# INLINE[3] stateful #-}
+
+
+------------------------------------------------------------------------------
+-- | Explicit loop breakers so that GHC will properly inline all of the above.
+___interpret___loop_breaker
+    :: Effect e
+    => (∀ x. e (Semantic (e ': r)) x -> Semantic r x)
+    -> Semantic (e ': r) a
+    -> Semantic r a
+___interpret___loop_breaker = interpret
+{-# NOINLINE ___interpret___loop_breaker #-}
+
+___interpretInStateT___loop_breaker
+    :: Effect e
+    => (∀ x. e (Semantic (e ': r)) x -> StateT s (Semantic r) x)
+    -> s
+    -> Semantic (e ': r) a
+    -> Semantic r (s, a)
+___interpretInStateT___loop_breaker = interpretInStateT
+{-# NOINLINE ___interpretInStateT___loop_breaker #-}
+
+___reinterpret___loop_breaker
+    :: forall f e r a
+     . Effect e
+    => (∀ x. e (Semantic (e ': r)) x -> Semantic (f ': r) x)
+    -> Semantic (e ': r) a
+    -> Semantic (f ': r) a
+___reinterpret___loop_breaker = reinterpret
+{-# NOINLINE ___reinterpret___loop_breaker #-}
 

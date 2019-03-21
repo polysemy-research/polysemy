@@ -1,4 +1,5 @@
-{-# LANGUAGE UnicodeSyntax #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UnicodeSyntax   #-}
 
 module Polysemy.Resource
   ( Resource (..)
@@ -29,39 +30,23 @@ instance Effect Resource where
     Bracket (f alloc) (fmap f dealloc) (fmap f use) k
   {-# INLINE hoist #-}
 
-
-bracket
-    :: Member Resource r
-    => Semantic r a
-    -> (a -> Semantic r ())
-    -> (a -> Semantic r b)
-    -> Semantic r b
-bracket alloc dealloc use = send $ Bracket alloc dealloc use id
-{-# INLINE bracket #-}
+makeSemantic ''Resource
 
 
-runResource
-    :: forall r a
-     . Member (Lift IO) r
-    => (∀ x. Semantic r x -> IO x)
-    -> Semantic (Resource ': r) a
-    -> Semantic r a
-runResource finish = interpret $ \case
-  Bracket alloc dealloc use k -> fmap k . sendM $
-    let runIt :: Semantic (Resource ': r) x -> IO x
-        runIt = finish . runResource' finish
-     in X.bracket
-          (runIt alloc)
-          (runIt . dealloc)
-          (runIt . use)
-{-# INLINE runResource #-}
-
-
-runResource'
-    :: Member (Lift IO) r
-    => (∀ x. Semantic r x -> IO x)
-    -> Semantic (Resource ': r) a
-    -> Semantic r a
-runResource' = runResource
-{-# NOINLINE runResource' #-}
+inlineRecursiveCalls [d|
+  runResource
+      :: forall r a
+       . Member (Lift IO) r
+      => (∀ x. Semantic r x -> IO x)
+      -> Semantic (Resource ': r) a
+      -> Semantic r a
+  runResource finish = interpret $ \case
+    Bracket alloc dealloc use k -> fmap k . sendM $
+      let runIt :: Semantic (Resource ': r) x -> IO x
+          runIt = finish . runResource finish
+       in X.bracket
+            (runIt alloc)
+            (runIt . dealloc)
+            (runIt . use)
+  |]
 

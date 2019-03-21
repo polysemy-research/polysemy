@@ -33,26 +33,21 @@ instance Effect (Error e) where
 makeSemantic ''Error
 
 
-runError :: Semantic (Error e ': r) a -> Semantic r (Either e a)
-runError (Semantic m) = Semantic $ \k -> E.runExceptT $ m $ \u ->
-  case decomp u of
-    Left x -> E.ExceptT $ k $
-      weave (Right ()) (either (pure . Left) runError') x
-    Right (Throw e) -> E.throwE e
-    Right (Catch try handle kt) -> E.ExceptT $ do
-      let runIt = usingSemantic k . runError'
-      ma <- runIt try
-      case ma of
-        Right a -> pure . Right $ kt a
-        Left e -> do
-          ma' <- runIt $ handle e
-          case ma' of
-            Left e' -> pure $ Left e'
-            Right a -> pure . Right $ kt a
-{-# INLINE runError #-}
-
-
-runError' :: Semantic (Error e ': r) a -> Semantic r (Either e a)
-runError' = runError
-{-# NOINLINE runError' #-}
-
+inlineRecursiveCalls [d|
+  runError :: Semantic (Error e ': r) a -> Semantic r (Either e a)
+  runError (Semantic m) = Semantic $ \k -> E.runExceptT $ m $ \u ->
+    case decomp u of
+      Left x -> E.ExceptT $ k $
+        weave (Right ()) (either (pure . Left) runError) x
+      Right (Throw e) -> E.throwE e
+      Right (Catch try handle kt) -> E.ExceptT $ do
+        let runIt = usingSemantic k . runError
+        ma <- runIt try
+        case ma of
+          Right a -> pure . Right $ kt a
+          Left e -> do
+            ma' <- runIt $ handle e
+            case ma' of
+              Left e' -> pure $ Left e'
+              Right a -> pure . Right $ kt a
+  |]

@@ -28,28 +28,21 @@ instance Effect (Writer o) where
 makeSemantic ''Writer
 
 
-runWriter
-    :: Monoid o
-    => Semantic (Writer o ': r) a
-    -> Semantic r (o, a)
-runWriter = runState mempty . reinterpret \case
-  Tell o k -> do
-    modify (<> o)
-    pure k
-  Listen m k -> do
-    (o, a) <- raise $ runWriter' m
-    pure $ k o a
-  Censor f m k -> do
-    (o, a) <- raise $ runWriter' m
-    modify (<> f o)
-    pure $ k a
-{-# INLINE runWriter #-}
-
-
-runWriter'
-    :: Monoid o
-    => Semantic (Writer o ': r) a
-    -> Semantic r (o, a)
-runWriter' = runWriter
-{-# NOINLINE runWriter' #-}
+inlineRecursiveCalls [d|
+  runWriter
+      :: Monoid o
+      => Semantic (Writer o ': r) a
+      -> Semantic r (o, a)
+  runWriter = runState mempty . reinterpret \case
+    Tell o k -> do
+      modify (<> o)
+      pure k
+    Listen m k -> do
+      (o, a) <- raise $ runWriter m
+      pure $ k o a
+    Censor f m k -> do
+      (o, a) <- raise $ runWriter m
+      modify (<> f o)
+      pure $ k a
+  |]
 
