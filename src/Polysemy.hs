@@ -10,6 +10,7 @@ module Polysemy
   , sendM
   , run
   , runM
+  , raise
   , Lift ()
   , usingSemantic
   , liftSemantic
@@ -20,6 +21,7 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Polysemy.Lift
+import Polysemy.Effect
 import Polysemy.Union
 
 
@@ -86,6 +88,16 @@ hoistSemantic
     -> Semantic r' a
 hoistSemantic nat (Semantic m) = Semantic $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSemantic #-}
+
+
+raise :: Semantic r a -> Semantic (e ': r) a
+raise = hoistSemantic $ hoist raise' . weaken
+{-# INLINE raise #-}
+
+
+raise' :: Semantic r a -> Semantic (e ': r) a
+raise' = raise
+{-# NOINLINE raise' #-}
 
 
 send :: Member e r => e (Semantic r) a -> Semantic r a
