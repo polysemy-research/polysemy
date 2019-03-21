@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass  #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.NonDet
   ( NonDet (..)
@@ -47,12 +48,14 @@ instance Monad (NonDetC m) where
   {-# INLINE (>>=) #-}
 
 
-runNonDet :: Alternative f => Semantic (NonDet ': r) a -> Semantic r (f a)
-runNonDet (Semantic m) = Semantic $ \k -> runNonDetC $ m $ \u ->
-  case decomp u of
-    Left x  -> NonDetC $ \cons nil -> do
-      z <- k $ weave [()] (fmap concat . traverse runNonDet) x
-      foldr cons nil z
-    Right Empty       -> empty
-    Right (Choose ek) -> pure (ek True) <|> pure (ek False)
+inlineRecursiveCalls [d|
+  runNonDet :: Alternative f => Semantic (NonDet ': r) a -> Semantic r (f a)
+  runNonDet (Semantic m) = Semantic $ \k -> runNonDetC $ m $ \u ->
+    case decomp u of
+      Left x  -> NonDetC $ \cons nil -> do
+        z <- k $ weave [()] (fmap concat . traverse runNonDet) x
+        foldr cons nil z
+      Right Empty       -> empty
+      Right (Choose ek) -> pure (ek True) <|> pure (ek False)
+  |]
 
