@@ -34,10 +34,12 @@ runRandom q = runState q . reinterpret \case
     (a, q') <- gets @q $ R.randomR r
     put q'
     pure $ k a
+{-# INLINE runRandom #-}
 
 
 runRandomIO :: Member (Lift IO) r => Semantic (Random ': r) a -> Semantic r a
 runRandomIO m = do
   q <- sendM R.newStdGen
   snd <$> runRandom q m
+{-# INLINE runRandomIO #-}
 
