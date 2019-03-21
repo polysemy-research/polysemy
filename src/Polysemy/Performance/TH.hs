@@ -17,9 +17,17 @@ import Language.Haskell.TH
 -- interpreters for higher-order effects. This can have disastrous repercussions
 -- for your performance.
 --
--- Fortunately there's a solution, but it's ugly boilerplate. You can use this
--- TemplateHaskell splice to convince GHC to inline these functions and make
--- everything fast again.
+-- Fortunately there's a solution, but it's ugly boilerplate. You can enable
+-- @-XTemplateHaskell@ and use 'inlineRecursiveCalls' to convince GHC to make
+-- these functions fast again.
+--
+-- @
+-- inlineRecursiveCalls [d|
+--   factorial :: Int -> Int
+--   factorial 0 = 1
+--   factorial n = n * factorial (n - 1)
+--   |]
+-- @
 inlineRecursiveCalls :: Q [Dec] -> Q [Dec]
 inlineRecursiveCalls m = do
   decs <- m
