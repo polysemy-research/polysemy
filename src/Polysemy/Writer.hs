@@ -5,6 +5,7 @@ module Polysemy.Writer where
 
 import Polysemy
 import Polysemy.Effect.New
+import Polysemy.Output
 import Polysemy.State
 
 data Writer o m a
@@ -26,6 +27,12 @@ instance Effect (Writer o) where
   {-# INLINE hoist #-}
 
 makeSemantic ''Writer
+
+
+runOutputAsWriter :: Semantic (Output o ': r) a -> Semantic (Writer o ': r) a
+runOutputAsWriter = reinterpret \case
+  Output o k -> tell o >> pure k
+{-# INLINE runOutputAsWriter #-}
 
 
 inlineRecursiveCalls [d|

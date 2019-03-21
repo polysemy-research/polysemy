@@ -4,6 +4,7 @@ module Polysemy.Reader where
 
 import Polysemy
 import Polysemy.Effect.New
+import Polysemy.Input
 
 data Reader i m a
   = Ask (i -> a)
@@ -30,3 +31,10 @@ inlineRecursiveCalls [d|
     Ask k -> pure $ k i
     Local f m k -> fmap k $ runReader (f i) m
   |]
+
+
+runInputAsReader :: Semantic (Input i ': r) a -> Semantic (Reader i ': r) a
+runInputAsReader = reinterpret $ \case
+  Input k -> fmap k ask
+{-# INLINE runInputAsReader #-}
+

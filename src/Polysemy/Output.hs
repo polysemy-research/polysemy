@@ -7,7 +7,6 @@ module Polysemy.Output where
 import Polysemy
 import Polysemy.Effect.New
 import Polysemy.State
-import Polysemy.Writer
 
 
 data Output o m a = Output o a
@@ -32,9 +31,4 @@ runIgnoringOutput :: Semantic (Output o ': r) a -> Semantic r a
 runIgnoringOutput = interpret \case
   Output _ k -> pure k
 {-# INLINE runIgnoringOutput #-}
-
-
-runOutputAsWriter :: Semantic (Output o ': r) a -> Semantic (Writer o ': r) a
-runOutputAsWriter = reinterpret \case
-  Output o k -> tell o >> pure k
 

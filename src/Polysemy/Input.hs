@@ -8,7 +8,6 @@ import Data.Foldable (for_)
 import Data.List (uncons)
 import Polysemy
 import Polysemy.Effect.New
-import Polysemy.Reader
 import Polysemy.State
 
 newtype Input i m a = Input (i -> a)
@@ -36,10 +35,4 @@ runMonadicInput :: Semantic r i -> Semantic (Input i ': r) a -> Semantic r a
 runMonadicInput m = interpret \case
   Input k -> fmap k m
 {-# INLINE runMonadicInput #-}
-
-
-runInputAsReader :: Semantic (Input i ': r) a -> Semantic (Reader i ': r) a
-runInputAsReader = reinterpret \case
-  Input k -> fmap k ask
-{-# INLINE runInputAsReader #-}
 
