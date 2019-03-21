@@ -162,7 +162,7 @@ inj e = Union (finder @_ @r @e) e
 
 ------------------------------------------------------------------------------
 -- | Attempt to take an @e@ effect out of a 'Union'.
-prj :: forall r e a m
+prj :: forall e r a m
      . ( Member e r
        )
     => Union r m a

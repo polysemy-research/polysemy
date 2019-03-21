@@ -5,6 +5,7 @@ module Polysemy.Effect.New
   , makeSemantic
   , makeSemantic_
   , interpret
+  , intercept
   , reinterpret
   , stateful
   , Union ()
@@ -60,8 +61,6 @@ interpretInStateT f s (Semantic m) = Semantic $ \k ->
 {-# INLINE interpretInStateT #-}
 
 
-
-
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of removing the effect @e@, reencodes it in
 -- some new effect @f@. This function will fuse when followed by
@@ -82,7 +81,6 @@ reinterpret f (Semantic m) = Semantic $ \k -> m $ \u ->
 {-# INLINE[3] reinterpret #-}
 
 
-
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but with access to an intermediate state @s@.
 stateful
@@ -93,6 +91,21 @@ stateful
     -> Semantic r (s, a)
 stateful f = interpretInStateT $ \e -> S.StateT $ fmap swap . f e
 {-# INLINE[3] stateful #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'interpret', but instead of handling the effect, allows responding to
+-- the effect while leaving it unhandled.
+intercept
+    :: forall e r a. Member e r
+    => (∀ x. e (Semantic r) x -> Semantic r x)
+    -> Semantic r a
+    -> Semantic r a
+intercept f (Semantic m) = Semantic $ \k -> m $ \u ->
+  case prj @e u of
+    Just e  -> usingSemantic k $ f e
+    Nothing -> k u
+{-# INLINE intercept #-}
 
 
 ------------------------------------------------------------------------------
