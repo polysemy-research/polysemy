@@ -1,5 +1,6 @@
-{-# LANGUAGE CPP          #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE CPP             #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ViewPatterns    #-}
 
 {-# OPTIONS_GHC -fno-warn-overlapping-patterns #-}
 
@@ -32,9 +33,10 @@ import Control.Arrow
 import Control.Monad
 import Data.Char (toLower)
 import Data.List ((\\), nub)
+import Generics.SYB
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
-import Generics.SYB
+import Polysemy
 
 #if !(MIN_VERSION_base(4,8,0))
 import Control.Applicative
@@ -193,12 +195,9 @@ liftCon' typeSig tvbs cx f n nns cn tts = do
   opName <- mkName <$> mkOpName (nameBase cn)
   r      <- newName "r"
   a      <- newName "a"
-  semantic <- findTypeOrFail  "Semantic"
-  member   <- findTypeOrFail  "Member"
-  liftF    <- findValueOrFail "send"
   let m = last nns
       ns = init nns
-      replaceMType t | t == m = ConT semantic `AppT` VarT r
+      replaceMType t | t == m = ConT ''Semantic `AppT` VarT r
                      | otherwise = t
       ts = everywhere (mkT replaceMType) tts
   -- look at the constructor parameters
@@ -209,12 +208,12 @@ liftCon' typeSig tvbs cx f n nns cn tts = do
   -- (e.g. with Nothing/Just or Left/Right tags)
   (retType, es) <- unifyCaptured a cs
   -- operation type is (a1 -> a2 -> ... -> aN -> Semantic r z)
-  let opType  = foldr (AppT . AppT ArrowT) (ConT semantic `AppT` VarT r `AppT` retType) ps
+  let opType  = foldr (AppT . AppT ArrowT) (ConT ''Semantic `AppT` VarT r `AppT` retType) ps
   -- picking names for the implementation
   xs  <- mapM (const $ newName "p") ps
   let pat  = map VarP xs                      -- this is LHS
       exprs = zipExprs (map VarE xs) es args  -- this is what ctor would be applied to
-      fval = foldl AppE (ConE cn) exprs       -- this is RHS without liftF
+      fval = foldl AppE (ConE cn) exprs       -- this is RHS without send
       ns' = nub (concatMap extractVars ns)
       q = map PlainTV (ns' ++ r : qa) ++ filter nonNext tvbs
       qa = case retType of
@@ -224,12 +223,12 @@ liftCon' typeSig tvbs cx f n nns cn tts = do
   return $ concat
     [ if typeSig
 #if MIN_VERSION_template_haskell(2,10,0)
-        then [ SigD opName (ForallT q (cx ++ [ConT member `AppT` f' `AppT` VarT r]) opType) ]
+        then [ SigD opName (ForallT q (cx ++ [ConT ''Member `AppT` f' `AppT` VarT r]) opType) ]
 #else
-        then [ SigD opName (ForallT q (cx ++ [ClassP member [f', VarT r]]) opType) ]
+        then [ SigD opName (ForallT q (cx ++ [ClassP ''Member [f', VarT r]]) opType) ]
 #endif
         else []
-    , [ FunD opName [ Clause pat (NormalB $ AppE (VarE liftF) fval) [] ]
+    , [ FunD opName [ Clause pat (NormalB $ AppE (VarE 'send) fval) [] ]
       , PragmaD $ InlineP opName Inline FunLike AllPhases
       ] ]
   where
