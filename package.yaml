@@ -25,6 +25,7 @@ dependencies:
 - mtl
 - template-haskell
 - syb
+- random
 
 flags:
   dump-core:
