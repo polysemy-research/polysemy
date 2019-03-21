@@ -17,11 +17,13 @@ module Polysemy
   , hoistSemantic
   ) where
 
+import Control.Applicative
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
-import Polysemy.Lift
 import Polysemy.Effect
+import Polysemy.Lift
+import Polysemy.NonDet.Type
 import Polysemy.Union
 
 
@@ -65,6 +67,14 @@ instance Monad (Semantic f) where
     z <- ma k
     runSemantic (f z) k
   {-# INLINE (>>=) #-}
+
+
+instance (Member NonDet r) => Alternative (Semantic r) where
+  empty = send Empty
+  a <|> b = do
+    send (Choose id) >>= \case
+      False -> a
+      True  -> b
 
 
 instance (Member (Lift IO) r) => MonadIO (Semantic r) where
