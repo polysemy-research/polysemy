@@ -23,6 +23,7 @@ import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Polysemy.Effect
 import Polysemy.Lift
+import Polysemy.Fixpoint.Type
 import Polysemy.NonDet.Type
 import Polysemy.Union
 
@@ -81,10 +82,8 @@ instance (Member (Lift IO) r) => MonadIO (Semantic r) where
   liftIO = sendM
   {-# INLINE liftIO #-}
 
-instance MonadFix (Semantic '[]) where
-  mfix f = a
-    where
-      a = f (run a)
+instance Member Fixpoint r => MonadFix (Semantic r) where
+  mfix f = send $ Fixpoint f id
 
 
 liftSemantic :: Union r (Semantic r) a -> Semantic r a
