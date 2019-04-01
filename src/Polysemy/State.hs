@@ -9,6 +9,7 @@ module Polysemy.State
   , put
   , modify
   , runState
+  , runLazyState
   ) where
 
 import Polysemy
@@ -41,8 +42,19 @@ runState = stateful $ \case
   Put s k -> const $ pure (s, k)
 {-# INLINE[3] runState #-}
 
+runLazyState :: s -> Semantic (State s ': r) a -> Semantic r (s, a)
+runLazyState = lazilyStateful $ \case
+  Get k   -> \s -> pure (s, k s)
+  Put s k -> const $ pure (s, k)
+{-# INLINE[3] runLazyState #-}
+
 {-# RULES "runState/reinterpret"
    forall s e (f :: forall x. e (Semantic (e ': r)) x -> Semantic (State s ': r) x).
      runState s (reinterpret f e) = stateful (\x s' -> runState s' $ f x) s e
+     #-}
+
+{-# RULES "runLazyState/reinterpret"
+   forall s e (f :: forall x. e (Semantic (e ': r)) x -> Semantic (State s ': r) x).
+     runLazyState s (reinterpret f e) = lazilyStateful (\x s' -> runLazyState s' $ f x) s e
      #-}
 

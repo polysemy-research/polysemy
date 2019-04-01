@@ -3,6 +3,8 @@
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -fwarn-all-missed-specializations #-}
+
 module Wtf where
 
 import Polysemy

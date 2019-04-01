@@ -8,6 +8,7 @@ module Polysemy.Effect.New
   , intercept
   , reinterpret
   , stateful
+  , lazilyStateful
   , Union ()
   , decomp
   , prj
@@ -18,6 +19,7 @@ module Polysemy.Effect.New
 
 import           Control.Monad.Trans.State.Strict (StateT)
 import qualified Control.Monad.Trans.State.Strict as S
+import qualified Control.Monad.Trans.State.Lazy as LS
 import           Data.Tuple
 import           Polysemy
 import           Polysemy.Effect
@@ -60,6 +62,25 @@ interpretInStateT f s (Semantic m) = Semantic $ \k ->
         Right y -> S.mapStateT (usingSemantic k) $ f y
 {-# INLINE interpretInStateT #-}
 
+------------------------------------------------------------------------------
+-- | A highly-performant combinator for interpreting an effect statefully. See
+-- 'stateful' for a more user-friendly variety of this function.
+interpretInLazyStateT
+    :: Effect e
+    => (∀ x. e (Semantic (e ': r)) x -> LS.StateT s (Semantic r) x)
+    -> s
+    -> Semantic (e ': r) a
+    -> Semantic r (s, a)
+interpretInLazyStateT f s (Semantic m) = Semantic $ \k ->
+  fmap swap $ flip LS.runStateT s $ m $ \u ->
+    case decomp u of
+        Left x -> LS.StateT $ \s' ->
+          k . fmap swap
+            . weave (s', ()) (uncurry $ ___interpretInLazyStateT___loop_breaker f)
+            $ x
+        Right y -> LS.mapStateT (usingSemantic k) $ f y
+{-# INLINE interpretInLazyStateT #-}
+
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of removing the effect @e@, reencodes it in
@@ -76,8 +97,8 @@ reinterpret
     -> Semantic (f ': r) a
 reinterpret f (Semantic m) = Semantic $ \k -> m $ \u ->
   case decompCoerce u of
-    Left x -> k $ hoist (___reinterpret___loop_breaker f) $ x
-    Right y  -> usingSemantic k $ f y
+    Left x  -> k $ hoist (___reinterpret___loop_breaker f) $ x
+    Right y -> usingSemantic k $ f y
 {-# INLINE[3] reinterpret #-}
 
 
@@ -91,6 +112,18 @@ stateful
     -> Semantic r (s, a)
 stateful f = interpretInStateT $ \e -> S.StateT $ fmap swap . f e
 {-# INLINE[3] stateful #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'interpret', but with access to an intermediate state @s@.
+lazilyStateful
+    :: Effect e
+    => (∀ x. e (Semantic (e ': r)) x -> s -> Semantic r (s, x))
+    -> s
+    -> Semantic (e ': r) a
+    -> Semantic r (s, a)
+lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
+{-# INLINE[3] lazilyStateful #-}
 
 
 ------------------------------------------------------------------------------
@@ -126,6 +159,15 @@ ___interpretInStateT___loop_breaker
     -> Semantic r (s, a)
 ___interpretInStateT___loop_breaker = interpretInStateT
 {-# NOINLINE ___interpretInStateT___loop_breaker #-}
+
+___interpretInLazyStateT___loop_breaker
+    :: Effect e
+    => (∀ x. e (Semantic (e ': r)) x -> LS.StateT s (Semantic r) x)
+    -> s
+    -> Semantic (e ': r) a
+    -> Semantic r (s, a)
+___interpretInLazyStateT___loop_breaker = interpretInLazyStateT
+{-# NOINLINE ___interpretInLazyStateT___loop_breaker #-}
 
 ___reinterpret___loop_breaker
     :: forall f e r a
