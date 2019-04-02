@@ -20,6 +20,12 @@ runTraceIO = interpret $ \case
 {-# INLINE runTraceIO #-}
 
 
+runIgnoringTrace :: Member (Lift IO) r => Semantic (Trace ': r) a -> Semantic r a
+runIgnoringTrace = interpret $ \case
+  Trace _ k -> pure k
+{-# INLINE runIgnoringTrace #-}
+
+
 runTraceAsOutput :: Semantic (Trace ': r) a -> Semantic (Output String ': r) a
 runTraceAsOutput = reinterpret $ \case
   Trace m k -> output m >> pure k
