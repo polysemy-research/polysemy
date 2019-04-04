@@ -45,10 +45,10 @@ inlineRecursiveCalls [d|
       modify (<> o)
       pure k
     Listen m k -> do
-      (o, a) <- raise $ runWriter m
+      ~(o, a) <- raise $ runWriter m
       pure $ k o a
     Censor f m k -> do
-      (o, a) <- raise $ runWriter m
+      ~(o, a) <- raise $ runWriter m
       modify (<> f o)
       pure $ k a
   |]

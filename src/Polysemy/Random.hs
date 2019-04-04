@@ -27,11 +27,11 @@ runRandom
     -> Semantic r (q, a)
 runRandom q = runState q . reinterpret \case
   Random k -> do
-    (a, q') <- gets @q R.random
+    ~(a, q') <- gets @q R.random
     put q'
     pure $ k a
   RandomR r k -> do
-    (a, q') <- gets @q $ R.randomR r
+    ~(a, q') <- gets @q $ R.randomR r
     put q'
     pure $ k a
 {-# INLINE runRandom #-}

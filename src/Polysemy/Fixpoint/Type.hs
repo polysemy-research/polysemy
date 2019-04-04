@@ -13,5 +13,5 @@ deriving instance Functor (Fixpoint m)
 instance Effect Fixpoint where
   weave _ distrib (Fixpoint f k) =
     Fixpoint (\sx -> distrib $ fmap f sx) (fmap k)
-  hoist = defaultHoist
+  hoist nat (Fixpoint f k) = Fixpoint (fmap nat f) k
 

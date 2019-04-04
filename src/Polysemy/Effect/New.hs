@@ -9,6 +9,7 @@ module Polysemy.Effect.New
   , reinterpret
   , stateful
   , lazilyStateful
+  , interpretInLazyStateT
   , Union ()
   , decomp
   , prj
@@ -20,12 +21,17 @@ module Polysemy.Effect.New
 import           Control.Monad.Trans.State.Strict (StateT)
 import qualified Control.Monad.Trans.State.Strict as S
 import qualified Control.Monad.Trans.State.Lazy as LS
-import           Data.Tuple
 import           Polysemy
 import           Polysemy.Effect
 import           Polysemy.Effect.TH
 import           Polysemy.Performance.TH
 import           Polysemy.Union
+
+
+------------------------------------------------------------------------------
+-- | A lazier version of 'Data.Tuple.swap'.
+swap :: (a,b) -> (b,a)
+swap ~(a, b) = (b,a)
 
 
 ------------------------------------------------------------------------------
