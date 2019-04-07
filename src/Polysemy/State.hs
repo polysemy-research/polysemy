@@ -16,12 +16,17 @@ import Polysemy
 import Polysemy.Effect.New
 
 
-data State s m a
-  = Get (s -> a)
-  | Put s a
-  deriving (Functor, Effect)
+data State s m a where
+  Get :: State s m s
+  Put :: s -> State s m ()
 
-makeSemantic ''State
+-- makeSemantic ''State
+
+get :: Member (State s) r => Semantic r s
+get = send Get
+
+put :: Member (State s) r => s -> Semantic r ()
+put = send . Put
 
 
 gets :: Member (State s) r => (s -> a) -> Semantic r a
@@ -38,23 +43,23 @@ modify f = do
 
 runState :: s -> Semantic (State s ': r) a -> Semantic r (s, a)
 runState = stateful $ \case
-  Get k   -> \s -> pure (s, k s)
-  Put s k -> const $ pure (s, k)
+  Get   -> \s -> pure (s, s)
+  Put s -> const $ pure (s, ())
 {-# INLINE[3] runState #-}
 
 runLazyState :: s -> Semantic (State s ': r) a -> Semantic r (s, a)
 runLazyState = lazilyStateful $ \case
-  Get k   -> \s -> pure (s, k s)
-  Put s k -> const $ pure (s, k)
+  Get   -> \s -> pure (s, s)
+  Put s -> const $ pure (s, ())
 {-# INLINE[3] runLazyState #-}
 
 {-# RULES "runState/reinterpret"
-   forall s e (f :: forall x. e (Semantic (e ': r)) x -> Semantic (State s ': r) x).
+   forall s e (f :: forall m x. e m x -> Semantic (State s ': r) x).
      runState s (reinterpret f e) = stateful (\x s' -> runState s' $ f x) s e
      #-}
 
 {-# RULES "runLazyState/reinterpret"
-   forall s e (f :: forall x. e (Semantic (e ': r)) x -> Semantic (State s ': r) x).
+   forall s e (f :: forall m x. e m x -> Semantic (State s ': r) x).
      runLazyState s (reinterpret f e) = lazilyStateful (\x s' -> runLazyState s' $ f x) s e
      #-}
 

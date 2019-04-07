@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Polysemy.Tactics.Type where
 
 import Polysemy
@@ -18,8 +20,22 @@ start na = do
   na'    <- continue (const na)
   pure $ na' istate
 
+
 continue :: Member (Tactics f n r) r' => (a -> n b) -> Semantic r' (f a -> Semantic r (f b))
 continue f = send $ HoistInterpretation f
+
+
+toH
+    :: forall n f r r' a e
+     . ( Functor f
+       , r' ~ (e : r)
+       , Member (Tactics f n r) r'
+       )
+    => Semantic r a
+    -> Semantic r' (f a)
+toH m = do
+  istate <- send @(Tactics f n r) GetInitialState
+  raise $ fmap (<$ istate) m
 
 
 runTactics
