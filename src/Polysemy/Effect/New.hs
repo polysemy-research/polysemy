@@ -19,15 +19,15 @@ module Polysemy.Effect.New
   , inlineRecursiveCalls
   ) where
 
-import Data.Proxy
 import qualified Control.Exception as X
+import qualified Control.Monad.Trans.State.Lazy as LS
 import           Control.Monad.Trans.State.Strict (StateT)
 import qualified Control.Monad.Trans.State.Strict as S
-import qualified Control.Monad.Trans.State.Lazy as LS
 import           Polysemy
 import           Polysemy.Effect
 import           Polysemy.Effect.TH
 import           Polysemy.Performance.TH
+import           Polysemy.Tactics.Type
 import           Polysemy.Union
 
 
@@ -55,19 +55,6 @@ interpret f (Semantic m) = m $ \u ->
 data Bracket m a where
   Bracket :: m a -> (a -> m ()) -> (a -> m b) -> Bracket m b
 
-start
-    :: forall f n r r' a
-     . Member (Interpret f n r) r'
-    => n a
-    -> Semantic r' (Semantic r (f a))
-start na = do
-  istate <- send @(Interpret f n r) InterpretInitial
-  na'    <- continue (const na)
-  pure $ na' istate
-
-continue :: Member (Interpret f n r) r' => (a -> n b) -> Semantic r' (f a -> Semantic r (f b))
-continue f = send $ InterpretHoist f
-
 runBracket
     :: Member (Lift IO) r
     => (∀ x. Semantic r x -> IO x)
@@ -80,41 +67,19 @@ runBracket lower = interpretH $ \case
     u <- continue use
     sendM $ X.bracket (lower o) (lower . c) (lower . u)
 
-data Interpret f n r m a where
-  InterpretInitial :: Interpret f n r m (f ())
-  InterpretHoist :: (a -> n b) -> Interpret f n r m (f a -> Semantic r (f b))
 
-runInterpret
-   :: Functor f
-   => f ()
-   -> (∀ x. f (m x) -> Semantic r (f x))
-   -> Semantic (Interpret f m r ': r) a
-   -> Semantic r a
-runInterpret s d (Semantic m) = m $ \u ->
-  case decomp u of
-    Left x -> liftSemantic $ hoist (runInterpret s d) x
-    Right (Yo InterpretInitial s' _ y) ->
-      pure $ y $ s <$ s'
-    Right (Yo (InterpretHoist na) s' _ y) -> do
-      pure $ y $ (d . fmap na) <$ s'
-
-
-------------------------------------------------------------------------------
--- | Interpret an effect by rewriting it in terms of capabilities already
--- present in the underlying effect stack.
 interpretH
     :: forall e r a
-     . (∀ x m f . e m x -> Semantic (Interpret f m r ': r) (f x))
+     . (∀ x m f . e m x -> Semantic (Tactics f m r ': r) (f x))
     -> Semantic (e ': r) a
     -> Semantic r a
 interpretH f (Semantic m) = m $ \u ->
   case decomp u of
     Left  x -> liftSemantic $ hoist (interpretH f) x
     Right (Yo e s d y) -> do
-      a <- runInterpret s (interpretH f . d) (f e)
+      a <- runTactics s (interpretH f . d) (f e)
       pure $ y a
 {-# INLINE interpretH #-}
-
 
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
