@@ -11,6 +11,7 @@ module Polysemy.Effect.New
   , reinterpret2
   , reinterpret2H
   , intercept
+  , interceptH
   , stateful
   , lazilyStateful
   , Union ()
@@ -205,4 +206,18 @@ intercept f (Semantic m) = Semantic $ \k -> m $ \u ->
     Just (Yo e s _ y) -> usingSemantic k $ fmap (y . (<$ s)) $ f e
     Nothing -> k u
 {-# INLINE intercept #-}
+
+------------------------------------------------------------------------------
+-- | Like 'interpret', but instead of handling the effect, allows responding to
+-- the effect while leaving it unhandled.
+interceptH
+    :: forall e r a. Member e r
+    => (∀ x m. e m x -> Tactically m r x)
+    -> Semantic r a
+    -> Semantic r a
+interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
+  case prj @e u of
+    Just (Yo e s d y) -> usingSemantic k $ fmap y $ runTactics s d $ f e
+    Nothing -> k u
+{-# INLINE interceptH #-}
 

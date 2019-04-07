@@ -10,44 +10,35 @@ module Polysemy.Error
 
 import qualified Control.Monad.Trans.Except as E
 import           Polysemy
+import           Polysemy.Union
 import           Polysemy.Effect.New
 
 
-data Error e m a
-  = Throw e
-  | ∀ x. Catch (m x) (e -> m x) (x -> a)
+data Error e m a where
+  Throw :: e -> Error e m a
+  Catch :: m a -> (e -> m a) -> Error e m a
 
-deriving instance Functor (Error e m)
+throw :: Member (Error e) r => e -> Semantic r a
+throw = send . Throw
 
-instance Effect (Error e) where
-  weave _ _ (Throw e) = Throw e
-  weave s f (Catch try handle k) =
-    Catch (f $ try <$ s) (\e -> f $ handle e <$ s) $ fmap k
-  {-# INLINE weave #-}
-
-  hoist _ (Throw e) = Throw e
-  hoist f (Catch try handle k) =
-    Catch (f try) (fmap f handle) k
-  {-# INLINE hoist #-}
-
-makeSemantic ''Error
+catch :: Member (Error e) r => Semantic r a -> (e -> Semantic r a) -> Semantic r a
+catch ma h = send $ Catch ma h
 
 
-inlineRecursiveCalls [d|
-  runError :: Semantic (Error e ': r) a -> Semantic r (Either e a)
-  runError (Semantic m) = Semantic $ \k -> E.runExceptT $ m $ \u ->
-    case decomp u of
-      Left x -> E.ExceptT $ k $
-        weave (Right ()) (either (pure . Left) runError) x
-      Right (Throw e) -> E.throwE e
-      Right (Catch try handle kt) -> E.ExceptT $ do
-        let runIt = usingSemantic k . runError
-        ma <- runIt try
+runError :: Semantic (Error e ': r) a -> Semantic r (Either e a)
+runError (Semantic m) = Semantic $ \k -> E.runExceptT $ m $ \u ->
+  case decomp u of
+    Left x -> E.ExceptT $ k $
+      weave (Right ()) (either (pure . Left) runError) x
+    Right (Yo (Throw e) _ _ _) -> E.throwE e
+    Right (Yo (Catch try handle) s d y) ->
+      E.ExceptT $ usingSemantic k $ do
+        ma <- runError $ d $ try <$ s
         case ma of
-          Right a -> pure . Right $ kt a
+          Right a -> pure . Right $ y a
           Left e -> do
-            ma' <- runIt $ handle e
+            ma' <- runError $ d $ (<$ s) $ handle e
             case ma' of
               Left e' -> pure $ Left e'
-              Right a -> pure . Right $ kt a
-  |]
+              Right a -> pure . Right $ y a
+
