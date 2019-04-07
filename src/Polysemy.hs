@@ -99,7 +99,7 @@ hoistSemantic nat (Semantic m) = Semantic $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSemantic #-}
 
 
-raise :: Semantic r a -> Semantic (e ': r) a
+raise :: forall e r a. Semantic r a -> Semantic (e ': r) a
 raise = hoistSemantic $ hoist raise' . weaken
 {-# INLINE raise #-}
 
@@ -132,6 +132,11 @@ run (Semantic m) = runIdentity $ m absurdU
 -- | Lower a 'Semantic' containing only a single lifted 'Monad' into that
 -- monad.
 runM :: Monad m => Semantic '[Lift m] a -> m a
-runM (Semantic m) = m $ unLift . extract
+runM (Semantic m) = m $ \z ->
+  case extract z of
+    Yo e s _ f -> do
+      a <- unLift e
+      pure $ f $ a <$ s
+
 {-# INLINE runM #-}
 

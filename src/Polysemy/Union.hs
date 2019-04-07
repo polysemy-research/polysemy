@@ -8,6 +8,8 @@
 
 module Polysemy.Union
   ( Union (..)
+  , Yo (..)
+  , liftYo
   , Member
   -- * Building Unions
   , inj
@@ -26,6 +28,8 @@ module Polysemy.Union
 import Data.Typeable
 import Polysemy.Effect
 import Polysemy.Union.TypeErrors
+import Data.Functor.Compose
+import Data.Functor.Identity
 
 
 ------------------------------------------------------------------------------
@@ -33,13 +37,36 @@ import Polysemy.Union.TypeErrors
 -- list of effects, any one of which may be held within the 'Union'.
 data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
   Union
-      :: Effect (IndexOf r n)
-      =>  SNat n
+      :: SNat n
          -- ^ A proof that the effect is actually in @r@.
-      -> IndexOf r n m a
+      -> Yo (IndexOf r n) m a
          -- ^ The effect to wrap. The functions 'prj' and 'decomp' can help
          -- retrieve this value later.
       -> Union r m a
+
+
+
+data Yo e m a where
+  Yo :: (Functor f)
+     => e m a
+     -> f ()
+     -> (forall x. f (m x) -> n (f x))
+     -> (f a -> b)
+     -> Yo e n b
+
+liftYo :: Functor m => e m a -> Yo e m a
+liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity
+
+instance Functor (Yo e m) where
+  fmap f (Yo e s d f') = Yo e s d (f . f')
+
+instance Effect (Yo e) where
+  weave s' d (Yo e s nt f) =
+    Yo e (Compose $ s <$ s')
+         (fmap Compose . d . fmap nt . getCompose)
+         (fmap f . getCompose)
+
+  hoist = defaultHoist
 
 
 instance (Functor m) => Functor (Union r m) where
@@ -68,7 +95,7 @@ type Member e r =
   ( Find r e
   -- , Break (AmbiguousSend r e) (IndexOf r (Found r e))
   , e ~ IndexOf r (Found r e)
-  , Effect e
+  -- , Effect e
   )
 
 
@@ -122,7 +149,7 @@ instance ( Find z t
 ------------------------------------------------------------------------------
 -- | Decompose a 'Union'. Either this union contains an effect @e@---the head
 -- of the @r@ list---or it doesn't.
-decomp :: Union (e ': r) m a -> Either (Union r m a) (e m a)
+decomp :: Union (e ': r) m a -> Either (Union r m a) (Yo e m a)
 decomp (Union p a) =
   case p of
     SZ   -> Right a
@@ -132,7 +159,7 @@ decomp (Union p a) =
 
 ------------------------------------------------------------------------------
 -- | Retrieve the last effect in a 'Union'.
-extract :: Union '[e] m a -> e m a
+extract :: Union '[e] m a -> Yo e m a
 extract (Union SZ a) = a
 extract _ = error "impossible"
 {-# INLINE extract #-}
@@ -156,7 +183,7 @@ weaken (Union n a) =
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
 inj :: forall r e a m. (Functor m , Member e r) => e m a -> Union r m a
-inj e = Union (finder @_ @r @e) e
+inj e = Union (finder @_ @r @e) $ liftYo e
 {-# INLINE inj #-}
 
 
@@ -166,7 +193,7 @@ prj :: forall e r a m
      . ( Member e r
        )
     => Union r m a
-    -> Maybe (e m a)
+    -> Maybe (Yo e m a)
 prj (Union (s :: SNat n) a) =
   case induceTypeable s of
     Dict ->
@@ -181,7 +208,7 @@ prj (Union (s :: SNat n) a) =
 -- 'Polysemy.Effect.New.reinterpret' function.
 decompCoerce
     :: Union (e ': r) m a
-    -> Either (Union (f ': r) m a) (e m a)
+    -> Either (Union (f ': r) m a) (Yo e m a)
 decompCoerce (Union p a) =
   case p of
     SZ -> Right a
