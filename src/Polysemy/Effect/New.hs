@@ -24,10 +24,10 @@ module Polysemy.Effect.New
     -- * Performance
   , inlineRecursiveCalls
     -- * Tactics
-  , begin
-  , start
-  , continue
   , Tactical
+  , pureT
+  , runT
+  , bindT
     -- * Error Messages
   , DefiningModule
   ) where
@@ -56,7 +56,7 @@ interpret
     -> Semantic (e ': r) a
     -> Semantic r a
 -- TODO(sandy): could probably give a `coerce` impl for `runTactics` here
-interpret f = interpretH $ \(e :: e m x) -> toH2 @m $ f e
+interpret f = interpretH $ \(e :: e m x) -> liftT @m $ f e
 
 interpretH
     :: forall e r a
@@ -164,7 +164,7 @@ reinterpret
     => (∀ m x. e1 m x -> Semantic (e2 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
-reinterpret f = reinterpretH $ \(e :: e m x) -> toH2 @m $ f e
+reinterpret f = reinterpretH $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret #-}
 
 reinterpret2H
@@ -186,7 +186,7 @@ reinterpret2
     => (∀ m x. e1 m x -> Semantic (e2 ': e3 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
-reinterpret2 f = reinterpret2H $ \(e :: e m x) -> toH2 @m $ f e
+reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret2 #-}
 
 
@@ -201,7 +201,7 @@ intercept
     => (∀ x m. e m x -> Semantic r x)
     -> Semantic r a
     -> Semantic r a
-intercept f = interceptH $ \(e :: e m x) -> toH2 @m $ f e
+intercept f = interceptH $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE intercept #-}
 
 ------------------------------------------------------------------------------
@@ -214,7 +214,8 @@ interceptH
     -> Semantic r a
 interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
   case prj @e u of
-    Just (Yo e s d y) -> usingSemantic k $ fmap y $ runTactics s (raise . d) $ f e
+    Just (Yo e s d y) ->
+      usingSemantic k $ fmap y $ runTactics s (raise . d) $ f e
     Nothing -> k u
 {-# INLINE interceptH #-}
 

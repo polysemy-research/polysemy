@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE UnicodeSyntax   #-}
 
 module Polysemy.Resource
   ( Resource (..)
@@ -26,9 +25,9 @@ runResource
     -> Semantic r a
 runResource finish = interpretH $ \case
   Bracket alloc dealloc use -> do
-    a <- start    alloc
-    d <- continue dealloc
-    u <- continue use
+    a <- runT  alloc
+    d <- bindT dealloc
+    u <- bindT use
 
     let runIt :: Semantic (Resource ': r) x -> IO x
         runIt = finish . runResource finish

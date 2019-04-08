@@ -17,8 +17,9 @@ runFixpoint
     -> Semantic r a
 runFixpoint lower = interpretH $ \case
   Fixpoint mf -> do
-    c <- continue mf
+    c <- bindT mf
     pure $ fix $ lower . runFixpoint lower . c
+
 
 runFixpointM
     :: ( MonadFix m
@@ -29,6 +30,6 @@ runFixpointM
     -> Semantic r a
 runFixpointM lower = interpretH $ \case
   Fixpoint mf -> do
-    c <- continue mf
+    c <- bindT mf
     sendM $ mfix $ lower . runFixpointM lower . c
 

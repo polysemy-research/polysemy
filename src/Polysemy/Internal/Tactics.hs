@@ -2,10 +2,10 @@
 
 module Polysemy.Internal.Tactics
   ( Tactics (..)
-  , start
-  , continue
-  , begin
-  , toH2
+  , runT
+  , bindT
+  , pureT
+  , liftT
   , runTactics
   , Tactical
   ) where
@@ -20,38 +20,44 @@ data Tactics f n r m a where
   GetInitialState     :: Tactics f n r m (f ())
   HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Semantic r (f b))
 
-begin
-    :: forall n r a e. a -> Tactical e n r a
-begin a = do
-  istate <- send @(Tactics _ n (e ': r)) GetInitialState
+
+getInitialState :: forall f m r e. Semantic (Tactics f m (e ': r) ': r) (f ())
+getInitialState = send @(Tactics _ m (e ': r)) GetInitialState
+
+
+pureT :: a -> Tactical e n r a
+pureT a = do
+  istate <- getInitialState
   pure $ a <$ istate
 
-start
-    :: forall f n r a e
-     . n a
-    -> Semantic (Tactics f n (e ': r) ': r) (Semantic (e ': r) (f a))
-start na = do
-  istate <- send @(Tactics _ n (e ': r)) GetInitialState
-  na'    <- continue (const na)
+
+runT
+    :: n a
+    -> Semantic (Tactics f n (e ': r) ': r)
+                (Semantic (e ': r) (f a))
+runT na = do
+  istate <- getInitialState
+  na'    <- bindT (const na)
   pure $ na' istate
-{-# INLINE start #-}
+{-# INLINE runT #-}
 
 
-continue :: (a -> n b) -> Semantic (Tactics f n (e ': r) ': r) (f a -> Semantic (e ': r) (f b))
-continue f = send $ HoistInterpretation f
-{-# INLINE continue #-}
+bindT
+    :: (a -> n b)
+    -> Semantic (Tactics f n (e ': r) ': r)
+                (f a -> Semantic (e ': r) (f b))
+bindT f = send $ HoistInterpretation f
+{-# INLINE bindT #-}
 
 
-toH2
-    :: forall n f r a e
-     . ( Functor f
-       )
+liftT
+    :: forall n f r e a. Functor f
     => Semantic r a
     -> Semantic (Tactics f n (e ': r) ': r) (f a)
-toH2 m = do
-  istate <- send @(Tactics f n (e ':r)) GetInitialState
-  raise $ fmap (<$ istate) m
-{-# INLINE toH2 #-}
+liftT m = do
+  a <- raise m
+  pureT a
+{-# INLINE liftT #-}
 
 
 runTactics

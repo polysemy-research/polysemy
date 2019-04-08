@@ -15,9 +15,9 @@ makeSemantic ''Reader
 
 runReader :: i -> Semantic (Reader i ': r) a -> Semantic r a
 runReader i = interpretH $ \case
-  Ask -> begin i
+  Ask -> pureT i
   Local f m -> do
-    mm <- start m
+    mm <- runT m
     raise $ runReader (f i) mm
 
 

@@ -2,9 +2,7 @@
 
 ## TODO
 
-* restructure project
-  * internal
-  * effect.new sux
+* effect.new sux
 * add commentary
 * talk
 * readme

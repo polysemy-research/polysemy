@@ -29,14 +29,14 @@ runWriter
     -> Semantic r (o, a)
 runWriter = runState mempty . reinterpretH \case
   Tell o -> do
-    modify (<> o) >>= begin
+    modify (<> o) >>= pureT
   Listen m -> do
-    mm <- start m
+    mm <- runT m
     -- TODO(sandy): this is fucking stupid
     (o, fa) <- raise $ runWriter mm
     pure $ fmap (o, ) fa
   Censor f m -> do
-    mm <- start m
+    mm <- runT m
     ~(o, a) <- raise $ runWriter mm
     modify (<> f o)
     pure a
