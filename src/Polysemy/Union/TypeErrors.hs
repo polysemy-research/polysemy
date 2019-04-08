@@ -8,6 +8,7 @@ module Polysemy.Union.TypeErrors
   ( AmbiguousSend
   , Break
   , FirstOrder
+  , UnhandledEffect
   ) where
 
 import Data.Coerce
@@ -90,14 +91,27 @@ type family AmbiguousSend r e where
         )
 
 
+type family UnhandledEffect e :: k where
+  UnhandledEffect e =
+    TypeError ( 'Text "Unhandled effect '"
+          ':<>: 'ShowType e
+          ':<>: 'Text "'."
+          ':$$: 'Text "Probable fix:"
+          ':$$: 'Text "  add an interpretation for '"
+          ':<>: 'ShowType e
+          ':<>: 'Text "'."
+              )
+
+
+
 type family FirstOrderError e (fn :: Symbol) :: k where
   FirstOrderError e fn =
     TypeError ( 'Text "'"
           ':<>: 'ShowType e
           ':<>: 'Text "' is higher-order, but '"
           ':<>: 'Text fn
-          ':<>: 'Text "' is only"
-          ':$$: 'Text "helpful for first-order effects."
+          ':<>: 'Text "' can help only"
+          ':$$: 'Text "with first-order effects."
           ':$$: 'Text "Fix:"
           ':$$: 'Text "  use '"
           ':<>: 'Text fn

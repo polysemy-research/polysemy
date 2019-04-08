@@ -5,6 +5,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE StrictData            #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Polysemy.Internal.Union
   ( Union (..)
@@ -25,11 +26,11 @@ module Polysemy.Internal.Union
   , Nat (..)
   ) where
 
+import Data.Functor.Compose
+import Data.Functor.Identity
 import Data.Typeable
 import Polysemy.Internal.Effect
 import Polysemy.Union.TypeErrors
-import Data.Functor.Compose
-import Data.Functor.Identity
 
 
 ------------------------------------------------------------------------------
@@ -93,7 +94,7 @@ instance Effect (Union r) where
 -- put a $ in the wrong place
 type Member e r =
   ( Find r e
-  -- , Break (AmbiguousSend r e) (IndexOf r (Found r e))
+  , Break (AmbiguousSend r e) (IndexOf r (Found r e))
   , e ~ IndexOf r (Found r e)
   -- , Effect e
   )
@@ -128,6 +129,7 @@ type family IndexOf (ts :: [k]) (n :: Nat) :: k where
 
 
 type family Found (ts :: [k]) (t :: k) :: Nat where
+  Found '[]       t = UnhandledEffect t
   Found (t ': ts) t = 'Z
   Found (u ': ts) t = 'S (Found ts t)
 
