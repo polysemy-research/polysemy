@@ -134,14 +134,14 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 reinterpretH
     :: forall e2 e1 r a
-     . (∀ m x. e1 m x -> Tactically m (e2 ': r) x)
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
 reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ hoist (reinterpretH_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSemantic k $ runTactics s (reinterpretH_b f . d) $ f e
+      a <- usingSemantic k $ runTactics s (raise . reinterpretH_b f . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
 
@@ -157,7 +157,7 @@ reinterpret
      . (∀ m x. e1 m x -> Semantic (e2 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
-reinterpret f = reinterpretH $ \(e :: e m x) -> toH @m $ f e
+reinterpret f = reinterpretH $ \(e :: e m x) -> toH2 @m $ f e
 {-# INLINE[3] reinterpret #-}
 
 reinterpret2H
@@ -238,7 +238,7 @@ interpretInLazyStateT_b = interpretInLazyStateT
 
 reinterpretH_b
     :: forall e2 e1 r a
-     . (∀ m x. e1 m x -> Tactically m (e2 ': r) x)
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
 reinterpretH_b = reinterpretH

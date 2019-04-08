@@ -1,5 +1,6 @@
 {-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections   #-}
 
 module Polysemy.Writer where
 
@@ -22,19 +23,23 @@ runOutputAsWriter = reinterpret \case
 {-# INLINE runOutputAsWriter #-}
 
 
--- -- inlineRecursiveCalls [d|
--- runWriter
---     :: Monoid o
---     => Semantic (Writer o ': r) a
---     -> Semantic r (o, a)
--- runWriter = runState mempty . reinterpretH \case
---   Tell o -> do
---     start $ modify (<> o)
---   -- Listen m -> do
---   --   raise $ runWriter m
---   -- Censor f m -> do
---   --   ~(o, a) <- raise $ runWriter m
---   --   modify (<> f o)
---   --   pure a
--- -- |]
+-- inlineRecursiveCalls [d|
+runWriter
+    :: Monoid o
+    => Semantic (Writer o ': r) a
+    -> Semantic r (o, a)
+runWriter = runState mempty . reinterpretH \case
+  Tell o -> do
+    modify (<> o) >>= begin
+  Listen m -> do
+    mm <- start m
+    -- TODO(sandy): this is fucking stupid
+    (o, fa) <- raise $ runWriter mm
+    pure $ fmap (o, ) fa
+  Censor f m -> do
+    mm <- start m
+    ~(o, a) <- raise $ runWriter mm
+    modify (<> f o)
+    pure a
+-- |]
 
