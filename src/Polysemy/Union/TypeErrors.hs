@@ -1,11 +1,16 @@
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Polysemy.Union.TypeErrors
   ( AmbiguousSend
   , Break
+  , FirstOrder
   ) where
 
+import Data.Coerce
 import Data.Kind
 import GHC.TypeLits
 
@@ -83,4 +88,21 @@ type family AmbiguousSend r e where
     ':<>: 'Text ") to the context of"
     ':$$: 'Text "    the type signature"
         )
+
+
+type family FirstOrderError e (fn :: Symbol) :: k where
+  FirstOrderError e fn =
+    TypeError ( 'Text "'"
+          ':<>: 'ShowType e
+          ':<>: 'Text "' is higher-order, but '"
+          ':<>: 'Text fn
+          ':<>: 'Text "' is only"
+          ':$$: 'Text "helpful for first-order effects."
+          ':$$: 'Text "Fix:"
+          ':$$: 'Text "  use '"
+          ':<>: 'Text fn
+          ':<>: 'Text "H' instead."
+              )
+
+type FirstOrder e fn = ∀ m. Coercible (e m) (e (FirstOrderError e fn))
 

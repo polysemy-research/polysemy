@@ -1,3 +1,6 @@
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+
 -- | Everything you need in order to define new effects.
 module Polysemy.Effect.New
   ( -- * TH
@@ -35,6 +38,7 @@ import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Performance.TH
 import           Polysemy.Internal.Tactics
 import           Polysemy.Internal.Union
+import           Polysemy.Union.TypeErrors
 
 
 ------------------------------------------------------------------------------
@@ -45,7 +49,8 @@ swap ~(a, b) = (b, a)
 
 
 interpret
-    :: (∀ x m. e m x -> Semantic r x)
+    :: FirstOrder e "interpret"
+    => (∀ x m. e m x -> Semantic r x)
     -> Semantic (e ': r) a
     -> Semantic r a
 -- TODO(sandy): could probably give a `coerce` impl for `runTactics` here
@@ -153,7 +158,8 @@ reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 reinterpret
     :: forall e2 e1 r a
-     . (∀ m x. e1 m x -> Semantic (e2 ': r) x)
+     . FirstOrder e1 "reinterpret"
+    => (∀ m x. e1 m x -> Semantic (e2 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
 reinterpret f = reinterpretH $ \(e :: e m x) -> toH2 @m $ f e
@@ -174,7 +180,8 @@ reinterpret2H f (Semantic m) = Semantic $ \k -> m $ \u ->
 
 reinterpret2
     :: forall e2 e3 e1 r a
-     . (∀ m x. e1 m x -> Semantic (e2 ': e3 ': r) x)
+     . FirstOrder e1 "reinterpret2"
+    => (∀ m x. e1 m x -> Semantic (e2 ': e3 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2 f = reinterpret2H $ \(e :: e m x) -> toH2 @m $ f e
@@ -185,7 +192,10 @@ reinterpret2 f = reinterpret2H $ \(e :: e m x) -> toH2 @m $ f e
 -- | Like 'interpret', but instead of handling the effect, allows responding to
 -- the effect while leaving it unhandled.
 intercept
-    :: forall e r a. Member e r
+    :: forall e r a
+     . ( Member e r
+       , FirstOrder e "intercept"
+       )
     => (∀ x m. e m x -> Semantic r x)
     -> Semantic r a
     -> Semantic r a
