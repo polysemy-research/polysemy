@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveAnyClass  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -Wall #-}
+
 module Polysemy.Error
   ( Error (..)
   , throw
@@ -18,11 +20,7 @@ data Error e m a where
   Throw :: e -> Error e m a
   Catch :: m a -> (e -> m a) -> Error e m a
 
-throw :: Member (Error e) r => e -> Semantic r a
-throw = send . Throw
-
-catch :: Member (Error e) r => Semantic r a -> (e -> Semantic r a) -> Semantic r a
-catch ma h = send $ Catch ma h
+makeSemantic ''Error
 
 
 runError :: Semantic (Error e ': r) a -> Semantic r (Either e a)

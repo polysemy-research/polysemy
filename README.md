@@ -2,7 +2,6 @@
 
 ## TODO
 
-* fix TH
 * restructure project
   * internal
   * effect.new sux
