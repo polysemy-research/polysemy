@@ -143,7 +143,7 @@ genType (ForallC tyVarBindings conCtx con) = do
        , k
        )
 genType (GadtC   _ tArgs' (eff `AppT` m `AppT` tRet)) = do
-  effs <- newName "effs"
+  effs <- newName "r"
   let
     tArgs            = fmap snd tArgs'
     memberConstraint = ConT ''Member `AppT` eff `AppT` VarT effs

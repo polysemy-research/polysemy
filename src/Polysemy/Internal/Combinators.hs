@@ -1,8 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 
--- | Everything you need in order to define new effects.
-module Polysemy.Interpretation
+module Polysemy.Internal.Combinators
   ( -- * First order
     interpret
   , intercept
@@ -43,8 +42,7 @@ interpret
 interpret f = interpretH $ \(e :: e m x) -> liftT @m $ f e
 
 interpretH
-    :: forall e r a
-     . (∀ x m . e m x -> Tactical e m r x)
+    :: (∀ x m . e m x -> Tactical e m r x)
     -> Semantic (e ': r) a
     -> Semantic r a
 interpretH f (Semantic m) = m $ \u ->
@@ -123,8 +121,7 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 --
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 reinterpretH
-    :: forall e2 e1 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
+    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
 reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
@@ -143,8 +140,7 @@ reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
 --
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 reinterpret
-    :: forall e2 e1 r a
-     . FirstOrder e1 "reinterpret"
+    :: FirstOrder e1 "reinterpret"
     => (∀ m x. e1 m x -> Semantic (e2 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
@@ -152,8 +148,7 @@ reinterpret f = reinterpretH $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret #-}
 
 reinterpret2H
-    :: forall e2 e3 e1 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
+    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2H f (Semantic m) = Semantic $ \k -> m $ \u ->
@@ -165,8 +160,7 @@ reinterpret2H f (Semantic m) = Semantic $ \k -> m $ \u ->
 {-# INLINE[3] reinterpret2H #-}
 
 reinterpret2
-    :: forall e2 e3 e1 r a
-     . FirstOrder e1 "reinterpret2"
+    :: FirstOrder e1 "reinterpret2"
     => (∀ m x. e1 m x -> Semantic (e2 ': e3 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
@@ -178,8 +172,7 @@ reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
 -- | Like 'interpret', but instead of handling the effect, allows responding to
 -- the effect while leaving it unhandled.
 intercept
-    :: forall e r a
-     . ( Member e r
+    :: ( Member e r
        , FirstOrder e "intercept"
        )
     => (∀ x m. e m x -> Semantic r x)
@@ -192,12 +185,12 @@ intercept f = interceptH $ \(e :: e m x) -> liftT @m $ f e
 -- | Like 'interpret', but instead of handling the effect, allows responding to
 -- the effect while leaving it unhandled.
 interceptH
-    :: forall e r a. Member e r
+    :: Member e r
     => (∀ x m. e m x -> Tactical e m r x)
     -> Semantic r a
     -> Semantic r a
 interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
-  case prj @e u of
+  case prj u of
     Just (Yo e s d y) ->
       usingSemantic k $ fmap y $ runTactics s (raise . d) $ f e
     Nothing -> k u
@@ -206,8 +199,7 @@ interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- Loop breakers
 interpretH_b
-    :: forall e r a
-     . (∀ x m . e m x -> Tactical e m r x)
+    :: (∀ x m . e m x -> Tactical e m r x)
     -> Semantic (e ': r) a
     -> Semantic r a
 interpretH_b = interpretH
@@ -230,16 +222,14 @@ interpretInLazyStateT_b = interpretInLazyStateT
 {-# NOINLINE interpretInLazyStateT_b #-}
 
 reinterpretH_b
-    :: forall e2 e1 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
+    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
 reinterpretH_b = reinterpretH
 {-# NOINLINE reinterpretH_b #-}
 
 reinterpret2H_b
-    :: forall e2 e3 e1 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
+    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2H_b = reinterpret2H

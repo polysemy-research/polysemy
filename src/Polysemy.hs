@@ -29,14 +29,15 @@ module Polysemy
   , inlineRecursiveCalls
     -- * Tactics
   , Tactical
+  , WithTactics
   , pureT
   , runT
   , bindT
   ) where
 
 import Polysemy.Internal
+import Polysemy.Internal.Combinators
 import Polysemy.Internal.TH.Effect
 import Polysemy.Internal.TH.Performance
 import Polysemy.Internal.Tactics
-import Polysemy.Interpretation
 
