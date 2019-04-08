@@ -8,45 +8,32 @@ module Polysemy.Resource
   ) where
 
 import qualified Control.Exception as X
-import           Control.Monad (void)
 import           Polysemy
 import           Polysemy.Effect.New
 
 
-data Resource m a
-  = ∀ r x. Bracket (m r) (r -> m ()) (r -> m x) (x -> a)
-
-deriving instance Functor (Resource m)
-
-instance Effect Resource where
-  weave s f (Bracket alloc dealloc use k) =
-    Bracket (f $ alloc <$ s)
-            (void . f . fmap dealloc)
-            (f . fmap use)
-            (fmap k)
-  {-# INLINE weave #-}
-
-  hoist f (Bracket alloc dealloc use k) =
-    Bracket (f alloc) (fmap f dealloc) (fmap f use) k
-  {-# INLINE hoist #-}
+data Resource m a where
+  Bracket :: m a -> (a -> m ()) -> (a -> m b) -> Resource m b
 
 makeSemantic ''Resource
 
 
-inlineRecursiveCalls [d|
-  runResource
-      :: forall r a
-       . Member (Lift IO) r
-      => (∀ x. Semantic r x -> IO x)
-      -> Semantic (Resource ': r) a
-      -> Semantic r a
-  runResource finish = interpret $ \case
-    Bracket alloc dealloc use k -> fmap k . sendM $
-      let runIt :: Semantic (Resource ': r) x -> IO x
-          runIt = finish . runResource finish
-       in X.bracket
-            (runIt alloc)
-            (runIt . dealloc)
-            (runIt . use)
-  |]
+-- inlineRecursiveCalls [d|
+runResource
+    :: forall r a
+     . Member (Lift IO) r
+    => (∀ x. Semantic r x -> IO x)
+    -> Semantic (Resource ': r) a
+    -> Semantic r a
+runResource finish = interpretH $ \case
+  Bracket alloc dealloc use -> do
+    a <- start    alloc
+    d <- continue dealloc
+    u <- continue use
+
+    let runIt :: Semantic (Resource ': r) x -> IO x
+        runIt = finish . runResource finish
+
+    sendM $ X.bracket (runIt a) (runIt . d) (runIt . u)
+  -- |]
 
