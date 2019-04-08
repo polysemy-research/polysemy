@@ -2,7 +2,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 
 -- | Everything you need in order to define new effects.
-module Polysemy.Effect.New
+module Polysemy.Interpretation
   ( -- * TH
     makeSemantic
   , makeSemantic_
@@ -35,9 +35,9 @@ module Polysemy.Effect.New
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
 import           Polysemy
-import           Polysemy.Effect.TH
 import           Polysemy.Internal.Effect
-import           Polysemy.Internal.Performance.TH
+import           Polysemy.Internal.TH.Effect
+import           Polysemy.Internal.TH.Performance
 import           Polysemy.Internal.Tactics
 import           Polysemy.Internal.Union
 import           Polysemy.Union.TypeErrors

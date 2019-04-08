@@ -1,7 +1,7 @@
 {-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Polysemy.Internal.Performance.TH
+module Polysemy.Internal.TH.Performance
   ( inlineRecursiveCalls
   ) where
 

@@ -10,7 +10,7 @@ import qualified Control.Monad.Trans.Except as E
 import qualified Control.Monad.Trans.State.Strict as S
 import           Polysemy
 import           Polysemy.Error
-import           Polysemy.Effect.New
+import           Polysemy.Interpretation
 import           Polysemy.State
 import           Polysemy.Union
 import           Test.Hspec

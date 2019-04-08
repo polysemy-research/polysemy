@@ -13,7 +13,7 @@ module Polysemy.State
   ) where
 
 import Polysemy
-import Polysemy.Effect.New
+import Polysemy.Interpretation
 
 
 data State s m a where

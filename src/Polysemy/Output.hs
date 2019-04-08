@@ -4,7 +4,7 @@
 module Polysemy.Output where
 
 import Polysemy
-import Polysemy.Effect.New
+import Polysemy.Interpretation
 import Polysemy.State
 
 

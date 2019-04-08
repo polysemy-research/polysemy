@@ -28,7 +28,7 @@ writeFile :: 'Member' FileSystem effs => 'FilePath' -> 'String' -> 'Eff' effs ()
 writeFile a b = 'send' (WriteFile a b)
 @
 -}
-module Polysemy.Effect.TH
+module Polysemy.Internal.TH.Effect
   ( makeSemantic
   , makeSemantic_
   )

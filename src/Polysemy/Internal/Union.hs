@@ -214,7 +214,7 @@ prj (Union (s :: SNat n) a) =
 
 ------------------------------------------------------------------------------
 -- | Like 'decomp', but allows for a more efficient
--- 'Polysemy.Effect.New.reinterpret' function.
+-- 'Polysemy.Interpretation.reinterpret' function.
 decompCoerce
     :: Union (e ': r) m a
     -> Either (Union (f ': r) m a) (Yo e m a)

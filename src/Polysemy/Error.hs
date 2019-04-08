@@ -12,7 +12,7 @@ module Polysemy.Error
 
 import qualified Control.Monad.Trans.Except as E
 import           Polysemy
-import           Polysemy.Effect.New
+import           Polysemy.Interpretation
 import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 

@@ -7,7 +7,7 @@ module Polysemy.Fixpoint
 
 import Control.Monad.Fix
 import Polysemy
-import Polysemy.Effect.New
+import Polysemy.Interpretation
 import Polysemy.Internal.Fixpoint
 
 

@@ -8,7 +8,7 @@ module Polysemy.Resource
 
 import qualified Control.Exception as X
 import           Polysemy
-import           Polysemy.Effect.New
+import           Polysemy.Interpretation
 
 
 data Resource m a where
