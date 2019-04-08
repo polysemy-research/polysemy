@@ -7,7 +7,7 @@ module Polysemy.NonDet
   ) where
 
 import Control.Applicative
-import Polysemy
+import Polysemy.Internal
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.Union
 import Polysemy.Internal.Effect

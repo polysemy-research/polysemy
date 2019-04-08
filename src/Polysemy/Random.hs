@@ -1,11 +1,9 @@
 {-# LANGUAGE BlockArguments  #-}
-{-# LANGUAGE DeriveAnyClass  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.Random where
 
 import           Polysemy
-import           Polysemy.Interpretation
 import           Polysemy.State
 import qualified System.Random as R
 

@@ -10,7 +10,7 @@ module Polysemy.Internal.Tactics
   , Tactical
   ) where
 
-import Polysemy
+import Polysemy.Internal
 import Polysemy.Internal.Union
 import Polysemy.Internal.Effect
 

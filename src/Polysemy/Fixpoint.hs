@@ -1,13 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.Fixpoint
-  ( Fixpoint ()
+  ( Fixpoint (..)
   , module Polysemy.Fixpoint
   ) where
 
 import Control.Monad.Fix
 import Polysemy
-import Polysemy.Interpretation
 import Polysemy.Internal.Fixpoint
 
 

@@ -6,7 +6,6 @@ module Polysemy.Input where
 import Data.Foldable (for_)
 import Data.List (uncons)
 import Polysemy
-import Polysemy.Interpretation
 import Polysemy.State
 
 data Input i m a where

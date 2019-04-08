@@ -8,7 +8,6 @@ module Polysemy.Resource
 
 import qualified Control.Exception as X
 import           Polysemy
-import           Polysemy.Interpretation
 
 
 data Resource m a where

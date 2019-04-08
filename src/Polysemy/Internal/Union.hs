@@ -33,7 +33,7 @@ import Data.Typeable
 import Polysemy.Internal.Effect
 
 #ifdef ERROR_MESSAGES
-import Polysemy.Union.TypeErrors
+import Polysemy.Internal.CustomErrors
 #endif
 
 

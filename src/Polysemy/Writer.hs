@@ -5,7 +5,6 @@
 module Polysemy.Writer where
 
 import Polysemy
-import Polysemy.Interpretation
 import Polysemy.Output
 import Polysemy.State
 

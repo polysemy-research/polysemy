@@ -3,7 +3,6 @@
 module Polysemy.Trace where
 
 import Polysemy
-import Polysemy.Interpretation
 import Polysemy.Output
 
 

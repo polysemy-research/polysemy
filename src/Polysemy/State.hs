@@ -1,6 +1,4 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.State
   ( State (..)
@@ -13,7 +11,6 @@ module Polysemy.State
   ) where
 
 import Polysemy
-import Polysemy.Interpretation
 
 
 data State s m a where

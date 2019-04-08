@@ -3,11 +3,8 @@
 
 -- | Everything you need in order to define new effects.
 module Polysemy.Interpretation
-  ( -- * TH
-    makeSemantic
-  , makeSemantic_
-    -- * First order
-  , interpret
+  ( -- * First order
+    interpret
   , intercept
   , reinterpret
   , reinterpret2
@@ -19,28 +16,15 @@ module Polysemy.Interpretation
     -- * Statefulness
   , stateful
   , lazilyStateful
-    -- * Raising
-  , raise
-    -- * Performance
-  , inlineRecursiveCalls
-    -- * Tactics
-  , Tactical
-  , pureT
-  , runT
-  , bindT
-    -- * Error Messages
-  , DefiningModule
   ) where
 
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
-import           Polysemy
+import           Polysemy.Internal
+import           Polysemy.Internal.CustomErrors
 import           Polysemy.Internal.Effect
-import           Polysemy.Internal.TH.Effect
-import           Polysemy.Internal.TH.Performance
 import           Polysemy.Internal.Tactics
 import           Polysemy.Internal.Union
-import           Polysemy.Union.TypeErrors
 
 
 ------------------------------------------------------------------------------

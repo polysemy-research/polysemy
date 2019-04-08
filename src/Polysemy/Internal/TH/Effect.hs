@@ -39,9 +39,8 @@ import Data.Char (toLower)
 import Data.List
 import Generics.SYB
 import Language.Haskell.TH
-import Polysemy (send, Member, Semantic)
-import Prelude
-import Polysemy.Union.TypeErrors (DefiningModule)
+import Polysemy.Internal (send, Member, Semantic)
+import Polysemy.Internal.CustomErrors (DefiningModule)
 
 
 -- | If @T@ is a GADT representing an effect algebra, as described in the module

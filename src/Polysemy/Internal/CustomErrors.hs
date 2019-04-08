@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module Polysemy.Union.TypeErrors
+module Polysemy.Internal.CustomErrors
   ( AmbiguousSend
   , Break
   , FirstOrder
