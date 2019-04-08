@@ -1,5 +1,4 @@
 {-# LANGUAGE BlockArguments  #-}
-{-# LANGUAGE DeriveAnyClass  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.Input where
@@ -10,29 +9,29 @@ import Polysemy
 import Polysemy.Effect.New
 import Polysemy.State
 
-newtype Input i m a = Input (i -> a)
-  deriving (Functor, Effect)
+data Input i m a where
+  Input :: Input i m i
 
 makeSemantic ''Input
 
 
 runConstInput :: i -> Semantic (Input i ': r) a -> Semantic r a
 runConstInput c = interpret \case
-  Input k -> pure $ k c
+  Input -> pure c
 {-# INLINE runConstInput #-}
 
 
 runListInput :: [i] -> Semantic (Input (Maybe i) ': r) a -> Semantic r a
 runListInput is = fmap snd . runState is . reinterpret \case
-  Input k -> do
+  Input -> do
     s <- gets uncons
     for_ s $ put . snd
-    pure $ k $ fmap fst s
+    pure $ fmap fst s
 {-# INLINE runListInput #-}
 
 
 runMonadicInput :: Semantic r i -> Semantic (Input i ': r) a -> Semantic r a
 runMonadicInput m = interpret \case
-  Input k -> fmap k m
+  Input -> m
 {-# INLINE runMonadicInput #-}
 

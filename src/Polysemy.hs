@@ -83,7 +83,7 @@ instance (Member (Lift IO) r) => MonadIO (Semantic r) where
   {-# INLINE liftIO #-}
 
 instance Member Fixpoint r => MonadFix (Semantic r) where
-  mfix f = send $ Fixpoint f id
+  mfix f = send $ Fixpoint f
 
 
 liftSemantic :: Union r (Semantic r) a -> Semantic r a

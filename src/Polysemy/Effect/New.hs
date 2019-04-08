@@ -20,6 +20,9 @@ module Polysemy.Effect.New
   , decompCoerce
   , weaken
   , inlineRecursiveCalls
+  , start
+  , continue
+  , Tactically
   ) where
 
 import qualified Control.Monad.Trans.State.Lazy as LS
@@ -38,25 +41,26 @@ swap :: (a, b) -> (b, a)
 swap ~(a, b) = (b, a)
 
 
-type Tactically m r x = ∀ f. Functor f => Semantic (Tactics f m r ': r) (f x)
+type Tactical e m r x = ∀ f. Functor f => Semantic (Tactics f m (e ': r) ': r) (f x)
+type Tactically m r x = ∀ f. Functor f => Semantic (Tactics f m r        ': r) (f x)
 
 interpret
     :: (∀ x m. e m x -> Semantic r x)
     -> Semantic (e ': r) a
     -> Semantic r a
 -- TODO(sandy): could probably give a `coerce` impl for `runTactics` here
-interpret f = interpretH $ \(e :: e m x) -> toH @m $ f e
+interpret f = interpretH $ \(e :: e m x) -> toH2 @m $ f e
 
 interpretH
     :: forall e r a
-     . (∀ x m . e m x -> Tactically m r x)
+     . (∀ x m . e m x -> Tactical e m r x)
     -> Semantic (e ': r) a
     -> Semantic r a
 interpretH f (Semantic m) = m $ \u ->
   case decomp u of
     Left  x -> liftSemantic $ hoist (interpretH_b f) x
     Right (Yo e s d y) -> do
-      a <- runTactics s (interpretH_b f . d) (f e)
+      a <- runTactics s (raise . interpretH_b f . d) (f e)
       pure $ y a
 {-# INLINE interpretH #-}
 
@@ -209,7 +213,7 @@ interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
 -- Loop breakers
 interpretH_b
     :: forall e r a
-     . (∀ x m . e m x -> Tactically m r x)
+     . (∀ x m . e m x -> Tactical e m r x)
     -> Semantic (e ': r) a
     -> Semantic r a
 interpretH_b = interpretH

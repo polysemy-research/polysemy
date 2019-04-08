@@ -1,5 +1,4 @@
 {-# LANGUAGE BlockArguments  #-}
-{-# LANGUAGE DeriveAnyClass  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.Output where
@@ -9,8 +8,8 @@ import Polysemy.Effect.New
 import Polysemy.State
 
 
-data Output o m a = Output o a
-  deriving (Functor, Effect)
+data Output o m a where
+  Output :: o -> Output o m ()
 
 makeSemantic ''Output
 
@@ -22,14 +21,12 @@ runFoldMapOutput
     -> Semantic (Output o ': r) a
     -> Semantic r (m, a)
 runFoldMapOutput f = runState mempty . reinterpret \case
-  Output o k -> do
-    modify (<> f o)
-    pure k
+  Output o -> modify (<> f o)
 {-# INLINE runFoldMapOutput #-}
 
 
 runIgnoringOutput :: Semantic (Output o ': r) a -> Semantic r a
 runIgnoringOutput = interpret \case
-  Output _ k -> pure k
+  Output _ -> pure ()
 {-# INLINE runIgnoringOutput #-}
 

@@ -10,6 +10,7 @@ import Control.Applicative
 import Polysemy
 import Polysemy.Effect.New
 import Polysemy.NonDet.Type
+import Polysemy.Union
 
 
 --------------------------------------------------------------------------------
@@ -48,14 +49,14 @@ instance Monad (NonDetC m) where
   {-# INLINE (>>=) #-}
 
 
-inlineRecursiveCalls [d|
-  runNonDet :: Alternative f => Semantic (NonDet ': r) a -> Semantic r (f a)
-  runNonDet (Semantic m) = Semantic $ \k -> runNonDetC $ m $ \u ->
-    case decomp u of
-      Left x  -> NonDetC $ \cons nil -> do
-        z <- k $ weave [()] (fmap concat . traverse runNonDet) x
-        foldr cons nil z
-      Right Empty       -> empty
-      Right (Choose ek) -> pure (ek True) <|> pure (ek False)
-  |]
+runNonDet :: Alternative f => Semantic (NonDet ': r) a -> Semantic r (f a)
+runNonDet (Semantic m) = Semantic $ \k -> runNonDetC $ m $ \u ->
+  case decomp u of
+    Left x  -> NonDetC $ \cons nil -> do
+      z <- k $ weave [()] (fmap concat . traverse runNonDet) x
+      foldr cons nil z
+    Right (Yo Empty _ _ _) -> empty
+    Right (Yo (Choose ek) s _ y) -> do
+      z <- pure (ek True) <|> pure (ek False)
+      pure $ y $ z <$ s
 

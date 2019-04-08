@@ -5,6 +5,7 @@ module Polysemy.Tactics.Type
   , start
   , continue
   , toH
+  , toH2
   , runTactics
   ) where
 
@@ -22,7 +23,7 @@ start
     => n a
     -> Semantic r' (Semantic r (f a))
 start na = do
-  istate <- send @(Tactics f n r) GetInitialState
+  istate <- send @(Tactics _ n r) GetInitialState
   na'    <- continue (const na)
   pure $ na' istate
 {-# INLINE start #-}
@@ -46,12 +47,23 @@ toH m = do
   raise $ fmap (<$ istate) m
 {-# INLINE toH #-}
 
+toH2
+    :: forall n f r a e
+     . ( Functor f
+       )
+    => Semantic r a
+    -> Semantic (Tactics f n (e ': r) ': r) (f a)
+toH2 m = do
+  istate <- send @(Tactics f n (e ':r)) GetInitialState
+  raise $ fmap (<$ istate) m
+{-# INLINE toH2 #-}
+
 
 runTactics
    :: Functor f
    => f ()
-   -> (∀ x. f (m x) -> Semantic r (f x))
-   -> Semantic (Tactics f m r ': r) a
+   -> (∀ x. f (m x) -> Semantic r2 (f x))
+   -> Semantic (Tactics f m r2 ': r) a
    -> Semantic r a
 runTactics s d (Semantic m) = m $ \u ->
   case decomp u of
@@ -66,8 +78,8 @@ runTactics s d (Semantic m) = m $ \u ->
 runTactics_b
    :: Functor f
    => f ()
-   -> (∀ x. f (m x) -> Semantic r (f x))
-   -> Semantic (Tactics f m r ': r) a
+   -> (∀ x. f (m x) -> Semantic r2 (f x))
+   -> Semantic (Tactics f m r2 ': r) a
    -> Semantic r a
 runTactics_b = runTactics
 {-# NOINLINE runTactics_b #-}

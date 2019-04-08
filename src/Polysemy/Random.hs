@@ -9,12 +9,9 @@ import           Polysemy.Effect.New
 import           Polysemy.State
 import qualified System.Random as R
 
-data Random m a
-  = ∀ x. R.Random x => Random (x -> a)
-  | ∀ x. R.Random x => RandomR (x, x) (x -> a)
-
-deriving instance Functor (Random m)
-deriving instance Effect Random
+data Random m a where
+  Random :: R.Random x => Random m x
+  RandomR :: R.Random x => (x, x) -> Random m x
 
 makeSemantic ''Random
 
@@ -26,14 +23,14 @@ runRandom
     -> Semantic (Random ': r) a
     -> Semantic r (q, a)
 runRandom q = runState q . reinterpret \case
-  Random k -> do
+  Random -> do
     ~(a, q') <- gets @q R.random
     put q'
-    pure $ k a
-  RandomR r k -> do
+    pure a
+  RandomR r -> do
     ~(a, q') <- gets @q $ R.randomR r
     put q'
-    pure $ k a
+    pure a
 {-# INLINE runRandom #-}
 
 
