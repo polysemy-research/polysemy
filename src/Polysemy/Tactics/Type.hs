@@ -5,7 +5,6 @@ module Polysemy.Tactics.Type
   , start
   , continue
   , begin
-  , toH
   , toH2
   , runTactics
   ) where
@@ -41,19 +40,6 @@ continue :: (a -> n b) -> Semantic (Tactics f n (e ': r) ': r) (f a -> Semantic 
 continue f = send $ HoistInterpretation f
 {-# INLINE continue #-}
 
-
-toH
-    :: forall n f r r' a e
-     . ( Functor f
-       , r' ~ (e : r)
-       , Member (Tactics f n r) r'
-       )
-    => Semantic r a
-    -> Semantic r' (f a)
-toH m = do
-  istate <- send @(Tactics f n r) GetInitialState
-  raise $ fmap (<$ istate) m
-{-# INLINE toH #-}
 
 toH2
     :: forall n f r a e

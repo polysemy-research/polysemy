@@ -23,7 +23,7 @@ module Polysemy.Effect.New
   , start
   , continue
   , begin
-  , Tactically
+  , Tactical
   ) where
 
 import qualified Control.Monad.Trans.State.Lazy as LS
@@ -43,7 +43,6 @@ swap ~(a, b) = (b, a)
 
 
 type Tactical e m r x = ∀ f. Functor f => Semantic (Tactics f m (e ': r) ': r) (f x)
-type Tactically m r x = ∀ f. Functor f => Semantic (Tactics f m r        ': r) (f x)
 
 interpret
     :: (∀ x m. e m x -> Semantic r x)
@@ -162,14 +161,14 @@ reinterpret f = reinterpretH $ \(e :: e m x) -> toH2 @m $ f e
 
 reinterpret2H
     :: forall e2 e3 e1 r a
-     . (∀ m x. e1 m x -> Tactically m (e2 ': e3 ': r) x)
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2H f (Semantic m) = Semantic $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ weaken $ hoist (reinterpret2H_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSemantic k $ runTactics s (reinterpret2H_b f . d) $ f e
+      a <- usingSemantic k $ runTactics s (raise . reinterpret2H_b f . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpret2H #-}
 
@@ -178,7 +177,7 @@ reinterpret2
      . (∀ m x. e1 m x -> Semantic (e2 ': e3 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
-reinterpret2 f = reinterpret2H $ \(e :: e m x) -> toH @m $ f e
+reinterpret2 f = reinterpret2H $ \(e :: e m x) -> toH2 @m $ f e
 {-# INLINE[3] reinterpret2 #-}
 
 
@@ -190,10 +189,7 @@ intercept
     => (∀ x m. e m x -> Semantic r x)
     -> Semantic r a
     -> Semantic r a
-intercept f (Semantic m) = Semantic $ \k -> m $ \u ->
-  case prj @e u of
-    Just (Yo e s _ y) -> usingSemantic k $ fmap (y . (<$ s)) $ f e
-    Nothing -> k u
+intercept f = interceptH $ \(e :: e m x) -> toH2 @m $ f e
 {-# INLINE intercept #-}
 
 ------------------------------------------------------------------------------
@@ -201,12 +197,12 @@ intercept f (Semantic m) = Semantic $ \k -> m $ \u ->
 -- the effect while leaving it unhandled.
 interceptH
     :: forall e r a. Member e r
-    => (∀ x m. e m x -> Tactically m r x)
+    => (∀ x m. e m x -> Tactical e m r x)
     -> Semantic r a
     -> Semantic r a
 interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
   case prj @e u of
-    Just (Yo e s d y) -> usingSemantic k $ fmap y $ runTactics s d $ f e
+    Just (Yo e s d y) -> usingSemantic k $ fmap y $ runTactics s (raise . d) $ f e
     Nothing -> k u
 {-# INLINE interceptH #-}
 
@@ -246,7 +242,7 @@ reinterpretH_b = reinterpretH
 
 reinterpret2H_b
     :: forall e2 e3 e1 r a
-     . (∀ m x. e1 m x -> Tactically m (e2 ': e3 ': r) x)
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2H_b = reinterpret2H

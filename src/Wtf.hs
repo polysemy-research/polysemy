@@ -25,6 +25,6 @@ slowBeforeSpecialization = do
 
 
 countDown :: Int -> Int
-countDown start =
-  fst . run . runState start . reinterpret send $ slowBeforeSpecialization
+countDown s =
+  fst . run . runState s $ slowBeforeSpecialization
 
