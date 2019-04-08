@@ -28,6 +28,8 @@ module Polysemy.Effect.New
   , start
   , continue
   , Tactical
+    -- * Error Messages
+  , DefiningModule
   ) where
 
 import qualified Control.Monad.Trans.State.Lazy as LS

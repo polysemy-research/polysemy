@@ -9,11 +9,21 @@ module Polysemy.Union.TypeErrors
   , Break
   , FirstOrder
   , UnhandledEffect
+  , DefiningModule
+  , DefiningModuleForEffect
   ) where
 
 import Data.Coerce
 import Data.Kind
 import GHC.TypeLits
+
+
+type family DefiningModule (t :: k) :: Symbol
+
+type family DefiningModuleForEffect (e :: k) :: Symbol where
+  DefiningModuleForEffect (e a) = DefiningModuleForEffect e
+  DefiningModuleForEffect e     = DefiningModule e
+
 
 
 data T1 m a
@@ -22,6 +32,7 @@ type family Break (c :: Constraint)
                   (rep :: (* -> *) -> * -> *) :: Constraint where
   Break _ T1 = ((), ())
   Break _ c  = ()
+
 
 
 type AmbigousEffectMessage r e t vs =
@@ -40,10 +51,6 @@ type AmbigousEffectMessage r e t vs =
     ':$$: 'Text "    "
     ':<>: PrettyPrint vs
     ':<>: 'Text " directly"
-    ':$$: 'Text "If you are seeing this error at the interpretation site,"
-    ':$$: 'Text "  it means you forgot to handle the '"
-    ':<>: 'ShowType t
-    ':<>: 'Text "' effect"
         )
 
 type family PrettyPrint (vs :: [k]) where
@@ -91,16 +98,6 @@ type family AmbiguousSend r e where
         )
 
 
-type family UnhandledEffect e :: k where
-  UnhandledEffect e =
-    TypeError ( 'Text "Unhandled effect '"
-          ':<>: 'ShowType e
-          ':<>: 'Text "'."
-          ':$$: 'Text "Probable fix:"
-          ':$$: 'Text "  add an interpretation for '"
-          ':<>: 'ShowType e
-          ':<>: 'Text "'."
-              )
 
 
 
@@ -119,4 +116,31 @@ type family FirstOrderError e (fn :: Symbol) :: k where
               )
 
 type FirstOrder e fn = ∀ m. Coercible (e m) (e (FirstOrderError e fn))
+
+
+------------------------------------------------------------------------------
+-- | Unhandled effects
+type UnhandledEffectMsg e
+      = 'Text "Unhandled effect '"
+  ':<>: 'ShowType e
+  ':<>: 'Text "'"
+  ':$$: 'Text "Probable fix:"
+  ':$$: 'Text "  add an interpretation for '"
+  ':<>: 'ShowType e
+  ':<>: 'Text "'"
+
+type CheckDocumentation e
+      = 'Text "  If you are looking for inspiration, try consulting"
+  ':$$: 'Text "    the documentation for module '"
+  ':<>: 'Text (DefiningModuleForEffect e)
+  ':<>: 'Text "'"
+
+type family BreakSym (z :: k -> k) e (c :: Constraint)
+                       (rep :: Symbol) :: k where
+  BreakSym _ e _ "" =  TypeError (UnhandledEffectMsg e ':$$: CheckDocumentation e)
+  BreakSym z e _ c  = z (TypeError (UnhandledEffectMsg e ':$$: CheckDocumentation e))
+
+type family UnhandledEffect z e where
+  UnhandledEffect z e =
+    BreakSym z e (TypeError (UnhandledEffectMsg e)) (DefiningModuleForEffect e)
 

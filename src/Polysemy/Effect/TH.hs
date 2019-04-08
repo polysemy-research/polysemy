@@ -34,13 +34,14 @@ module Polysemy.Effect.TH
   )
 where
 
-import Data.List
 import Control.Monad (forM, unless)
-import Polysemy (send, Member, Semantic)
 import Data.Char (toLower)
-import Language.Haskell.TH
+import Data.List
 import Generics.SYB
+import Language.Haskell.TH
+import Polysemy (send, Member, Semantic)
 import Prelude
+import Polysemy.Union.TypeErrors (DefiningModule)
 
 
 -- | If @T@ is a GADT representing an effect algebra, as described in the module
@@ -77,12 +78,22 @@ genFreer makeSigs tcName = do
   -- The signatures for the generated definitions require FlexibleContexts.
   isExtEnabled FlexibleContexts
     >>= flip unless (fail "makeSemantic requires FlexibleContexts to be enabled")
+  hasTyFams <- isExtEnabled TypeFamilies
 
   reify tcName >>= \case
     TyConI (DataD _ _ _ _ cons _) -> do
       sigs <- filter (const makeSigs) <$> mapM genSig cons
       decs <- mapM genDecl cons
-      return $ sigs ++ decs
+      loc <- location
+
+      return $
+        [ TySynInstD ''DefiningModule
+            . TySynEqn [ConT tcName]
+            . LitT
+            . StrTyLit
+            $ loc_module loc
+        | hasTyFams
+        ] ++ sigs ++ decs
 
     _ -> fail "makeSemantic expects a type constructor"
 

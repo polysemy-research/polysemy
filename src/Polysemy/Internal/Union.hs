@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -30,7 +31,10 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Typeable
 import Polysemy.Internal.Effect
+
+#ifdef ERROR_MESSAGES
 import Polysemy.Union.TypeErrors
+#endif
 
 
 ------------------------------------------------------------------------------
@@ -94,9 +98,10 @@ instance Effect (Union r) where
 -- put a $ in the wrong place
 type Member e r =
   ( Find r e
-  , Break (AmbiguousSend r e) (IndexOf r (Found r e))
   , e ~ IndexOf r (Found r e)
-  -- , Effect e
+#ifdef ERROR_MESSAGES
+  , Break (AmbiguousSend r e) (IndexOf r (Found r e))
+#endif
   )
 
 
@@ -129,7 +134,9 @@ type family IndexOf (ts :: [k]) (n :: Nat) :: k where
 
 
 type family Found (ts :: [k]) (t :: k) :: Nat where
-  Found '[]       t = UnhandledEffect t
+#ifdef ERROR_MESSAGES
+  Found '[]       t = UnhandledEffect 'S t
+#endif
   Found (t ': ts) t = 'Z
   Found (u ': ts) t = 'S (Found ts t)
 
