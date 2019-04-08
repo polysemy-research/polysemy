@@ -7,11 +7,13 @@ module Polysemy.Internal.Combinators
   , intercept
   , reinterpret
   , reinterpret2
+  , reinterpret3
     -- * Higher order
   , interpretH
   , interceptH
   , reinterpretH
   , reinterpret2H
+  , reinterpret3H
     -- * Statefulness
   , stateful
   , lazilyStateful
@@ -167,6 +169,26 @@ reinterpret2
 reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret2 #-}
 
+reinterpret3H
+    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
+    -> Semantic (e1 ': r) a
+    -> Semantic (e2 ': e3 ': e4 ': r) a
+reinterpret3H f (Semantic m) = Semantic $ \k -> m $ \u ->
+  case decompCoerce u of
+    Left x  -> k . weaken . weaken . hoist (reinterpret3H_b f) $ x
+    Right (Yo e s d y) -> do
+      a <- usingSemantic k $ runTactics s (raise . reinterpret3H_b f . d) $ f e
+      pure $ y a
+{-# INLINE[3] reinterpret3H #-}
+
+reinterpret3
+    :: FirstOrder e1 "reinterpret2"
+    => (∀ m x. e1 m x -> Semantic (e2 ': e3 ': e4 ': r) x)
+    -> Semantic (e1 ': r) a
+    -> Semantic (e2 ': e3 ': e4 ': r) a
+reinterpret3 f = reinterpret3H $ \(e :: e m x) -> liftT @m $ f e
+{-# INLINE[3] reinterpret3 #-}
+
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of handling the effect, allows responding to
@@ -234,4 +256,11 @@ reinterpret2H_b
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2H_b = reinterpret2H
 {-# NOINLINE reinterpret2H_b #-}
+
+reinterpret3H_b
+    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
+    -> Semantic (e1 ': r) a
+    -> Semantic (e2 ': e3 ': e4 ': r) a
+reinterpret3H_b = reinterpret3H
+{-# NOINLINE reinterpret3H_b #-}
 

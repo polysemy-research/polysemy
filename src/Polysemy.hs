@@ -17,11 +17,13 @@ module Polysemy
   , intercept
   , reinterpret
   , reinterpret2
+  , reinterpret3
     -- * Higher order
   , interpretH
   , interceptH
   , reinterpretH
   , reinterpret2H
+  , reinterpret3H
     -- * Statefulness
   , stateful
   , lazilyStateful
