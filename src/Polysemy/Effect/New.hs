@@ -54,27 +54,11 @@ interpretH
     -> Semantic r a
 interpretH f (Semantic m) = m $ \u ->
   case decomp u of
-    Left  x -> liftSemantic $ hoist (interpretH f) x
+    Left  x -> liftSemantic $ hoist (interpretH_b f) x
     Right (Yo e s d y) -> do
-      a <- runTactics s (interpretH f . d) (f e)
+      a <- runTactics s (interpretH_b f . d) (f e)
       pure $ y a
 {-# INLINE interpretH #-}
-
-
--- data Bracket m a where
---   Bracket :: m a -> (a -> m ()) -> (a -> m b) -> Bracket m b
-
--- runBracket
---     :: Member (Lift IO) r
---     => (∀ x. Semantic r x -> IO x)
---     -> Semantic (Bracket ': r) a
---     -> Semantic r a
--- runBracket lower = interpretH $ \case
---   Bracket open close use -> do
---     o <- start    open
---     c <- continue close
---     u <- continue use
---     sendM $ X.bracket (lower o) (lower . c) (lower . u)
 
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
@@ -89,7 +73,7 @@ interpretInStateT f s (Semantic m) = Semantic $ \k ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ interpretInStateT f)
+            . weave (s', ()) (uncurry $ interpretInStateT_b f)
             $ x
         Right (Yo e z _ y) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSemantic k) $ f e
@@ -108,7 +92,7 @@ interpretInLazyStateT f s (Semantic m) = Semantic $ \k ->
     case decomp u of
         Left x -> LS.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ interpretInLazyStateT f)
+            . weave (s', ()) (uncurry $ interpretInLazyStateT_b f)
             $ x
         Right (Yo e z _ y) ->
           fmap (y . (<$ z)) $ LS.mapStateT (usingSemantic k) $ f e
@@ -150,9 +134,9 @@ reinterpretH
     -> Semantic (e2 ': r) a
 reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
   case decompCoerce u of
-    Left x  -> k $ hoist (reinterpretH f) $ x
+    Left x  -> k $ hoist (reinterpretH_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSemantic k $ runTactics s (reinterpretH f . d) $ f e
+      a <- usingSemantic k $ runTactics s (reinterpretH_b f . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
 
@@ -178,9 +162,9 @@ reinterpret2H
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2H f (Semantic m) = Semantic $ \k -> m $ \u ->
   case decompCoerce u of
-    Left x  -> k $ weaken $ hoist (reinterpret2H f) $ x
+    Left x  -> k $ weaken $ hoist (reinterpret2H_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSemantic k $ runTactics s (reinterpret2H f . d) $ f e
+      a <- usingSemantic k $ runTactics s (reinterpret2H_b f . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpret2H #-}
 
@@ -220,4 +204,46 @@ interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
     Just (Yo e s d y) -> usingSemantic k $ fmap y $ runTactics s d $ f e
     Nothing -> k u
 {-# INLINE interceptH #-}
+
+------------------------------------------------------------------------------
+-- Loop breakers
+interpretH_b
+    :: forall e r a
+     . (∀ x m . e m x -> Tactically m r x)
+    -> Semantic (e ': r) a
+    -> Semantic r a
+interpretH_b = interpretH
+{-# NOINLINE interpretH_b #-}
+
+interpretInStateT_b
+    :: (∀ x m. e m x -> S.StateT s (Semantic r) x)
+    -> s
+    -> Semantic (e ': r) a
+    -> Semantic r (s, a)
+interpretInStateT_b = interpretInStateT
+{-# NOINLINE interpretInStateT_b #-}
+
+interpretInLazyStateT_b
+    :: (∀ x m. e m x -> LS.StateT s (Semantic r) x)
+    -> s
+    -> Semantic (e ': r) a
+    -> Semantic r (s, a)
+interpretInLazyStateT_b = interpretInLazyStateT
+{-# NOINLINE interpretInLazyStateT_b #-}
+
+reinterpretH_b
+    :: forall e2 e1 r a
+     . (∀ m x. e1 m x -> Tactically m (e2 ': r) x)
+    -> Semantic (e1 ': r) a
+    -> Semantic (e2 ': r) a
+reinterpretH_b = reinterpretH
+{-# NOINLINE reinterpretH_b #-}
+
+reinterpret2H_b
+    :: forall e2 e3 e1 r a
+     . (∀ m x. e1 m x -> Tactically m (e2 ': e3 ': r) x)
+    -> Semantic (e1 ': r) a
+    -> Semantic (e2 ': e3 ': r) a
+reinterpret2H_b = reinterpret2H
+{-# NOINLINE reinterpret2H_b #-}
 

@@ -1,6 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module Polysemy.Tactics.Type where
+module Polysemy.Tactics.Type
+  ( Tactics (..)
+  , start
+  , continue
+  , toH
+  , runTactics
+  ) where
 
 import Polysemy
 import Polysemy.Union
@@ -19,10 +25,12 @@ start na = do
   istate <- send @(Tactics f n r) GetInitialState
   na'    <- continue (const na)
   pure $ na' istate
+{-# INLINE start #-}
 
 
 continue :: Member (Tactics f n r) r' => (a -> n b) -> Semantic r' (f a -> Semantic r (f b))
 continue f = send $ HoistInterpretation f
+{-# INLINE continue #-}
 
 
 toH
@@ -36,6 +44,7 @@ toH
 toH m = do
   istate <- send @(Tactics f n r) GetInitialState
   raise $ fmap (<$ istate) m
+{-# INLINE toH #-}
 
 
 runTactics
@@ -46,10 +55,20 @@ runTactics
    -> Semantic r a
 runTactics s d (Semantic m) = m $ \u ->
   case decomp u of
-    Left x -> liftSemantic $ hoist (runTactics s d) x
+    Left x -> liftSemantic $ hoist (runTactics_b s d) x
     Right (Yo GetInitialState s' _ y) ->
       pure $ y $ s <$ s'
     Right (Yo (HoistInterpretation na) s' _ y) -> do
       pure $ y $ (d . fmap na) <$ s'
 {-# INLINE runTactics #-}
+
+
+runTactics_b
+   :: Functor f
+   => f ()
+   -> (∀ x. f (m x) -> Semantic r (f x))
+   -> Semantic (Tactics f m r ': r) a
+   -> Semantic r a
+runTactics_b = runTactics
+{-# NOINLINE runTactics_b #-}
 

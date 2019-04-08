@@ -2,12 +2,16 @@
 
 ## TODO
 
-* tests to prove fusion
-* benchmarks
+* fix TH
+* restructure project
+  * internal
+  * effect.new sux
 * add commentary
+* talk
 * readme
 * CI
 * launch!
 * blog post
-* talk
+* benchmarks
+* tests to prove fusion
 
