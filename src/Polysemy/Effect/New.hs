@@ -1,39 +1,40 @@
 -- | Everything you need in order to define new effects.
 module Polysemy.Effect.New
-  ( Effect (..)
-  , defaultHoist
-  , makeSemantic
+  ( -- * TH
+    makeSemantic
   , makeSemantic_
+    -- * First order
   , interpret
-  , interpretH
-  , reinterpret
-  , reinterpretH
-  , reinterpret2
-  , reinterpret2H
   , intercept
+  , reinterpret
+  , reinterpret2
+    -- * Higher order
+  , interpretH
   , interceptH
+  , reinterpretH
+  , reinterpret2H
+    -- * Statefulness
   , stateful
   , lazilyStateful
-  , Union ()
-  , decomp
-  , prj
-  , decompCoerce
-  , weaken
+    -- * Raising
+  , raise
+    -- * Performance
   , inlineRecursiveCalls
+    -- * Tactics
+  , begin
   , start
   , continue
-  , begin
   , Tactical
   ) where
 
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
 import           Polysemy
-import           Polysemy.Effect
 import           Polysemy.Effect.TH
-import           Polysemy.Performance.TH
-import           Polysemy.Tactics.Type
-import           Polysemy.Union
+import           Polysemy.Internal.Effect
+import           Polysemy.Internal.Performance.TH
+import           Polysemy.Internal.Tactics
+import           Polysemy.Internal.Union
 
 
 ------------------------------------------------------------------------------
@@ -42,7 +43,6 @@ swap :: (a, b) -> (b, a)
 swap ~(a, b) = (b, a)
 
 
-type Tactical e m r x = ∀ f. Functor f => Semantic (Tactics f m (e ': r) ': r) (f x)
 
 interpret
     :: (∀ x m. e m x -> Semantic r x)

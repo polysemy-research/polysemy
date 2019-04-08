@@ -18,7 +18,6 @@ data Resource m a where
 makeSemantic ''Resource
 
 
--- inlineRecursiveCalls [d|
 runResource
     :: forall r a
      . Member (Lift IO) r
@@ -35,5 +34,4 @@ runResource finish = interpretH $ \case
         runIt = finish . runResource finish
 
     sendM $ X.bracket (runIt a) (runIt . d) (runIt . u)
-  -- |]
 

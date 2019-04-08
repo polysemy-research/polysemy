@@ -12,8 +12,9 @@ module Polysemy.Error
 
 import qualified Control.Monad.Trans.Except as E
 import           Polysemy
-import           Polysemy.Union
 import           Polysemy.Effect.New
+import           Polysemy.Internal.Effect
+import           Polysemy.Internal.Union
 
 
 data Error e m a where

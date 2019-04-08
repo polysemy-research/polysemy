@@ -1,28 +1,29 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module Polysemy.Tactics.Type
+module Polysemy.Internal.Tactics
   ( Tactics (..)
   , start
   , continue
   , begin
   , toH2
   , runTactics
+  , Tactical
   ) where
 
 import Polysemy
-import Polysemy.Union
-import Polysemy.Effect
+import Polysemy.Internal.Union
+import Polysemy.Internal.Effect
+
+type Tactical e m r x = ∀ f. Functor f => Semantic (Tactics f m (e ': r) ': r) (f x)
 
 data Tactics f n r m a where
   GetInitialState     :: Tactics f n r m (f ())
   HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Semantic r (f b))
 
 begin
-    :: forall f n r a e
-     . Functor f => a
-    -> Semantic (Tactics f n (e ': r) ': r) (f a)
+    :: forall n r a e. a -> Tactical e n r a
 begin a = do
-  istate <- send @(Tactics f n (e ': r)) GetInitialState
+  istate <- send @(Tactics _ n (e ': r)) GetInitialState
   pure $ a <$ istate
 
 start

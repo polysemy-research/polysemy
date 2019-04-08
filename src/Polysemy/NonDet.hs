@@ -8,9 +8,9 @@ module Polysemy.NonDet
 
 import Control.Applicative
 import Polysemy
-import Polysemy.Effect.New
-import Polysemy.NonDet.Type
-import Polysemy.Union
+import Polysemy.Internal.NonDet
+import Polysemy.Internal.Union
+import Polysemy.Internal.Effect
 
 
 --------------------------------------------------------------------------------

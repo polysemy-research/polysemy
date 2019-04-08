@@ -21,11 +21,11 @@ import Control.Applicative
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
-import Polysemy.Effect
-import Polysemy.Lift
-import Polysemy.Fixpoint.Type
-import Polysemy.NonDet.Type
-import Polysemy.Union
+import Polysemy.Internal.Effect
+import Polysemy.Internal.Fixpoint
+import Polysemy.Internal.Lift
+import Polysemy.Internal.NonDet
+import Polysemy.Internal.Union
 
 
 newtype Semantic r a = Semantic

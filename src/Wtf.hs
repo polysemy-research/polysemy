@@ -9,7 +9,6 @@ module Wtf where
 
 import Polysemy
 import Polysemy.State
-import Polysemy.Effect.New
 
 
 slowBeforeSpecialization :: Member (State Int) r => Semantic r Int

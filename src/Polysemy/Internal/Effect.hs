@@ -1,7 +1,7 @@
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 
-module Polysemy.Effect where
+module Polysemy.Internal.Effect where
 
 import Data.Coerce
 import Data.Functor.Identity

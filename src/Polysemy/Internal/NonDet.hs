@@ -1,12 +1,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor  #-}
 
-module Polysemy.NonDet.Type where
-
-import Polysemy.Effect
+module Polysemy.Internal.NonDet where
 
 data NonDet m a
   = Empty
   | Choose (Bool -> a)
-  deriving (Functor, Effect)
 

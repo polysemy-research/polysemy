@@ -6,7 +6,7 @@
 {-# LANGUAGE StrictData            #-}
 {-# LANGUAGE TypeFamilies          #-}
 
-module Polysemy.Union
+module Polysemy.Internal.Union
   ( Union (..)
   , Yo (..)
   , liftYo
@@ -26,7 +26,7 @@ module Polysemy.Union
   ) where
 
 import Data.Typeable
-import Polysemy.Effect
+import Polysemy.Internal.Effect
 import Polysemy.Union.TypeErrors
 import Data.Functor.Compose
 import Data.Functor.Identity

@@ -23,7 +23,6 @@ runOutputAsWriter = reinterpret \case
 {-# INLINE runOutputAsWriter #-}
 
 
--- inlineRecursiveCalls [d|
 runWriter
     :: Monoid o
     => Semantic (Writer o ': r) a
@@ -41,5 +40,4 @@ runWriter = runState mempty . reinterpretH \case
     ~(o, a) <- raise $ runWriter mm
     modify (<> f o)
     pure a
--- |]
 
