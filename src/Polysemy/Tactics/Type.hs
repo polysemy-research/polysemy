@@ -4,6 +4,7 @@ module Polysemy.Tactics.Type
   ( Tactics (..)
   , start
   , continue
+  , begin
   , toH
   , toH2
   , runTactics
@@ -17,19 +18,26 @@ data Tactics f n r m a where
   GetInitialState     :: Tactics f n r m (f ())
   HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Semantic r (f b))
 
+begin
+    :: forall f n r a e
+     . Functor f => a
+    -> Semantic (Tactics f n (e ': r) ': r) (f a)
+begin a = do
+  istate <- send @(Tactics f n (e ': r)) GetInitialState
+  pure $ a <$ istate
+
 start
-    :: forall f n r r' a
-     . Member (Tactics f n r) r'
-    => n a
-    -> Semantic r' (Semantic r (f a))
+    :: forall f n r a e
+     . n a
+    -> Semantic (Tactics f n (e ': r) ': r) (Semantic (e ': r) (f a))
 start na = do
-  istate <- send @(Tactics _ n r) GetInitialState
+  istate <- send @(Tactics _ n (e ': r)) GetInitialState
   na'    <- continue (const na)
   pure $ na' istate
 {-# INLINE start #-}
 
 
-continue :: Member (Tactics f n r) r' => (a -> n b) -> Semantic r' (f a -> Semantic r (f b))
+continue :: (a -> n b) -> Semantic (Tactics f n (e ': r) ': r) (f a -> Semantic (e ': r) (f b))
 continue f = send $ HoistInterpretation f
 {-# INLINE continue #-}
 

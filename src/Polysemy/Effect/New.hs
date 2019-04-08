@@ -22,6 +22,7 @@ module Polysemy.Effect.New
   , inlineRecursiveCalls
   , start
   , continue
+  , begin
   , Tactically
   ) where
 
