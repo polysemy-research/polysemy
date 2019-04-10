@@ -115,6 +115,9 @@ type family FirstOrderError e (fn :: Symbol) :: k where
           ':<>: 'Text "H' instead."
               )
 
+------------------------------------------------------------------------------
+-- | This constraint gives helpful error messages if you attempt to use a
+-- first-order combinator with a higher-order type.
 type FirstOrder e fn = ∀ m. Coercible (e m) (e (FirstOrderError e fn))
 
 

@@ -1,13 +1,12 @@
-{-# LANGUAGE AllowAmbiguousTypes     #-}
-{-# LANGUAGE CPP                     #-}
-{-# LANGUAGE ConstraintKinds         #-}
-{-# LANGUAGE FlexibleInstances       #-}
-{-# LANGUAGE MultiParamTypeClasses   #-}
-{-# LANGUAGE QuantifiedConstraints   #-}
-{-# LANGUAGE StrictData              #-}
-{-# LANGUAGE TypeFamilies            #-}
-{-# LANGUAGE UndecidableInstances    #-}
-{-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE StrictData            #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Polysemy.Internal.Union
   ( Union (..)
@@ -94,28 +93,15 @@ instance Effect (Union r) where
   {-# INLINE hoist #-}
 
 
-------------------------------------------------------------------------------
--- | Hide the actual implementation of 'Member' from the haddock.
-class
+type Member e r = Member' e r
+
+type Member' e r =
   ( Find r e
   , e ~ IndexOf r (Found r e)
 #ifdef ERROR_MESSAGES
   , Break (AmbiguousSend r e) (IndexOf r (Found r e))
 #endif
-  ) => Member' e r
-
-instance
-  ( Find r e
-  , e ~ IndexOf r (Found r e)
-#ifdef ERROR_MESSAGES
-  , Break (AmbiguousSend r e) (IndexOf r (Found r e))
-#endif
-  ) => Member' e r
-
-------------------------------------------------------------------------------
--- | A @Member e r@ constraint is a proof that the effect @e@ is available in
--- the list of effects @r@.
-type Member = Member'
+  )
 
 
 data Dict c where Dict :: c => Dict c

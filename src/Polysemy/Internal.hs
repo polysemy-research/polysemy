@@ -99,6 +99,9 @@ hoistSemantic nat (Semantic m) = Semantic $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSemantic #-}
 
 
+------------------------------------------------------------------------------
+-- | Introduce an effect into 'Semantic'. Analogous to
+-- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem
 raise :: forall e r a. Semantic r a -> Semantic (e ': r) a
 raise = hoistSemantic $ hoist raise_b . weaken
 {-# INLINE raise #-}
@@ -109,6 +112,9 @@ raise_b = raise
 {-# NOINLINE raise_b #-}
 
 
+------------------------------------------------------------------------------
+-- | Lift an effect into a 'Semantic'. This is used primarily via
+-- 'Polysemy.makeSemantic' to implement smart constructors.
 send :: Member e r => e (Semantic r) a -> Semantic r a
 send = liftSemantic . inj
 {-# INLINE[3] send #-}

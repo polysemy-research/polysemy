@@ -27,14 +27,22 @@ getInitialState :: forall f m r e. Semantic (WithTactics e f m r) (f ())
 getInitialState = send @(Tactics _ m (e ': r)) GetInitialState
 
 
+------------------------------------------------------------------------------
+-- | Lift a value into 'Tactical'.
 pureT :: a -> Tactical e m r a
 pureT a = do
   istate <- getInitialState
   pure $ a <$ istate
 
 
+------------------------------------------------------------------------------
+-- | Run a monadic action in a 'Tactical' environment. The stateful environment
+-- used will be the same one that the effect is initally run in. Use 'bindT' if
+-- you'd prefer to explicitly manage your stateful environment.
 runT
     :: m a
+      -- ^ The monadic action to lift. This is usually a parameter in your
+      -- effect.
     -> Semantic (WithTactics e f m r)
                 (Semantic (e ': r) (f a))
 runT na = do
@@ -46,6 +54,11 @@ runT na = do
 
 bindT
     :: (a -> m b)
+       -- ^ The monadic continuation to lift. This is usually a parameter in
+       -- your effect.
+       --
+       -- Continuations lifted via 'bindT' will run in the same environment
+       -- which produced the 'a'.
     -> Semantic (WithTactics e f m r)
                 (f a -> Semantic (e ': r) (f b))
 bindT f = send $ HoistInterpretation f

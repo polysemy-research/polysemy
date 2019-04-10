@@ -29,7 +29,16 @@ module Polysemy
   , lazilyStateful
     -- * Performance
   , inlineRecursiveCalls
+
     -- * Tactics
+    -- | Higher-order effects need to explicitly thread /other effects'/ state
+    -- through themselves. Tactics are a domain-specific language for describing
+    -- exactly how this threading should take place.
+    --
+    -- The first computation to be run should use 'runT', and subsequent
+    -- computations /in the same environment/ should use 'bindT'. Any
+    -- first-order constructors which appear in a higher-order context may use
+    -- 'pureT' to satisfy the typechecker.
   , Tactical
   , WithTactics
   , pureT

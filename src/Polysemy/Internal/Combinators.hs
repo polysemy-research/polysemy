@@ -35,16 +35,29 @@ swap ~(a, b) = (b, a)
 
 
 
+------------------------------------------------------------------------------
+-- | The simplest way to produce an effect handler. Interprets an effect 'e' by
+-- transforming it into other effects inside of 'r'.
 interpret
     :: FirstOrder e "interpret"
     => (∀ x m. e m x -> Semantic r x)
+       -- ^ A natural transformation from the handled effect to other effects
+       -- already in 'Semantic'.
     -> Semantic (e ': r) a
     -> Semantic r a
 -- TODO(sandy): could probably give a `coerce` impl for `runTactics` here
 interpret f = interpretH $ \(e :: e m x) -> liftT @m $ f e
 
+
+------------------------------------------------------------------------------
+-- | Like 'interpret', but for higher-order effects (ie. those which make use of
+-- the 'm' parameter.)
+--
+-- See the notes on 'Tactical' for how to use this function.
 interpretH
     :: (∀ x m . e m x -> Tactical e m r x)
+       -- ^ A natural transformation from the handled effect to other effects
+       -- already in 'Semantic'.
     -> Semantic (e ': r) a
     -> Semantic r a
 interpretH f (Semantic m) = m $ \u ->
@@ -120,10 +133,9 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 -- some new effect @f@. This function will fuse when followed by
 -- 'Polysemy.State.runState', meaning it's free to 'reinterpret' in terms of
 -- the 'Polysemy.State.State' effect and immediately run it.
---
--- TODO(sandy): Make this fuse in with 'stateful' directly.
 reinterpretH
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
+       -- ^ A natural transformation from the handled effect to the new effect.
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
 reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
@@ -133,24 +145,31 @@ reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
       a <- usingSemantic k $ runTactics s (raise . reinterpretH_b f . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
+-- TODO(sandy): Make this fuse in with 'stateful' directly.
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of removing the effect @e@, reencodes it in
 -- some new effect @f@. This function will fuse when followed by
 -- 'Polysemy.State.runState', meaning it's free to 'reinterpret' in terms of
 -- the 'Polysemy.State.State' effect and immediately run it.
---
--- TODO(sandy): Make this fuse in with 'stateful' directly.
 reinterpret
     :: FirstOrder e1 "reinterpret"
     => (∀ m x. e1 m x -> Semantic (e2 ': r) x)
+       -- ^ A natural transformation from the handled effect to the new effect.
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': r) a
 reinterpret f = reinterpretH $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret #-}
+-- TODO(sandy): Make this fuse in with 'stateful' directly.
 
+
+------------------------------------------------------------------------------
+-- | Like 'reinterpret2', but for higher-order effects.
+--
+-- See the notes on 'Tactical' for how to use this function.
 reinterpret2H
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
+       -- ^ A natural transformation from the handled effect to the new effects.
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2H f (Semantic m) = Semantic $ \k -> m $ \u ->
@@ -161,16 +180,25 @@ reinterpret2H f (Semantic m) = Semantic $ \k -> m $ \u ->
       pure $ y a
 {-# INLINE[3] reinterpret2H #-}
 
+
+------------------------------------------------------------------------------
+-- | Like 'reinterpret', but introduces /two/ intermediary effects.
 reinterpret2
     :: FirstOrder e1 "reinterpret2"
     => (∀ m x. e1 m x -> Semantic (e2 ': e3 ': r) x)
+       -- ^ A natural transformation from the handled effect to the new effects.
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret2 #-}
 
+------------------------------------------------------------------------------
+-- | Like 'reinterpret3', but for higher-order effects.
+--
+-- See the notes on 'Tactical' for how to use this function.
 reinterpret3H
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
+       -- ^ A natural transformation from the handled effect to the new effects.
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': e4 ': r) a
 reinterpret3H f (Semantic m) = Semantic $ \k -> m $ \u ->
@@ -181,9 +209,13 @@ reinterpret3H f (Semantic m) = Semantic $ \k -> m $ \u ->
       pure $ y a
 {-# INLINE[3] reinterpret3H #-}
 
+
+------------------------------------------------------------------------------
+-- | Like 'reinterpret', but introduces /three/ intermediary effects.
 reinterpret3
     :: FirstOrder e1 "reinterpret2"
     => (∀ m x. e1 m x -> Semantic (e2 ': e3 ': e4 ': r) x)
+       -- ^ A natural transformation from the handled effect to the new effects.
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': e4 ': r) a
 reinterpret3 f = reinterpret3H $ \(e :: e m x) -> liftT @m $ f e

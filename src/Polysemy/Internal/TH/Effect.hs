@@ -12,19 +12,19 @@ effect algebra. For example, using the @FileSystem@ effect from the example in
 the module documentation for "Polysemy", we can write the following:
 
 @
-data FileSystem r where
+data FileSystem m a where
   ReadFile :: 'FilePath' -> FileSystem 'String'
   WriteFile :: 'FilePath' -> 'String' -> FileSystem ()
-'makeEffect' ''FileSystem
+'makeSemantic' ''FileSystem
 @
 
 This will automatically generate the following functions:
 
 @
-readFile :: 'Member' FileSystem effs => 'FilePath' -> 'Eff' effs 'String'
+readFile :: 'Member' FileSystem r => 'FilePath' -> 'Semantic' r 'String'
 readFile a = 'send' (ReadFile a)
 
-writeFile :: 'Member' FileSystem effs => 'FilePath' -> 'String' -> 'Eff' effs ()
+writeFile :: 'Member' FileSystem r => 'FilePath' -> 'String' -> 'Semantic' r ()
 writeFile a b = 'send' (WriteFile a b)
 @
 -}
@@ -44,26 +44,26 @@ import Polysemy.Internal.CustomErrors (DefiningModule)
 
 
 -- | If @T@ is a GADT representing an effect algebra, as described in the module
--- documentation for "Polysemy", @$('makeEffect' ''T)@ automatically
+-- documentation for "Polysemy", @$('makeSemantic' ''T)@ automatically
 -- generates a function that uses 'send' with each operation. For more
--- information, see the module documentation for "Polysemy.TH".
+-- information, see the module documentation for "Polysemy.Internal.TH.Effect".
 makeSemantic :: Name -> Q [Dec]
 makeSemantic = genFreer True
 
--- | Like 'makeEffect', but does not provide type signatures. This can be used
+-- | Like 'makeSemantic', but does not provide type signatures. This can be used
 -- to attach Haddock comments to individual arguments for each generated
 -- function.
 --
 -- @
--- data Lang x where
+-- data Lang m a where
 --   Output :: String -> Lang ()
 --
 -- makeSemantic_ ''Lang
 --
 -- -- | Output a string.
--- output :: Member Lang effs
---        => String    -- ^ String to output.
---        -> Semantic effs ()  -- ^ No result.
+-- output :: Member Lang r
+--        => String         -- ^ String to output.
+--        -> Semantic r ()  -- ^ No result.
 -- @
 --
 -- Note that 'makeEffect_' must be used /before/ the explicit type signatures.
@@ -71,7 +71,7 @@ makeSemantic_ :: Name -> Q [Dec]
 makeSemantic_ = genFreer False
 
 -- | Generates declarations and possibly signatures for functions to lift GADT
--- constructors into 'Eff' actions.
+-- constructors into 'Semantic' actions.
 genFreer :: Bool -> Name -> Q [Dec]
 genFreer makeSigs tcName = do
   -- The signatures for the generated definitions require FlexibleContexts.
@@ -130,7 +130,7 @@ tyVarBndrKind (PlainTV _) = Nothing
 tyVarBndrKind (KindedTV _ k) = Just k
 
 -- | Generates a function type from the corresponding GADT type constructor
--- @x :: Member (Effect e) effs => a -> b -> c -> Semantic effs r@.
+-- @x :: Member (Effect e) r => a -> b -> c -> Semantic r r@.
 genType :: Con -> Q (Type, Maybe Name, Maybe Type)
 genType (ForallC tyVarBindings conCtx con) = do
   (t, mn, _) <- genType con
@@ -143,13 +143,13 @@ genType (ForallC tyVarBindings conCtx con) = do
        , k
        )
 genType (GadtC   _ tArgs' (eff `AppT` m `AppT` tRet)) = do
-  effs <- newName "r"
+  r <- newName "r"
   let
     tArgs            = fmap snd tArgs'
-    memberConstraint = ConT ''Member `AppT` eff `AppT` VarT effs
-    resultType       = ConT ''Semantic `AppT` VarT effs `AppT` tRet
+    memberConstraint = ConT ''Member `AppT` eff `AppT` VarT r
+    resultType       = ConT ''Semantic `AppT` VarT r `AppT` tRet
 
-    replaceMType t | t == m = ConT ''Semantic `AppT` VarT effs
+    replaceMType t | t == m = ConT ''Semantic `AppT` VarT r
                    | otherwise = t
     ts = everywhere (mkT replaceMType) tArgs
     tn = case tRet of
@@ -158,7 +158,7 @@ genType (GadtC   _ tArgs' (eff `AppT` m `AppT` tRet)) = do
 
   pure
     . (, tn, Nothing)
-    .  ForallT [PlainTV effs] [memberConstraint]
+    .  ForallT [PlainTV r] [memberConstraint]
     .  foldArrows
     $  ts
     ++ [resultType]
@@ -178,7 +178,7 @@ simplifyBndr _ (KindedTV tv StarT) = PlainTV tv
 simplifyBndr _ bndr = bndr
 
 -- | Generates a type signature of the form
--- @x :: Member (Effect e) effs => a -> b -> c -> Semantic effs r@.
+-- @x :: Member (Effect e) r => a -> b -> c -> Semantic r r@.
 genSig :: Con -> Q Dec
 genSig con = do
   let
