@@ -97,3 +97,62 @@ runResource finish = interpretH $ \case
 
 Easy.
 
+
+## Friendly Error Messages
+
+Free monad libraries aren't well known for their ease-of-use. But following in
+the shoes of `freer-simple`, `polysemy` takes a serious stance on providing
+helpful error messages.
+
+For example, the library exposes both the `interpret` and `interpretH`
+combinators. If you use the wrong one, the library's got your back:
+
+```haskell
+runResource
+    :: forall r a
+     . Member (Lift IO) r
+    => (∀ x. Semantic r x -> IO x)
+    -> Semantic (Resource ': r) a
+    -> Semantic r a
+runResource finish = interpret $ \case
+  ...
+```
+
+makes the helpful suggestion:
+
+```
+    • 'Resource' is higher-order, but 'interpret' can help only
+      with first-order effects.
+      Fix:
+        use 'interpretH' instead.
+    • In the expression:
+        interpret
+          $ \case
+```
+
+Likewise it will give you tips on what to do if you forget a `TypeApplication`
+or forget to handle an effect.
+
+Don't like helpful errors? That's OK too --- just flip the `error-messages` flag
+and enjoy the raw, unadulterated fury of the typesystem.
+
+
+## Necessary Language Extensions
+
+You're going to want to stick all of this into your `package.yaml` file.
+
+```yaml
+  ghc-options: -O2 -flate-specialise -fspecialise-aggressively
+  default-extensions:
+    - DataKinds
+    - FlexibleContexts
+    - GADTs
+    - LambdaCase
+    - PolyKinds
+    - RankNTypes
+    - ScopedTypeVariables
+    - TypeApplications
+    - TypeOperators
+    - TypeFamilies
+```
+
