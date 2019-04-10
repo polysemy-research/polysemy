@@ -22,7 +22,7 @@ implementation code into reusable library code.
 It's like `mtl` but composes better, requires less boilerplate, and avoids the
 O(n^2) instances problem.
 
-It's like `freer-simple` but more powerful and 700x faster.
+It's like `freer-simple` but more powerful and 35x faster.
 
 It's like `fused-effects` but with an order of magnitude less boilerplate.
 
