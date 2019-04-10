@@ -68,6 +68,9 @@ runErrorInIO
        , Member (Lift IO) r
        )
     => (∀ x. Semantic r x -> IO x)
+       -- ^ Strategy for lowering a 'Semantic' action down to 'IO'. This is
+       -- likely some combination of 'runM' and other interpters composed via
+       -- '.@'.
     -> Semantic (Error e ': r) a
     -> Semantic r (Either e a)
 runErrorInIO lower

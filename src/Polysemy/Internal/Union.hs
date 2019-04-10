@@ -97,6 +97,9 @@ instance Effect (Union r) where
   {-# INLINE hoist #-}
 
 
+------------------------------------------------------------------------------
+-- | A proof that the effect 'e' is available somewhere inside of the effect
+-- stack 'r'.
 type Member e r = Member' e r
 
 type Member' e r =

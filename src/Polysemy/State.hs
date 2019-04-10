@@ -11,6 +11,7 @@ module Polysemy.State
   ) where
 
 import Polysemy
+import Polysemy.Internal.Combinators
 
 
 data State s m a where

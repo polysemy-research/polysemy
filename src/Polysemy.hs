@@ -1,35 +1,42 @@
 module Polysemy
-  ( Semantic ()
+  ( -- * Core Types
+    Semantic ()
   , Member
-  -- * Running
+
+  -- * Running Semantic
   , run
   , runM
-  , (.@)
-  , (.@@)
-  -- * Monads
+
+  -- * Interoperating With Other Monads
   , Lift ()
   , sendM
-    -- * Raising
+
+    -- * Lifting
   , raise
-    -- * TH
+
+    -- * Creating New Effects
   , makeSemantic
   , makeSemantic_
-    -- * First order
+
+    -- * Combinators for Interpreting First-Order Effects
   , interpret
   , intercept
   , reinterpret
   , reinterpret2
   , reinterpret3
-    -- * Higher order
+
+    -- * Combinators for Interpreting Higher-Order Effects
   , interpretH
   , interceptH
   , reinterpretH
   , reinterpret2H
   , reinterpret3H
-    -- * Statefulness
-  , stateful
-  , lazilyStateful
-    -- * Performance
+
+    -- * Composing IO-based Interpreters
+  , (.@)
+  , (.@@)
+
+    -- * Improving Performance for Interpreters
   , inlineRecursiveCalls
 
     -- * Tactics

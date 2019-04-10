@@ -30,6 +30,94 @@ import Polysemy.Internal.NonDet
 import Polysemy.Internal.Union
 
 
+------------------------------------------------------------------------------
+-- | The 'Semantic' monad handles computations of arbitrary extensible effects.
+-- A value of type @Semantic r@ describes a program with the capabilities of
+-- @r@. For best results, @r@ should always be kept polymorphic, but you can
+-- add capabilities via the 'Member' constraint.
+--
+-- The value of the 'Semantic' monad is that it allows you to write programs
+-- against a set of effects without a predefined meaning, and provide that
+-- meaning later. For example, unlike with mtl, you can decide to interpret an
+-- 'Polysemy.Error.Error' effect tradtionally as an 'Either', or instead
+-- significantly faster as an 'IO' 'Control.Exception.Exception'. These
+-- interpretations (and others that you might add) may be used interchangably
+-- without needing to write any newtypes or 'Monad' instances. The only
+-- change needed to swap interpretations is to change a call from
+-- 'Polysemy.Error.runError' to 'Polysemy.Error.runErrorInIO'.
+--
+-- The effect stack @r@ can contain arbitrary other monads inside of it. These
+-- monads are lifted into effects via the 'Lift' effect. Monadic values can be
+-- lifted into a 'Semantic' via 'sendM'.
+--
+-- A 'Semantic' can be interpreted as a pure value (via 'run') or as any
+-- traditional 'Monad' (via 'runM'). Each effect @E@ comes equipped with some
+-- interpreters of the form:
+--
+-- @
+-- runE :: 'Semantic' (E ': r) a -> 'Semantic' r a
+-- @
+--
+-- which is responsible for removing the effect @E@ from the effect stack. It
+-- is the order in which you call the interpreters that determines the
+-- monomorphic representation of the @r@ parameter.
+--
+-- After all of your effects are handled, you'll be left with either
+-- a @'Semantic' '[] a@ or a @'Semantic' ('Lift' m) a@ value, which can be
+-- consumed respectively by 'run' and 'runM'.
+--
+-- ==== Examples
+--
+-- As an example of keeping @r@ polymorphic, we can consider the type
+--
+-- @
+-- 'Member' ('Polysemy.State' String) r => 'Semantic' r ()
+-- @
+--
+-- to be a program with access to
+--
+-- @
+-- 'Polysemy.State.get' :: 'Semantic' r String
+-- 'Polysemy.State.put' :: String -> 'Semantic' r ()
+-- @
+--
+-- methods.
+--
+-- By also adding a
+--
+-- @
+-- 'Member' ('Polysemy.Error' Bool) r
+-- @
+--
+-- constraint on @r@, we gain access to the
+--
+-- @
+-- 'Polysemy.Error.throw' :: Bool -> 'Semantic' r a
+-- 'Polysemy.Error.catch' :: 'Semantic' r a -> (Bool -> 'Semantic' r a) -> 'Semantic' r a
+-- @
+--
+-- functions as well.
+--
+-- In this sense, a @'Member' ('Polysemy.State.State' s) r@ constraint is
+-- analogous to mtl's @'Control.Monad.State.Class.MonadState' s m@ and should
+-- be thought of as such. However, /unlike/ mtl, a 'Semantic' monad may have
+-- an arbitrary number of the same effect.
+--
+-- For example, we can write a 'Semantic' program which can output either
+-- 'Int's or 'Bool's:
+--
+-- @
+-- foo :: ( 'Member' ('Polysemy.Output.Output' Int) r
+--        , 'Member' ('Polysemy.Output.Output' Bool) r
+--        )
+--     => 'Semantic' r ()
+-- foo = do
+--   'Polysemy.Output.output' @Int  5
+--   'Polysemy.Output.output' True
+-- @
+--
+-- Notice that we must use @-XTypeApplications@ to specify that we'd like to
+-- use the ('Polysemy.Output.Output' 'Int') effect.
 newtype Semantic r a = Semantic
   { runSemantic
         :: ∀ m
@@ -175,6 +263,7 @@ runM (Semantic m) = m $ \z ->
 (.@)
     :: Monad m
     => (∀ x. Semantic r x -> m x)
+       -- ^ The lowering function, likely 'runM'.
     -> (∀ y. (∀ x. Semantic r x -> m x)
           -> Semantic (e ': r) y
           -> Semantic r y)
@@ -190,6 +279,7 @@ infixl 9 .@
 (.@@)
     :: Monad m
     => (∀ x. Semantic r x -> m x)
+       -- ^ The lowering function, likely 'runM'.
     -> (∀ y. (∀ x. Semantic r x -> m x)
           -> Semantic (e ': r) y
           -> Semantic r (f y))
