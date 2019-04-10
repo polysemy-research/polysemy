@@ -36,6 +36,7 @@ script:
  - |
    set -ex
    $STACK --no-terminal build --ghc-options="$GHC_OPTIONS"
+   $STACK test --ghc-options="$GHC_OPTIONS"
    set +ex
 
 after_success:
