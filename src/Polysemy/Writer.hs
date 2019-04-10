@@ -9,8 +9,8 @@ import Polysemy.Output
 import Polysemy.State
 
 data Writer o m a where
-  Tell :: o -> Writer o m ()
-  Listen :: m a -> Writer o m (o, a)
+  Tell   :: o -> Writer o m ()
+  Listen :: ∀ o m a. m a -> Writer o m (o, a)
   Censor :: (o -> o) -> m a -> Writer o m a
 
 makeSemantic ''Writer

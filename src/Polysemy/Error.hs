@@ -20,7 +20,7 @@ import           Polysemy.Internal.Union
 
 data Error e m a where
   Throw :: e -> Error e m a
-  Catch :: m a -> (e -> m a) -> Error e m a
+  Catch :: ∀ e m a. m a -> (e -> m a) -> Error e m a
 
 makeSemantic ''Error
 

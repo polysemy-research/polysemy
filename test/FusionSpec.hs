@@ -8,11 +8,12 @@ module FusionSpec where
 
 import qualified Control.Monad.Trans.Except as E
 import qualified Control.Monad.Trans.State.Strict as S
-import           Polysemy
 import           Polysemy.Error
-import           Polysemy.Interpretation
+import           Polysemy.Internal
+import           Polysemy.Internal.Combinators
+import           Polysemy.Internal.Effect
+import           Polysemy.Internal.Union
 import           Polysemy.State
-import           Polysemy.Union
 import           Test.Hspec
 import           Test.Inspection
 
@@ -50,11 +51,11 @@ spec = do
 
 go :: Semantic '[State Int] Int
 go = do
-  n <- send (Get id)
+  n <- get
   if n <= 0
      then pure n
      else do
-       send $ Put (n-1) ()
+       put (n-1)
        go
 
 
@@ -71,5 +72,5 @@ countDown start = fst $ run $ runState start go
 
 
 jank :: Int -> Int
-jank start = fst $ run $ runState start $ reinterpret send $ go
+jank start = fst $ run $ runState start $ go
 
