@@ -1,0 +1,45 @@
+# Adapted from https://github.com/commercialhaskell/stack
+language: c
+sudo: false
+
+cache:
+    directories:
+        - $HOME/.ghc
+        - $HOME/.cabal
+        - $HOME/.stack
+        - .stack-work
+
+matrix:
+  include:
+    # ghc 8.6.3
+  - env: STACK='stack --resolver=lts-13.0' CACHE_NAME=8.6.3
+    addons: {apt: {packages: [libgmp-dev]}}
+
+    # Use the resolver in stack.yaml
+  - env: STACK=stack CACHE_NAME=stack-linux
+    addons: {apt: {packages: [libgmp-dev]}}
+
+  - env: STACK=stack CACHE_NAME=stack-osx
+    os: osx
+    addons: {apt: {packages: [libgmp-dev]}}
+
+
+install:
+ - unset CC
+ - export PATH=$HOME/.local/bin:/opt/ghc/$GHCVER/bin:$PATH
+ - ./.travis/install-ghr.sh
+ - ./.travis/install-stack.sh
+
+script:
+ - echo "$(stack ghc -- --version) [$(stack ghc -- --print-project-git-commit-id 2> /dev/null || echo '?')]"
+ - GHC_OPTIONS="-Werror"
+ - |
+   set -ex
+   $STACK --no-terminal build --ghc-options="$GHC_OPTIONS"
+   set +ex
+
+after_success:
+ - |
+   # Build and ship binary
+   ./.travis/attach-binary.sh
+
