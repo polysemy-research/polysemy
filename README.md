@@ -38,8 +38,8 @@ It's like `fused-effects` but with an order of magnitude less boilerplate.
     away the entire abstraction at compile time.
 
 
-<a name="fn1">1</a>: Unfortunately this is not true in GHC 8.6.3, but will be
-true as soon as [my patch](https://gitlab.haskell.org/ghc/ghc/merge_requests/668/) lands.
+<sup><a name="fn1">1</a></sup>: Unfortunately this is not true in GHC 8.6.3, but
+will be true as soon as [my patch](https://gitlab.haskell.org/ghc/ghc/merge_requests/668/) lands.
 
 
 ## Examples

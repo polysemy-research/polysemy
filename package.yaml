@@ -10,13 +10,9 @@ extra-source-files:
 - README.md
 - ChangeLog.md
 
-# Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+synopsis:            Higher-order, low-boilerplate, zero-cost free monads.
+category:            Language
 
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
 description:         Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
 
 dependencies:
@@ -66,26 +62,6 @@ library:
 
     - condition: flag(error-messages)
       cpp-options: -DERROR_MESSAGES
-
-executables:
-  polysemy-exe:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - polysemy
-    when:
-      - condition: flag(dump-core)
-        then:
-          dependencies:
-            - dump-core
-          ghc-options:
-            - -fplugin=DumpCore
-            - -fplugin-opt DumpCore:core-html
-        else: {}
 
 tests:
   polysemy-test:

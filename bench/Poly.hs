@@ -5,7 +5,7 @@
 
 {-# OPTIONS_GHC -fwarn-all-missed-specializations #-}
 
-module Wtf where
+module Poly where
 
 import Polysemy
 import Polysemy.Error
