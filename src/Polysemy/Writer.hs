@@ -2,12 +2,26 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections   #-}
 
-module Polysemy.Writer where
+module Polysemy.Writer
+  ( -- * Effect
+    Writer (..)
+
+    -- * Actions
+  , tell
+  , listen
+  , censor
+
+    -- * Interpretations
+  , runOutputAsWriter
+  , runWriter
+  ) where
 
 import Polysemy
 import Polysemy.Output
 import Polysemy.State
 
+------------------------------------------------------------------------------
+-- | An effect capable of emitting and intercepting messages.
 data Writer o m a where
   Tell   :: o -> Writer o m ()
   Listen :: ∀ o m a. m a -> Writer o m (o, a)
@@ -16,12 +30,17 @@ data Writer o m a where
 makeSemantic ''Writer
 
 
+------------------------------------------------------------------------------
+-- | Transform an 'Output' effect into a 'Writer' effect.
 runOutputAsWriter :: Semantic (Output o ': r) a -> Semantic (Writer o ': r) a
 runOutputAsWriter = reinterpret \case
   Output o -> tell o
 {-# INLINE runOutputAsWriter #-}
 
 
+------------------------------------------------------------------------------
+-- | Run a 'Writer' effect in the style of 'Control.Monad.Trans.Writer.WriterT'
+-- (but without the nasty space leak!)
 runWriter
     :: (Monoid o, Typeable o)
     => Semantic (Writer o ': r) a

@@ -1,7 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.Fixpoint
-  ( Fixpoint (..)
+  ( -- * Effect
+    Fixpoint (..)
+
+    -- * Interpretations
   , module Polysemy.Fixpoint
   ) where
 
@@ -10,6 +13,8 @@ import Polysemy
 import Polysemy.Internal.Fixpoint
 
 
+------------------------------------------------------------------------------
+-- | Run a 'Fixpoint' effect purely.
 runFixpoint
     :: (∀ x. Semantic r x -> x)
     -> Semantic (Fixpoint ': r) a
@@ -20,6 +25,8 @@ runFixpoint lower = interpretH $ \case
     pure $ fix $ lower . runFixpoint lower . c
 
 
+------------------------------------------------------------------------------
+-- | Run a 'Fixpoint' effect in terms of an underlying 'MonadFix' instance.
 runFixpointM
     :: ( MonadFix m
        , Member (Lift m) r

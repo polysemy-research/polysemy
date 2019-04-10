@@ -1,9 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.Error
-  ( Error (..)
+  ( -- * Effect
+    Error (..)
+
+    -- * Actions
   , throw
   , catch
+
+    -- * Interpretations
   , runError
   , runErrorInIO
   ) where
@@ -25,6 +30,9 @@ data Error e m a where
 makeSemantic ''Error
 
 
+------------------------------------------------------------------------------
+-- | Run an 'Error' effect in the style of
+-- 'Control.Monad.Trans.Except.ExceptT'.
 runError
     :: Typeable e
     => Semantic (Error e ': r) a
@@ -63,6 +71,9 @@ instance Typeable e => Show (WrappedExc e) where
 instance (Typeable e) => X.Exception (WrappedExc e)
 
 
+------------------------------------------------------------------------------
+-- | Run an 'Error' effect as an 'IO' 'X.Exception'. This interpretation is
+-- significantly faster than 'runError', at the cost of being less flexible.
 runErrorInIO
     :: ( Typeable e
        , Member (Lift IO) r

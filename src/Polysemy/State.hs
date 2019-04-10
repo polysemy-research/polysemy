@@ -1,11 +1,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.State
-  ( State (..)
+  ( -- * Effect
+    State (..)
+
+    -- * Actions
   , get
   , gets
   , put
   , modify
+
+    -- * Interpretations
   , runState
   , runLazyState
   ) where
@@ -14,6 +19,14 @@ import Polysemy
 import Polysemy.Internal.Combinators
 
 
+------------------------------------------------------------------------------
+-- | An effect for providing statefulness. Note that unlike mtl's
+-- 'Control.Monad.Trans.State.StateT', there is no restriction that the 'State'
+-- effect corresponds necessarily to /local/ state. It could could just as well
+-- be interrpeted in terms of HTTP requests or database access.
+--
+-- Interpreters which require statefulness can 'Polysemy.reinterpret'
+-- themselves in terms of 'State', and subsequently call 'runState'.
 data State s m a where
   Get :: State s m s
   Put :: s -> State s m ()
@@ -23,16 +36,18 @@ makeSemantic ''State
 
 gets :: Member (State s) r => (s -> a) -> Semantic r a
 gets f = fmap f get
-{-# INLINE gets #-}
+{-# INLINABLE gets #-}
 
 
 modify :: Member (State s) r => (s -> s) -> Semantic r ()
 modify f = do
   s <- get
   put $ f s
-{-# INLINE modify #-}
+{-# INLINABLE modify #-}
 
 
+------------------------------------------------------------------------------
+-- | Run a 'State' effect with local state.
 runState :: Typeable s => s -> Semantic (State s ': r) a -> Semantic r (s, a)
 runState = stateful $ \case
   Get   -> \s -> pure (s, s)
@@ -40,6 +55,8 @@ runState = stateful $ \case
 {-# INLINE[3] runState #-}
 
 
+------------------------------------------------------------------------------
+-- | Run a 'State' effect with local state, lazily.
 runLazyState :: Typeable s => s -> Semantic (State s ': r) a -> Semantic r (s, a)
 runLazyState = lazilyStateful $ \case
   Get   -> \s -> pure (s, s)

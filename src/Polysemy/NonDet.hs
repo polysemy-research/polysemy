@@ -2,7 +2,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.NonDet
-  ( NonDet (..)
+  ( -- * Effect
+    NonDet (..)
+
+    -- * Interpretations
   , runNonDet
   ) where
 
@@ -49,6 +52,8 @@ instance Monad (NonDetC m) where
   {-# INLINE (>>=) #-}
 
 
+------------------------------------------------------------------------------
+-- | Run a 'NonDet' effect in terms of some underlying 'Alternative' @f@.
 runNonDet :: Alternative f => Semantic (NonDet ': r) a -> Semantic r (f a)
 runNonDet (Semantic m) = Semantic $ \k -> runNonDetC $ m $ \u ->
   case decomp u of

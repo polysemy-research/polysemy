@@ -1,12 +1,25 @@
 {-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Polysemy.Random where
+module Polysemy.Random
+  ( -- * Effect
+    Random (..)
+
+    -- * Actions
+  , random
+  , randomR
+
+    -- * Interpretations
+  , runRandom
+  , runRandomIO
+  ) where
 
 import           Polysemy
 import           Polysemy.State
 import qualified System.Random as R
 
+------------------------------------------------------------------------------
+-- | An effect capable of providing 'R.Random' values.
 data Random m a where
   Random :: R.Random x => Random m x
   RandomR :: R.Random x => (x, x) -> Random m x
@@ -14,6 +27,8 @@ data Random m a where
 makeSemantic ''Random
 
 
+------------------------------------------------------------------------------
+-- | Run a 'Random' effect with an explicit 'R.RandomGen'.
 runRandom
     :: forall q r a
      . ( Typeable q
@@ -34,6 +49,8 @@ runRandom q = runState q . reinterpret \case
 {-# INLINE runRandom #-}
 
 
+------------------------------------------------------------------------------
+-- | Run a 'Random' effect by using the 'IO' random generator.
 runRandomIO :: Member (Lift IO) r => Semantic (Random ': r) a -> Semantic r a
 runRandomIO m = do
   q <- sendM R.newStdGen
