@@ -34,7 +34,7 @@ module Polysemy.Internal.TH.Effect
   )
 where
 
-import Control.Monad (forM, unless)
+import Control.Monad (join, forM, unless)
 import Data.Char (toLower)
 import Data.List
 import Generics.SYB
@@ -82,7 +82,7 @@ genFreer makeSigs tcName = do
   reify tcName >>= \case
     TyConI (DataD _ _ _ _ cons _) -> do
       sigs <- filter (const makeSigs) <$> mapM genSig cons
-      decs <- mapM genDecl cons
+      decs <- join <$> mapM genDecl cons
       loc <- location
 
       return $
@@ -105,20 +105,23 @@ getDeclName = mkName . overFirst toLower . nameBase
   overFirst _ as       = as
 
 -- | Builds a function definition of the form @x a b c = send $ X a b c@.
-genDecl :: Con -> Q Dec
+genDecl :: Con -> Q [Dec]
 genDecl (ForallC _       _     con) = genDecl con
 genDecl (GadtC   [cName] tArgs _  ) = do
   let fnName = getDeclName cName
   let arity  = length tArgs - 1
   dTypeVars <- forM [0 .. arity] $ const $ newName "a"
-  return $ FunD fnName . pure $ Clause
-    (VarP <$> dTypeVars)
-    (NormalB . AppE (VarE 'send) $ foldl
-      (\b -> AppE b . VarE)
-      (ConE cName)
-      dTypeVars
-    )
-    []
+  pure $
+    [PragmaD (InlineP fnName Inlinable ConLike AllPhases)
+    , FunD fnName . pure $ Clause
+        (VarP <$> dTypeVars)
+        (NormalB . AppE (VarE 'send) $ foldl
+          (\b -> AppE b . VarE)
+          (ConE cName)
+          dTypeVars
+        )
+        []
+    ]
 genDecl _ = fail "genDecl expects a GADT constructor"
 
 tyVarBndrName :: TyVarBndr -> Name
