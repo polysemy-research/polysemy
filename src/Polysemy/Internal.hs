@@ -148,6 +148,30 @@ runM (Semantic m) = m $ \z ->
 {-# INLINE runM #-}
 
 
+------------------------------------------------------------------------------
+-- | Some interpreters need to be able to lower down to the base monad (often
+-- 'IO') in order to function properly --- some good examples of this are
+-- 'Polysemy.Error.runErrorInIO' and 'Polysemy.Resource.runResource'.
+--
+-- However, these interpreters don't compose particularly nicely; for example,
+-- to run 'Polysemy.Resource.runResource', you must write:
+--
+-- @
+-- runM . runErrorInIO runM
+-- @
+--
+-- Notice that 'runM' is duplicated in two places here. The situation gets
+-- exponentially worse the more intepreters you have that need to run in this
+-- pattern.
+--
+-- Instead, '.@' performs the composition we'd like. The above can be written as
+--
+-- @
+-- (runM .@ runErrorInIO)
+-- @
+--
+-- The parentheses here are important; without them you'll run into operator
+-- precedence errors.
 (.@)
     :: Monad m
     => (∀ x. Semantic r x -> m x)
@@ -160,6 +184,9 @@ f .@ g = f . g f
 infixl 9 .@
 
 
+------------------------------------------------------------------------------
+-- | Like '.@', but for interpreters which change the resulting type --- eg.
+-- 'Polysemy.Error.runErrorInIO'.
 (.@@)
     :: Monad m
     => (∀ x. Semantic r x -> m x)
