@@ -15,6 +15,8 @@ module Polysemy.Internal
   , usingSemantic
   , liftSemantic
   , hoistSemantic
+  , (.@)
+  , (.@@)
   ) where
 
 import Control.Applicative
@@ -102,7 +104,7 @@ hoistSemantic nat (Semantic m) = Semantic $ \k -> m $ \u -> k $ nat u
 ------------------------------------------------------------------------------
 -- | Introduce an effect into 'Semantic'. Analogous to
 -- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem
-raise :: forall e r a. Semantic r a -> Semantic (e ': r) a
+raise :: ∀ e r a. Semantic r a -> Semantic (e ': r) a
 raise = hoistSemantic $ hoist raise_b . weaken
 {-# INLINE raise #-}
 
@@ -143,6 +145,29 @@ runM (Semantic m) = m $ \z ->
     Yo e s _ f -> do
       a <- unLift e
       pure $ f $ a <$ s
-
 {-# INLINE runM #-}
+
+
+(.@)
+    :: Monad m
+    => (∀ x. Semantic r x -> m x)
+    -> (∀ y. (∀ x. Semantic r x -> m x)
+          -> Semantic (e ': r) y
+          -> Semantic r y)
+    -> Semantic (e ': r) z
+    -> m z
+f .@ g = f . g f
+infixl 9 .@
+
+
+(.@@)
+    :: Monad m
+    => (∀ x. Semantic r x -> m x)
+    -> (∀ y. (∀ x. Semantic r x -> m x)
+          -> Semantic (e ': r) y
+          -> Semantic r (f y))
+    -> Semantic (e ': r) z
+    -> m (f z)
+f .@@ g = f . g f
+infixl 9 .@@
 

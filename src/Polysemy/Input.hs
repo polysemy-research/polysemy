@@ -20,7 +20,11 @@ runConstInput c = interpret \case
 {-# INLINE runConstInput #-}
 
 
-runListInput :: [i] -> Semantic (Input (Maybe i) ': r) a -> Semantic r a
+runListInput
+    :: Typeable i
+    => [i]
+    -> Semantic (Input (Maybe i) ': r) a
+    -> Semantic r a
 runListInput is = fmap snd . runState is . reinterpret \case
   Input -> do
     s <- gets uncons

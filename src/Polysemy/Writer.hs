@@ -23,7 +23,7 @@ runOutputAsWriter = reinterpret \case
 
 
 runWriter
-    :: Monoid o
+    :: (Monoid o, Typeable o)
     => Semantic (Writer o ': r) a
     -> Semantic r (o, a)
 runWriter = runState mempty . reinterpretH \case

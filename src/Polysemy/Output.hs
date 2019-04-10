@@ -15,7 +15,7 @@ makeSemantic ''Output
 
 runFoldMapOutput
     :: forall o m r a
-     . Monoid m
+     . (Typeable m, Monoid m)
     => (o -> m)
     -> Semantic (Output o ': r) a
     -> Semantic r (m, a)

@@ -1,7 +1,9 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 
 module Polysemy.Internal.Tactics
   ( Tactics (..)
+  , getInitialStateT
   , runT
   , bindT
   , pureT
@@ -12,10 +14,11 @@ module Polysemy.Internal.Tactics
   ) where
 
 import Polysemy.Internal
-import Polysemy.Internal.Union
 import Polysemy.Internal.Effect
+import Polysemy.Internal.Union
 
-type Tactical e m r x = ∀ f. Functor f => Semantic (WithTactics e f m r) (f x)
+type Tactical e m r x = ∀ f. (Functor f, Typeable1 f)
+                          => Semantic (WithTactics e f m r) (f x)
 type WithTactics e f m r = Tactics f m (e ': r) ': r
 
 data Tactics f n r m a where
@@ -23,15 +26,15 @@ data Tactics f n r m a where
   HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Semantic r (f b))
 
 
-getInitialState :: forall f m r e. Semantic (WithTactics e f m r) (f ())
-getInitialState = send @(Tactics _ m (e ': r)) GetInitialState
+getInitialStateT :: forall f m r e. Semantic (WithTactics e f m r) (f ())
+getInitialStateT = send @(Tactics _ m (e ': r)) GetInitialState
 
 
 ------------------------------------------------------------------------------
 -- | Lift a value into 'Tactical'.
 pureT :: a -> Tactical e m r a
 pureT a = do
-  istate <- getInitialState
+  istate <- getInitialStateT
   pure $ a <$ istate
 
 
@@ -46,7 +49,7 @@ runT
     -> Semantic (WithTactics e f m r)
                 (Semantic (e ': r) (f a))
 runT na = do
-  istate <- getInitialState
+  istate <- getInitialStateT
   na'    <- bindT (const na)
   pure $ na' istate
 {-# INLINE runT #-}
@@ -67,7 +70,9 @@ bindT f = send $ HoistInterpretation f
 
 liftT
     :: forall m f r e a
-     . Functor f
+     . ( Functor f
+       , Typeable1 f
+       )
     => Semantic r a
     -> Semantic (WithTactics e f m r) (f a)
 liftT m = do

@@ -32,14 +32,14 @@ modify f = do
 {-# INLINE modify #-}
 
 
-runState :: s -> Semantic (State s ': r) a -> Semantic r (s, a)
+runState :: Typeable s => s -> Semantic (State s ': r) a -> Semantic r (s, a)
 runState = stateful $ \case
   Get   -> \s -> pure (s, s)
   Put s -> const $ pure (s, ())
 {-# INLINE[3] runState #-}
 
 
-runLazyState :: s -> Semantic (State s ': r) a -> Semantic r (s, a)
+runLazyState :: Typeable s => s -> Semantic (State s ': r) a -> Semantic r (s, a)
 runLazyState = lazilyStateful $ \case
   Get   -> \s -> pure (s, s)
   Put s -> const $ pure (s, ())

@@ -4,6 +4,8 @@ module Polysemy
   -- * Running
   , run
   , runM
+  , (.@)
+  , (.@@)
   -- * Monads
   , Lift ()
   , sendM
@@ -41,11 +43,16 @@ module Polysemy
     -- 'pureT' to satisfy the typechecker.
   , Tactical
   , WithTactics
+  , getInitialStateT
   , pureT
   , runT
   , bindT
+
+  -- * Reexports
+  , Typeable
   ) where
 
+import Data.Typeable
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
 import Polysemy.Internal.TH.Effect

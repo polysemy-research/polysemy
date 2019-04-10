@@ -21,6 +21,7 @@ module Polysemy.Internal.Combinators
 
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
+import           Data.Typeable
 import           Polysemy.Internal
 import           Polysemy.Internal.CustomErrors
 import           Polysemy.Internal.Effect
@@ -72,7 +73,8 @@ interpretH f (Semantic m) = m $ \u ->
 -- | A highly-performant combinator for interpreting an effect statefully. See
 -- 'stateful' for a more user-friendly variety of this function.
 interpretInStateT
-    :: (∀ x m. e m x -> S.StateT s (Semantic r) x)
+    :: Typeable s
+    => (∀ x m. e m x -> S.StateT s (Semantic r) x)
     -> s
     -> Semantic (e ': r) a
     -> Semantic r (s, a)
@@ -91,7 +93,8 @@ interpretInStateT f s (Semantic m) = Semantic $ \k ->
 -- | A highly-performant combinator for interpreting an effect statefully. See
 -- 'stateful' for a more user-friendly variety of this function.
 interpretInLazyStateT
-    :: (∀ x m. e m x -> LS.StateT s (Semantic r) x)
+    :: Typeable s
+    => (∀ x m. e m x -> LS.StateT s (Semantic r) x)
     -> s
     -> Semantic (e ': r) a
     -> Semantic r (s, a)
@@ -109,7 +112,8 @@ interpretInLazyStateT f s (Semantic m) = Semantic $ \k ->
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but with access to an intermediate state @s@.
 stateful
-    :: (∀ x m. e m x -> s -> Semantic r (s, x))
+    :: Typeable s
+    => (∀ x m. e m x -> s -> Semantic r (s, x))
     -> s
     -> Semantic (e ': r) a
     -> Semantic r (s, a)
@@ -120,7 +124,8 @@ stateful f = interpretInStateT $ \e -> S.StateT $ fmap swap . f e
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but with access to an intermediate state @s@.
 lazilyStateful
-    :: (∀ x m. e m x -> s -> Semantic r (s, x))
+    :: Typeable s
+    => (∀ x m. e m x -> s -> Semantic r (s, x))
     -> s
     -> Semantic (e ': r) a
     -> Semantic r (s, a)
@@ -260,7 +265,8 @@ interpretH_b = interpretH
 {-# NOINLINE interpretH_b #-}
 
 interpretInStateT_b
-    :: (∀ x m. e m x -> S.StateT s (Semantic r) x)
+    :: Typeable s
+    => (∀ x m. e m x -> S.StateT s (Semantic r) x)
     -> s
     -> Semantic (e ': r) a
     -> Semantic r (s, a)
@@ -268,7 +274,8 @@ interpretInStateT_b = interpretInStateT
 {-# NOINLINE interpretInStateT_b #-}
 
 interpretInLazyStateT_b
-    :: (∀ x m. e m x -> LS.StateT s (Semantic r) x)
+    :: Typeable s
+    => (∀ x m. e m x -> LS.StateT s (Semantic r) x)
     -> s
     -> Semantic (e ': r) a
     -> Semantic r (s, a)

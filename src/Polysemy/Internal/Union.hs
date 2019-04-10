@@ -52,26 +52,30 @@ data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
 
 
 data Yo e m a where
-  Yo :: (Functor f)
+  Yo :: (Functor f, Typeable1 f, Typeable f)
      => e m a
      -> f ()
      -> (forall x. f (m x) -> n (f x))
      -> (f a -> b)
      -> Yo e n b
 
-liftYo :: Functor m => e m a -> Yo e m a
-liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity
-
 instance Functor (Yo e m) where
   fmap f (Yo e s d f') = Yo e s d (f . f')
+  {-# INLINE fmap #-}
 
 instance Effect (Yo e) where
   weave s' d (Yo e s nt f) =
     Yo e (Compose $ s <$ s')
          (fmap Compose . d . fmap nt . getCompose)
          (fmap f . getCompose)
+  {-# INLINE weave #-}
 
   hoist = defaultHoist
+  {-# INLINE hoist #-}
+
+liftYo :: Functor m => e m a -> Yo e m a
+liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity
+{-# INLINE liftYo #-}
 
 
 instance (Functor m) => Functor (Union r m) where

@@ -16,7 +16,9 @@ makeSemantic ''Random
 
 runRandom
     :: forall q r a
-     . R.RandomGen q
+     . ( Typeable q
+       , R.RandomGen q
+       )
     => q
     -> Semantic (Random ': r) a
     -> Semantic r (q, a)

@@ -8,6 +8,8 @@
 module Wtf where
 
 import Polysemy
+import Polysemy.Error
+import Polysemy.Resource
 import Polysemy.State
 
 
@@ -26,4 +28,18 @@ slowBeforeSpecialization = do
 countDown :: Int -> Int
 countDown s =
   fst . run . runState s $ slowBeforeSpecialization
+
+prog
+    :: Semantic '[ State Bool
+                 , Error Bool
+                 , Resource
+                 , Lift IO
+                 ] Bool
+prog = catch @Bool (throw True) (pure . not)
+
+zoinks :: IO (Either Bool Bool)
+zoinks = fmap (fmap snd)
+       . (runM .@ runResource .@@ runErrorInIO)
+       . runState False
+       $ prog
 
