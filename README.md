@@ -47,7 +47,7 @@ will be true as soon as [my patch](https://gitlab.haskell.org/ghc/ghc/merge_requ
 Console effect:
 
 ```haskell
-{-# LANGAUGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 import Polysemy
 
