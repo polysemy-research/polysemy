@@ -15,6 +15,61 @@ module Polysemy
   , raise
 
     -- * Creating New Effects
+    -- | Effects should be defined as a GADT (enable @-XGADTs@), with kind @(* -> *) -> *@.
+    -- Every primitive action in the effect should be its own constructor of
+    -- the type. For example, we can model an effect which interacts with a tty
+    -- console as follows:
+    --
+    -- @
+    -- data Console m a where
+    --   WriteLine :: String -> Console m ()
+    --   ReadLine  :: Console m String
+    -- @
+    --
+    -- Notice that the 'a' parameter gets instataniated at the /desired return
+    -- type/ of the actions. Writing a line returns a '()', but reading one
+    -- returns 'String'.
+    --
+    -- By enabling @-XTemplateHaskell@, we can use the 'makeSemantic' function
+    -- to generate smart constructors for the actions. These smart constructors
+    -- can be invoked directly inside of the 'Semantic' monad.
+    --
+    -- >>> makeSemantic ''Console
+    --
+    -- results in the following definitions:
+    --
+    -- @
+    -- writeLine :: 'Member' Console r => String -> 'Semantic' r ()
+    -- readLine  :: 'Member' Console r => 'Semantic' r String
+    -- @
+    --
+    -- Effects which don't make use of the @m@ parameter are known as
+    -- "first-order effects."
+
+    -- ** Higher-Order Effects
+    -- | Every effect has access to the @m@ parameter, which corresponds to the
+    -- 'Semantic' monad it's used in. Using this parameter, we're capable of
+    -- writing effects which themselves contain subcomputations.
+    --
+    -- For example, the definition of 'Polysemy.Error.Error' is
+    --
+    -- @
+    -- data 'Polysemy.Error.Error' e m a where
+    --   'Polysemy.Error.Throw' :: e -> 'Polysemy.Error.Error' e m a
+    --   'Polysemy.Error.Catch' :: m a -> (e -> m a) -> 'Polysemy.Error.Error' e m a
+    -- @
+    --
+    -- where 'Polysemy.Error.Catch' is an action that can run an exception
+    -- handler if its first argument calls 'Polysemy.Error.throw'.
+    --
+    -- >>> makeSemantic ''Error
+    --
+    -- @
+    -- 'Polysemy.Error.throw' :: 'Member' ('Polysemy.Error.Error' e) r => e -> 'Semantic' r a
+    -- 'Polysemy.Error.catch'  :: 'Member' ('Polysemy.Error.Error' e) r => 'Semantic' r a -> (e -> 'Semantic' r a) -> 'Semantic' r a
+    -- @
+    --
+    -- As you see, in the smart constructors, the @m@ parameter has become @'Semantic' r@.
   , makeSemantic
   , makeSemantic_
 
@@ -32,12 +87,12 @@ module Polysemy
   , reinterpret2H
   , reinterpret3H
 
+    -- * Improving Performance for Interpreters
+  , inlineRecursiveCalls
+
     -- * Composing IO-based Interpreters
   , (.@)
   , (.@@)
-
-    -- * Improving Performance for Interpreters
-  , inlineRecursiveCalls
 
     -- * Tactics
     -- | Higher-order effects need to explicitly thread /other effects'/ state

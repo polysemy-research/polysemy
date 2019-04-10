@@ -45,8 +45,7 @@ import Polysemy.Internal.CustomErrors (DefiningModule)
 
 -- | If @T@ is a GADT representing an effect algebra, as described in the module
 -- documentation for "Polysemy", @$('makeSemantic' ''T)@ automatically
--- generates a function that uses 'send' with each operation. For more
--- information, see the module documentation for "Polysemy.Internal.TH.Effect".
+-- generates a smart constructor for every data constructor of @T@.
 makeSemantic :: Name -> Q [Dec]
 makeSemantic = genFreer True
 

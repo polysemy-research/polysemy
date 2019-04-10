@@ -134,10 +134,9 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 
 
 ------------------------------------------------------------------------------
--- | Like 'interpret', but instead of removing the effect @e@, reencodes it in
--- some new effect @f@. This function will fuse when followed by
--- 'Polysemy.State.runState', meaning it's free to 'reinterpret' in terms of
--- the 'Polysemy.State.State' effect and immediately run it.
+-- | Like 'reinterpret', but for higher-order effects.
+--
+-- See the notes on 'Tactical' for how to use this function.
 reinterpretH
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
@@ -151,6 +150,7 @@ reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
+
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of removing the effect @e@, reencodes it in
@@ -197,6 +197,7 @@ reinterpret2
 reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret2 #-}
 
+
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret3', but for higher-order effects.
 --
@@ -229,24 +230,33 @@ reinterpret3 f = reinterpret3H $ \(e :: e m x) -> liftT @m $ f e
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of handling the effect, allows responding to
--- the effect while leaving it unhandled.
+-- the effect while leaving it unhandled. This allows you, for example, to
+-- intercept other effects and insert logic around them.
 intercept
     :: ( Member e r
        , FirstOrder e "intercept"
        )
     => (∀ x m. e m x -> Semantic r x)
+       -- ^ A natural transformation from the handled effect to other effects
+       -- already in 'Semantic'.
     -> Semantic r a
+       -- ^ Unlike 'interpret', 'intercept' does not consume any effects.
     -> Semantic r a
 intercept f = interceptH $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE intercept #-}
 
+
 ------------------------------------------------------------------------------
--- | Like 'interpret', but instead of handling the effect, allows responding to
--- the effect while leaving it unhandled.
+-- | Like 'interceptH', but for higher-order effects.
+--
+-- See the notes on 'Tactical' for how to use this function.
 interceptH
     :: Member e r
     => (∀ x m. e m x -> Tactical e m r x)
+       -- ^ A natural transformation from the handled effect to other effects
+       -- already in 'Semantic'.
     -> Semantic r a
+       -- ^ Unlike 'interpretH', 'interceptH' does not consume any effects.
     -> Semantic r a
 interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
   case prj u of
@@ -254,6 +264,7 @@ interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
       usingSemantic k $ fmap y $ runTactics s (raise . d) $ f e
     Nothing -> k u
 {-# INLINE interceptH #-}
+
 
 ------------------------------------------------------------------------------
 -- Loop breakers
@@ -264,6 +275,7 @@ interpretH_b
 interpretH_b = interpretH
 {-# NOINLINE interpretH_b #-}
 
+
 interpretInStateT_b
     :: Typeable s
     => (∀ x m. e m x -> S.StateT s (Semantic r) x)
@@ -272,6 +284,7 @@ interpretInStateT_b
     -> Semantic r (s, a)
 interpretInStateT_b = interpretInStateT
 {-# NOINLINE interpretInStateT_b #-}
+
 
 interpretInLazyStateT_b
     :: Typeable s
@@ -282,6 +295,7 @@ interpretInLazyStateT_b
 interpretInLazyStateT_b = interpretInLazyStateT
 {-# NOINLINE interpretInLazyStateT_b #-}
 
+
 reinterpretH_b
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
     -> Semantic (e1 ': r) a
@@ -289,12 +303,14 @@ reinterpretH_b
 reinterpretH_b = reinterpretH
 {-# NOINLINE reinterpretH_b #-}
 
+
 reinterpret2H_b
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
     -> Semantic (e1 ': r) a
     -> Semantic (e2 ': e3 ': r) a
 reinterpret2H_b = reinterpret2H
 {-# NOINLINE reinterpret2H_b #-}
+
 
 reinterpret3H_b
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)

@@ -22,10 +22,13 @@ import Language.Haskell.TH
 -- these functions fast again.
 --
 -- @
--- inlineRecursiveCalls [d|
---   factorial :: Int -> Int
---   factorial 0 = 1
---   factorial n = n * factorial (n - 1)
+-- 'inlineRecursiveCalls' [d|
+--   'Polysemy.Reader.runReader' :: i -> 'Polysemy.Semantic' ('Polysemy.Reader.Reader' i ': r) a -> 'Polysemy.Semantic' r a
+--   'Polysemy.Reader.runReader' i = 'Polysemy.interpretH' $ \\case
+--     'Polysemy.Reader.Ask' -> 'Polysemy.pureT' i
+--     'Polysemy.Reader.Local' f m -> do
+--       mm <- 'Polysemy.runT' m
+--       'Polysemy.raise' $ 'Polysemy.Reader.runReader' (f i) mm
 --   |]
 -- @
 inlineRecursiveCalls :: Q [Dec] -> Q [Dec]
