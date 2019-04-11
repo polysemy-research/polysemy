@@ -5,6 +5,7 @@
 
 module Polysemy.Internal
   ( Semantic (..)
+  , Sem
   , Member
   , send
   , sendM
@@ -125,6 +126,10 @@ newtype Semantic r a = Semantic
         => (∀ x. Union r (Semantic r) x -> m x)
         -> m a
   }
+
+------------------------------------------------------------------------------
+-- | Convenience synonym for 'Semantic'
+type Sem r a = Semantic r a
 
 ------------------------------------------------------------------------------
 -- | Like 'runSemantic' but flipped for better ergonomics sometimes.
