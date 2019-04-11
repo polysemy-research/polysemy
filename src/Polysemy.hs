@@ -1,6 +1,7 @@
 module Polysemy
   ( -- * Core Types
-    Semantic ()
+    Semantic()
+  , Sem
   , Member
 
   -- * Running Semantic
@@ -8,7 +9,7 @@ module Polysemy
   , runM
 
   -- * Interoperating With Other Monads
-  , Lift ()
+  , Lift()
   , sendM
 
     -- * Lifting
@@ -112,12 +113,13 @@ module Polysemy
 
   -- * Reexports
   , Typeable
-  ) where
+  )
+where
 
-import Data.Typeable
-import Polysemy.Internal
-import Polysemy.Internal.Combinators
-import Polysemy.Internal.TH.Effect
-import Polysemy.Internal.TH.Performance
-import Polysemy.Internal.Tactics
+import           Data.Typeable
+import           Polysemy.Internal
+import           Polysemy.Internal.Combinators
+import           Polysemy.Internal.TH.Effect
+import           Polysemy.Internal.TH.Performance
+import           Polysemy.Internal.Tactics
 
