@@ -61,23 +61,92 @@ Make sure you read the [Necessary Language
 Extensions](https://github.com/isovector/polysemy#necessary-language-extensions)
 before trying these yourself!
 
-Console effect:
+Teletype effect:
 
 ```haskell
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE BlockArguments, DataKinds, FlexibleContexts, GADTs, LambdaCase,
+             PolyKinds, RankNTypes, ScopedTypeVariables, TypeApplications,
+             TypeOperators, TypeFamilies, UnicodeSyntax
+#-}
 
 import Polysemy
+import Polysemy.Input
+import Polysemy.Output
 
-data Console m a where
-  ReadTTY  :: Console m String
-  WriteTTY :: String -> Console m ()
+data Teletype m a where
+  ReadTTY  :: Teletype m String
+  WriteTTY :: String -> Teletype m ()
 
-makeSem ''Console
+makeSem ''Teletype
 
-runConsoleIO :: Member (Lift IO) r => Sem (Console ': r) a -> Sem r a
-runConsoleIO = interpret $ \case
+runTeletypeIO :: Member (Lift IO) r => Sem (Teletype ': r) a -> Sem r a
+runTeletypeIO = interpret $ \case
   ReadTTY      -> sendM getLine
   WriteTTY msg -> sendM $ putStrLn msg
+
+runTeletypeBoring :: [String] -> Sem (Teletype ': r) a -> Sem r ([String], a)
+runTeletypeBoring i
+  = runFoldMapOutput pure
+  . runListInput i
+  . reinterpret2 \case
+      ReadTTY -> maybe "" id <$> input
+      WriteTTY msg -> output msg
+
+-- Continuations so we can build up chains of behavior
+echoK :: Member Teletype r => Sem r () -> Sem r ()
+echoK k = do
+  a <- readTTY
+  when (a == "") $ pure ()
+  when (a /= "") do
+    writeTTY a
+    k
+
+revK :: Member Teletype r => Sem r () -> Sem r ()
+revK k = do
+  a <- readTTY
+  when (a == "") $ pure ()
+  when (a /= "") do
+    writeTTY (reverse a)
+    k
+
+-- Fixpoints
+
+echo :: Member Teletype r => Sem r ()
+echo = fix echoK
+
+rev :: Member Teletype r => Sem r ()
+rev = fix revK
+
+alternating :: Member Teletype r => Sem r ()
+alternating = fix (echoK . revK)
+
+-- Let's pretend
+echoBoring :: [String] -> Sem '[] ([String], ())
+echoBoring = flip runTeletypeBoring echo
+
+revBoring :: [String] -> Sem '[] ([String], ())
+revBoring = flip runTeletypeBoring rev
+
+alternatingBoring :: [String] -> Sem '[] ([String], ())
+alternatingBoring = flip runTeletypeBoring alternating
+
+boring :: [String] -> [[String]]
+boring = map (fst . run) . sequence [echoBoring, revBoring, alternatingBoring]
+
+-- Now let's do things
+echoIO :: Sem '[Lift IO] ()
+echoIO = runTeletypeIO echo
+
+revIO :: Sem '[Lift IO] ()
+revIO = runTeletypeIO rev
+
+alternatingIO :: Sem '[Lift IO] ()
+alternatingIO = runTeletypeIO alternating
+
+-- cycle echo and reverse until a blank line
+main :: IO ()
+main = runM alternatingIO
 ```
 
 
@@ -85,14 +154,42 @@ Resource effect:
 
 ```haskell
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE BlockArguments, DataKinds, FlexibleContexts, GADTs, LambdaCase,
+             PolyKinds, RankNTypes, ScopedTypeVariables, TypeApplications,
+             TypeOperators, TypeFamilies, UnicodeSyntax
+#-}
 
+import Prelude hiding (throw, catch, bracket)
+import Polysemy
+import Polysemy.Input
+import Polysemy.Output
+import Polysemy.Error
 import qualified Control.Exception as X
-import           Polysemy
+
+data Teletype m a where
+  ReadTTY  :: Teletype m String
+  WriteTTY :: String -> Teletype m ()
 
 data Resource m a where
   Bracket :: m a -> (a -> m ()) -> (a -> m b) -> Resource m b
 
+makeSem ''Teletype
 makeSem ''Resource
+
+
+runTeletypeIO :: Member (Lift IO) r => Sem (Teletype ': r) a -> Sem r a
+runTeletypeIO = interpret $ \case
+  ReadTTY      -> sendM getLine
+  WriteTTY msg -> sendM $ putStrLn msg
+
+runTeletypeBoring :: [String] -> Sem (Teletype ': r) a -> Sem r ([String], a)
+runTeletypeBoring i
+  = runFoldMapOutput pure
+  . runListInput i
+  . reinterpret2 \case
+      ReadTTY -> maybe "" id <$> input
+      WriteTTY msg -> output msg
+
 
 runResource
     :: forall r a
@@ -110,6 +207,27 @@ runResource finish = interpretH $ \case
         runIt = finish .@ runResource
 
     sendM $ X.bracket (runIt a) (runIt . d) (runIt . u)
+
+data CustomException = ThisException | ThatException deriving Show
+instance X.Exception CustomException
+
+program :: Members '[Resource, Teletype, Error CustomException] r => Sem r ()
+program = catch work $ \e -> writeTTY ("Caught " ++ show e)
+  where work = bracket (readTTY) (const $ writeTTY "exiting bracket") $ \input -> do
+          writeTTY "entering bracket"
+          when (input == "explode") $ throw ThisException
+          writeTTY input
+          when (input == "weird stuff") $ throw ThatException
+          writeTTY "no exceptions"
+
+boringProgram :: IO (Either CustomException ([String], ()))
+boringProgram = (runM .@ runResource) . runError @CustomException . runTeletypeBoring ["words"] $ program
+
+boringExplosion :: IO (Either CustomException ([String], ()))
+boringExplosion = (runM .@ runResource) . runError @CustomException . runTeletypeBoring ["explode"] $ program
+
+ioProgram :: IO (Either CustomException ())
+ioProgram = (runM .@ runResource .@@ runErrorInIO @CustomException) . runTeletypeIO $ program
 ```
 
 Easy.
