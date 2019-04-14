@@ -15,10 +15,10 @@ module Polysemy
   , raise
 
     -- * Creating New Effects
-    -- | Effects should be defined as a GADT (enable @-XGADTs@), with kind @(* -> *) -> *@.
-    -- Every primitive action in the effect should be its own constructor of
-    -- the type. For example, we can model an effect which interacts with a tty
-    -- console as follows:
+    -- | Effects should be defined as a GADT (enable @-XGADTs@), with kind @(*
+    -- -> *) -> * -> *@. Every primitive action in the effect should be its
+    -- own constructor of the type. For example, we can model an effect which
+    -- interacts with a tty console as follows:
     --
     -- @
     -- data Console m a where

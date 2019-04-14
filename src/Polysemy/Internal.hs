@@ -63,7 +63,7 @@ import Polysemy.Internal.Union
 -- monomorphic representation of the @r@ parameter.
 --
 -- After all of your effects are handled, you'll be left with either
--- a @'Semantic' '[] a@ or a @'Semantic' ('Lift' m) a@ value, which can be
+-- a @'Semantic' '[] a@ or a @'Semantic' '[ 'Lift' m ] a@ value, which can be
 -- consumed respectively by 'run' and 'runM'.
 --
 -- ==== Examples

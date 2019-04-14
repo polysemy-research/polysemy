@@ -68,7 +68,7 @@ import Polysemy.Internal.Union
 -- block will not be visible inside of the @dealloc@ block.
 --
 -- Power users may explicitly use 'getInitialStateT' and 'bindT' to construct
--- whatever data flow they'd like; although this is usually necessary.
+-- whatever data flow they'd like; although this is usually unnecessary.
 type Tactical e m r x = ∀ f. (Functor f, Typeable1 f)
                           => Semantic (WithTactics e f m r) (f x)
 
