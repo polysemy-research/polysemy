@@ -219,7 +219,7 @@ reinterpret3H f (Semantic m) = Semantic $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /three/ intermediary effects.
 reinterpret3
-    :: FirstOrder e1 "reinterpret2"
+    :: FirstOrder e1 "reinterpret3"
     => (∀ m x. e1 m x -> Semantic (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Semantic (e1 ': r) a
