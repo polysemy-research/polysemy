@@ -8,7 +8,7 @@ module Polysemy
   , runM
 
   -- * Interoperating With Other Monads
-  , Lift ()
+  , Lift (..)
   , sendM
 
     -- * Lifting

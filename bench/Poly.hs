@@ -1,6 +1,8 @@
+{-# LANGUAGE BlockArguments   #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
+{-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -fwarn-all-missed-specializations #-}
@@ -11,6 +13,8 @@ import Polysemy
 import Polysemy.Error
 import Polysemy.Resource
 import Polysemy.State
+import Polysemy.Input
+import Polysemy.Output
 
 
 slowBeforeSpecialization :: Member (State Int) r => Semantic r Int
@@ -42,4 +46,18 @@ zoinks = fmap (fmap snd)
        . (runM .@ runResource .@@ runErrorInIO)
        . runState False
        $ prog
+
+data Console m a where
+  ReadLine :: Console m String
+  WriteLine :: String -> Console m ()
+
+makeSemantic ''Console
+
+runConsoleBoring :: [String] -> Semantic (Console ': r) a -> Semantic r ([String], a)
+runConsoleBoring inputs
+  = runFoldMapOutput (:[])
+  . runListInput inputs
+  . reinterpret2 \case
+      ReadLine -> maybe "" id <$> input
+      WriteLine msg -> output msg
 

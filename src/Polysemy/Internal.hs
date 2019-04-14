@@ -11,7 +11,7 @@ module Polysemy.Internal
   , run
   , runM
   , raise
-  , Lift ()
+  , Lift (..)
   , usingSemantic
   , liftSemantic
   , hoistSemantic
@@ -162,18 +162,25 @@ instance Monad (Semantic f) where
 
 instance (Member NonDet r) => Alternative (Semantic r) where
   empty = send Empty
+  {-# INLINE empty #-}
   a <|> b = do
     send (Choose id) >>= \case
       False -> a
       True  -> b
+  {-# INLINE (<|>) #-}
 
 
+------------------------------------------------------------------------------
+-- | This instance will only lift 'IO' actions. If you want to lift into some
+-- other 'MonadIO' type, use this instance, and handle it via the
+-- 'Polysemy.IO.runIO' interpretation.
 instance (Member (Lift IO) r) => MonadIO (Semantic r) where
   liftIO = sendM
   {-# INLINE liftIO #-}
 
 instance Member Fixpoint r => MonadFix (Semantic r) where
   mfix f = send $ Fixpoint f
+  {-# INLINE mfix #-}
 
 
 liftSemantic :: Union r (Semantic r) a -> Semantic r a
