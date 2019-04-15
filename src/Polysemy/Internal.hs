@@ -5,6 +5,8 @@
 
 module Polysemy.Internal
   ( Sem (..)
+  , Semantic
+  , runSemantic
   , Member
   , send
   , sendM
@@ -125,6 +127,17 @@ newtype Sem r a = Sem
         => (∀ x. Union r (Sem r) x -> m x)
         -> m a
   }
+
+type Semantic = Sem
+{-# DEPRECATED Semantic "'Semantic' is deprecated in favor of 'Sem'" #-}
+
+runSemantic :: ∀ m r a
+  . Monad m
+  => Semantic r a -> (∀ x. Union r (Sem r) x -> m x)
+  -> m a
+runSemantic = runSem
+{-# DEPRECATED runSemantic "'runSemantic' is deprecated in favor of 'runSem'" #-}
+
 
 ------------------------------------------------------------------------------
 -- | Like 'runSem' but flipped for better ergonomics sometimes.
