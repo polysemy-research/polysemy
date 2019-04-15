@@ -44,12 +44,12 @@ spec = do
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'hoist)
 
     it "who needs Sematic even?" $ do
-      shouldSucceed $(inspectTest $ 'countDown `doesNotUse` 'Semantic)
-      shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Semantic)
-      shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Semantic)
+      shouldSucceed $(inspectTest $ 'countDown `doesNotUse` 'Sem)
+      shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Sem)
+      shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Sem)
 
 
-go :: Semantic '[State Int] Int
+go :: Sem '[State Int] Int
 go = do
   n <- get
   if n <= 0
