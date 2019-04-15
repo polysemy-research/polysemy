@@ -219,7 +219,7 @@ reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /three/ intermediary effects.
 reinterpret3
-    :: FirstOrder e1 "reinterpret2"
+    :: FirstOrder e1 "reinterpret3"
     => (∀ m x. e1 m x -> Sem (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a

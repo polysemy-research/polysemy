@@ -11,7 +11,7 @@ module Polysemy.Internal
   , run
   , runM
   , raise
-  , Lift ()
+  , Lift (..)
   , usingSem
   , liftSem
   , hoistSem
@@ -63,7 +63,7 @@ import Polysemy.Internal.Union
 -- monomorphic representation of the @r@ parameter.
 --
 -- After all of your effects are handled, you'll be left with either
--- a @'Sem' '[] a@ or a @'Sem' ('Lift' m) a@ value, which can be
+-- a @'Sem' '[] a@ or a @'Sem' '[ 'Lift' m ] a@ value, which can be
 -- consumed respectively by 'run' and 'runM'.
 --
 -- ==== Examples
@@ -162,18 +162,25 @@ instance Monad (Sem f) where
 
 instance (Member NonDet r) => Alternative (Sem r) where
   empty = send Empty
+  {-# INLINE empty #-}
   a <|> b = do
     send (Choose id) >>= \case
       False -> a
       True  -> b
+  {-# INLINE (<|>) #-}
 
 
+------------------------------------------------------------------------------
+-- | This instance will only lift 'IO' actions. If you want to lift into some
+-- other 'MonadIO' type, use this instance, and handle it via the
+-- 'Polysemy.IO.runIO' interpretation.
 instance (Member (Lift IO) r) => MonadIO (Sem r) where
   liftIO = sendM
   {-# INLINE liftIO #-}
 
 instance Member Fixpoint r => MonadFix (Sem r) where
   mfix f = send $ Fixpoint f
+  {-# INLINE mfix #-}
 
 
 liftSem :: Union r (Sem r) a -> Sem r a

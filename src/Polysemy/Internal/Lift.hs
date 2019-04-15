@@ -23,7 +23,6 @@ module Polysemy.Internal.Lift where
 --
 -- Consider using 'Polysemy.Trace.trace' and 'Polysemy.Trace.runTraceIO' as
 -- a substitute for using 'putStrLn' directly.
-newtype Lift m (z :: * -> *) a = Lift
-  { unLift :: m a
-  }
+newtype Lift m (z :: * -> *) a where
+  Lift :: { unLift :: m a } -> Lift m z a
 
