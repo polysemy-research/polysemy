@@ -27,7 +27,7 @@ data Error e m a where
   Throw :: e -> Error e m a
   Catch :: ∀ e m a. m a -> (e -> m a) -> Error e m a
 
-makeSemantic ''Error
+makeSem ''Error
 
 
 ------------------------------------------------------------------------------
@@ -35,15 +35,15 @@ makeSemantic ''Error
 -- 'Control.Monad.Trans.Except.ExceptT'.
 runError
     :: Typeable e
-    => Semantic (Error e ': r) a
-    -> Semantic r (Either e a)
-runError (Semantic m) = Semantic $ \k -> E.runExceptT $ m $ \u ->
+    => Sem (Error e ': r) a
+    -> Sem r (Either e a)
+runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
   case decomp u of
     Left x -> E.ExceptT $ k $
       weave (Right ()) (either (pure . Left) runError_b) x
     Right (Yo (Throw e) _ _ _) -> E.throwE e
     Right (Yo (Catch try handle) s d y) ->
-      E.ExceptT $ usingSemantic k $ do
+      E.ExceptT $ usingSem k $ do
         ma <- runError_b $ d $ try <$ s
         case ma of
           Right a -> pure . Right $ y a
@@ -56,8 +56,8 @@ runError (Semantic m) = Semantic $ \k -> E.runExceptT $ m $ \u ->
 
 runError_b
     :: Typeable e
-    => Semantic (Error e ': r) a
-    -> Semantic r (Either e a)
+    => Sem (Error e ': r) a
+    -> Sem r (Either e a)
 runError_b = runError
 {-# NOINLINE runError_b #-}
 
@@ -78,12 +78,12 @@ runErrorInIO
     :: ( Typeable e
        , Member (Lift IO) r
        )
-    => (∀ x. Semantic r x -> IO x)
-       -- ^ Strategy for lowering a 'Semantic' action down to 'IO'. This is
+    => (∀ x. Sem r x -> IO x)
+       -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is
        -- likely some combination of 'runM' and other interpters composed via
        -- '.@'.
-    -> Semantic (Error e ': r) a
-    -> Semantic r (Either e a)
+    -> Sem (Error e ': r) a
+    -> Sem r (Either e a)
 runErrorInIO lower
     = sendM
     . fmap (first unwrapExc)
@@ -96,9 +96,9 @@ runErrorAsExc
     :: forall e r a. ( Typeable e
        , Member (Lift IO) r
        )
-    => (∀ x. Semantic r x -> IO x)
-    -> Semantic (Error e ': r) a
-    -> Semantic r a
+    => (∀ x. Sem r x -> IO x)
+    -> Sem (Error e ': r) a
+    -> Sem r a
 runErrorAsExc lower = interpretH $ \case
   Throw e -> sendM $ X.throwIO $ WrappedExc e
   Catch try handle -> do
@@ -115,9 +115,9 @@ runErrorAsExc_b
     :: ( Typeable e
        , Member (Lift IO) r
        )
-    => (∀ x. Semantic r x -> IO x)
-    -> Semantic (Error e ': r) a
-    -> Semantic r a
+    => (∀ x. Sem r x -> IO x)
+    -> Sem (Error e ': r) a
+    -> Sem r a
 runErrorAsExc_b = runErrorAsExc
 {-# NOINLINE runErrorAsExc_b #-}
 

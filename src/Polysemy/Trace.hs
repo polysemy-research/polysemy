@@ -22,12 +22,12 @@ import Polysemy.Output
 data Trace m a where
   Trace :: String -> Trace m ()
 
-makeSemantic ''Trace
+makeSem ''Trace
 
 
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by printing the messages to stdout.
-runTraceIO :: Member (Lift IO) r => Semantic (Trace ': r) a -> Semantic r a
+runTraceIO :: Member (Lift IO) r => Sem (Trace ': r) a -> Sem r a
 runTraceIO = interpret $ \case
   Trace m -> sendM $ putStrLn m
 {-# INLINE runTraceIO #-}
@@ -35,7 +35,7 @@ runTraceIO = interpret $ \case
 
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by ignoring all of its messages.
-runIgnoringTrace :: Member (Lift IO) r => Semantic (Trace ': r) a -> Semantic r a
+runIgnoringTrace :: Member (Lift IO) r => Sem (Trace ': r) a -> Sem r a
 runIgnoringTrace = interpret $ \case
   Trace _ -> pure ()
 {-# INLINE runIgnoringTrace #-}
@@ -43,7 +43,7 @@ runIgnoringTrace = interpret $ \case
 
 ------------------------------------------------------------------------------
 -- | Transform a 'Trace' effect into a 'Output' 'String' effect.
-runTraceAsOutput :: Semantic (Trace ': r) a -> Semantic (Output String ': r) a
+runTraceAsOutput :: Sem (Trace ': r) a -> Sem (Output String ': r) a
 runTraceAsOutput = reinterpret $ \case
   Trace m -> output m
 {-# INLINE runTraceAsOutput #-}

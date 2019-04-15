@@ -4,8 +4,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Polysemy.Internal
-  ( Semantic (..)
-  , Sem
+  ( Sem (..)
   , Member
   , send
   , sendM
@@ -13,9 +12,9 @@ module Polysemy.Internal
   , runM
   , raise
   , Lift ()
-  , usingSemantic
-  , liftSemantic
-  , hoistSemantic
+  , usingSem
+  , liftSem
+  , hoistSem
   , (.@)
   , (.@@)
   ) where
@@ -32,12 +31,12 @@ import Polysemy.Internal.Union
 
 
 ------------------------------------------------------------------------------
--- | The 'Semantic' monad handles computations of arbitrary extensible effects.
--- A value of type @Semantic r@ describes a program with the capabilities of
+-- | The 'Sem' monad handles computations of arbitrary extensible effects.
+-- A value of type @Sem r@ describes a program with the capabilities of
 -- @r@. For best results, @r@ should always be kept polymorphic, but you can
 -- add capabilities via the 'Member' constraint.
 --
--- The value of the 'Semantic' monad is that it allows you to write programs
+-- The value of the 'Sem' monad is that it allows you to write programs
 -- against a set of effects without a predefined meaning, and provide that
 -- meaning later. For example, unlike with mtl, you can decide to interpret an
 -- 'Polysemy.Error.Error' effect tradtionally as an 'Either', or instead
@@ -49,14 +48,14 @@ import Polysemy.Internal.Union
 --
 -- The effect stack @r@ can contain arbitrary other monads inside of it. These
 -- monads are lifted into effects via the 'Lift' effect. Monadic values can be
--- lifted into a 'Semantic' via 'sendM'.
+-- lifted into a 'Sem' via 'sendM'.
 --
--- A 'Semantic' can be interpreted as a pure value (via 'run') or as any
+-- A 'Sem' can be interpreted as a pure value (via 'run') or as any
 -- traditional 'Monad' (via 'runM'). Each effect @E@ comes equipped with some
 -- interpreters of the form:
 --
 -- @
--- runE :: 'Semantic' (E ': r) a -> 'Semantic' r a
+-- runE :: 'Sem' (E ': r) a -> 'Sem' r a
 -- @
 --
 -- which is responsible for removing the effect @E@ from the effect stack. It
@@ -64,7 +63,7 @@ import Polysemy.Internal.Union
 -- monomorphic representation of the @r@ parameter.
 --
 -- After all of your effects are handled, you'll be left with either
--- a @'Semantic' '[] a@ or a @'Semantic' ('Lift' m) a@ value, which can be
+-- a @'Sem' '[] a@ or a @'Sem' ('Lift' m) a@ value, which can be
 -- consumed respectively by 'run' and 'runM'.
 --
 -- ==== Examples
@@ -72,14 +71,14 @@ import Polysemy.Internal.Union
 -- As an example of keeping @r@ polymorphic, we can consider the type
 --
 -- @
--- 'Member' ('Polysemy.State' String) r => 'Semantic' r ()
+-- 'Member' ('Polysemy.State' String) r => 'Sem' r ()
 -- @
 --
 -- to be a program with access to
 --
 -- @
--- 'Polysemy.State.get' :: 'Semantic' r String
--- 'Polysemy.State.put' :: String -> 'Semantic' r ()
+-- 'Polysemy.State.get' :: 'Sem' r String
+-- 'Polysemy.State.put' :: String -> 'Sem' r ()
 -- @
 --
 -- methods.
@@ -93,25 +92,25 @@ import Polysemy.Internal.Union
 -- constraint on @r@, we gain access to the
 --
 -- @
--- 'Polysemy.Error.throw' :: Bool -> 'Semantic' r a
--- 'Polysemy.Error.catch' :: 'Semantic' r a -> (Bool -> 'Semantic' r a) -> 'Semantic' r a
+-- 'Polysemy.Error.throw' :: Bool -> 'Sem' r a
+-- 'Polysemy.Error.catch' :: 'Sem' r a -> (Bool -> 'Sem' r a) -> 'Sem' r a
 -- @
 --
 -- functions as well.
 --
 -- In this sense, a @'Member' ('Polysemy.State.State' s) r@ constraint is
 -- analogous to mtl's @'Control.Monad.State.Class.MonadState' s m@ and should
--- be thought of as such. However, /unlike/ mtl, a 'Semantic' monad may have
+-- be thought of as such. However, /unlike/ mtl, a 'Sem' monad may have
 -- an arbitrary number of the same effect.
 --
--- For example, we can write a 'Semantic' program which can output either
+-- For example, we can write a 'Sem' program which can output either
 -- 'Int's or 'Bool's:
 --
 -- @
 -- foo :: ( 'Member' ('Polysemy.Output.Output' Int) r
 --        , 'Member' ('Polysemy.Output.Output' Bool) r
 --        )
---     => 'Semantic' r ()
+--     => 'Sem' r ()
 -- foo = do
 --   'Polysemy.Output.output' @Int  5
 --   'Polysemy.Output.output' True
@@ -119,53 +118,49 @@ import Polysemy.Internal.Union
 --
 -- Notice that we must use @-XTypeApplications@ to specify that we'd like to
 -- use the ('Polysemy.Output.Output' 'Int') effect.
-newtype Semantic r a = Semantic
-  { runSemantic
+newtype Sem r a = Sem
+  { runSem
         :: ∀ m
          . Monad m
-        => (∀ x. Union r (Semantic r) x -> m x)
+        => (∀ x. Union r (Sem r) x -> m x)
         -> m a
   }
 
 ------------------------------------------------------------------------------
--- | Convenience synonym for 'Semantic'
-type Sem r a = Semantic r a
-
-------------------------------------------------------------------------------
--- | Like 'runSemantic' but flipped for better ergonomics sometimes.
-usingSemantic
+-- | Like 'runSem' but flipped for better ergonomics sometimes.
+usingSem
     :: Monad m
-    => (∀ x. Union r (Semantic r) x -> m x)
-    -> Semantic r a
+    => (∀ x. Union r (Sem r) x -> m x)
+    -> Sem r a
     -> m a
-usingSemantic k m = runSemantic m k
-{-# INLINE usingSemantic #-}
+usingSem k m = runSem m k
+{-# INLINE usingSem #-}
 
 
-instance Functor (Semantic f) where
-  fmap f (Semantic m) = Semantic $ \k -> fmap f $ m k
+instance Functor (Sem f) where
+  fmap f (Sem m) = Sem $ \k -> fmap f $ m k
   {-# INLINE fmap #-}
 
 
-instance Applicative (Semantic f) where
-  pure a = Semantic $ const $ pure a
+instance Applicative (Sem f) where
+  pure a = Sem $ const $ pure a
   {-# INLINE pure #-}
 
-  Semantic f <*> Semantic a = Semantic $ \k -> f k <*> a k
+  Sem f <*> Sem a = Sem $ \k -> f k <*> a k
   {-# INLINE (<*>) #-}
 
 
-instance Monad (Semantic f) where
+instance Monad (Sem f) where
   return = pure
   {-# INLINE return #-}
 
-  Semantic ma >>= f = Semantic $ \k -> do
+  Sem ma >>= f = Sem $ \k -> do
     z <- ma k
-    runSemantic (f z) k
+    runSem (f z) k
   {-# INLINE (>>=) #-}
 
 
-instance (Member NonDet r) => Alternative (Semantic r) where
+instance (Member NonDet r) => Alternative (Sem r) where
   empty = send Empty
   a <|> b = do
     send (Choose id) >>= \case
@@ -173,67 +168,67 @@ instance (Member NonDet r) => Alternative (Semantic r) where
       True  -> b
 
 
-instance (Member (Lift IO) r) => MonadIO (Semantic r) where
+instance (Member (Lift IO) r) => MonadIO (Sem r) where
   liftIO = sendM
   {-# INLINE liftIO #-}
 
-instance Member Fixpoint r => MonadFix (Semantic r) where
+instance Member Fixpoint r => MonadFix (Sem r) where
   mfix f = send $ Fixpoint f
 
 
-liftSemantic :: Union r (Semantic r) a -> Semantic r a
-liftSemantic u = Semantic $ \k -> k u
-{-# INLINE liftSemantic #-}
+liftSem :: Union r (Sem r) a -> Sem r a
+liftSem u = Sem $ \k -> k u
+{-# INLINE liftSem #-}
 
 
-hoistSemantic
-    :: (∀ x. Union r (Semantic r) x -> Union r' (Semantic r') x)
-    -> Semantic r a
-    -> Semantic r' a
-hoistSemantic nat (Semantic m) = Semantic $ \k -> m $ \u -> k $ nat u
-{-# INLINE hoistSemantic #-}
+hoistSem
+    :: (∀ x. Union r (Sem r) x -> Union r' (Sem r') x)
+    -> Sem r a
+    -> Sem r' a
+hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
+{-# INLINE hoistSem #-}
 
 
 ------------------------------------------------------------------------------
--- | Introduce an effect into 'Semantic'. Analogous to
+-- | Introduce an effect into 'Sem'. Analogous to
 -- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem
-raise :: ∀ e r a. Semantic r a -> Semantic (e ': r) a
-raise = hoistSemantic $ hoist raise_b . weaken
+raise :: ∀ e r a. Sem r a -> Sem (e ': r) a
+raise = hoistSem $ hoist raise_b . weaken
 {-# INLINE raise #-}
 
 
-raise_b :: Semantic r a -> Semantic (e ': r) a
+raise_b :: Sem r a -> Sem (e ': r) a
 raise_b = raise
 {-# NOINLINE raise_b #-}
 
 
 ------------------------------------------------------------------------------
--- | Lift an effect into a 'Semantic'. This is used primarily via
--- 'Polysemy.makeSemantic' to implement smart constructors.
-send :: Member e r => e (Semantic r) a -> Semantic r a
-send = liftSemantic . inj
+-- | Lift an effect into a 'Sem'. This is used primarily via
+-- 'Polysemy.makeSem' to implement smart constructors.
+send :: Member e r => e (Sem r) a -> Sem r a
+send = liftSem . inj
 {-# INLINE[3] send #-}
 
 
 ------------------------------------------------------------------------------
--- | Lift a monadic action @m@ into 'Semantic'.
-sendM :: Member (Lift m) r => m a -> Semantic r a
+-- | Lift a monadic action @m@ into 'Sem'.
+sendM :: Member (Lift m) r => m a -> Sem r a
 sendM = send . Lift
 {-# INLINE sendM #-}
 
 
 ------------------------------------------------------------------------------
--- | Run a 'Semantic' containing no effects as a pure value.
-run :: Semantic '[] a -> a
-run (Semantic m) = runIdentity $ m absurdU
+-- | Run a 'Sem' containing no effects as a pure value.
+run :: Sem '[] a -> a
+run (Sem m) = runIdentity $ m absurdU
 {-# INLINE run #-}
 
 
 ------------------------------------------------------------------------------
--- | Lower a 'Semantic' containing only a single lifted 'Monad' into that
+-- | Lower a 'Sem' containing only a single lifted 'Monad' into that
 -- monad.
-runM :: Monad m => Semantic '[Lift m] a -> m a
-runM (Semantic m) = m $ \z ->
+runM :: Monad m => Sem '[Lift m] a -> m a
+runM (Sem m) = m $ \z ->
   case extract z of
     Yo e s _ f -> do
       a <- unLift e
@@ -267,12 +262,12 @@ runM (Semantic m) = m $ \z ->
 -- precedence errors.
 (.@)
     :: Monad m
-    => (∀ x. Semantic r x -> m x)
+    => (∀ x. Sem r x -> m x)
        -- ^ The lowering function, likely 'runM'.
-    -> (∀ y. (∀ x. Semantic r x -> m x)
-          -> Semantic (e ': r) y
-          -> Semantic r y)
-    -> Semantic (e ': r) z
+    -> (∀ y. (∀ x. Sem r x -> m x)
+          -> Sem (e ': r) y
+          -> Sem r y)
+    -> Sem (e ': r) z
     -> m z
 f .@ g = f . g f
 infixl 9 .@
@@ -283,12 +278,12 @@ infixl 9 .@
 -- 'Polysemy.Error.runErrorInIO'.
 (.@@)
     :: Monad m
-    => (∀ x. Semantic r x -> m x)
+    => (∀ x. Sem r x -> m x)
        -- ^ The lowering function, likely 'runM'.
-    -> (∀ y. (∀ x. Semantic r x -> m x)
-          -> Semantic (e ': r) y
-          -> Semantic r (f y))
-    -> Semantic (e ': r) z
+    -> (∀ y. (∀ x. Sem r x -> m x)
+          -> Sem (e ': r) y
+          -> Sem r (f y))
+    -> Sem (e ': r) z
     -> m (f z)
 f .@@ g = f . g f
 infixl 9 .@@

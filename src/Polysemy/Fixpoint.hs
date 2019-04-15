@@ -16,9 +16,9 @@ import Polysemy.Internal.Fixpoint
 ------------------------------------------------------------------------------
 -- | Run a 'Fixpoint' effect purely.
 runFixpoint
-    :: (∀ x. Semantic r x -> x)
-    -> Semantic (Fixpoint ': r) a
-    -> Semantic r a
+    :: (∀ x. Sem r x -> x)
+    -> Sem (Fixpoint ': r) a
+    -> Sem r a
 runFixpoint lower = interpretH $ \case
   Fixpoint mf -> do
     c <- bindT mf
@@ -31,9 +31,9 @@ runFixpointM
     :: ( MonadFix m
        , Member (Lift m) r
        )
-    => (∀ x. Semantic r x -> m x)
-    -> Semantic (Fixpoint ': r) a
-    -> Semantic r a
+    => (∀ x. Sem r x -> m x)
+    -> Sem (Fixpoint ': r) a
+    -> Sem r a
 runFixpointM lower = interpretH $ \case
   Fixpoint mf -> do
     c <- bindT mf

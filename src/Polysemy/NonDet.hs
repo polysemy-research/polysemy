@@ -54,8 +54,8 @@ instance Monad (NonDetC m) where
 
 ------------------------------------------------------------------------------
 -- | Run a 'NonDet' effect in terms of some underlying 'Alternative' @f@.
-runNonDet :: Alternative f => Semantic (NonDet ': r) a -> Semantic r (f a)
-runNonDet (Semantic m) = Semantic $ \k -> runNonDetC $ m $ \u ->
+runNonDet :: Alternative f => Sem (NonDet ': r) a -> Sem r (f a)
+runNonDet (Sem m) = Sem $ \k -> runNonDetC $ m $ \u ->
   case decomp u of
     Left x  -> NonDetC $ \cons nil -> do
       z <- k $ weave [()] (fmap concat . traverse runNonDet) x

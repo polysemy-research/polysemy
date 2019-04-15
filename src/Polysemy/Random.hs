@@ -24,7 +24,7 @@ data Random m a where
   Random :: R.Random x => Random m x
   RandomR :: R.Random x => (x, x) -> Random m x
 
-makeSemantic ''Random
+makeSem ''Random
 
 
 ------------------------------------------------------------------------------
@@ -35,8 +35,8 @@ runRandom
        , R.RandomGen q
        )
     => q
-    -> Semantic (Random ': r) a
-    -> Semantic r (q, a)
+    -> Sem (Random ': r) a
+    -> Sem r (q, a)
 runRandom q = runState q . reinterpret \case
   Random -> do
     ~(a, q') <- gets @q R.random
@@ -51,7 +51,7 @@ runRandom q = runState q . reinterpret \case
 
 ------------------------------------------------------------------------------
 -- | Run a 'Random' effect by using the 'IO' random generator.
-runRandomIO :: Member (Lift IO) r => Semantic (Random ': r) a -> Semantic r a
+runRandomIO :: Member (Lift IO) r => Sem (Random ': r) a -> Sem r a
 runRandomIO m = do
   q <- sendM R.newStdGen
   snd <$> runRandom q m

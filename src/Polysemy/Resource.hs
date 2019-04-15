@@ -30,7 +30,7 @@ data Resource m a where
        -- ^ Action which uses the resource.
     -> Resource m b
 
-makeSemantic ''Resource
+makeSem ''Resource
 
 
 ------------------------------------------------------------------------------
@@ -38,19 +38,19 @@ makeSemantic ''Resource
 runResource
     :: forall r a
      . Member (Lift IO) r
-    => (∀ x. Semantic r x -> IO x)
-       -- ^ Strategy for lowering a 'Semantic' action down to 'IO'. This is
+    => (∀ x. Sem r x -> IO x)
+       -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is
        -- likely some combination of 'runM' and other interpters composed via
        -- '.@'.
-    -> Semantic (Resource ': r) a
-    -> Semantic r a
+    -> Sem (Resource ': r) a
+    -> Sem r a
 runResource finish = interpretH $ \case
   Bracket alloc dealloc use -> do
     a <- runT  alloc
     d <- bindT dealloc
     u <- bindT use
 
-    let runIt :: Semantic (Resource ': r) x -> IO x
+    let runIt :: Sem (Resource ': r) x -> IO x
         runIt = finish .@ runResource
 
     sendM $ X.bracket (runIt a) (runIt . d) (runIt . u)

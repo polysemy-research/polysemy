@@ -24,17 +24,17 @@ data Reader i m a where
   Ask   :: Reader i m i
   Local :: (i -> i) -> m a -> Reader i m a
 
-makeSemantic ''Reader
+makeSem ''Reader
 
 
-asks :: Member (Reader i) r => (i -> j) -> Semantic r j
+asks :: Member (Reader i) r => (i -> j) -> Sem r j
 asks f = f <$> ask
 {-# INLINABLE asks #-}
 
 
 ------------------------------------------------------------------------------
 -- | Run a 'Reader' effect with a constant value.
-runReader :: i -> Semantic (Reader i ': r) a -> Semantic r a
+runReader :: i -> Sem (Reader i ': r) a -> Sem r a
 runReader i = interpretH $ \case
   Ask -> pureT i
   Local f m -> do
@@ -42,14 +42,14 @@ runReader i = interpretH $ \case
     raise $ runReader_b (f i) mm
 {-# INLINE runReader #-}
 
-runReader_b :: i -> Semantic (Reader i ': r) a -> Semantic r a
+runReader_b :: i -> Sem (Reader i ': r) a -> Sem r a
 runReader_b = runReader
 {-# NOINLINE runReader_b #-}
 
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Input' effect into a 'Reader' effect.
-runInputAsReader :: Semantic (Input i ': r) a -> Semantic (Reader i ': r) a
+runInputAsReader :: Sem (Input i ': r) a -> Sem (Reader i ': r) a
 runInputAsReader = reinterpret $ \case
   Input -> ask
 {-# INLINE runInputAsReader #-}

@@ -23,7 +23,7 @@ import Polysemy.State
 data Output o m a where
   Output :: o -> Output o m ()
 
-makeSemantic ''Output
+makeSem ''Output
 
 
 ------------------------------------------------------------------------------
@@ -32,8 +32,8 @@ runFoldMapOutput
     :: forall o m r a
      . (Typeable m, Monoid m)
     => (o -> m)
-    -> Semantic (Output o ': r) a
-    -> Semantic r (m, a)
+    -> Sem (Output o ': r) a
+    -> Sem r (m, a)
 runFoldMapOutput f = runState mempty . reinterpret \case
   Output o -> modify (<> f o)
 {-# INLINE runFoldMapOutput #-}
@@ -41,7 +41,7 @@ runFoldMapOutput f = runState mempty . reinterpret \case
 
 ------------------------------------------------------------------------------
 -- | Run an 'Ouput' effect by ignoring it.
-runIgnoringOutput :: Semantic (Output o ': r) a -> Semantic r a
+runIgnoringOutput :: Sem (Output o ': r) a -> Sem r a
 runIgnoringOutput = interpret \case
   Output _ -> pure ()
 {-# INLINE runIgnoringOutput #-}

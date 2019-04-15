@@ -27,12 +27,12 @@ data Writer o m a where
   Listen :: ∀ o m a. m a -> Writer o m (o, a)
   Censor :: (o -> o) -> m a -> Writer o m a
 
-makeSemantic ''Writer
+makeSem ''Writer
 
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Output' effect into a 'Writer' effect.
-runOutputAsWriter :: Semantic (Output o ': r) a -> Semantic (Writer o ': r) a
+runOutputAsWriter :: Sem (Output o ': r) a -> Sem (Writer o ': r) a
 runOutputAsWriter = reinterpret \case
   Output o -> tell o
 {-# INLINE runOutputAsWriter #-}
@@ -43,8 +43,8 @@ runOutputAsWriter = reinterpret \case
 -- (but without the nasty space leak!)
 runWriter
     :: (Monoid o, Typeable o)
-    => Semantic (Writer o ': r) a
-    -> Semantic r (o, a)
+    => Sem (Writer o ': r) a
+    -> Sem r (o, a)
 runWriter = runState mempty . reinterpretH \case
   Tell o -> do
     modify (<> o) >>= pureT

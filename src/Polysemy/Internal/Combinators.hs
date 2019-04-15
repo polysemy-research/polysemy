@@ -41,11 +41,11 @@ swap ~(a, b) = (b, a)
 -- transforming it into other effects inside of 'r'.
 interpret
     :: FirstOrder e "interpret"
-    => (∀ x m. e m x -> Semantic r x)
+    => (∀ x m. e m x -> Sem r x)
        -- ^ A natural transformation from the handled effect to other effects
-       -- already in 'Semantic'.
-    -> Semantic (e ': r) a
-    -> Semantic r a
+       -- already in 'Sem'.
+    -> Sem (e ': r) a
+    -> Sem r a
 -- TODO(sandy): could probably give a `coerce` impl for `runTactics` here
 interpret f = interpretH $ \(e :: e m x) -> liftT @m $ f e
 
@@ -58,12 +58,12 @@ interpret f = interpretH $ \(e :: e m x) -> liftT @m $ f e
 interpretH
     :: (∀ x m . e m x -> Tactical e m r x)
        -- ^ A natural transformation from the handled effect to other effects
-       -- already in 'Semantic'.
-    -> Semantic (e ': r) a
-    -> Semantic r a
-interpretH f (Semantic m) = m $ \u ->
+       -- already in 'Sem'.
+    -> Sem (e ': r) a
+    -> Sem r a
+interpretH f (Sem m) = m $ \u ->
   case decomp u of
-    Left  x -> liftSemantic $ hoist (interpretH_b f) x
+    Left  x -> liftSem $ hoist (interpretH_b f) x
     Right (Yo e s d y) -> do
       a <- runTactics s (raise . interpretH_b f . d) (f e)
       pure $ y a
@@ -74,11 +74,11 @@ interpretH f (Semantic m) = m $ \u ->
 -- 'stateful' for a more user-friendly variety of this function.
 interpretInStateT
     :: Typeable s
-    => (∀ x m. e m x -> S.StateT s (Semantic r) x)
+    => (∀ x m. e m x -> S.StateT s (Sem r) x)
     -> s
-    -> Semantic (e ': r) a
-    -> Semantic r (s, a)
-interpretInStateT f s (Semantic m) = Semantic $ \k ->
+    -> Sem (e ': r) a
+    -> Sem r (s, a)
+interpretInStateT f s (Sem m) = Sem $ \k ->
   fmap swap $ flip S.runStateT s $ m $ \u ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
@@ -86,7 +86,7 @@ interpretInStateT f s (Semantic m) = Semantic $ \k ->
             . weave (s', ()) (uncurry $ interpretInStateT_b f)
             $ x
         Right (Yo e z _ y) ->
-          fmap (y . (<$ z)) $ S.mapStateT (usingSemantic k) $ f e
+          fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInStateT #-}
 
 ------------------------------------------------------------------------------
@@ -94,11 +94,11 @@ interpretInStateT f s (Semantic m) = Semantic $ \k ->
 -- 'stateful' for a more user-friendly variety of this function.
 interpretInLazyStateT
     :: Typeable s
-    => (∀ x m. e m x -> LS.StateT s (Semantic r) x)
+    => (∀ x m. e m x -> LS.StateT s (Sem r) x)
     -> s
-    -> Semantic (e ': r) a
-    -> Semantic r (s, a)
-interpretInLazyStateT f s (Semantic m) = Semantic $ \k ->
+    -> Sem (e ': r) a
+    -> Sem r (s, a)
+interpretInLazyStateT f s (Sem m) = Sem $ \k ->
   fmap swap $ flip LS.runStateT s $ m $ \u ->
     case decomp u of
         Left x -> LS.StateT $ \s' ->
@@ -106,17 +106,17 @@ interpretInLazyStateT f s (Semantic m) = Semantic $ \k ->
             . weave (s', ()) (uncurry $ interpretInLazyStateT_b f)
             $ x
         Right (Yo e z _ y) ->
-          fmap (y . (<$ z)) $ LS.mapStateT (usingSemantic k) $ f e
+          fmap (y . (<$ z)) $ LS.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInLazyStateT #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but with access to an intermediate state @s@.
 stateful
     :: Typeable s
-    => (∀ x m. e m x -> s -> Semantic r (s, x))
+    => (∀ x m. e m x -> s -> Sem r (s, x))
     -> s
-    -> Semantic (e ': r) a
-    -> Semantic r (s, a)
+    -> Sem (e ': r) a
+    -> Sem r (s, a)
 stateful f = interpretInStateT $ \e -> S.StateT $ fmap swap . f e
 {-# INLINE[3] stateful #-}
 
@@ -125,10 +125,10 @@ stateful f = interpretInStateT $ \e -> S.StateT $ fmap swap . f e
 -- | Like 'interpret', but with access to an intermediate state @s@.
 lazilyStateful
     :: Typeable s
-    => (∀ x m. e m x -> s -> Semantic r (s, x))
+    => (∀ x m. e m x -> s -> Sem r (s, x))
     -> s
-    -> Semantic (e ': r) a
-    -> Semantic r (s, a)
+    -> Sem (e ': r) a
+    -> Sem r (s, a)
 lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 {-# INLINE[3] lazilyStateful #-}
 
@@ -140,13 +140,13 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 reinterpretH
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
-    -> Semantic (e1 ': r) a
-    -> Semantic (e2 ': r) a
-reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': r) a
+reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ hoist (reinterpretH_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSemantic k $ runTactics s (raise . reinterpretH_b f . d) $ f e
+      a <- usingSem k $ runTactics s (raise . reinterpretH_b f . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
@@ -159,10 +159,10 @@ reinterpretH f (Semantic m) = Semantic $ \k -> m $ \u ->
 -- the 'Polysemy.State.State' effect and immediately run it.
 reinterpret
     :: FirstOrder e1 "reinterpret"
-    => (∀ m x. e1 m x -> Semantic (e2 ': r) x)
+    => (∀ m x. e1 m x -> Sem (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
-    -> Semantic (e1 ': r) a
-    -> Semantic (e2 ': r) a
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': r) a
 reinterpret f = reinterpretH $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
@@ -175,13 +175,13 @@ reinterpret f = reinterpretH $ \(e :: e m x) -> liftT @m $ f e
 reinterpret2H
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
-    -> Semantic (e1 ': r) a
-    -> Semantic (e2 ': e3 ': r) a
-reinterpret2H f (Semantic m) = Semantic $ \k -> m $ \u ->
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': e3 ': r) a
+reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ weaken $ hoist (reinterpret2H_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSemantic k $ runTactics s (raise . reinterpret2H_b f . d) $ f e
+      a <- usingSem k $ runTactics s (raise . reinterpret2H_b f . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpret2H #-}
 
@@ -190,10 +190,10 @@ reinterpret2H f (Semantic m) = Semantic $ \k -> m $ \u ->
 -- | Like 'reinterpret', but introduces /two/ intermediary effects.
 reinterpret2
     :: FirstOrder e1 "reinterpret2"
-    => (∀ m x. e1 m x -> Semantic (e2 ': e3 ': r) x)
+    => (∀ m x. e1 m x -> Sem (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
-    -> Semantic (e1 ': r) a
-    -> Semantic (e2 ': e3 ': r) a
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': e3 ': r) a
 reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret2 #-}
 
@@ -205,13 +205,13 @@ reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
 reinterpret3H
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
-    -> Semantic (e1 ': r) a
-    -> Semantic (e2 ': e3 ': e4 ': r) a
-reinterpret3H f (Semantic m) = Semantic $ \k -> m $ \u ->
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': e3 ': e4 ': r) a
+reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k . weaken . weaken . hoist (reinterpret3H_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSemantic k $ runTactics s (raise . reinterpret3H_b f . d) $ f e
+      a <- usingSem k $ runTactics s (raise . reinterpret3H_b f . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpret3H #-}
 
@@ -220,10 +220,10 @@ reinterpret3H f (Semantic m) = Semantic $ \k -> m $ \u ->
 -- | Like 'reinterpret', but introduces /three/ intermediary effects.
 reinterpret3
     :: FirstOrder e1 "reinterpret2"
-    => (∀ m x. e1 m x -> Semantic (e2 ': e3 ': e4 ': r) x)
+    => (∀ m x. e1 m x -> Sem (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
-    -> Semantic (e1 ': r) a
-    -> Semantic (e2 ': e3 ': e4 ': r) a
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': e3 ': e4 ': r) a
 reinterpret3 f = reinterpret3H $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE[3] reinterpret3 #-}
 
@@ -236,12 +236,12 @@ intercept
     :: ( Member e r
        , FirstOrder e "intercept"
        )
-    => (∀ x m. e m x -> Semantic r x)
+    => (∀ x m. e m x -> Sem r x)
        -- ^ A natural transformation from the handled effect to other effects
-       -- already in 'Semantic'.
-    -> Semantic r a
+       -- already in 'Sem'.
+    -> Sem r a
        -- ^ Unlike 'interpret', 'intercept' does not consume any effects.
-    -> Semantic r a
+    -> Sem r a
 intercept f = interceptH $ \(e :: e m x) -> liftT @m $ f e
 {-# INLINE intercept #-}
 
@@ -254,14 +254,14 @@ interceptH
     :: Member e r
     => (∀ x m. e m x -> Tactical e m r x)
        -- ^ A natural transformation from the handled effect to other effects
-       -- already in 'Semantic'.
-    -> Semantic r a
+       -- already in 'Sem'.
+    -> Sem r a
        -- ^ Unlike 'interpretH', 'interceptH' does not consume any effects.
-    -> Semantic r a
-interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
+    -> Sem r a
+interceptH f (Sem m) = Sem $ \k -> m $ \u ->
   case prj u of
     Just (Yo e s d y) ->
-      usingSemantic k $ fmap y $ runTactics s (raise . d) $ f e
+      usingSem k $ fmap y $ runTactics s (raise . d) $ f e
     Nothing -> k u
 {-# INLINE interceptH #-}
 
@@ -270,52 +270,52 @@ interceptH f (Semantic m) = Semantic $ \k -> m $ \u ->
 -- Loop breakers
 interpretH_b
     :: (∀ x m . e m x -> Tactical e m r x)
-    -> Semantic (e ': r) a
-    -> Semantic r a
+    -> Sem (e ': r) a
+    -> Sem r a
 interpretH_b = interpretH
 {-# NOINLINE interpretH_b #-}
 
 
 interpretInStateT_b
     :: Typeable s
-    => (∀ x m. e m x -> S.StateT s (Semantic r) x)
+    => (∀ x m. e m x -> S.StateT s (Sem r) x)
     -> s
-    -> Semantic (e ': r) a
-    -> Semantic r (s, a)
+    -> Sem (e ': r) a
+    -> Sem r (s, a)
 interpretInStateT_b = interpretInStateT
 {-# NOINLINE interpretInStateT_b #-}
 
 
 interpretInLazyStateT_b
     :: Typeable s
-    => (∀ x m. e m x -> LS.StateT s (Semantic r) x)
+    => (∀ x m. e m x -> LS.StateT s (Sem r) x)
     -> s
-    -> Semantic (e ': r) a
-    -> Semantic r (s, a)
+    -> Sem (e ': r) a
+    -> Sem r (s, a)
 interpretInLazyStateT_b = interpretInLazyStateT
 {-# NOINLINE interpretInLazyStateT_b #-}
 
 
 reinterpretH_b
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
-    -> Semantic (e1 ': r) a
-    -> Semantic (e2 ': r) a
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': r) a
 reinterpretH_b = reinterpretH
 {-# NOINLINE reinterpretH_b #-}
 
 
 reinterpret2H_b
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
-    -> Semantic (e1 ': r) a
-    -> Semantic (e2 ': e3 ': r) a
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': e3 ': r) a
 reinterpret2H_b = reinterpret2H
 {-# NOINLINE reinterpret2H_b #-}
 
 
 reinterpret3H_b
     :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
-    -> Semantic (e1 ': r) a
-    -> Semantic (e2 ': e3 ': e4 ': r) a
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': e3 ': e4 ': r) a
 reinterpret3H_b = reinterpret3H
 {-# NOINLINE reinterpret3H_b #-}
 
