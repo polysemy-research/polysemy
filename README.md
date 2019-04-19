@@ -44,6 +44,10 @@ will be true as soon as [my patch](https://gitlab.haskell.org/ghc/ghc/merge_requ
 
 ## Examples
 
+Make sure you read the [Necessary Language
+Extensions](https://github.com/isovector/polysemy#necessary-language-extensions)
+before trying these yourself!
+
 Console effect:
 
 ```haskell
@@ -52,15 +56,15 @@ Console effect:
 import Polysemy
 
 data Console m a where
-  GetLine :: Console m String
-  PutLine :: String -> Console m ()
+  ReadTTY  :: Console m String
+  WriteTTY :: String -> Console m ()
 
 makeSemantic ''Console
 
 runConsoleIO :: Member (Lift IO) r => Semantic (Console ': r) a -> Semantic r a
 runConsoleIO = interpret $ \case
-  GetLine     -> sendM getLine
-  PutLine msg -> sendM $ putStrLn msg
+  ReadTTY      -> sendM getLine
+  WriteTTY msg -> sendM $ putStrLn msg
 ```
 
 

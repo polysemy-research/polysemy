@@ -40,7 +40,7 @@ runResource
      . Member (Lift IO) r
     => (∀ x. Semantic r x -> IO x)
        -- ^ Strategy for lowering a 'Semantic' action down to 'IO'. This is
-       -- likely some combination of 'runM' and other interpters composed via
+       -- likely some combination of 'runM' and other interpreters composed via
        -- '.@'.
     -> Semantic (Resource ': r) a
     -> Semantic r a

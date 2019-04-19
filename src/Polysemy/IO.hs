@@ -10,7 +10,9 @@ import Control.Monad.IO.Class
 
 
 ------------------------------------------------------------------------------
--- | The 'MonadIO' class is conceptually an interpretation of 'IO' to some
+-- | __If you trying to run 'Semantic' in 'IO', the function you want is 'runM'.__
+--
+-- The 'MonadIO' class is conceptually an interpretation of 'IO' to some
 -- other monad. This function reifies that intuition, by transforming an 'IO'
 -- effect into some other 'MonadIO'.
 --
