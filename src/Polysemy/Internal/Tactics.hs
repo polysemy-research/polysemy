@@ -49,9 +49,9 @@ import Polysemy.Internal.Union
 -- where
 --
 -- @
--- alloc'   ::         'Polysemy.Semantic' ('Polysemy.Resource.Resource' ': r) (f a1)
--- dealloc' :: f a1 -> 'Polysemy.Semantic' ('Polysemy.Resource.Resource' ': r) (f ())
--- use'     :: f a1 -> 'Polysemy.Semantic' ('Polysemy.Resource.Resource' ': r) (f x)
+-- alloc'   ::         'Polysemy.Sem' ('Polysemy.Resource.Resource' ': r) (f a1)
+-- dealloc' :: f a1 -> 'Polysemy.Sem' ('Polysemy.Resource.Resource' ': r) (f ())
+-- use'     :: f a1 -> 'Polysemy.Sem' ('Polysemy.Resource.Resource' ': r) (f x)
 -- @
 --
 -- The @f@ type here is existential and corresponds to "whatever
@@ -70,20 +70,20 @@ import Polysemy.Internal.Union
 -- Power users may explicitly use 'getInitialStateT' and 'bindT' to construct
 -- whatever data flow they'd like; although this is usually unnecessary.
 type Tactical e m r x = ∀ f. (Functor f, Typeable1 f)
-                          => Semantic (WithTactics e f m r) (f x)
+                          => Sem (WithTactics e f m r) (f x)
 
 type WithTactics e f m r = Tactics f m (e ': r) ': r
 
 data Tactics f n r m a where
   GetInitialState     :: Tactics f n r m (f ())
-  HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Semantic r (f b))
+  HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Sem r (f b))
 
 
 ------------------------------------------------------------------------------
 -- | Get the stateful environment of the world at the moment the effect @e@ is
 -- to be run. Prefer 'pureT', 'runT' or 'bindT' instead of using this function
 -- directly.
-getInitialStateT :: forall f m r e. Semantic (WithTactics e f m r) (f ())
+getInitialStateT :: forall f m r e. Sem (WithTactics e f m r) (f ())
 getInitialStateT = send @(Tactics _ m (e ': r)) GetInitialState
 
 
@@ -103,8 +103,8 @@ runT
     :: m a
       -- ^ The monadic action to lift. This is usually a parameter in your
       -- effect.
-    -> Semantic (WithTactics e f m r)
-                (Semantic (e ': r) (f a))
+    -> Sem (WithTactics e f m r)
+                (Sem (e ': r) (f a))
 runT na = do
   istate <- getInitialStateT
   na'    <- bindT (const na)
@@ -123,8 +123,8 @@ bindT
        --
        -- Continuations lifted via 'bindT' will run in the same environment
        -- which produced the 'a'.
-    -> Semantic (WithTactics e f m r)
-                (f a -> Semantic (e ': r) (f b))
+    -> Sem (WithTactics e f m r)
+                (f a -> Sem (e ': r) (f b))
 bindT f = send $ HoistInterpretation f
 {-# INLINE bindT #-}
 
@@ -137,8 +137,8 @@ liftT
      . ( Functor f
        , Typeable1 f
        )
-    => Semantic r a
-    -> Semantic (WithTactics e f m r) (f a)
+    => Sem r a
+    -> Sem (WithTactics e f m r) (f a)
 liftT m = do
   a <- raise m
   pureT a
@@ -150,12 +150,12 @@ liftT m = do
 runTactics
    :: Functor f
    => f ()
-   -> (∀ x. f (m x) -> Semantic r2 (f x))
-   -> Semantic (Tactics f m r2 ': r) a
-   -> Semantic r a
-runTactics s d (Semantic m) = m $ \u ->
+   -> (∀ x. f (m x) -> Sem r2 (f x))
+   -> Sem (Tactics f m r2 ': r) a
+   -> Sem r a
+runTactics s d (Sem m) = m $ \u ->
   case decomp u of
-    Left x -> liftSemantic $ hoist (runTactics_b s d) x
+    Left x -> liftSem $ hoist (runTactics_b s d) x
     Right (Yo GetInitialState s' _ y) ->
       pure $ y $ s <$ s'
     Right (Yo (HoistInterpretation na) s' _ y) -> do
@@ -166,9 +166,9 @@ runTactics s d (Semantic m) = m $ \u ->
 runTactics_b
    :: Functor f
    => f ()
-   -> (∀ x. f (m x) -> Semantic r2 (f x))
-   -> Semantic (Tactics f m r2 ': r) a
-   -> Semantic r a
+   -> (∀ x. f (m x) -> Sem r2 (f x))
+   -> Sem (Tactics f m r2 ': r) a
+   -> Sem r a
 runTactics_b = runTactics
 {-# NOINLINE runTactics_b #-}
 

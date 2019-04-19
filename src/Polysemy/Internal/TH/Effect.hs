@@ -15,22 +15,22 @@ the module documentation for "Polysemy", we can write the following:
 data FileSystem m a where
   ReadFile :: 'FilePath' -> FileSystem 'String'
   WriteFile :: 'FilePath' -> 'String' -> FileSystem ()
-'makeSemantic' ''FileSystem
+'makeSem' ''FileSystem
 @
 
 This will automatically generate the following functions:
 
 @
-readFile :: 'Member' FileSystem r => 'FilePath' -> 'Semantic' r 'String'
+readFile :: 'Member' FileSystem r => 'FilePath' -> 'Sem' r 'String'
 readFile a = 'send' (ReadFile a)
 
-writeFile :: 'Member' FileSystem r => 'FilePath' -> 'String' -> 'Semantic' r ()
+writeFile :: 'Member' FileSystem r => 'FilePath' -> 'String' -> 'Sem' r ()
 writeFile a b = 'send' (WriteFile a b)
 @
 -}
 module Polysemy.Internal.TH.Effect
-  ( makeSemantic
-  , makeSemantic_
+  ( makeSem
+  , makeSem_
   )
 where
 
@@ -39,17 +39,17 @@ import Data.Char (toLower)
 import Data.List
 import Generics.SYB
 import Language.Haskell.TH
-import Polysemy.Internal (send, Member, Semantic)
+import Polysemy.Internal (send, Member, Sem)
 import Polysemy.Internal.CustomErrors (DefiningModule)
 
 
 -- | If @T@ is a GADT representing an effect algebra, as described in the module
--- documentation for "Polysemy", @$('makeSemantic' ''T)@ automatically
+-- documentation for "Polysemy", @$('makeSem' ''T)@ automatically
 -- generates a smart constructor for every data constructor of @T@.
-makeSemantic :: Name -> Q [Dec]
-makeSemantic = genFreer True
+makeSem :: Name -> Q [Dec]
+makeSem = genFreer True
 
--- | Like 'makeSemantic', but does not provide type signatures. This can be used
+-- | Like 'makeSem', but does not provide type signatures. This can be used
 -- to attach Haddock comments to individual arguments for each generated
 -- function.
 --
@@ -57,25 +57,25 @@ makeSemantic = genFreer True
 -- data Lang m a where
 --   Output :: String -> Lang ()
 --
--- makeSemantic_ ''Lang
+-- makeSem_ ''Lang
 --
 -- -- | Output a string.
 -- output :: Member Lang r
 --        => String         -- ^ String to output.
---        -> Semantic r ()  -- ^ No result.
+--        -> Sem r ()  -- ^ No result.
 -- @
 --
--- Note that 'makeEffect_' must be used /before/ the explicit type signatures.
-makeSemantic_ :: Name -> Q [Dec]
-makeSemantic_ = genFreer False
+-- Note that 'makeSem_' must be used /before/ the explicit type signatures.
+makeSem_ :: Name -> Q [Dec]
+makeSem_ = genFreer False
 
 -- | Generates declarations and possibly signatures for functions to lift GADT
--- constructors into 'Semantic' actions.
+-- constructors into 'Sem' actions.
 genFreer :: Bool -> Name -> Q [Dec]
 genFreer makeSigs tcName = do
   -- The signatures for the generated definitions require FlexibleContexts.
   isExtEnabled FlexibleContexts
-    >>= flip unless (fail "makeSemantic requires FlexibleContexts to be enabled")
+    >>= flip unless (fail "makeSem requires FlexibleContexts to be enabled")
   hasTyFams <- isExtEnabled TypeFamilies
 
   reify tcName >>= \case
@@ -93,7 +93,7 @@ genFreer makeSigs tcName = do
         | hasTyFams
         ] ++ sigs ++ decs
 
-    _ -> fail "makeSemantic expects a type constructor"
+    _ -> fail "makeSem expects a type constructor"
 
 -- | Given the name of a GADT constructor, return the name of the corresponding
 -- lifted function.
@@ -132,7 +132,7 @@ tyVarBndrKind (PlainTV _) = Nothing
 tyVarBndrKind (KindedTV _ k) = Just k
 
 -- | Generates a function type from the corresponding GADT type constructor
--- @x :: Member (Effect e) r => a -> b -> c -> Semantic r r@.
+-- @x :: Member (Effect e) r => a -> b -> c -> Sem r r@.
 genType :: Con -> Q (Type, Maybe Name, Maybe Type)
 genType (ForallC tyVarBindings conCtx con) = do
   (t, mn, _) <- genType con
@@ -149,9 +149,9 @@ genType (GadtC   _ tArgs' (eff `AppT` m `AppT` tRet)) = do
   let
     tArgs            = fmap snd tArgs'
     memberConstraint = ConT ''Member `AppT` eff `AppT` VarT r
-    resultType       = ConT ''Semantic `AppT` VarT r `AppT` tRet
+    resultType       = ConT ''Sem `AppT` VarT r `AppT` tRet
 
-    replaceMType t | t == m = ConT ''Semantic `AppT` VarT r
+    replaceMType t | t == m = ConT ''Sem `AppT` VarT r
                    | otherwise = t
     ts = everywhere (mkT replaceMType) tArgs
     tn = case tRet of
@@ -180,7 +180,7 @@ simplifyBndr _ (KindedTV tv StarT) = PlainTV tv
 simplifyBndr _ bndr = bndr
 
 -- | Generates a type signature of the form
--- @x :: Member (Effect e) r => a -> b -> c -> Semantic r r@.
+-- @x :: Member (Effect e) r => a -> b -> c -> Sem r r@.
 genSig :: Con -> Q Dec
 genSig con = do
   let

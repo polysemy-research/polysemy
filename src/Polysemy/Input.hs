@@ -25,12 +25,12 @@ import Polysemy.State
 data Input i m a where
   Input :: Input i m i
 
-makeSemantic ''Input
+makeSem ''Input
 
 
 ------------------------------------------------------------------------------
 -- | Run an 'Input' effect by always giving back the same value.
-runConstInput :: i -> Semantic (Input i ': r) a -> Semantic r a
+runConstInput :: i -> Sem (Input i ': r) a -> Sem r a
 runConstInput c = interpret \case
   Input -> pure c
 {-# INLINE runConstInput #-}
@@ -42,8 +42,8 @@ runConstInput c = interpret \case
 runListInput
     :: Typeable i
     => [i]
-    -> Semantic (Input (Maybe i) ': r) a
-    -> Semantic r a
+    -> Sem (Input (Maybe i) ': r) a
+    -> Sem r a
 runListInput is = fmap snd . runState is . reinterpret \case
   Input -> do
     s <- gets uncons
@@ -54,7 +54,7 @@ runListInput is = fmap snd . runState is . reinterpret \case
 
 ------------------------------------------------------------------------------
 -- | Runs an 'Input' effect by evaluating a monadic action for each request.
-runMonadicInput :: Semantic r i -> Semantic (Input i ': r) a -> Semantic r a
+runMonadicInput :: Sem r i -> Sem (Input i ': r) a -> Sem r a
 runMonadicInput m = interpret \case
   Input -> m
 {-# INLINE runMonadicInput #-}

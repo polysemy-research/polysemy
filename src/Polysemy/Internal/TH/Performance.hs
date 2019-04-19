@@ -23,7 +23,7 @@ import Language.Haskell.TH
 --
 -- @
 -- 'inlineRecursiveCalls' [d|
---   'Polysemy.Reader.runReader' :: i -> 'Polysemy.Semantic' ('Polysemy.Reader.Reader' i ': r) a -> 'Polysemy.Semantic' r a
+--   'Polysemy.Reader.runReader' :: i -> 'Polysemy.Sem' ('Polysemy.Reader.Reader' i ': r) a -> 'Polysemy.Sem' r a
 --   'Polysemy.Reader.runReader' i = 'Polysemy.interpretH' $ \\case
 --     'Polysemy.Reader.Ask' -> 'Polysemy.pureT' i
 --     'Polysemy.Reader.Local' f m -> do

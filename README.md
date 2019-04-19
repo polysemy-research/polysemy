@@ -59,9 +59,9 @@ data Console m a where
   ReadTTY  :: Console m String
   WriteTTY :: String -> Console m ()
 
-makeSemantic ''Console
+makeSem ''Console
 
-runConsoleIO :: Member (Lift IO) r => Semantic (Console ': r) a -> Semantic r a
+runConsoleIO :: Member (Lift IO) r => Sem (Console ': r) a -> Sem r a
 runConsoleIO = interpret $ \case
   ReadTTY      -> sendM getLine
   WriteTTY msg -> sendM $ putStrLn msg
@@ -79,21 +79,21 @@ import           Polysemy
 data Resource m a where
   Bracket :: m a -> (a -> m ()) -> (a -> m b) -> Resource m b
 
-makeSemantic ''Resource
+makeSem ''Resource
 
 runResource
     :: forall r a
      . Member (Lift IO) r
-    => (∀ x. Semantic r x -> IO x)
-    -> Semantic (Resource ': r) a
-    -> Semantic r a
+    => (∀ x. Sem r x -> IO x)
+    -> Sem (Resource ': r) a
+    -> Sem r a
 runResource finish = interpretH $ \case
   Bracket alloc dealloc use -> do
     a <- runT  alloc
     d <- bindT dealloc
     u <- bindT use
 
-    let runIt :: Semantic (Resource ': r) x -> IO x
+    let runIt :: Sem (Resource ': r) x -> IO x
         runIt = finish .@ runResource
 
     sendM $ X.bracket (runIt a) (runIt . d) (runIt . u)
@@ -115,9 +115,9 @@ combinators. If you use the wrong one, the library's got your back:
 runResource
     :: forall r a
      . Member (Lift IO) r
-    => (∀ x. Semantic r x -> IO x)
-    -> Semantic (Resource ': r) a
-    -> Semantic r a
+    => (∀ x. Sem r x -> IO x)
+    -> Sem (Resource ': r) a
+    -> Sem r a
 runResource finish = interpret $ \case
   ...
 ```

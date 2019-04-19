@@ -17,7 +17,7 @@ type Typeable1 f = (∀ y. Typeable y => Typeable (f y) :: Constraint)
 -- An effect @e@ is a type @e m a@, where the other types are given by:
 --
 -- * The @m@ type variable corresponds to a monad, which will eventually be
--- instantiated at 'Polysemy.Semantic'---meaning it is capable of encoding
+-- instantiated at 'Polysemy.Sem'---meaning it is capable of encoding
 -- arbitrary other effects.
 --
 -- * The @a@ type is handled automatically and uninteresting.
