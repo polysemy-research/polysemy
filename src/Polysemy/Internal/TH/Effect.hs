@@ -46,6 +46,8 @@ import Polysemy.Internal.CustomErrors (DefiningModule)
 -- | If @T@ is a GADT representing an effect algebra, as described in the module
 -- documentation for "Polysemy", @$('makeSem' ''T)@ automatically
 -- generates a smart constructor for every data constructor of @T@.
+--
+-- @since 0.1.2.0
 makeSem :: Name -> Q [Dec]
 makeSem = genFreer True
 
@@ -66,6 +68,8 @@ makeSem = genFreer True
 -- @
 --
 -- Note that 'makeSem_' must be used /before/ the explicit type signatures.
+--
+-- @since 0.1.2.0
 makeSem_ :: Name -> Q [Dec]
 makeSem_ = genFreer False
 

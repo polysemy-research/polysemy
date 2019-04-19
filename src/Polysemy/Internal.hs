@@ -118,6 +118,8 @@ import Polysemy.Internal.Union
 --
 -- Notice that we must use @-XTypeApplications@ to specify that we'd like to
 -- use the ('Polysemy.Output.Output' 'Int') effect.
+--
+-- @since 0.1.2.0
 newtype Sem r a = Sem
   { runSem
         :: ∀ m
