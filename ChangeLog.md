@@ -11,3 +11,7 @@
 - Initial release
 
 ## Unreleased changes
+
+- `runInputAsReader`, `runTraceAsOutput` and `runOutputAsWriter` have more
+    generalized types
+- Aded `runStateInIO`

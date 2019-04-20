@@ -49,8 +49,8 @@ runReader_b = runReader
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Input' effect into a 'Reader' effect.
-runInputAsReader :: Sem (Input i ': r) a -> Sem (Reader i ': r) a
-runInputAsReader = reinterpret $ \case
+runInputAsReader :: Member (Reader i) r => Sem (Input i ': r) a -> Sem r a
+runInputAsReader = interpret $ \case
   Input -> ask
 {-# INLINE runInputAsReader #-}
 

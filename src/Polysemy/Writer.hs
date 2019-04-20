@@ -32,8 +32,8 @@ makeSem ''Writer
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Output' effect into a 'Writer' effect.
-runOutputAsWriter :: Sem (Output o ': r) a -> Sem (Writer o ': r) a
-runOutputAsWriter = reinterpret \case
+runOutputAsWriter :: Member (Writer o) r => Sem (Output o ': r) a -> Sem r a
+runOutputAsWriter = interpret \case
   Output o -> tell o
 {-# INLINE runOutputAsWriter #-}
 

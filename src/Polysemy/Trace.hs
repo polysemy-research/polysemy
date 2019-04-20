@@ -43,8 +43,11 @@ runIgnoringTrace = interpret $ \case
 
 ------------------------------------------------------------------------------
 -- | Transform a 'Trace' effect into a 'Output' 'String' effect.
-runTraceAsOutput :: Sem (Trace ': r) a -> Sem (Output String ': r) a
-runTraceAsOutput = reinterpret $ \case
+runTraceAsOutput
+    :: Member (Output String) r
+    => Sem (Trace ': r) a
+    -> Sem r a
+runTraceAsOutput = interpret $ \case
   Trace m -> output m
 {-# INLINE runTraceAsOutput #-}
 
