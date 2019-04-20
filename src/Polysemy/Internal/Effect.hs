@@ -5,11 +5,7 @@ module Polysemy.Internal.Effect where
 
 import Data.Coerce
 import Data.Functor.Identity
-import Data.Kind (Constraint)
-import Data.Typeable
 
-
-type Typeable1 f = (∀ y. Typeable y => Typeable (f y) :: Constraint)
 
 ------------------------------------------------------------------------------
 -- | The class for semantic effects.
