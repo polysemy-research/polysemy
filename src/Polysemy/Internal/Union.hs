@@ -52,7 +52,7 @@ data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
 
 
 data Yo e m a where
-  Yo :: (Functor f, Typeable1 f, Typeable f)
+  Yo :: Functor f
      => e m a
      -> f ()
      -> (forall x. f (m x) -> n (f x))

@@ -40,8 +40,7 @@ runConstInput c = interpret \case
 -- | Run an 'Input' effect by providing a different element of a list each
 -- time. Returns 'Nothing' after the list is exhausted.
 runListInput
-    :: Typeable i
-    => [i]
+    :: [i]
     -> Sem (Input (Maybe i) ': r) a
     -> Sem r a
 runListInput is = fmap snd . runState is . reinterpret \case

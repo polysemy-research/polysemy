@@ -31,7 +31,7 @@ makeSem ''Output
 -- | Run an 'Output' effect by transforming it into a monoid.
 runFoldMapOutput
     :: forall o m r a
-     . (Typeable m, Monoid m)
+     . Monoid m
     => (o -> m)
     -> Sem (Output o ': r) a
     -> Sem r (m, a)
@@ -58,8 +58,7 @@ runIgnoringOutput = interpret \case
 -- @since 0.1.2.0
 runBatchOutput
     :: forall o r a
-     . (Typeable o)
-    => Int
+     . Int
     -> Sem (Output [o] ': r) a
     -> Sem (Output [[o]] ': r) a
 runBatchOutput 0 m = raise $ runIgnoringOutput m

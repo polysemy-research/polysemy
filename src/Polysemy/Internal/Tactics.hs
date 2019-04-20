@@ -69,7 +69,7 @@ import Polysemy.Internal.Union
 --
 -- Power users may explicitly use 'getInitialStateT' and 'bindT' to construct
 -- whatever data flow they'd like; although this is usually unnecessary.
-type Tactical e m r x = ∀ f. (Functor f, Typeable1 f)
+type Tactical e m r x = ∀ f. Functor f
                           => Sem (WithTactics e f m r) (f x)
 
 type WithTactics e f m r = Tactics f m (e ': r) ': r
@@ -134,9 +134,7 @@ bindT f = send $ HoistInterpretation f
 -- higher-order ones.
 liftT
     :: forall m f r e a
-     . ( Functor f
-       , Typeable1 f
-       )
+     . Functor f
     => Sem r a
     -> Sem (WithTactics e f m r) (f a)
 liftT m = do

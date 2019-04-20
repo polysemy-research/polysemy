@@ -21,7 +21,6 @@ module Polysemy.Internal.Combinators
 
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
-import           Data.Typeable
 import           Polysemy.Internal
 import           Polysemy.Internal.CustomErrors
 import           Polysemy.Internal.Effect
@@ -73,8 +72,7 @@ interpretH f (Sem m) = m $ \u ->
 -- | A highly-performant combinator for interpreting an effect statefully. See
 -- 'stateful' for a more user-friendly variety of this function.
 interpretInStateT
-    :: Typeable s
-    => (∀ x m. e m x -> S.StateT s (Sem r) x)
+    :: (∀ x m. e m x -> S.StateT s (Sem r) x)
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
@@ -93,8 +91,7 @@ interpretInStateT f s (Sem m) = Sem $ \k ->
 -- | A highly-performant combinator for interpreting an effect statefully. See
 -- 'stateful' for a more user-friendly variety of this function.
 interpretInLazyStateT
-    :: Typeable s
-    => (∀ x m. e m x -> LS.StateT s (Sem r) x)
+    :: (∀ x m. e m x -> LS.StateT s (Sem r) x)
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
@@ -112,8 +109,7 @@ interpretInLazyStateT f s (Sem m) = Sem $ \k ->
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but with access to an intermediate state @s@.
 stateful
-    :: Typeable s
-    => (∀ x m. e m x -> s -> Sem r (s, x))
+    :: (∀ x m. e m x -> s -> Sem r (s, x))
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
@@ -124,8 +120,7 @@ stateful f = interpretInStateT $ \e -> S.StateT $ fmap swap . f e
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but with access to an intermediate state @s@.
 lazilyStateful
-    :: Typeable s
-    => (∀ x m. e m x -> s -> Sem r (s, x))
+    :: (∀ x m. e m x -> s -> Sem r (s, x))
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
@@ -277,8 +272,7 @@ interpretH_b = interpretH
 
 
 interpretInStateT_b
-    :: Typeable s
-    => (∀ x m. e m x -> S.StateT s (Sem r) x)
+    :: (∀ x m. e m x -> S.StateT s (Sem r) x)
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
@@ -287,8 +281,7 @@ interpretInStateT_b = interpretInStateT
 
 
 interpretInLazyStateT_b
-    :: Typeable s
-    => (∀ x m. e m x -> LS.StateT s (Sem r) x)
+    :: (∀ x m. e m x -> LS.StateT s (Sem r) x)
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)

@@ -5,11 +5,7 @@ module Polysemy.Internal.Effect where
 
 import Data.Coerce
 import Data.Functor.Identity
-import Data.Kind (Constraint)
-import Data.Typeable
 
-
-type Typeable1 f = (∀ y. Typeable y => Typeable (f y) :: Constraint)
 
 ------------------------------------------------------------------------------
 -- | The class for semantic effects.
@@ -52,7 +48,7 @@ class (∀ m. Functor m => Functor (e m)) => Effect e where
   -- * If instead it is given the intial state, both computations will see the
   -- same state, but the result of (at least) one will necessarily be ignored.
   weave
-      :: (Functor s, Functor m, Functor n, Typeable1 s, Typeable s)
+      :: (Functor s, Functor m, Functor n)
       => s ()
       -> (∀ x. s (m x) -> n (s x))
       -> e m a
@@ -61,8 +57,6 @@ class (∀ m. Functor m => Functor (e m)) => Effect e where
   -- | When @e@ is first order, 'weave' can be given for free.
   default weave
       :: ( Coercible (e m (s a)) (e n (s a))
-         , Typeable1 s
-         , Typeable s
          , Functor s
          , Functor m
          , Functor n
