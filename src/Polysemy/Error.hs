@@ -34,8 +34,7 @@ makeSem ''Error
 -- | Run an 'Error' effect in the style of
 -- 'Control.Monad.Trans.Except.ExceptT'.
 runError
-    :: Typeable e
-    => Sem (Error e ': r) a
+    :: Sem (Error e ': r) a
     -> Sem r (Either e a)
 runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
   case decomp u of
@@ -55,8 +54,7 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
 {-# INLINE runError #-}
 
 runError_b
-    :: Typeable e
-    => Sem (Error e ': r) a
+    :: Sem (Error e ': r) a
     -> Sem r (Either e a)
 runError_b = runError
 {-# NOINLINE runError_b #-}

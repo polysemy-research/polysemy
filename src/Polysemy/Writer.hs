@@ -44,7 +44,7 @@ runOutputAsWriter = interpret \case
 -- | Run a 'Writer' effect in the style of 'Control.Monad.Trans.Writer.WriterT'
 -- (but without the nasty space leak!)
 runWriter
-    :: (Monoid o, Typeable o)
+    :: Monoid o
     => Sem (Writer o ': r) a
     -> Sem r (o, a)
 runWriter = runState mempty . reinterpretH \case

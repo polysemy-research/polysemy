@@ -50,7 +50,7 @@ modify f = do
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect with local state.
-runState :: Typeable s => s -> Sem (State s ': r) a -> Sem r (s, a)
+runState :: s -> Sem (State s ': r) a -> Sem r (s, a)
 runState = stateful $ \case
   Get   -> \s -> pure (s, s)
   Put s -> const $ pure (s, ())
@@ -59,7 +59,7 @@ runState = stateful $ \case
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect with local state, lazily.
-runLazyState :: Typeable s => s -> Sem (State s ': r) a -> Sem r (s, a)
+runLazyState :: s -> Sem (State s ': r) a -> Sem r (s, a)
 runLazyState = lazilyStateful $ \case
   Get   -> \s -> pure (s, s)
   Put s -> const $ pure (s, ())

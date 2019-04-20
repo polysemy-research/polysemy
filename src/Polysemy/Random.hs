@@ -31,9 +31,7 @@ makeSem ''Random
 -- | Run a 'Random' effect with an explicit 'R.RandomGen'.
 runRandom
     :: forall q r a
-     . ( Typeable q
-       , R.RandomGen q
-       )
+     . R.RandomGen q
     => q
     -> Sem (Random ': r) a
     -> Sem r (q, a)
