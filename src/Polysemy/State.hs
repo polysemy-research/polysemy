@@ -13,8 +13,10 @@ module Polysemy.State
     -- * Interpretations
   , runState
   , runLazyState
+  , runStateInIORef
   ) where
 
+import Data.IORef
 import Polysemy
 import Polysemy.Internal.Combinators
 
@@ -62,6 +64,22 @@ runLazyState = lazilyStateful $ \case
   Get   -> \s -> pure (s, s)
   Put s -> const $ pure (s, ())
 {-# INLINE[3] runLazyState #-}
+
+
+------------------------------------------------------------------------------
+-- | Run a 'State' effect by transforming it into operations over an 'IORef'.
+--
+-- @since 0.1.2.0
+runStateInIORef
+    :: forall s r a
+     . Member (Lift IO) r
+    => IORef s
+    -> Sem (State s ': r) a
+    -> Sem r a
+runStateInIORef ref = interpret $ \case
+  Get   -> sendM $ readIORef ref
+  Put s -> sendM $ writeIORef ref s
+{-# INLINE runStateInIORef #-}
 
 
 {-# RULES "runState/reinterpret"
