@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6a7be8e3eda0643719ad6d2a30e4c307a34892d2b083ae8268abff01cccca34b
+-- hash: a746514de75e4e865e1cecad7b39efb038ae28b0024a9285dcd3ed80606f822f
 
 name:           polysemy
 version:        0.1.1.0
@@ -89,9 +89,11 @@ test-suite polysemy-test
   main-is: Main.hs
   other-modules:
       FusionSpec
+      OutputSpec
       Paths_polysemy
   hs-source-dirs:
       test
+  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
@@ -113,6 +115,7 @@ benchmark polysemy-bench
       Paths_polysemy
   hs-source-dirs:
       bench
+  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
       base >=4.7 && <5
     , criterion

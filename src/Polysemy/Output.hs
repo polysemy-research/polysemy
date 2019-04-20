@@ -11,6 +11,7 @@ module Polysemy.Output
     -- * Interpretations
   , runFoldMapOutput
   , runIgnoringOutput
+  , runBatchOutput
   ) where
 
 import Polysemy
@@ -45,4 +46,41 @@ runIgnoringOutput :: Sem (Output o ': r) a -> Sem r a
 runIgnoringOutput = interpret \case
   Output _ -> pure ()
 {-# INLINE runIgnoringOutput #-}
+
+
+------------------------------------------------------------------------------
+-- | Accumulate 'output's so they are delayed until they reach at least size
+-- @size@.
+--
+-- If @size@ is 0, this interpretation will not emit anything in the resulting
+-- 'Output' effect.
+--
+-- @since 0.1.2.0
+runBatchOutput
+    :: forall o r a
+     . (Typeable o)
+    => Int
+    -> Sem (Output [o] ': r) a
+    -> Sem (Output [[o]] ': r) a
+runBatchOutput 0 m = raise $ runIgnoringOutput m
+runBatchOutput size m = do
+  ((_, res), a) <-
+    runState (0 :: Int, [] :: [o]) $ reinterpret2 (\case
+      Output o -> do
+        (nacc, acc) <- get
+        let no     = length o
+            total  = acc <> o
+            ntotal = nacc + no
+
+            emitting n ls
+              | n >= size = do
+                  let (emit, acc') = splitAt size ls
+                  output [emit]
+                  emitting (n - size) acc'
+              | otherwise = pure (n, ls)
+        (nacc', acc') <- emitting ntotal total
+        put (nacc', acc')
+    ) m
+  output [res]
+  pure a
 
