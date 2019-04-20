@@ -11,6 +11,8 @@ module Polysemy.Reader
 
     -- * Interpretations
   , runReader
+
+    -- * Interpretations for Other Effects
   , runInputAsReader
   ) where
 

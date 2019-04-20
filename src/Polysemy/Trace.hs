@@ -11,6 +11,9 @@ module Polysemy.Trace
   , runTraceIO
   , runIgnoringTrace
   , runTraceAsOutput
+
+    -- * Interpretations for Other Effects
+  , runOutputAsTrace
   ) where
 
 import Polysemy
@@ -50,4 +53,18 @@ runTraceAsOutput
 runTraceAsOutput = interpret $ \case
   Trace m -> output m
 {-# INLINE runTraceAsOutput #-}
+
+------------------------------------------------------------------------------
+-- | Transform a 'Trace' effect into a 'Output' 'String' effect.
+--
+-- @since 0.1.2.0
+runOutputAsTrace
+    :: ( Show w
+       , Member Trace r
+       )
+    => Sem (Output w ': r) a
+    -> Sem r a
+runOutputAsTrace = interpret $ \case
+  Output m -> trace $ show m
+{-# INLINE runOutputAsTrace #-}
 

@@ -12,8 +12,10 @@ module Polysemy.Writer
   , censor
 
     -- * Interpretations
-  , runOutputAsWriter
   , runWriter
+
+    -- * Interpretations for Other Effects
+  , runOutputAsWriter
   ) where
 
 import Polysemy

@@ -14,4 +14,5 @@
 
 - `runInputAsReader`, `runTraceAsOutput` and `runOutputAsWriter` have more
     generalized types
-- Aded `runStateInIO`
+- Added `runStateInIO`
+- Added `runOutputAsTrace`
