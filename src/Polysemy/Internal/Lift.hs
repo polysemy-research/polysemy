@@ -16,10 +16,10 @@ module Polysemy.Internal.Lift where
 -- @
 --
 -- That being said, you lose out on a significant amount of the benefits of
--- 'Polysemy.Sem' by using 'sendM' directly in application code; doing so
--- will tie your application code directly to the underlying monad, and prevent
--- you from interpreting it differently. For best results, only use 'Lift' in
--- your effect interpreters.
+-- 'Polysemy.Sem' by using 'Polysemy.sendM' directly in application code; doing
+-- so will tie your application code directly to the underlying monad, and
+-- prevent you from interpreting it differently. For best results, only use
+-- 'Lift' in your effect interpreters.
 --
 -- Consider using 'Polysemy.Trace.trace' and 'Polysemy.Trace.runTraceIO' as
 -- a substitute for using 'putStrLn' directly.

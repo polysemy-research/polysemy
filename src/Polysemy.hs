@@ -26,7 +26,7 @@ module Polysemy
     --   ReadLine  :: Console m String
     -- @
     --
-    -- Notice that the 'a' parameter gets instataniated at the /desired return
+    -- Notice that the @a@ parameter gets instataniated at the /desired return
     -- type/ of the actions. Writing a line returns a '()', but reading one
     -- returns 'String'.
     --

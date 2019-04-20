@@ -36,8 +36,8 @@ swap ~(a, b) = (b, a)
 
 
 ------------------------------------------------------------------------------
--- | The simplest way to produce an effect handler. Interprets an effect 'e' by
--- transforming it into other effects inside of 'r'.
+-- | The simplest way to produce an effect handler. Interprets an effect @e@ by
+-- transforming it into other effects inside of @r@.
 interpret
     :: FirstOrder e "interpret"
     => (∀ x m. e m x -> Sem r x)
@@ -51,7 +51,7 @@ interpret f = interpretH $ \(e :: e m x) -> liftT @m $ f e
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but for higher-order effects (ie. those which make use of
--- the 'm' parameter.)
+-- the @m@ parameter.)
 --
 -- See the notes on 'Tactical' for how to use this function.
 interpretH

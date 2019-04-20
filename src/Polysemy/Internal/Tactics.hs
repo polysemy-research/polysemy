@@ -122,7 +122,7 @@ bindT
        -- your effect.
        --
        -- Continuations lifted via 'bindT' will run in the same environment
-       -- which produced the 'a'.
+       -- which produced the @a@.
     -> Sem (WithTactics e f m r)
                 (f a -> Sem (e ': r) (f b))
 bindT f = send $ HoistInterpretation f

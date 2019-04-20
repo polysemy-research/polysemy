@@ -41,7 +41,7 @@ runFoldMapOutput f = runState mempty . reinterpret \case
 
 
 ------------------------------------------------------------------------------
--- | Run an 'Ouput' effect by ignoring it.
+-- | Run an 'Output' effect by ignoring it.
 runIgnoringOutput :: Sem (Output o ': r) a -> Sem r a
 runIgnoringOutput = interpret \case
   Output _ -> pure ()

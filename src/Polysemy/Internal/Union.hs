@@ -98,8 +98,8 @@ instance Effect (Union r) where
 
 
 ------------------------------------------------------------------------------
--- | A proof that the effect 'e' is available somewhere inside of the effect
--- stack 'r'.
+-- | A proof that the effect @e@ is available somewhere inside of the effect
+-- stack @r@.
 type Member e r = Member' e r
 
 type Member' e r =
