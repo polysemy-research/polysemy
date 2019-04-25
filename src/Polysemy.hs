@@ -2,6 +2,8 @@ module Polysemy
   ( -- * Core Types
     Sem ()
   , Member
+  , Members
+  , type (>@>)
 
   -- * Running Sem
   , run
