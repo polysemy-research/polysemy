@@ -174,7 +174,7 @@ type family Members es r :: Constraint where
 --
 -- (NB: keep in mind that 'r' variable representing list of all effects is
 -- hidden behind rank-2 type --- use 'Members' instead if you need access to it.)
-infix 0 >@>
+infixl 1 >@>
 type es >@> a = ∀ r. Members r es => Sem r a
 
 
