@@ -1,5 +1,14 @@
 # Changelog for polysemy
 
+## 0.1.2.0 (2019-04-26)
+
+- `runInputAsReader`, `runTraceAsOutput` and `runOutputAsWriter` have more
+    generalized types
+- Added `runStateInIO`
+- Added `runOutputAsTrace`
+- Added `Members` (thanks to @TheMatten)
+
+
 ## 0.1.1.0 (2019-04-14)
 
 - Added `runIO` interpretation (thanks to @adamConnerSax)
@@ -11,10 +20,4 @@
 - Initial release
 
 ## Unreleased changes
-
-- `runInputAsReader`, `runTraceAsOutput` and `runOutputAsWriter` have more
-    generalized types
-- Added `runStateInIO`
-- Added `runOutputAsTrace`
-- Added `Members` (thanks to @TheMatten)
 

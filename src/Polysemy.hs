@@ -121,7 +121,6 @@ module Polysemy
   , makeSemantic_
   ) where
 
-import Data.Typeable
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
 import Polysemy.Internal.TH.Effect
