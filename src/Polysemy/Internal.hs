@@ -153,7 +153,7 @@ newtype Sem r a = Sem
 -- @
 type family Members es r :: Constraint where
   Members '[]       r = ()
-  Members (e ': es) r = (Member e r, Members r es)
+  Members (e ': es) r = (Member e r, Members es r)
 
 
 ------------------------------------------------------------------------------
