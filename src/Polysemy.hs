@@ -3,7 +3,6 @@ module Polysemy
     Sem ()
   , Member
   , Members
-  , type (>@>)
 
   -- * Running Sem
   , run

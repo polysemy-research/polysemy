@@ -7,7 +7,6 @@ module Polysemy.Internal
   ( Sem (..)
   , Member
   , Members
-  , type (>@>)
   , send
   , sendM
   , run
@@ -154,28 +153,6 @@ newtype Sem r a = Sem
 type family Members es r :: Constraint where
   Members '[]       r = ()
   Members (e ': es) r = (Member e r, Members es r)
-
-
-------------------------------------------------------------------------------
--- | Compact alternative to 'Sem' type with 'Member' effects:
---
--- @
--- foo :: \'['Polysemy.Output.Output' Int, 'Polysemy.Output.Output' Bool] >@> ()
--- @
---
--- translates into:
---
--- @
--- foo :: ( 'Member' ('Polysemy.Output.Output' Int) r
---        , 'Member' ('Polysemy.Output.Output' Bool) r
---        )
---     => 'Sem' r ()
--- @
---
--- (NB: keep in mind that 'r' variable representing list of all effects is
--- hidden behind rank-2 type --- use 'Members' instead if you need access to it.)
-infixr 1 >@>
-type es >@> a = ∀ r. Members r es => Sem r a
 
 
 ------------------------------------------------------------------------------
