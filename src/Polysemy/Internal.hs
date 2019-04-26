@@ -138,6 +138,7 @@ newtype Sem r a = Sem
 -- @
 -- foo :: 'Members' \'[ 'Polysemy.Output.Output' Int
 --                 , 'Polysemy.Output.Output' Bool
+--                 , 'Polysemy.State' String
 --                 ] r
 --     => 'Sem' r ()
 -- @
@@ -147,6 +148,7 @@ newtype Sem r a = Sem
 -- @
 -- foo :: ( 'Member' ('Polysemy.Output.Output' Int) r
 --        , 'Member' ('Polysemy.Output.Output' Bool) r
+--        , 'Member' ('Polysemy.State' String) r
 --        )
 --     => 'Sem' r ()
 -- @
