@@ -111,9 +111,6 @@ module Polysemy
   , runT
   , bindT
 
-  -- * Reexports
-  , Typeable
-
   -- * Deprecated Names
   -- | The following exports are deprecated, and are exposed only for
   -- backwards compatability reasons. They will be removed in the next major
