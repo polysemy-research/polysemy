@@ -2,7 +2,7 @@
 
 ## 0.1.1.0 (2019-04-14)
 
-- Added 'runIO' interpretation (thanks to @adamConnerSax)
+- Added `runIO` interpretation (thanks to @adamConnerSax)
 - Minor documentation fixes
 
 
@@ -16,3 +16,5 @@
     generalized types
 - Added `runStateInIO`
 - Added `runOutputAsTrace`
+- Added `Members` (thanks to @TheMatten)
+
