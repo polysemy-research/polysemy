@@ -132,7 +132,7 @@ newtype Sem r a = Sem
 
 
 ------------------------------------------------------------------------------
--- | Makes constraints of functions that use multiple effects more readable by
+-- | Makes constraints of functions that use multiple effects shorter by
 -- translating single list of effects into multiple 'Member' constraints:
 --
 -- @
@@ -152,6 +152,8 @@ newtype Sem r a = Sem
 --        )
 --     => 'Sem' r ()
 -- @
+--
+-- @since 0.1.2.0
 type family Members es r :: Constraint where
   Members '[]       r = ()
   Members (e ': es) r = (Member e r, Members es r)
