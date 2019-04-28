@@ -53,7 +53,7 @@
 -- is /also/ a 'Num', but you just forgot to add a 'Polysemy.Member' constraint
 -- for it."
 --
--- This is obbviously insane, but it's the way the cookie crumbles.
+-- This is obviously insane, but it's the way the cookie crumbles.
 -- 'Polysemy.Plugin' is a typechecker plugin which will disambiguate the above
 -- program (and others) so the compiler will do what you want.
 --

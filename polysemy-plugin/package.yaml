@@ -1,6 +1,6 @@
 name:                polysemy-plugin
 version:             0.1.0.0
-github:              "isovector/polysemy-plugin"
+github:              "isovector/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
 maintainer:          "sandy@sandymaguire.me"
@@ -10,14 +10,10 @@ extra-source-files:
 - README.md
 - ChangeLog.md
 
-# Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+synopsis:            Disambiguate obivious uses of effects.
+category:            Polysemy
 
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/isovector/polysemy-plugin#readme>
+description:         Please see the README on GitHub at <https://github.com/isovector/polysemy/tree/master/polysemy-plugin#readme>
 
 dependencies:
 - base >= 4.7 && < 5
