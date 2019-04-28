@@ -26,6 +26,19 @@ It's like `freer-simple` but more powerful and 35x faster.
 
 It's like `fused-effects` but with an order of magnitude less boilerplate.
 
+Additionally, unlike `mtl`, `polysemy` has no functional dependencies, so you
+can use multiple copies of the same effect. This alleviates the need for ~~ugly
+hacks~~band-aids like [classy
+lenses](http://hackage.haskell.org/package/lens-4.17.1/docs/Control-Lens-TH.html#v:makeClassy),
+the [`ReaderT`
+pattern](https://www.fpcomplete.com/blog/2017/06/readert-design-pattern) and
+nicely solves the [trouble with typed
+errors](https://www.parsonsmatt.org/2018/11/03/trouble_with_typed_errors.html).
+
+Concerned about type inference? Check out
+[polysemy-plugin](https://github.com/isovector/polysemy/tree/master/polysemy-plugin),
+which should perform just as well as `mtl`'s!
+
 
 ## Features
 
