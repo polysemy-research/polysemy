@@ -6,6 +6,7 @@
 module Polysemy.Internal
   ( Sem (..)
   , Member
+  , Members
   , send
   , sendM
   , run
@@ -23,6 +24,7 @@ import Control.Applicative
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
+import Data.Kind
 import Polysemy.Internal.Effect
 import Polysemy.Internal.Fixpoint
 import Polysemy.Internal.Lift
@@ -127,6 +129,34 @@ newtype Sem r a = Sem
         => (∀ x. Union r (Sem r) x -> m x)
         -> m a
   }
+
+
+------------------------------------------------------------------------------
+-- | Makes constraints of functions that use multiple effects shorter by
+-- translating single list of effects into multiple 'Member' constraints:
+--
+-- @
+-- foo :: 'Members' \'[ 'Polysemy.Output.Output' Int
+--                 , 'Polysemy.Output.Output' Bool
+--                 , 'Polysemy.State' String
+--                 ] r
+--     => 'Sem' r ()
+-- @
+--
+-- translates into:
+--
+-- @
+-- foo :: ( 'Member' ('Polysemy.Output.Output' Int) r
+--        , 'Member' ('Polysemy.Output.Output' Bool) r
+--        , 'Member' ('Polysemy.State' String) r
+--        )
+--     => 'Sem' r ()
+-- @
+--
+-- @since 0.1.2.0
+type family Members es r :: Constraint where
+  Members '[]       r = ()
+  Members (e ': es) r = (Member e r, Members es r)
 
 
 ------------------------------------------------------------------------------

@@ -2,6 +2,7 @@ module Polysemy
   ( -- * Core Types
     Sem ()
   , Member
+  , Members
 
   -- * Running Sem
   , run
@@ -110,9 +111,6 @@ module Polysemy
   , runT
   , bindT
 
-  -- * Reexports
-  , Typeable
-
   -- * Deprecated Names
   -- | The following exports are deprecated, and are exposed only for
   -- backwards compatability reasons. They will be removed in the next major
@@ -123,7 +121,6 @@ module Polysemy
   , makeSemantic_
   ) where
 
-import Data.Typeable
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
 import Polysemy.Internal.TH.Effect
