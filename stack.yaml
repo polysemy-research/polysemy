@@ -2,6 +2,7 @@ resolver: lts-13.0
 
 packages:
 - .
+- polysemy-plugin
 
 extra-deps:
 - dump-core-0.1.3.2
