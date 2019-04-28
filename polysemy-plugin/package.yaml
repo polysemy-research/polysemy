@@ -38,3 +38,20 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - polysemy-plugin
+    - hspec
+
+default-extensions:
+  - DataKinds
+  - DeriveFunctor
+  - FlexibleContexts
+  - GADTs
+  - LambdaCase
+  - PolyKinds
+  - RankNTypes
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TypeApplications
+  - TypeOperators
+  - TypeFamilies
+
+  - UnicodeSyntax
