@@ -14,11 +14,19 @@ module Polysemy.State
   , runState
   , runLazyState
   , runStateInIORef
+
+    -- * Interoperation with MTL
+  , hoistStateIntoStateT
   ) where
 
-import Data.IORef
-import Polysemy
-import Polysemy.Internal.Combinators
+import qualified Control.Monad.Trans.State as S
+import           Data.IORef
+import           Data.Tuple (swap)
+import           Polysemy
+import           Polysemy.Internal
+import           Polysemy.Internal.Combinators
+import           Polysemy.Internal.Effect
+import           Polysemy.Internal.Union
 
 
 ------------------------------------------------------------------------------
@@ -80,6 +88,32 @@ runStateInIORef ref = interpret $ \case
   Get   -> sendM $ readIORef ref
   Put s -> sendM $ writeIORef ref s
 {-# INLINE runStateInIORef #-}
+
+
+------------------------------------------------------------------------------
+-- | Hoist a 'State' effect into a 'S.StateT' monad transformer. This can be
+-- useful when writing interpreters that need to interop with MTL.
+--
+-- @since 0.1.3.0
+hoistStateIntoStateT
+    :: Sem (State s ': r) a
+    -> S.StateT s (Sem r) a
+hoistStateIntoStateT (Sem m) = m $ \u ->
+  case decomp u of
+    Left x -> S.StateT $ \s ->
+      liftSem . fmap swap
+              . weave (s, ())
+                      (\(s', m') -> fmap swap
+                                  $ S.runStateT m' s')
+              $ hoist hoistStateIntoStateT_b x
+    Right (Yo Get z _ y)     -> fmap (y . (<$ z)) $ S.get
+    Right (Yo (Put s) z _ y) -> fmap (y . (<$ z)) $ S.put s
+{-# INLINE hoistStateIntoStateT #-}
+
+
+hoistStateIntoStateT_b :: Sem (State s ': r) a -> S.StateT s (Sem r) a
+hoistStateIntoStateT_b = hoistStateIntoStateT
+{-# NOINLINE hoistStateIntoStateT_b #-}
 
 
 {-# RULES "runState/reinterpret"
