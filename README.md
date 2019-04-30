@@ -131,7 +131,6 @@ import Polysemy.Input
 import Polysemy.Output
 import Polysemy.Error
 import Polysemy.Resource
-import qualified Control.Exception as X
 
 -- Using Teletype effect from above
 
