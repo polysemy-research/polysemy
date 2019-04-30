@@ -3,6 +3,8 @@
 {-# LANGUAGE MonoLocalBinds       #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal
   ( Sem (..)
   , Member
@@ -73,7 +75,7 @@ import Polysemy.Internal.Union
 -- As an example of keeping @r@ polymorphic, we can consider the type
 --
 -- @
--- 'Member' ('Polysemy.State' String) r => 'Sem' r ()
+-- 'Member' ('Polysemy.State.State' String) r => 'Sem' r ()
 -- @
 --
 -- to be a program with access to

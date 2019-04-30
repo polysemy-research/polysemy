@@ -1,6 +1,8 @@
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.Effect where
 
 import Data.Coerce

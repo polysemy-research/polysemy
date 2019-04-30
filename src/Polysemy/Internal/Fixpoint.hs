@@ -1,3 +1,5 @@
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.Fixpoint where
 
 ------------------------------------------------------------------------------

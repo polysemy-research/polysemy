@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.Combinators
   ( -- * First order
     interpret

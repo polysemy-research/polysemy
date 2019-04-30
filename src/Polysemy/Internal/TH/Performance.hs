@@ -1,6 +1,8 @@
 {-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.TH.Performance
   ( inlineRecursiveCalls
   ) where

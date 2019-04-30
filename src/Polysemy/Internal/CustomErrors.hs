@@ -4,6 +4,8 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.CustomErrors
   ( AmbiguousSend
   , Break

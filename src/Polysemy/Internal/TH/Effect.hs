@@ -2,6 +2,8 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 -- Originally ported from code written by Sandy Maguire (@isovector), available
 -- at https://github.com/IxpertaSolutions/freer-effects/pull/28.
 

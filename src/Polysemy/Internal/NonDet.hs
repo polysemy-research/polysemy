@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveFunctor  #-}
 {-# LANGUAGE NoPolyKinds    #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.NonDet where
 
 ------------------------------------------------------------------------------

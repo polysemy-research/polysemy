@@ -1,5 +1,7 @@
 {-# LANGUAGE NoPolyKinds #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.Lift where
 
 

@@ -8,6 +8,8 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.Union
   ( Union (..)
   , Yo (..)
