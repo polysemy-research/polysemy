@@ -156,11 +156,25 @@ getEffName :: Type -> Type
 getEffName t = fst $ splitAppTys t
 
 
-mkWanted :: CtLoc -> Type -> Type -> TcPluginM (Maybe Ct)
-mkWanted loc eff eff' = do
-  if eqType (getEffName eff) (getEffName eff')
+-- isTyVar :: Type -> Bool
+-- isTyVar = isJust . getTyVar_maybe
+
+
+canUnify :: Type -> Type -> Bool
+canUnify wanted given =
+  let (w, ws) = splitAppTys wanted
+      (g, gs) = splitAppTys given
+   in (&& eqType w g) . flip all (zip ws gs) $ \(wt, gt) ->
+        if isTyVarTy gt
+           then isTyVarTy wt
+           else True
+
+
+mkWanted :: Bool -> CtLoc -> Type -> Type -> TcPluginM (Maybe Ct)
+mkWanted mustUnify loc wanted given = do
+  if (not mustUnify || canUnify wanted given)
      then do
-       (ev, _) <- unsafeTcPluginTcM $ runTcSDeriveds $ newWantedEq loc Nominal eff eff'
+       (ev, _) <- unsafeTcPluginTcM $ runTcSDeriveds $ newWantedEq loc Nominal wanted given
        pure $ Just (CNonCanonical ev)
      else
        pure Nothing
@@ -174,9 +188,9 @@ solveFundep effCls giv _ want = do
       case findMatchingEffectIfSingular e givenEffs of
         Nothing -> do
           case splitAppTys r of
-            (_, [_, eff', _]) -> mkWanted loc eff eff'
+            (_, [_, eff', _]) -> mkWanted False loc eff eff'
             _                 -> pure Nothing
-        Just eff' -> mkWanted loc eff eff'
+        Just eff' -> mkWanted True loc eff eff'
 
     return (TcPluginOk [] (catMaybes eqs))
 

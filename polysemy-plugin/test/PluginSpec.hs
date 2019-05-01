@@ -3,9 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
-
-module Main where
+module PluginSpec where
 
 import Data.Functor.Identity
 import GHC.Exts
@@ -56,8 +54,8 @@ newtype MyString = MyString String
   deriving (IsString, Eq, Show)
 
 
-main :: IO ()
-main = hspec $ do
+spec :: Spec
+spec = do
   describe "State effect" $ do
     describe "get/put" $ do
       it "should work in simple cases" $ do
