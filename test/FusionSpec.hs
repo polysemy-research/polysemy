@@ -43,7 +43,7 @@ spec = do
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'reinterpret)
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'hoist)
 
-    it "who needs Sematic even?" $ do
+    it "who needs Semantic even?" $ do
       shouldSucceed $(inspectTest $ 'countDown `doesNotUse` 'Sem)
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Sem)
       shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Sem)
