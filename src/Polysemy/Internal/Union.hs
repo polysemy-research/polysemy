@@ -3,7 +3,6 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE StrictData            #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -80,14 +79,8 @@ liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity
 {-# INLINE liftYo #-}
 
 
-instance (Functor m) => Functor (Union r m) where
+instance Functor (Union r m) where
   fmap f (Union w t) = Union w $ fmap' f t
-    where
-      -- This is necessary to delay the interaction between the type family
-      -- 'IndexOf' and the quantified superclass constraint on 'Effect'.
-      fmap' :: (Functor m, Effect f) => (a -> b) -> f m a -> f m b
-      fmap' = fmap
-      {-# INLINE fmap' #-}
   {-# INLINE fmap #-}
 
 

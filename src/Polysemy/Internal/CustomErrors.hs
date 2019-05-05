@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
@@ -120,7 +119,10 @@ type family FirstOrderError e (fn :: Symbol) :: k where
 ------------------------------------------------------------------------------
 -- | This constraint gives helpful error messages if you attempt to use a
 -- first-order combinator with a higher-order type.
-type FirstOrder e fn = ∀ m. Coercible (e m) (e (FirstOrderError e fn))
+--
+-- Note that the parameter 'm' is only required to work around supporting
+-- versions of GHC without QuantifiedConstraints
+type FirstOrder m e fn = Coercible (e m) (e (FirstOrderError e fn))
 
 
 ------------------------------------------------------------------------------
