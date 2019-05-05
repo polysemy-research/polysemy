@@ -11,6 +11,16 @@ cache:
 
 matrix:
   include:
+    # ghc 8.0.2
+  - env: STACK='stack --resolver=lts-8.24' CACHE_NAME=8.0.2
+    addons: {apt: {packages: [libgmp-dev]}}
+    # ghc 8.2.2
+  - env: STACK='stack --resolver=lts-11.5' CACHE_NAME=8.2.2
+    addons: {apt: {packages: [libgmp-dev]}}
+    # ghc 8.4.4
+  - env: STACK='stack --resolver=lts-12.6' CACHE_NAME=8.4.4
+    addons: {apt: {packages: [libgmp-dev]}}
+
     # ghc 8.6.3
   - env: STACK='stack --resolver=lts-13.0' CACHE_NAME=8.6.3
     addons: {apt: {packages: [libgmp-dev]}}
