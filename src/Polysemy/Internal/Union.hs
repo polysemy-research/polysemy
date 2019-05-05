@@ -31,7 +31,7 @@ module Polysemy.Internal.Union
 
 import Data.Functor.Compose
 import Data.Functor.Identity
-import Data.Typeable
+import Data.Type.Equality
 import Polysemy.Internal.Effect
 
 #ifdef ERROR_MESSAGES
@@ -113,27 +113,26 @@ type Member' e r =
   )
 
 
-data Dict c where Dict :: c => Dict c
-
-
-induceTypeable :: SNat n -> Dict (Typeable n)
-induceTypeable SZ = Dict
-induceTypeable (SS _) = Dict
-{-# INLINE induceTypeable #-}
-
-
 ------------------------------------------------------------------------------
 -- | The kind of type-level natural numbers.
 data Nat = Z | S Nat
-  deriving Typeable
 
 
 ------------------------------------------------------------------------------
 -- | A singleton for 'Nat'.
 data SNat :: Nat -> * where
   SZ :: SNat 'Z
-  SS :: Typeable n => SNat n -> SNat ('S n)
-  deriving Typeable
+  SS :: SNat n -> SNat ('S n)
+
+instance TestEquality SNat where
+  testEquality SZ     SZ     = Just Refl
+  testEquality (SS _) SZ     = Nothing
+  testEquality SZ     (SS _) = Nothing
+  testEquality (SS n) (SS m) =
+    case testEquality n m of
+      Nothing -> Nothing
+      Just Refl -> Just Refl
+  {-# INLINE testEquality #-}
 
 
 type family IndexOf (ts :: [k]) (n :: Nat) :: k where
@@ -149,7 +148,7 @@ type family Found (ts :: [k]) (t :: k) :: Nat where
   Found (u ': ts) t = 'S (Found ts t)
 
 
-class Typeable (Found r t) => Find (r :: [k]) (t :: k) where
+class Find (r :: [k]) (t :: k) where
   finder :: SNat (Found r t)
 
 instance {-# OVERLAPPING #-} Find (t ': z) t where
@@ -191,9 +190,7 @@ absurdU = absurdU
 ------------------------------------------------------------------------------
 -- | Weaken a 'Union' so it is capable of storing a new sort of effect.
 weaken :: Union r m a -> Union (e ': r) m a
-weaken (Union n a) =
-  case induceTypeable n of
-    Dict -> Union (SS n) a
+weaken (Union n a) = Union (SS n) a
 {-# INLINE weaken #-}
 
 
@@ -211,12 +208,11 @@ prj :: forall e r a m
        )
     => Union r m a
     -> Maybe (Yo e m a)
-prj (Union (s :: SNat n) a) =
-  case induceTypeable s of
-    Dict ->
-      case eqT @n @(Found r e) of
-        Just Refl -> Just a
+prj (Union sn a) =
+  let sm = finder @_ @r @e
+   in case testEquality sn sm of
         Nothing -> Nothing
+        Just Refl -> Just a
 {-# INLINE prj #-}
 
 
