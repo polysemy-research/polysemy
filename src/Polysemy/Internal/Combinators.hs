@@ -40,7 +40,7 @@ swap ~(a, b) = (b, a)
 -- | The simplest way to produce an effect handler. Interprets an effect @e@ by
 -- transforming it into other effects inside of @r@.
 interpret
-    :: FirstOrder e m0 "interpret"
+    :: FirstOrder m0 e "interpret"
     => (∀ x m. e m x -> Sem r x)
        -- ^ A natural transformation from the handled effect to other effects
        -- already in 'Sem'.
@@ -154,7 +154,7 @@ reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
 -- 'Polysemy.State.runState', meaning it's free to 'reinterpret' in terms of
 -- the 'Polysemy.State.State' effect and immediately run it.
 reinterpret
-    :: FirstOrder e1 m0 "reinterpret"
+    :: FirstOrder m0 e1 "reinterpret"
     => (∀ m x. e1 m x -> Sem (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
     -> Sem (e1 ': r) a
@@ -185,7 +185,7 @@ reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /two/ intermediary effects.
 reinterpret2
-    :: FirstOrder e1 m0 "reinterpret2"
+    :: FirstOrder m0 e1 "reinterpret2"
     => (∀ m x. e1 m x -> Sem (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
@@ -215,7 +215,7 @@ reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /three/ intermediary effects.
 reinterpret3
-    :: FirstOrder e1 m0 "reinterpret3"
+    :: FirstOrder m0 e1 "reinterpret3"
     => (∀ m x. e1 m x -> Sem (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
@@ -230,7 +230,7 @@ reinterpret3 f = reinterpret3H $ \(e :: e m x) -> liftT @m $ f e
 -- intercept other effects and insert logic around them.
 intercept
     :: ( Member e r
-       , FirstOrder e m0 "intercept"
+       , FirstOrder m0 e "intercept"
        )
     => (∀ x m. e m x -> Sem r x)
        -- ^ A natural transformation from the handled effect to other effects

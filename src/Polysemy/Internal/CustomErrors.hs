@@ -122,7 +122,7 @@ type family FirstOrderError e (fn :: Symbol) :: k where
 --
 -- Note that the parameter 'm' is only required to work around supporting
 -- versions of GHC without QuantifiedConstraints
-type FirstOrder e m fn = Coercible (e m) (e (FirstOrderError e fn))
+type FirstOrder m e fn = Coercible (e m) (e (FirstOrderError e fn))
 
 
 ------------------------------------------------------------------------------
