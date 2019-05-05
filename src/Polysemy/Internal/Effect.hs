@@ -1,5 +1,4 @@
 {-# LANGUAGE DefaultSignatures     #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 

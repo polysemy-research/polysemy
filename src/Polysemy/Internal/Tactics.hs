@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
