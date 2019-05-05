@@ -125,7 +125,7 @@ data SNat :: Nat -> * where
   SS :: SNat n -> SNat ('S n)
 
 instance TestEquality SNat where
-  testEquality SZ     SZ     = (Just Refl)
+  testEquality SZ     SZ     = Just Refl
   testEquality (SS _) SZ     = Nothing
   testEquality SZ     (SS _) = Nothing
   testEquality (SS n) (SS m) =
