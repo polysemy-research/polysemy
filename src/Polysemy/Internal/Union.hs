@@ -208,7 +208,7 @@ prj :: forall e r a m
        )
     => Union r m a
     -> Maybe (Yo e m a)
-prj (Union (sn :: SNat n) a) =
+prj (Union sn a) =
   let sm = finder @_ @r @e
    in case testEquality sn sm of
         Nothing -> Nothing
