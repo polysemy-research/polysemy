@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {-# OPTIONS_HADDOCK not-home #-}

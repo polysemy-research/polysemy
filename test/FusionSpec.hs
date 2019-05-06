@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments   #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
@@ -60,11 +59,10 @@ go = do
 
 
 tryIt :: Either Bool String
-tryIt = run . runError @Bool $ do
+tryIt = run . runError @Bool $
   catch @Bool
-    do
-      throw False
-    \_ -> pure "hello"
+    (throw False)
+    (\_ -> pure "hello")
 
 
 countDown :: Int -> Int
