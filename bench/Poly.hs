@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments   #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
@@ -57,7 +56,9 @@ runConsoleBoring :: [String] -> Semantic (Console ': r) a -> Semantic r ([String
 runConsoleBoring inputs
   = runFoldMapOutput (:[])
   . runListInput inputs
-  . reinterpret2 \case
+  . reinterpret2
+  (\case
       ReadLine -> maybe "" id <$> input
       WriteLine msg -> output msg
+  )
 

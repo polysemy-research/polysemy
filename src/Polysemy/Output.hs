@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.Output
@@ -35,15 +34,17 @@ runFoldMapOutput
     => (o -> m)
     -> Sem (Output o ': r) a
     -> Sem r (m, a)
-runFoldMapOutput f = runState mempty . reinterpret \case
-  Output o -> modify (<> f o)
+runFoldMapOutput f = runState mempty . reinterpret
+  (\case
+      Output o -> modify (<> f o)
+  )
 {-# INLINE runFoldMapOutput #-}
 
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by ignoring it.
 runIgnoringOutput :: Sem (Output o ': r) a -> Sem r a
-runIgnoringOutput = interpret \case
+runIgnoringOutput = interpret $ \case
   Output _ -> pure ()
 {-# INLINE runIgnoringOutput #-}
 
