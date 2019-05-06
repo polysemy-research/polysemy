@@ -21,3 +21,8 @@
 
 ## Unreleased changes
 
+- Lowered precedence of `.@` and `.@@` down to 8, from 9
+- Remove unnecessary dependency on `QuantifiedConstraints` (thanks to @jkachmar)
+- Remove some `Typeable` constraints inside `Union` (thanks to @googleson78)
+- Improved some haddock links
+
