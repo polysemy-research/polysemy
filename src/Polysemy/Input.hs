@@ -30,10 +30,8 @@ makeSem ''Input
 ------------------------------------------------------------------------------
 -- | Run an 'Input' effect by always giving back the same value.
 runConstInput :: i -> Sem (Input i ': r) a -> Sem r a
-runConstInput c = interpret
-  (\case
-      Input -> pure c
-  )
+runConstInput c = interpret $ \case
+  Input -> pure c
 {-# INLINE runConstInput #-}
 
 
@@ -57,9 +55,7 @@ runListInput is = fmap snd . runState is . reinterpret
 ------------------------------------------------------------------------------
 -- | Runs an 'Input' effect by evaluating a monadic action for each request.
 runMonadicInput :: Sem r i -> Sem (Input i ': r) a -> Sem r a
-runMonadicInput m = interpret
-  (\case
-      Input -> m
-  )
+runMonadicInput m = interpret $ \case
+  Input -> m
 {-# INLINE runMonadicInput #-}
 
