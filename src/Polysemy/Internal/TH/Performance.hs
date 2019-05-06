@@ -10,6 +10,7 @@ import Control.Monad
 import Data.Bool
 import Data.Maybe (maybeToList, mapMaybe)
 import Data.Monoid (Any (..))
+import Data.Semigroup ((<>)) -- For compatibility with GHC < 8.6
 import Generics.SYB
 import Language.Haskell.TH
 
