@@ -29,13 +29,11 @@ shouldSucceed r = r `shouldSatisfy` isSuccess
 spec :: Spec
 spec = do
   describe "fusion" $ do
+#if __GLASGOW_HASKELL__ >= 806
     -- TODO: Investigate why this test fails mysteriously on GHC < 8.6
-    #if __GLASGOW_HASKELL__ >= 806
-
     it "Union proofs should simplify" $ do
       shouldSucceed $(inspectTest $ 'countDown `hasNoType` ''SNat)
-
-    #endif
+#endif
 
     it "internal uses of StateT should simplify" $ do
       shouldSucceed $(inspectTest $ 'countDown `doesNotUse` ''S.StateT)
