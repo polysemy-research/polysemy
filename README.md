@@ -37,7 +37,13 @@ errors](https://www.parsonsmatt.org/2018/11/03/trouble_with_typed_errors.html).
 
 Concerned about type inference? Check out
 [polysemy-plugin](https://github.com/isovector/polysemy/tree/master/polysemy-plugin),
-which should perform just as well as `mtl`'s!
+which should perform just as well as `mtl`'s! Add `polysemy-plugin` to your package.yaml
+or .cabal file's dependencies section to use. Then turn it on with a pragma in your source-files:
+
+```haskell
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+```
+Or by adding `-fplugin=Polysemy.Plugin` to your package.yaml/.cabal file `ghc-options` section.
 
 
 ## Features
@@ -120,7 +126,6 @@ main = runM echoIO
 Resource effect:
 
 ```haskell
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase, BlockArguments #-}
 {-# LANGUAGE GADTs, FlexibleContexts, TypeOperators, DataKinds, PolyKinds, TypeApplications #-}
@@ -137,7 +142,7 @@ import Polysemy.Resource
 data CustomException = ThisException | ThatException deriving Show
 
 program :: Members '[Resource, Teletype, Error CustomException] r => Sem r ()
-program = catch work $ \e -> writeTTY ("Caught " ++ show e)
+program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
   where work = bracket (readTTY) (const $ writeTTY "exiting bracket") $ \input -> do
           writeTTY "entering bracket"
           case input of
