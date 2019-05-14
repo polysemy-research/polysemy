@@ -126,7 +126,6 @@ main = runM echoIO
 Resource effect:
 
 ```haskell
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase, BlockArguments #-}
 {-# LANGUAGE GADTs, FlexibleContexts, TypeOperators, DataKinds, PolyKinds, TypeApplications #-}
@@ -143,7 +142,7 @@ import Polysemy.Resource
 data CustomException = ThisException | ThatException deriving Show
 
 program :: Members '[Resource, Teletype, Error CustomException] r => Sem r ()
-program = catch work $ \e -> writeTTY ("Caught " ++ show e)
+program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
   where work = bracket (readTTY) (const $ writeTTY "exiting bracket") $ \input -> do
           writeTTY "entering bracket"
           case input of
