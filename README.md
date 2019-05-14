@@ -37,7 +37,13 @@ errors](https://www.parsonsmatt.org/2018/11/03/trouble_with_typed_errors.html).
 
 Concerned about type inference? Check out
 [polysemy-plugin](https://github.com/isovector/polysemy/tree/master/polysemy-plugin),
-which should perform just as well as `mtl`'s!
+which should perform just as well as `mtl`'s! Add `polysemy-plugin` to your package.yaml
+or .cabal file's dependencies section to use. Then turn it on with a pragma in your source-files:
+
+```haskell
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+```
+Or by adding `-fplugin=Polysemy.Plugin` to your package.yaml/.cabal file `ghc-options` section.
 
 
 ## Features
