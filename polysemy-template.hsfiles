@@ -1,0 +1,155 @@
+{-# START_FILE package.yaml #-}
+name:                {{name}}
+version:             0.1.0.0
+#synopsis:
+#description:
+homepage:            https://github.com/{{github-username}}{{^github-username}}githubuser{{/github-username}}/{{name}}#readme
+license:             BSD3
+author:              {{author-name}}{{^author-name}}Author name here{{/author-name}}
+maintainer:          {{author-email}}{{^author-email}}example@example.com{{/author-email}}
+copyright:           {{copyright}}{{^copyright}}{{year}}{{^year}}2019{{/year}} {{author-name}}{{^author-name}}Author name here{{/author-name}}{{/copyright}}
+category:            {{category}}{{^category}}Web{{/category}}
+extra-source-files:
+- README.md
+
+ghc-options: -O2 -flate-specialise -fspecialise-aggressively
+
+default-extensions:
+  - DataKinds
+  - FlexibleContexts
+  - GADTs
+  - LambdaCase
+  - PolyKinds
+  - RankNTypes
+  - ScopedTypeVariables
+  - TypeApplications
+  - TypeOperators
+  - TypeFamilies
+  
+dependencies:
+  - base >= 4.7 && < 5
+  - polysemy
+  - polysemy-plugin
+
+executables:
+  main:
+    source-dirs:      src
+    main:             Main.hs
+
+{-# START_FILE Setup.hs #-}
+import Distribution.Simple
+main = defaultMain
+
+{-# START_FILE src/Main.hs #-}
+  {-# LANGUAGE TemplateHaskell #-}
+  module Main where
+  import Prelude hiding (throw, catch, bracket)
+  import Polysemy
+  import Polysemy.Input
+  import Polysemy.Output
+  import Polysemy.Error
+  import Polysemy.Resource
+  
+  import Teletype hiding (main)
+
+  data CustomException = ThisException | ThatException deriving Show
+  
+  program :: Members '[Resource, Teletype, Error CustomException] r => Sem r ()
+  program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
+    where work = bracket (readTTY) (const $ writeTTY "exiting bracket") $ \input -> do
+            writeTTY "entering bracket"
+            case input of
+              "explode"     -> throw ThisException
+              "weird stuff" -> writeTTY input >> throw ThatException
+              _             -> writeTTY input >> writeTTY "no exceptions"
+  
+  main :: IO (Either CustomException ())
+  main = (runM .@ runResource .@@ runErrorInIO @CustomException) . runTeletypeIO $ program
+
+
+
+{-# START_FILE src/Teletype.hs #-}
+  {-# LANGUAGE TemplateHaskell,BlockArguments #-}
+  module Teletype where
+  
+  import Polysemy
+  import Polysemy.Input
+  import Polysemy.Output
+  
+  data Teletype m a where
+    ReadTTY  :: Teletype m String
+    WriteTTY :: String -> Teletype m ()
+  
+  makeSem ''Teletype
+  
+  runTeletypeIO :: Member (Lift IO) r => Sem (Teletype ': r) a -> Sem r a
+  runTeletypeIO = interpret $ \case
+    ReadTTY      -> sendM getLine
+    WriteTTY msg -> sendM $ putStrLn msg
+  
+  runTeletypePure :: [String] -> Sem (Teletype ': r) a -> Sem r ([String], a)
+  runTeletypePure i
+    = runFoldMapOutput pure  -- For each WriteTTY in our program, consume an output by appending it to the list in a ([String], a)
+    . runListInput i         -- Treat each element of our list of strings as a line of input
+    . reinterpret2 \case     -- Reinterpret our effect in terms of Input and Output
+        ReadTTY -> maybe "" id <$> input
+        WriteTTY msg -> output msg
+  
+  
+  echo :: Member Teletype r => Sem r ()
+  echo = do
+    i <- readTTY
+    case i of
+      "" -> pure ()
+      _  -> writeTTY i >> echo
+  
+  
+  -- Let's pretend
+  echoPure :: [String] -> Sem '[] ([String], ())
+  echoPure = flip runTeletypePure echo
+  
+  pureOutput :: [String] -> [String]
+  pureOutput = fst . run . echoPure
+  
+  -- Now let's do things
+  echoIO :: Sem '[Lift IO] ()
+  echoIO = runTeletypeIO echo
+  
+  -- echo forever
+  main :: IO ()
+  main = runM echoIO
+
+{-# START_FILE README.md #-}
+# {{name}}
+
+{-# START_FILE LICENSE #-}
+Copyright {{author-name}}{{^author-name}}Author name here{{/author-name}} (c) {{year}}{{^year}}2019{{/year}}
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of {{author-name}}{{^author-name}}Author name here{{/author-name}} nor the names of other
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
