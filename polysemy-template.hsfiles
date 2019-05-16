@@ -12,7 +12,7 @@ category:            {{category}}{{^category}}Web{{/category}}
 extra-source-files:
 - README.md
 
-ghc-options: -O2 -flate-specialise -fspecialise-aggressively
+ghc-options: -O2 -flate-specialise -fspecialise-aggressively -fplugin=Polysemy.Plugin
 
 default-extensions:
   - DataKinds
@@ -50,7 +50,7 @@ main = defaultMain
   import Polysemy.Error
   import Polysemy.Resource
   
-  import Teletype hiding (main)
+  import Polysemy.Teletype
 
   data CustomException = ThisException | ThatException deriving Show
   
@@ -68,9 +68,9 @@ main = defaultMain
 
 
 
-{-# START_FILE src/Teletype.hs #-}
+{-# START_FILE src/Polysemy/Teletype.hs #-}
   {-# LANGUAGE TemplateHaskell,BlockArguments #-}
-  module Teletype where
+  module Polysemy.Teletype where
   
   import Polysemy
   import Polysemy.Input
@@ -114,10 +114,6 @@ main = defaultMain
   -- Now let's do things
   echoIO :: Sem '[Lift IO] ()
   echoIO = runTeletypeIO echo
-  
-  -- echo forever
-  main :: IO ()
-  main = runM echoIO
 
 {-# START_FILE README.md #-}
 # {{name}}

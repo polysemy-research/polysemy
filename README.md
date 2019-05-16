@@ -233,4 +233,5 @@ To get started, run the following command:
 ```sh
 stack new --resolver=nightly polysemy-base https://github.com/isovector/polysemy/raw/master/polysemy-template.hsfiles
 ```
-Substituting `--resolver` and project name as needed.
+For now, you will need to use one of the stackage nightly resolvers, but eventually `polysemy` will make its way
+into the LTS resolvers. You can substitute the `--resolver` and project name as needed.
