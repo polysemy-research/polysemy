@@ -52,6 +52,7 @@ flags:
 library:
   ghc-options: -O2 -Wall
   source-dirs: src
+  other-modules: Polysemy.Internal.PluginLookup
 
   when:
     - condition: flag(dump-core)

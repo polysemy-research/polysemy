@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e7d506fb8346095c09f6efd4fec48a435a2e85513956419a807073dea1fe0274
+-- hash: 5083f650624e23b69f32959147328d1059db99da44a999e30f1a3effd286c3c4
 
 name:           polysemy
 version:        0.1.2.0
@@ -64,7 +64,7 @@ library
       Polysemy.Trace
       Polysemy.Writer
   other-modules:
-      Paths_polysemy
+      Polysemy.Internal.PluginLookup
   hs-source-dirs:
       src
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax

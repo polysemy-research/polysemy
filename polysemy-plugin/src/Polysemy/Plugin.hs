@@ -1,5 +1,5 @@
+{-# LANGUAGE CPP                       #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE CPP #-}
 
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
@@ -92,42 +92,62 @@ module Polysemy.Plugin
   ( plugin
   ) where
 
--- external
-import GHC.TcPluginM.Extra (lookupModule, lookupName)
-
--- GHC API
+import Class
+import CoAxiom
+import Control.Monad
+import CoreMonad
+import Data.Maybe
+import DynFlags
 import FastString (fsLit)
-import Module     (mkModuleName)
+import GHC (ModuleName, moduleName)
+import GHC.TcPluginM.Extra (lookupModule, lookupName)
+import Module     (mkModuleName, moduleSetElts)
 import OccName    (mkTcOcc)
+import Outputable
+import TcPluginM  (TcPluginM, tcLookupClass)
+import TcRnTypes
+import TcSMonad hiding (tcLookupClass)
+import TyCoRep    (Type (..))
+import Type
+
 import Plugins    (Plugin (..), defaultPlugin
 #if __GLASGOW_HASKELL__ >= 806
     , PluginRecompile(..)
 #endif
     )
-import TcPluginM  (TcPluginM, tcLookupClass)
-import TcRnTypes
-import TyCoRep    (Type (..))
-import Control.Monad
-import Class
-import Type
-import Data.Maybe
-import TcSMonad hiding (tcLookupClass)
-import CoAxiom
-import Outputable
 
 
 plugin :: Plugin
 plugin = defaultPlugin
-    { tcPlugin = const (Just fundepPlugin)
+    { tcPlugin = const $ Just fundepPlugin
+    , installCoreToDos = \_ todos -> installTodos todos
 #if __GLASGOW_HASKELL__ >= 806
-    , pluginRecompile = const (return NoForceRecompile)
+    , pluginRecompile = const $ pure NoForceRecompile
 #endif
     }
+
+polysemyInternal :: ModuleName
+polysemyInternal = mkModuleName "Polysemy.Internal"
+
+polysemyInternalUnion :: ModuleName
+polysemyInternalUnion = mkModuleName "Polysemy.Internal.Union"
+
+installTodos :: [CoreToDo] -> CoreM [CoreToDo]
+installTodos todos = do
+  dynFlags <- getDynFlags
+  case optLevel dynFlags of
+    2 -> do
+      mods <- moduleSetElts <$> getVisibleOrphanMods
+      case any ((== polysemyInternal) . moduleName) mods of
+        -- TODO(sandy): install extra passes
+        True  -> pure todos
+        False -> pure todos
+    _ -> pure todos
 
 fundepPlugin :: TcPlugin
 fundepPlugin = TcPlugin
     { tcPluginInit = do
-        md <- lookupModule (mkModuleName "Polysemy.Internal.Union") (fsLit "polysemy")
+        md <- lookupModule polysemyInternalUnion (fsLit "polysemy")
         monadEffectTcNm <- lookupName md (mkTcOcc "Find")
         tcLookupClass monadEffectTcNm
     , tcPluginSolve = solveFundep

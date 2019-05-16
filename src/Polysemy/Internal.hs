@@ -31,6 +31,7 @@ import Polysemy.Internal.Effect
 import Polysemy.Internal.Fixpoint
 import Polysemy.Internal.Lift
 import Polysemy.Internal.NonDet
+import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
 
 
@@ -131,6 +132,13 @@ newtype Sem r a = Sem
         => (∀ x. Union r (Sem r) x -> m x)
         -> m a
   }
+
+
+------------------------------------------------------------------------------
+-- | Due to a quirk of the GHC plugin interface, it's only easy to find
+-- transitive dependencies if they define an orphan instance. This orphan
+-- instance allows us to find "Polysemy.Internal" in the polysemy-plugin.
+instance PluginLookup Plugin
 
 
 ------------------------------------------------------------------------------
