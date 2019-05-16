@@ -15,8 +15,8 @@ the module documentation for "Polysemy", we can write the following:
 
 @
 data FileSystem m a where
-  ReadFile :: 'FilePath' -> FileSystem 'String'
-  WriteFile :: 'FilePath' -> 'String' -> FileSystem ()
+  ReadFile :: 'FilePath' -> FileSystem m 'String'
+  WriteFile :: 'FilePath' -> 'String' -> FileSystem m ()
 'makeSem' ''FileSystem
 @
 
@@ -140,6 +140,7 @@ tyVarBndrKind (KindedTV _ k) = Just k
 -- | Generates a function type from the corresponding GADT type constructor
 -- @x :: Member (Effect e) r => a -> b -> c -> Sem r r@.
 genType :: Con -> Q (Type, Maybe Name, Maybe Type)
+genType (NormalC a b) = error $ show (a, b)
 genType (ForallC tyVarBindings conCtx con) = do
   (t, mn, _) <- genType con
   let k = do n <- mn
@@ -192,6 +193,7 @@ genSig con = do
   let
     getConName (ForallC _ _ c) = getConName c
     getConName (GadtC [n] _ _) = pure n
+    getConName (NormalC n _)   = pure n
     getConName c = fail $ "failed to get GADT name from " ++ show c
   conName <- getConName con
   (t, _, k) <- genType con
