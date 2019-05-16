@@ -120,7 +120,9 @@ import Plugins    (Plugin (..), defaultPlugin
 plugin :: Plugin
 plugin = defaultPlugin
     { tcPlugin = const $ Just fundepPlugin
-    , installCoreToDos = \_ todos -> installTodos todos
+#if __GLASGOW_HASKELL__ >= 810
+    , installCoreToDos = const installTodos
+#endif
 #if __GLASGOW_HASKELL__ >= 806
     , pluginRecompile = const $ pure NoForceRecompile
 #endif
