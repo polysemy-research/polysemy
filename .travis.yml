@@ -35,7 +35,7 @@ install:
  - ./.travis/install-stack.sh
 
 script:
- - echo "$(stack ghc -- --version) [$(stack ghc -- --print-project-git-commit-id 2> /dev/null || echo '?')]"
+ - echo "$($STACK ghc -- --version) [$($STACK ghc -- --print-project-git-commit-id 2> /dev/null || echo '?')]"
  - GHC_OPTIONS="-Werror"
  - |
    set -ex
