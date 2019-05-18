@@ -16,7 +16,7 @@ matrix:
     addons: {apt: {packages: [libgmp-dev]}}
 
     # nightly
-  - env: STACK='stack --resolver=nightly'
+  - env: STACK='stack --resolver=nightly' CACHE_NAME=nightly
     addons: {apt: {packages: [libgmp-dev]}}
 
     # Use the resolver in stack.yaml
