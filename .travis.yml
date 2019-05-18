@@ -15,6 +15,10 @@ matrix:
   - env: STACK='stack --resolver=lts-13.0' CACHE_NAME=8.6.3
     addons: {apt: {packages: [libgmp-dev]}}
 
+    # nightly
+  - env: STACK='stack --resolver=nightly'
+    addons: {apt: {packages: [libgmp-dev]}}
+
     # Use the resolver in stack.yaml
   - env: STACK=stack CACHE_NAME=stack-linux
     addons: {apt: {packages: [libgmp-dev]}}
