@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5083f650624e23b69f32959147328d1059db99da44a999e30f1a3effd286c3c4
+-- hash: 636a71a55069d695c2cd1817011316cd69fb6c519741a019269b0989b46eb83b
 
 name:           polysemy
 version:        0.1.2.0
@@ -71,11 +71,11 @@ library
   ghc-options: -O2 -Wall
   build-depends:
       base >=4.7 && <5
-    , mtl
-    , random
-    , syb
-    , template-haskell
-    , transformers
+    , mtl >=2.2.2 && <3
+    , random >=1.1 && <1.2
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.14.0.0 && <2.15
+    , transformers >=0.5.5.0 && <0.6
   if flag(dump-core)
     ghc-options: -fplugin=DumpCore -fplugin-opt DumpCore:core-html
     build-depends:
@@ -97,14 +97,14 @@ test-suite polysemy-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
-    , hspec
-    , inspection-testing
-    , mtl
+    , hspec >=2.6.0 && <3
+    , inspection-testing >=0.4.1.1 && <0.5
+    , mtl >=2.2.2 && <3
     , polysemy
-    , random
-    , syb
-    , template-haskell
-    , transformers
+    , random >=1.1 && <1.2
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.14.0.0 && <2.15
+    , transformers >=0.5.5.0 && <0.6
   default-language: Haskell2010
 
 benchmark polysemy-bench
@@ -123,8 +123,8 @@ benchmark polysemy-bench
     , freer-simple
     , mtl
     , polysemy
-    , random
-    , syb
-    , template-haskell
-    , transformers
+    , random >=1.1 && <1.2
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.14.0.0 && <2.15
+    , transformers >=0.5.5.0 && <0.6
   default-language: Haskell2010

@@ -1,5 +1,12 @@
 # Changelog for polysemy
 
+## 0.1.2.1 (2019-05-18)
+
+- Give explicit package bounds for dependencies
+- Haddock improvements
+- Remove `Typeable` machinery from `Polysemy.Internal.Union` (thanks to
+    @googleson78)
+
 ## 0.1.2.0 (2019-04-26)
 
 - `runInputAsReader`, `runTraceAsOutput` and `runOutputAsWriter` have more

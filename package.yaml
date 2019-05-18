@@ -1,5 +1,5 @@
 name:                polysemy
-version:             0.1.2.0
+version:             0.1.2.1
 github:              "isovector/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -17,11 +17,11 @@ description:         Please see the README on GitHub at <https://github.com/isov
 
 dependencies:
 - base >= 4.7 && < 5
-- transformers
-- mtl
-- template-haskell
-- syb
-- random
+- transformers >= 0.5.5.0 && < 0.6
+- mtl >= 2.2.2 && <3
+- template-haskell >= 2.14.0.0 && <2.15
+- syb >= 0.7 && <0.8
+- random >= 1.1 && <1.2
 
 default-extensions:
   - DataKinds
@@ -75,8 +75,8 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - polysemy
-    - inspection-testing
-    - hspec
+    - inspection-testing >= 0.4.1.1 && < 0.5
+    - hspec >= 2.6.0 && < 3
 
 benchmarks:
   polysemy-bench:
