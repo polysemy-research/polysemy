@@ -51,7 +51,8 @@ type AmbigousEffectMessage r e t vs =
     ':$$: 'Text "  add a type application to specify"
     ':$$: 'Text "    "
     ':<>: PrettyPrint vs
-    ':<>: 'Text " directly"
+    ':<>: 'Text " directly, or activate polysemy-plugin which"
+    ':$$: 'Text "      can usually infer the type correctly."
         )
 
 type family PrettyPrint (vs :: [k]) where
