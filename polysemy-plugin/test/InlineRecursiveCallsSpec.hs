@@ -18,7 +18,10 @@ import           Test.Inspection
 spec :: Spec
 spec = describe "inlining recursive calls" $ do
   it "should explicitly break recursion" $ do
-    shouldSucceed $(inspectTest $ 'recursive === 'mutual)
+    -- TODO(sandy): This should use (===) instead of (==-), but can't due to
+    -- a bug in inspection-testing. See:
+    -- https://github.com/nomeata/inspection-testing/pull/19
+    shouldSucceed $(inspectTest $ 'recursive ==- 'mutual)
 
 
 isSuccess :: Result -> Bool

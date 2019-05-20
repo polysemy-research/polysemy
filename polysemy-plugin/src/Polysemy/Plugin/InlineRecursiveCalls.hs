@@ -77,6 +77,8 @@ loopbreaker n b = do
        ]
 
 
+-- TODO(sandy): Make this only break loops in functions whose type ends in `Sem
+-- * * -> Sem * *` for wildcards `*`
 loopbreakBinds
     :: Bind CoreBndr
     -> CoreSupplyM (Bind CoreBndr)
