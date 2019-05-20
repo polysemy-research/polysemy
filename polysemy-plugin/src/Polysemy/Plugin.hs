@@ -97,7 +97,8 @@ installTodos todos = do
   dflags <- getDynFlags
 
   case optLevel dflags of
-    2 -> do
+    0 -> pure todos
+    _ -> do
       mods <- moduleSetElts <$> getVisibleOrphanMods
       pure $ case any ((== polysemyInternal) . moduleName) mods of
         True  -> CoreDoPluginPass "Inline Recursive Calls" inlineRecursiveCalls
@@ -106,6 +107,5 @@ installTodos todos = do
               ++ extraPhases dflags
 #endif
         False -> todos
-    _ -> pure todos
 
 
