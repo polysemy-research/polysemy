@@ -65,7 +65,8 @@ replace n n' = everywhere $ mkT go
 loopbreaker :: CoreBndr -> CoreExpr -> CoreSupplyM [(Var, CoreExpr)]
 loopbreaker n b = do
   u <- getUniq
-  let info' = setInlinePragInfo (idInfo n) alwaysInlinePragma
+  let Just info = zapUsageInfo $ idInfo n
+      info' = setInlinePragInfo info alwaysInlinePragma
       n' = mkLocalVar
              (idDetails n)
              (mkInternalName u (occName n) noSrcSpan)

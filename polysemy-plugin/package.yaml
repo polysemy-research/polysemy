@@ -35,10 +35,12 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -fplugin=Polysemy.Plugin
+    - -O2
     dependencies:
     - polysemy-plugin
     - hspec >= 2.6.0 && < 3
     - should-not-typecheck >= 2.1.0 && < 3
+    - inspection-testing >= 0.4.1.1 && < 0.5
 
 default-extensions:
   - DataKinds
