@@ -28,3 +28,10 @@
 
 ## Unreleased changes
 
+- **NEEDS MAJOR REVISION**: no longer require `inlineRecursiveCalls` --- the
+    plugin does it automatically when compiling with `-O2`
+- Deprecated `inlineRecursiveCalls`; slated for removal in the next version
+- **NEEDS MAJOR PLUGIN REVISION**: plugin now automatically inlines recursive
+    calls
+
+

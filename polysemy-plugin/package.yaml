@@ -20,6 +20,8 @@ dependencies:
 - ghc >= 8.6.3 && < 8.7
 - ghc-tcplugins-extra >= 0.3 && < 0.4
 - polysemy >= 0.1
+- syb >= 0.7 && <0.8
+- transformers >= 0.5.5.0 && < 0.6
 
 library:
   source-dirs: src
@@ -33,10 +35,12 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -fplugin=Polysemy.Plugin
+    - -O2
     dependencies:
     - polysemy-plugin
     - hspec >= 2.6.0 && < 3
     - should-not-typecheck >= 2.1.0 && < 3
+    - inspection-testing >= 0.4.1.1 && < 0.5
 
 default-extensions:
   - DataKinds

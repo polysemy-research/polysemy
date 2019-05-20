@@ -88,9 +88,6 @@ module Polysemy
   , reinterpret2H
   , reinterpret3H
 
-    -- * Improving Performance for Interpreters
-  , inlineRecursiveCalls
-
     -- * Composing IO-based Interpreters
   , (.@)
   , (.@@)
@@ -119,6 +116,7 @@ module Polysemy
   , runSemantic
   , makeSemantic
   , makeSemantic_
+  , inlineRecursiveCalls
   ) where
 
 import Polysemy.Internal
