@@ -311,6 +311,11 @@ runM (Sem m) = m $ \z ->
 --
 -- The parentheses here are important; without them you'll run into operator
 -- precedence errors.
+--
+-- __Warning:__ This combinator will __duplicate work__ that is intended to be
+-- just for initialization. This can result in rather surprising behavior. For
+-- a version of '.@' that won't duplicate work, see the @.\@!@ operator in
+-- <http://hackage.haskell.org/package/polysemy-zoo/docs/Polysemy-IdempotentLowering.html polysemy-zoo>.
 (.@)
     :: Monad m
     => (∀ x. Sem r x -> m x)
@@ -321,7 +326,7 @@ runM (Sem m) = m $ \z ->
     -> Sem (e ': r) z
     -> m z
 f .@ g = f . g f
-infixl 9 .@
+infixl 8 .@
 
 
 ------------------------------------------------------------------------------
@@ -337,5 +342,5 @@ infixl 9 .@
     -> Sem (e ': r) z
     -> m (f z)
 f .@@ g = f . g f
-infixl 9 .@@
+infixl 8 .@@
 

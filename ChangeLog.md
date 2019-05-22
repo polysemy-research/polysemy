@@ -33,5 +33,6 @@
 - Deprecated `inlineRecursiveCalls`; slated for removal in the next version
 - **NEEDS MAJOR PLUGIN REVISION**: plugin now automatically inlines recursive
     calls
+- Lower precedence of `.@` and `.@@` to 8, from 9
 
 
