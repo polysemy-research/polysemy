@@ -50,7 +50,7 @@ flags:
     manual:      True
 
 library:
-  ghc-options: -O2 -Wall
+  ghc-options: -Wall
   source-dirs: src
   other-modules: Polysemy.Internal.PluginLookup
 
