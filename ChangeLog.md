@@ -1,5 +1,11 @@
 # Changelog for polysemy
 
+## 0.2.0.0 (2019-05-23)
+
+- Fixed a serious bug in `interpretH` and friends, where higher-order effects
+    would always be run with the current interpreter.
+- Lower precedence of `.@` and `.@@` to 8, from 9
+
 ## 0.1.2.1 (2019-05-18)
 
 - Give explicit package bounds for dependencies
@@ -33,6 +39,5 @@
 - Deprecated `inlineRecursiveCalls`; slated for removal in the next version
 - **NEEDS MAJOR PLUGIN REVISION**: plugin now automatically inlines recursive
     calls
-- Lower precedence of `.@` and `.@@` to 8, from 9
 
 
