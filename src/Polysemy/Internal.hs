@@ -257,7 +257,7 @@ raise_b = raise
 
 
 ------------------------------------------------------------------------------
--- | Like 'raise', but introduces a new effect uunderneath the head of the
+-- | Like 'raise', but introduces a new effect underneath the head of the
 -- list.
 raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = hoistSem $ hoist raiseUnder_b . weakenUnder
@@ -270,7 +270,7 @@ raiseUnder_b = raiseUnder
 
 
 ------------------------------------------------------------------------------
--- | Like 'raise', but introduces two new effects uunderneath the head of the
+-- | Like 'raise', but introduces two new effects underneath the head of the
 -- list.
 raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
 raiseUnder2 = hoistSem $ hoist raiseUnder2_b . weakenUnder2
@@ -283,7 +283,7 @@ raiseUnder2_b = raiseUnder2
 
 
 ------------------------------------------------------------------------------
--- | Like 'raise', but introduces two new effects uunderneath the head of the
+-- | Like 'raise', but introduces two new effects underneath the head of the
 -- list.
 raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
 raiseUnder3 = hoistSem $ hoist raiseUnder3_b . weakenUnder3
