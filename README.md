@@ -130,7 +130,6 @@ Resource effect:
 {-# LANGUAGE LambdaCase, BlockArguments #-}
 {-# LANGUAGE GADTs, FlexibleContexts, TypeOperators, DataKinds, PolyKinds, TypeApplications #-}
 
-import Prelude hiding (throw, catch, bracket)
 import Polysemy
 import Polysemy.Input
 import Polysemy.Output
