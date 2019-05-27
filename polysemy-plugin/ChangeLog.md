@@ -1,5 +1,11 @@
 # Changelog for polysemy-plugin
 
+## 0.2.1.0 (2019-05-27)
+
+- Fixed a bug in the `Alternative` instance for `Sem`, where it would choose the
+    *last* success instead of the first
+- Added `MonadPlus` and `MonadFail` instances for `Sem`
+
 ## 0.2.0.0 (2019-05-23)
 
 - Fixed a serious bug where the changes from 0.1.0.1 broke most real-world

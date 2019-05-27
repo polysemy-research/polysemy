@@ -59,7 +59,7 @@ Or by adding `-fplugin=Polysemy.Plugin` to your package.yaml/.cabal file `ghc-op
 
 
 <sup><a name="fn1">1</a></sup>: Unfortunately this is not true in GHC 8.6.3, but
-will be true as soon as [my patch](https://gitlab.haskell.org/ghc/ghc/merge_requests/668/) lands.
+will be true in GHC 8.10.1.
 
 
 ## Examples

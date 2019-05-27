@@ -62,6 +62,6 @@ runNonDet (Sem m) = Sem $ \k -> runNonDetC $ m $ \u ->
       foldr cons nil z
     Right (Yo Empty _ _ _) -> empty
     Right (Yo (Choose ek) s _ y) -> do
-      z <- pure (ek True) <|> pure (ek False)
+      z <- pure (ek False) <|> pure (ek True)
       pure $ y $ z <$ s
 

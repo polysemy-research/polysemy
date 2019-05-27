@@ -27,6 +27,8 @@ module Polysemy.Internal
   ) where
 
 import Control.Applicative
+import Control.Monad
+import Control.Monad.Fail
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
@@ -215,6 +217,13 @@ instance (Member NonDet r) => Alternative (Sem r) where
       False -> a
       True  -> b
   {-# INLINE (<|>) #-}
+
+instance (Member NonDet r) => MonadPlus (Sem r) where
+  mzero = empty
+  mplus = (<|>)
+
+instance (Member NonDet r) => MonadFail (Sem r) where
+  fail = const empty
 
 
 ------------------------------------------------------------------------------
