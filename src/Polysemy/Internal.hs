@@ -218,10 +218,12 @@ instance (Member NonDet r) => Alternative (Sem r) where
       True  -> b
   {-# INLINE (<|>) #-}
 
+-- | @since 0.2.1.0
 instance (Member NonDet r) => MonadPlus (Sem r) where
   mzero = empty
   mplus = (<|>)
 
+-- | @since 0.2.1.0
 instance (Member NonDet r) => MonadFail (Sem r) where
   fail = const empty
 
