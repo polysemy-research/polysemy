@@ -10,6 +10,7 @@ module Polysemy.Error
 
     -- * Interpretations
   , runError
+  , runErrorAsAnother
   , runErrorInIO
   ) where
 
@@ -58,6 +59,34 @@ runError_b
     -> Sem r (Either e a)
 runError_b = runError
 {-# NOINLINE runError_b #-}
+
+
+------------------------------------------------------------------------------
+-- | Transform one 'Error' into another. This function can be used to aggregate
+-- multiple errors into a single type.
+--
+-- @since 0.2.2.0
+runErrorAsAnother
+  :: Member (Error e2) r
+  => (e1 -> e2)
+  -> Sem (Error e1 ': r) a
+  -> Sem r a
+runErrorAsAnother f = interpretH $ \case
+  Throw e -> throw $ f e
+  Catch action handler -> do
+    a  <- runT action
+    h  <- bindT handler
+
+    mx <- raise $ runError a
+    case mx of
+      Right x -> pure x
+      Left e -> do
+        istate <- getInitialStateT
+        mx' <- raise $ runError $ h $ e <$ istate
+        case mx' of
+          Right x -> pure x
+          Left e' -> throw $ f e'
+{-# INLINE runErrorAsAnother #-}
 
 
 newtype WrappedExc e = WrappedExc { unwrapExc :: e }

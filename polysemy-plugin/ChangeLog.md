@@ -22,5 +22,7 @@
 
 - Initial release
 
-
 ## Unreleased changes
+
+- Added `runErrorAsAnother`
+
