@@ -23,6 +23,7 @@ dependencies:
 - random >= 1.1 && <1.2
 - th-abstraction >= 0.3 && <= 0.4
 - containers >= 0.6 && <= 0.7
+- syb >= 0.7 && <= 0.8
 
 default-extensions:
   - DataKinds

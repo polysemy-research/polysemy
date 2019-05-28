@@ -1,9 +1,7 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TupleSections       #-}
-{-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 
 -- | This module provides Template Haskell functions for automatically generating
@@ -37,6 +35,8 @@ import Prelude hiding ((<>))
 import Control.Monad
 import Data.Bifunctor
 import Data.Char                      (toLower)
+import Data.Either
+import Data.Generics
 import Data.List
 import Language.Haskell.TH
 import Language.Haskell.TH.PprLib
@@ -47,6 +47,7 @@ import Polysemy.Internal.CustomErrors (DefiningModule)
 import qualified Data.Map.Strict as M
 
 -- TODO: update documentation based on other decisions
+-- TODO: write tests for what should (not) compile
 
 ------------------------------------------------------------------------------
 -- | If @T@ is a GADT representing an effect algebra, as described in the
@@ -83,151 +84,171 @@ makeSem_ = genFreer False
 -- | Generates declarations and possibly signatures for functions to lift GADT
 -- constructors into 'Sem' actions.
 genFreer :: Bool -> Name -> Q [Dec]
-genFreer shouldMkSigs typeName = do
-  dtInfo <- reifyDatatype typeName
-  -- TODO: data families seem to work just fine - should they be restricted?
-  clInfos  <- traverse (mkCLInfo dtInfo) $ datatypeCons dtInfo
-  defModFI <- TySynInstD ''DefiningModule
-          .   TySynEqn [ConT $ datatypeName dtInfo]
-          .   LitT
-          .   StrTyLit
-          .   loc_module
-          <$> location
-  sigs     <- if shouldMkSigs then traverse genSig clInfos
-                              else return []
-  decs     <- traverse genDec clInfos
+genFreer should_mk_sigs type_name = do
+  dt_info       <- reifyDatatype type_name
+  cl_infos      <- traverse (mkCLInfo dt_info) $ datatypeCons dt_info
+  tyfams_ext_on <- isExtEnabled TypeFamilies
+  def_mod_fi    <- sequence [ TySynInstD ''DefiningModule
+                                . TySynEqn [ConT $ datatypeName dt_info]
+                                . LitT
+                                . StrTyLit
+                                . loc_module
+                              <$> location
+                            | tyfams_ext_on
+                            ]
+  sigs          <- if should_mk_sigs
+                      then traverse genSig cl_infos
+                      else return []
+  decs          <- traverse genDec cl_infos
 
-  return $ defModFI : join (sigs:decs)
+  return $ join $ def_mod_fi : sigs : decs
+
+------------------------------------------------------------------------------
+-- | Generates signature for lifting function and type arguments to apply in
+-- it's body on effect's data constructor.
+genSig :: ConLiftInfo -> Q Dec
+genSig
+  (CLInfo
+    { cliTypeName
+    , cliFunName
+    , cliEffTArgs
+    , cliMName
+    , cliResArg
+    , cliConCxt
+    , cliConArgs
+    })
+  = do
+  r <- newName "r"
+  let member_cxt = ConT ''Member `AppT` eff `AppT` VarT r
+      eff        = foldl' AppT (ConT cliTypeName) cliEffTArgs
+      -- TODO: can use of 'm' blow up somehow?
+      f_args     = replaceMArg cliMName r cliConArgs
+      return_t   = ConT ''Sem `AppT` VarT r `AppT` cliResArg
+
+  return $ SigD cliFunName $ quantifyType $
+    ForallT [] (member_cxt : cliConCxt) $ foldArrows $ f_args ++ [return_t]
+
+------------------------------------------------------------------------------
+-- | Replaces use of @m@ in type with @Sem r@.
+replaceMArg :: TypeSubstitution t => Name -> Name -> t -> t
+replaceMArg m r = applySubstitution $ M.singleton m $ ConT ''Sem `AppT` VarT r
+
+------------------------------------------------------------------------------
+-- | Builds a function definition of the form @x a b c = send $ X a b c@.
+genDec :: ConLiftInfo -> Q [Dec]
+-- TODO: apply effect's type arguments to avoid "bad ambiguity"
+genDec (CLInfo { cliFunName, cliConName, cliConArgs }) = do
+  f_args_names <- replicateM (length cliConArgs) $ newName "x"
+
+  return
+    [ PragmaD $ InlineP cliFunName Inlinable ConLike AllPhases
+    , FunD cliFunName
+        [ Clause (VarP <$> f_args_names)
+                 (NormalB $ AppE (VarE 'send) $
+                   foldl1' AppE $ ConE cliConName : (VarE <$> f_args_names))
+                 []
+        ]
+    ]
 
 -------------------------------------------------------------------------------
 -- | Info about constructor being lifted; use 'mkCLInfo' to create one.
-data ConLiftInfo = CLInfo {
-    typeName :: Name
-  , funName  :: Name
-  , conName  :: Name
-  , effTArgs :: [Type]
-  , mName    :: Name
-  , resArg   :: Type
-  , conCxt   :: Cxt
-  , conArgs  :: [Type]
+data ConLiftInfo = CLInfo
+  { cliTypeName :: Name    -- ^ type constructor of effect
+  , cliFunName  :: Name    -- ^ final lifting function
+  , cliConName  :: Name    -- ^ data constructor being lifted
+  , cliEffTArgs :: [Type]  -- ^ effect specific arguments to type constructor
+  , cliMName    :: Name    -- ^ monad argument in effect
+  , cliResArg   :: Type    -- ^ result argument in effect
+  , cliConCxt   :: Cxt     -- ^ constraints introduced by constructor
+  , cliConArgs  :: [Type]  -- ^ constructor's arguments
   } deriving Show
 
 ------------------------------------------------------------------------------
 -- | Creates info about constructor being lifted from parent type's and it's
 -- own info.
 mkCLInfo :: DatatypeInfo -> ConstructorInfo -> Q ConLiftInfo
--- mkCLInfo dtInfo conInfo = do
-mkCLInfo DatatypeInfo {
-             datatypeName = typeName
-           , datatypeVars
-           , datatypeInstTypes
-           }
-         ConstructorInfo {
-             constructorName = conName
-           , constructorContext
-           , constructorFields
-           }
+mkCLInfo
+  (DatatypeInfo
+    { datatypeName = cliTypeName
+    , datatypeVars
+    , datatypeInstTypes
+    })
+  (ConstructorInfo
+    { constructorName = cliConName
+    , constructorContext
+    , constructorFields
+    })
   = do
-  let funName           = mapNameBase (mapHead toLower) conName
+  let cliFunName            = mapNameBase (mapHead toLower) cliConName
+      all_eff_t_args        = normalizeType <$> datatypeInstTypes
+      cliConArgs            = normalizeType <$> constructorFields
+      normalizeType         = removeTypeKind . applySubstitution eq_pairs
       -- We extract equality constraints with variables to unify them
-      -- manually - this makes type errors more readable
-      (eqPairs, conCxt) = first (M.fromList . maybeAddResKind)
-                        $ partitionWith eqPairOrCxt constructorContext
-      -- We constrain kind of result to 'Type' if we get a type variable
+      -- manually - this makes type errors more readable. Plus we replace
+      -- kind of result with 'Type' if it is a type variable.
+      (eq_pairs, cliConCxt) = first (M.fromList . maybeAddResKind)
+                            $ partitionEithers
+                            $ eqPairOrCxt <$> constructorContext
       -- TODO: we probably want to add requirement for KindSignatures into
       -- documentation - PolyKinds are already mentioned...
-      -- TODO: This makes function signatures ugly - what is the best way to
-      -- restrict occurence of kind signature or completely remove it?
       -- TODO: take result type by name or position?
-      maybeAddResKind   = maybe id ((:) . (, StarT))
-                        $ tvName' $ tvKind $ last datatypeVars
-      allEffTArgs       = applySubstitution eqPairs datatypeInstTypes
-      conArgs           = applySubstitution eqPairs constructorFields
+      maybeAddResKind       = maybe id (\k ps -> (k, StarT) : ps)
+                            $ tVarName $ tvKind $ last datatypeVars
 
-  (effTArgs, [mArg, resArg]) <- case splitFromEnd 2 allEffTArgs of
+  (cliEffTArgs, [m_arg, cliResArg]) <-
+    case splitFromEnd 2 all_eff_t_args of
       r@(_, [_, _]) -> return r
-      _             -> fail $ show $ missingEffTArgs typeName
-  mName <-
-    -- May happen when used on data families
-    maybe (fail $ show $ mArgNotVar typeName mArg) return $ tvName' mArg
+      _             -> fail $ show $ missingEffTArgs cliTypeName
 
-  return CLInfo {
-    typeName, funName, conName, effTArgs, mName, resArg, conCxt, conArgs
-    }
-  where
-    mArgNotVar name mArg
-      =   text "Monad argument ‘" <> ppr mArg <> text "’ in effect ‘"
-          <> ppr name <> text "’ is not a type variable"
+                    -- May happen when used on data families
+  cliMName <- maybe (fail $ show $ mArgNotVar cliTypeName m_arg)
+                    return
+                    (tVarName m_arg)
 
-    missingEffTArgs name
-      =   text "Effect ‘" <> ppr name
-          <> text "’ has not enough type arguments"
+  return CLInfo { cliTypeName
+                , cliFunName
+                , cliConName
+                , cliEffTArgs
+                , cliMName
+                , cliResArg
+                , cliConCxt
+                , cliConArgs
+                }
+
+------------------------------------------------------------------------------
+-- Error messages
+
+mArgNotVar :: Name -> Type -> Doc
+mArgNotVar name mArg
+  =  text "Monad argument ‘" <> ppr mArg <> text "’ in effect ‘"
+  <> ppr name <> text "’ is not a type variable"
+
+missingEffTArgs :: Name -> Doc
+missingEffTArgs name
+  | base <- mapNameBase id name
+  , args <- PlainTV . mkName <$> ["m", "a"]
+
+  =   text "Effect ‘" <> ppr name
+      <> text "’ has not enough type arguments"
+  $+$ nest 4
+      (   text "At least monad and result argument are required, e.g.:"
       $+$ nest 4
-          (   text "At least monad and result argument are required, e.g.:"
-          $+$ nest 4
-              (   text ""
-              $+$ ppr (DataD [] base args Nothing [] []) <+> text "..."
-              $+$ text ""
-              )
+          (   text ""
+          $+$ ppr (DataD [] base args Nothing [] []) <+> text "..."
+          $+$ text ""
           )
-      where
-        base = mapNameBase id name
-        args = PlainTV . mkName <$> ["m", "a"]
+      )
 
 ------------------------------------------------------------------------------
--- | Generates signature for lifting function and type arguments to apply in
--- it's body on effect's data constructor.
-genSig :: ConLiftInfo -> Q Dec
-genSig CLInfo {
-    typeName, funName, effTArgs, mName, resArg, conCxt, conArgs
-  } = do
-  r <- newName "r"
-  let memberCxt  = ConT ''Member `AppT` eff `AppT` VarT r
-      eff        = foldl' AppT (ConT typeName) effTArgs
-      -- TODO: can use of 'm' blow up somehow?
-      funArgs    = replaceMArg mName r conArgs
-      returnType = ConT ''Sem `AppT` VarT r `AppT` resArg
-
-  return $ SigD funName $ quantifyType $
-    ForallT [] (memberCxt : conCxt) $ foldArrows $ funArgs ++ [returnType]
-
-  where
-    -- Replaces use of @m@ in type with @Sem r@.
-    replaceMArg m r = applySubstitution
-                    $ M.singleton m (ConT ''Sem `AppT` VarT r)
-
-------------------------------------------------------------------------------
--- | Builds a function definition of the form @x a b c = send $ X a b c@.
-genDec :: ConLiftInfo -> Q [Dec]
--- TODO: apply effect's type arguments to avoid "bad ambiguity"
-genDec CLInfo { funName, conName, conArgs } = do
-  funArgsNames <- replicateM (length conArgs) $ newName "x"
-
-  return [
-      PragmaD $ InlineP funName Inlinable ConLike AllPhases
-    , FunD funName [
-        Clause (VarP <$> funArgsNames)
-               (NormalB $ AppE (VarE 'send) $
-                 foldl1 AppE $ ConE conName : fmap VarE funArgsNames)
-               []
-      ]
-    ]
-
-------------------------------------------------------------------------------
--- | Folds a list of 'Type's into a right-associative arrow 'Type'.
-foldArrows :: [Type] -> Type
-foldArrows = foldr1 $ AppT . AppT ArrowT
-
-------------------------------------------------------------------------------
--- | Extracts name from type variable (possibly nested in signature and/or
--- some context), returns 'Nothing' otherwise.
-tvName' :: Type -> Maybe Name
-tvName' = \case
-  ForallT _ _ t -> tvName' t
-  SigT t _      -> tvName' t
-  VarT n        -> Just n
-  ParensT t     -> tvName' t
-  _             -> Nothing
+-- Removes 'Type' kind signatures from type
+removeTypeKind :: Type -> Type
+removeTypeKind = everywhere $ mkT $ \case
+  SigT t StarT    -> t
+  ForallT bs cs t -> ForallT (goBndr <$> bs) cs t
+    where
+      goBndr (KindedTV n StarT) = PlainTV n
+      goBndr b                  = b
+  t               -> t
 
 ------------------------------------------------------------------------------
 -- | Converts equality constraint with type variable to name and type pair or
@@ -239,6 +260,22 @@ eqPairOrCxt p = case asEqualPred p of
   _                -> Right p
 
 ------------------------------------------------------------------------------
+-- | Folds a list of 'Type's into a right-associative arrow 'Type'.
+foldArrows :: [Type] -> Type
+foldArrows = foldr1 $ AppT . AppT ArrowT
+
+------------------------------------------------------------------------------
+-- | Extracts name from type variable (possibly nested in signature and/or
+-- some context), returns 'Nothing' otherwise.
+tVarName :: Type -> Maybe Name
+tVarName = \case
+  ForallT _ _ t -> tVarName t
+  SigT t _      -> tVarName t
+  VarT n        -> Just n
+  ParensT t     -> tVarName t
+  _             -> Nothing
+
+------------------------------------------------------------------------------
 -- | Constructs name from base of input name with function applied
 mapNameBase :: (String -> String) -> Name -> Name
 mapNameBase f = mkName . f . nameBase
@@ -247,16 +284,13 @@ mapNameBase f = mkName . f . nameBase
 -- TODO: separate into some module for general utilities (or find them in
 -- available dependencies)
 
-partitionWith :: (a -> Either b c) -> [a] -> ([b], [c])
-partitionWith f = foldl' choose ([], []) where
-  choose = flip $ either (first . (:)) (second . (:)) . f
-
 splitFromEnd :: Int -> [a] -> ([a], [a])
-splitFromEnd n lst = go lst $ drop n lst where
-  go xs     []     = ([], xs)
-  go (x:xs) (_:ys) = first (x:) $ go xs ys
-
-  go []     (_:_)  = undefined
+splitFromEnd n lst = go lst $ drop n lst
+  where
+    go xs     []     = ([], xs)
+    go (x:xs) (_:ys) = first (x:) $ go xs ys
+    go []     (_:_)  = error
+      "splitFromEnd: list with dropped elements is longer"
 
 mapHead :: (a -> a) -> [a] -> [a]
 mapHead _ []     = []
