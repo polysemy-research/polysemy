@@ -88,9 +88,10 @@ canUnify wanted given =
   let (w, ws) = splitAppTys wanted
       (g, gs) = splitAppTys given
    in (&& eqType w g) . flip all (zip ws gs) $ \(wt, gt) ->
-        if isTyVarTy gt
-           then isTyVarTy wt
-           else True
+     or [ isTyVarTy wt
+        , eqType gt wt
+        ]
+
 
 
 mkWanted :: Bool -> CtLoc -> Type -> Type -> TcPluginM (Maybe Ct)
