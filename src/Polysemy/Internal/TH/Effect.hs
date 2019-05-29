@@ -84,10 +84,8 @@ makeSem = genFreer True
 -- * 'makeSem_' must be used /before/ the explicit type signatures
 -- * signatures have to specify argument of 'Sem' representing union of
 -- effects as @r@ (e.g. @'Sem' r ()@)
--- * all arguments in effect's type constructor that are type variables in
--- action's signature have to use the same names as in type constructor; if
--- they became more specific, they should use names from constructor's
--- signature. E.g.:
+-- * all arguments in effect's type constructor have to follow naming scheme
+-- from effect's declaration:
 --
 -- @
 -- data Foo e m a where
