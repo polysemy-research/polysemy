@@ -43,3 +43,7 @@
 
 ## Unreleased changes
 
+- A complete rewrite of `Polysemy.Internal.TH.Effect` (thanks to @TheMatten)
+- Fixed a bug in the TH generation of effects where the splices could contain
+    usages of effects that were ambiguous
+
