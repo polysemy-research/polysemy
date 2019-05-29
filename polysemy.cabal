@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e7d506fb8346095c09f6efd4fec48a435a2e85513956419a807073dea1fe0274
+-- hash: d24941def9c13073c8c65e68d2cb76cddd1df3fad645148e5dfffa914a749250
 
 name:           polysemy
-version:        0.1.2.0
+version:        0.2.1.0
 synopsis:       Higher-order, low-boilerplate, zero-cost free monads.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
 category:       Language
@@ -64,18 +64,18 @@ library
       Polysemy.Trace
       Polysemy.Writer
   other-modules:
-      Paths_polysemy
+      Polysemy.Internal.PluginLookup
   hs-source-dirs:
       src
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
-  ghc-options: -O2 -Wall
+  ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
-    , mtl
-    , random
-    , syb
-    , template-haskell
-    , transformers
+    , mtl >=2.2.2 && <3
+    , random >=1.1 && <1.2
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.14.0.0 && <2.15
+    , transformers >=0.5.5.0 && <0.6
   if flag(dump-core)
     ghc-options: -fplugin=DumpCore -fplugin-opt DumpCore:core-html
     build-depends:
@@ -88,7 +88,9 @@ test-suite polysemy-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      AlternativeSpec
       FusionSpec
+      HigherOrderSpec
       OutputSpec
       Paths_polysemy
   hs-source-dirs:
@@ -97,14 +99,14 @@ test-suite polysemy-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
-    , hspec
-    , inspection-testing
-    , mtl
+    , hspec >=2.6.0 && <3
+    , inspection-testing >=0.4.1.1 && <0.5
+    , mtl >=2.2.2 && <3
     , polysemy
-    , random
-    , syb
-    , template-haskell
-    , transformers
+    , random >=1.1 && <1.2
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.14.0.0 && <2.15
+    , transformers >=0.5.5.0 && <0.6
   default-language: Haskell2010
 
 benchmark polysemy-bench
@@ -123,8 +125,8 @@ benchmark polysemy-bench
     , freer-simple
     , mtl
     , polysemy
-    , random
-    , syb
-    , template-haskell
-    , transformers
+    , random >=1.1 && <1.2
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.14.0.0 && <2.15
+    , transformers >=0.5.5.0 && <0.6
   default-language: Haskell2010

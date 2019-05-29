@@ -3,6 +3,7 @@
 {-# LANGUAGE MonoLocalBinds       #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
 module Polysemy.Internal
@@ -14,6 +15,9 @@ module Polysemy.Internal
   , run
   , runM
   , raise
+  , raiseUnder
+  , raiseUnder2
+  , raiseUnder3
   , Lift (..)
   , usingSem
   , liftSem
@@ -23,6 +27,8 @@ module Polysemy.Internal
   ) where
 
 import Control.Applicative
+import Control.Monad
+import Control.Monad.Fail
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
@@ -31,6 +37,7 @@ import Polysemy.Internal.Effect
 import Polysemy.Internal.Fixpoint
 import Polysemy.Internal.Lift
 import Polysemy.Internal.NonDet
+import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
 
 
@@ -134,6 +141,13 @@ newtype Sem r a = Sem
 
 
 ------------------------------------------------------------------------------
+-- | Due to a quirk of the GHC plugin interface, it's only easy to find
+-- transitive dependencies if they define an orphan instance. This orphan
+-- instance allows us to find "Polysemy.Internal" in the polysemy-plugin.
+instance PluginLookup Plugin
+
+
+------------------------------------------------------------------------------
 -- | Makes constraints of functions that use multiple effects shorter by
 -- translating single list of effects into multiple 'Member' constraints:
 --
@@ -204,6 +218,15 @@ instance (Member NonDet r) => Alternative (Sem r) where
       True  -> b
   {-# INLINE (<|>) #-}
 
+-- | @since 0.2.1.0
+instance (Member NonDet r) => MonadPlus (Sem r) where
+  mzero = empty
+  mplus = (<|>)
+
+-- | @since 0.2.1.0
+instance (Member NonDet r) => MonadFail (Sem r) where
+  fail = const empty
+
 
 ------------------------------------------------------------------------------
 -- | This instance will only lift 'IO' actions. If you want to lift into some
@@ -242,6 +265,45 @@ raise = hoistSem $ hoist raise_b . weaken
 raise_b :: Sem r a -> Sem (e ': r) a
 raise_b = raise
 {-# NOINLINE raise_b #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'raise', but introduces a new effect underneath the head of the
+-- list.
+raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
+raiseUnder = hoistSem $ hoist raiseUnder_b . weakenUnder
+{-# INLINE raiseUnder #-}
+
+
+raiseUnder_b :: Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
+raiseUnder_b = raiseUnder
+{-# NOINLINE raiseUnder_b #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'raise', but introduces two new effects underneath the head of the
+-- list.
+raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
+raiseUnder2 = hoistSem $ hoist raiseUnder2_b . weakenUnder2
+{-# INLINE raiseUnder2 #-}
+
+
+raiseUnder2_b :: Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
+raiseUnder2_b = raiseUnder2
+{-# NOINLINE raiseUnder2_b #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'raise', but introduces two new effects underneath the head of the
+-- list.
+raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
+raiseUnder3 = hoistSem $ hoist raiseUnder3_b . weakenUnder3
+{-# INLINE raiseUnder3 #-}
+
+
+raiseUnder3_b :: Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
+raiseUnder3_b = raiseUnder3
+{-# NOINLINE raiseUnder3_b #-}
 
 
 ------------------------------------------------------------------------------
@@ -302,6 +364,11 @@ runM (Sem m) = m $ \z ->
 --
 -- The parentheses here are important; without them you'll run into operator
 -- precedence errors.
+--
+-- __Warning:__ This combinator will __duplicate work__ that is intended to be
+-- just for initialization. This can result in rather surprising behavior. For
+-- a version of '.@' that won't duplicate work, see the @.\@!@ operator in
+-- <http://hackage.haskell.org/package/polysemy-zoo/docs/Polysemy-IdempotentLowering.html polysemy-zoo>.
 (.@)
     :: Monad m
     => (∀ x. Sem r x -> m x)

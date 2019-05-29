@@ -65,7 +65,7 @@ interpretH f (Sem m) = m $ \u ->
   case decomp u of
     Left  x -> liftSem $ hoist (interpretH_b f) x
     Right (Yo e s d y) -> do
-      a <- runTactics s (raise . interpretH_b f . d) (f e)
+      a <- runTactics s d (f e)
       pure $ y a
 {-# INLINE interpretH #-}
 
@@ -142,7 +142,7 @@ reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ hoist (reinterpretH_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSem k $ runTactics s (raise . reinterpretH_b f . d) $ f e
+      a <- usingSem k $ runTactics s (raiseUnder . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
@@ -177,7 +177,7 @@ reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ weaken $ hoist (reinterpret2H_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSem k $ runTactics s (raise . reinterpret2H_b f . d) $ f e
+      a <- usingSem k $ runTactics s (raiseUnder2 . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpret2H #-}
 
@@ -207,7 +207,7 @@ reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k . weaken . weaken . hoist (reinterpret3H_b f) $ x
     Right (Yo e s d y) -> do
-      a <- usingSem k $ runTactics s (raise . reinterpret3H_b f . d) $ f e
+      a <- usingSem k $ runTactics s (raiseUnder3 . d) $ f e
       pure $ y a
 {-# INLINE[3] reinterpret3H #-}
 
