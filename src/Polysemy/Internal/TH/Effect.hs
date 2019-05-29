@@ -52,15 +52,10 @@ import qualified Data.Map.Strict as M
 -- TODO: write tests for what should (not) compile
 
 ------------------------------------------------------------------------------
--- | If @T@ is a datatype representing an effect algebra, as described in the
+-- | If @T@ is a GADT representing an effect algebra, as described in the
 -- module documentation for "Polysemy", @$('makeSem' ''T)@ automatically
--- generates a smart constructor for every data constructor of @T@.
---
--- Datatype may be created with GADT syntax, traditional syntax and can be
--- normal @data@, @newtype@ or even @data@ (family) @instance@ --- as long as
--- it conforms to basic shape of effect algebra. In case of data family
--- instances, use some of the data constructor names in instance as argument
--- to 'makeSem', so that it can recognize specific one.
+-- generates a smart constructor for every data constructor of @T@. This also
+-- works for data family instances.
 --
 -- @since 0.1.2.0
 makeSem :: Name -> Q [Dec]
@@ -153,7 +148,7 @@ genFreer should_mk_sigs type_name = do
 
 ------------------------------------------------------------------------------
 -- | Generates signature for lifting function and type arguments to apply in
--- it's body on effect's data constructor.
+-- its body on effect's data constructor.
 genSig :: ConLiftInfo -> Dec
 genSig cli
   = SigD (cliFunName cli) $ quantifyType
@@ -229,7 +224,6 @@ mkCLInfo dti ci = do
       (eq_pairs, cliFunCxt) = first (M.fromList . maybeResKindToType)
                             $ partitionEithers
                             $ eqPairOrCxt <$> constructorContext ci
-      -- TODO: take result type by name or position?
       maybeResKindToType    = maybe id (\k ps -> (k, StarT) : ps)
                             $ tVarName $ tvKind $ last
                             $ datatypeVars dti
