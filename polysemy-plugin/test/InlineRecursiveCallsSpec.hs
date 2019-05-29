@@ -44,9 +44,11 @@ recursive f s (Sem m) = Sem $ \k ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ recursive f)
+            . weave (s', ())
+                    (uncurry $ recursive f)
+                    (Just . snd)
             $ x
-        Right (Yo e z _ y) ->
+        Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 
 
@@ -61,9 +63,11 @@ mutual f s (Sem m) = Sem $ \k ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ mutual2 f)
+            . weave (s', ())
+                    (uncurry $ mutual2 f)
+                    (Just . snd)
             $ x
-        Right (Yo e z _ y) ->
+        Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 {-# INLINE mutual #-}
 
