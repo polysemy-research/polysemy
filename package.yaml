@@ -20,8 +20,10 @@ dependencies:
 - transformers >= 0.5.5.0 && < 0.6
 - mtl >= 2.2.2 && <3
 - template-haskell >= 2.14.0.0 && <2.15
-- syb >= 0.7 && <0.8
 - random >= 1.1 && <1.2
+- th-abstraction >= 0.3 && <= 0.4
+- containers >= 0.6 && <= 0.7
+- syb >= 0.7 && <= 0.8
 
 default-extensions:
   - DataKinds
