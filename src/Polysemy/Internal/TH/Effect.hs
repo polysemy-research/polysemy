@@ -1,8 +1,9 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TupleSections       #-}
-{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE NamedFieldPuns  #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections   #-}
 
 -- | This module provides Template Haskell functions for automatically generating
 -- effect operation functions (that is, functions that use 'send') from a given
@@ -11,12 +12,13 @@
 --
 -- @
 -- data FileSystem m a where
---   ReadFile :: 'FilePath' -> FileSystem 'String'
+--   ReadFile  :: 'FilePath' -> FileSystem 'String'
 --   WriteFile :: 'FilePath' -> 'String' -> FileSystem ()
+--
 -- 'makeSem' ''FileSystem
 -- @
 --
--- This will automatically generate the following functions:
+-- This will automatically generate (approximately) the following functions:
 --
 -- @
 -- readFile :: 'Member' FileSystem r => 'FilePath' -> 'Sem' r 'String'
@@ -46,13 +48,18 @@ import Polysemy.Internal.CustomErrors (DefiningModule)
 
 import qualified Data.Map.Strict as M
 
--- TODO: update documentation based on other decisions
 -- TODO: write tests for what should (not) compile
 
 ------------------------------------------------------------------------------
--- | If @T@ is a GADT representing an effect algebra, as described in the
+-- | If @T@ is a datatype representing an effect algebra, as described in the
 -- module documentation for "Polysemy", @$('makeSem' ''T)@ automatically
 -- generates a smart constructor for every data constructor of @T@.
+--
+-- Datatype may be created with GADT syntax, traditional syntax and can be
+-- normal @data@, @newtype@ or even @data@ (family) @instance@ --- as long as
+-- it conforms to basic shape of effect algebra. In case of data family
+-- instances, use some of the data constructor names in instance as argument
+-- to 'makeSem', so that it can recognize specific one.
 --
 -- @since 0.1.2.0
 makeSem :: Name -> Q [Dec]
@@ -69,83 +76,94 @@ makeSem = genFreer True
 -- makeSem_ ''Lang
 --
 -- -- | Output a string.
--- output :: Member Lang r
---        => String         -- ^ String to output.
+-- output :: forall r
+--        .  Member Lang r
+--        => String    -- ^ String to output.
 --        -> Sem r ()  -- ^ No result.
 -- @
 --
--- Note that 'makeSem_' must be used /before/ the explicit type signatures.
+-- Because of limitations in Template Haskell, signatures have to follow some
+-- rules to work properly:
+--
+-- * 'makeSem_' must be used /before/ the explicit type signatures
+-- * signatures have to specify argument of 'Sem' representing union of
+-- effects as @r@ (e.g. @'Sem' r ()@)
+-- * all effect's type variables and @r@ have to be explicitly qualified using
+-- @forall@ (order is not important)
+--
+-- These restrictions may be removed in the future, depending on changes to
+-- the compiler.
 --
 -- @since 0.1.2.0
 makeSem_ :: Name -> Q [Dec]
 makeSem_ = genFreer False
+-- NOTE(makeSem_):
+-- This function uses an ugly hack to work --- it enables change of names in
+-- annotation of applied data constructor to capturable ones, based of names
+-- in effect's definition. This allows user to provide them to us from their
+-- signature through 'forall' with 'ScopedTypeVariables' enabled, so that we
+-- can compile liftings of constructors with ambiguous type arguments (see
+-- issue #48).
+--
+-- Please, change this as soon as GHC provides some way of inspecting
+-- signatures, replacing code or generating haddock documentation in TH.
 
 ------------------------------------------------------------------------------
 -- | Generates declarations and possibly signatures for functions to lift GADT
 -- constructors into 'Sem' actions.
 genFreer :: Bool -> Name -> Q [Dec]
 genFreer should_mk_sigs type_name = do
-  dt_info       <- reifyDatatype type_name
-  cl_infos      <- traverse (mkCLInfo dt_info) $ datatypeCons dt_info
-  tyfams_ext_on <- isExtEnabled TypeFamilies
-  def_mod_fi    <- sequence [ TySynInstD ''DefiningModule
-                                . TySynEqn [ConT $ datatypeName dt_info]
-                                . LitT
-                                . StrTyLit
-                                . loc_module
-                              <$> location
-                            | tyfams_ext_on
-                            ]
-  sigs          <- if should_mk_sigs
-                      then traverse genSig cl_infos
-                      else return []
-  decs          <- traverse genDec cl_infos
+  checkExtensions [ScopedTypeVariables, FlexibleContexts]
+  dt_info    <- reifyDatatype type_name
+  cl_infos   <- traverse (mkCLInfo dt_info) $ datatypeCons dt_info
+  tyfams_on  <- isExtEnabled TypeFamilies
+  def_mod_fi <- sequence [ TySynInstD ''DefiningModule
+                             . TySynEqn [ConT $ datatypeName dt_info]
+                             . LitT
+                             . StrTyLit
+                             . loc_module
+                           <$> location
+                         | tyfams_on
+                         ]
+  decs       <- traverse (genDec should_mk_sigs) cl_infos
 
-  return $ join $ def_mod_fi : sigs : decs
+  let sigs = [ genSig <$> cl_infos | should_mk_sigs ]
+
+  return $ join $ def_mod_fi : sigs ++ decs
 
 ------------------------------------------------------------------------------
 -- | Generates signature for lifting function and type arguments to apply in
 -- it's body on effect's data constructor.
-genSig :: ConLiftInfo -> Q Dec
-genSig
-  (CLInfo
-    { cliTypeName
-    , cliFunName
-    , cliEffTArgs
-    , cliMName
-    , cliResArg
-    , cliConCxt
-    , cliConArgs
-    })
-  = do
-  r <- newName "r"
-  let member_cxt = ConT ''Member `AppT` eff `AppT` VarT r
-      eff        = foldl' AppT (ConT cliTypeName) cliEffTArgs
-      -- TODO: can use of 'm' blow up somehow?
-      f_args     = replaceMArg cliMName r cliConArgs
-      return_t   = ConT ''Sem `AppT` VarT r `AppT` cliResArg
-
-  return $ SigD cliFunName $ quantifyType $
-    ForallT [] (member_cxt : cliConCxt) $ foldArrows $ f_args ++ [return_t]
+genSig :: ConLiftInfo -> Dec
+genSig cli
+  = SigD (cliFunName cli) $ quantifyType
+  $ ForallT [] (member_cxt : cliFunCxt cli)
+  $ foldArrows $ cliFunArgs cli ++ [sem `AppT` cliResType cli]
+  where
+    member_cxt = classPred ''Member [eff, VarT $ cliUnionName cli]
+    eff        = foldl' AppT (ConT $ cliEffName cli) $ cliEffArgs cli
+    sem        = ConT ''Sem `AppT` VarT (cliUnionName cli)
 
 ------------------------------------------------------------------------------
--- | Replaces use of @m@ in type with @Sem r@.
-replaceMArg :: TypeSubstitution t => Name -> Name -> t -> t
-replaceMArg m r = applySubstitution $ M.singleton m $ ConT ''Sem `AppT` VarT r
+-- | Builds a function definition of the form
+-- @x a b c = send (X a b c :: E m a)@.
+genDec :: Bool -> ConLiftInfo -> Q [Dec]
+genDec should_mk_sigs cli = do
+  fun_args_names <- replicateM (length $ cliFunArgs cli) $ newName "x"
 
-------------------------------------------------------------------------------
--- | Builds a function definition of the form @x a b c = send $ X a b c@.
-genDec :: ConLiftInfo -> Q [Dec]
--- TODO: apply effect's type arguments to avoid "bad ambiguity"
-genDec (CLInfo { cliFunName, cliConName, cliConArgs }) = do
-  f_args_names <- replicateM (length cliConArgs) $ newName "x"
+  let action = foldl1' AppE
+             $ ConE (cliConName cli) : (VarE <$> fun_args_names)
+      eff    = foldl' AppT (ConT $ cliEffName cli) $ args
+               -- see NOTE(makeSem_)
+      args   = (if should_mk_sigs then id else map capturableTVars)
+             $ cliEffArgs cli ++ [sem, cliResType cli]
+      sem    = ConT ''Sem `AppT` VarT (cliUnionName cli)
 
   return
-    [ PragmaD $ InlineP cliFunName Inlinable ConLike AllPhases
-    , FunD cliFunName
-        [ Clause (VarP <$> f_args_names)
-                 (NormalB $ AppE (VarE 'send) $
-                   foldl1' AppE $ ConE cliConName : (VarE <$> f_args_names))
+    [ PragmaD $ InlineP (cliFunName cli) Inlinable ConLike AllPhases
+    , FunD (cliFunName cli)
+        [ Clause (VarP <$> fun_args_names)
+                 (NormalB $ AppE (VarE 'send) $ SigE action eff)
                  []
         ]
     ]
@@ -153,82 +171,69 @@ genDec (CLInfo { cliFunName, cliConName, cliConArgs }) = do
 -------------------------------------------------------------------------------
 -- | Info about constructor being lifted; use 'mkCLInfo' to create one.
 data ConLiftInfo = CLInfo
-  { cliTypeName :: Name    -- ^ type constructor of effect
-  , cliFunName  :: Name    -- ^ final lifting function
-  , cliConName  :: Name    -- ^ data constructor being lifted
-  , cliEffTArgs :: [Type]  -- ^ effect specific arguments to type constructor
-  , cliMName    :: Name    -- ^ monad argument in effect
-  , cliResArg   :: Type    -- ^ result argument in effect
-  , cliConCxt   :: Cxt     -- ^ constraints introduced by constructor
-  , cliConArgs  :: [Type]  -- ^ constructor's arguments
+  { cliEffName   :: Name    -- ^ name of effect's type constructor
+  , cliEffArgs   :: [Type]  -- ^ effect specific type arguments
+  , cliResType   :: Type    -- ^ result type specific to action
+  , cliConName   :: Name    -- ^ name of action constructor
+  , cliFunName   :: Name    -- ^ name of final function
+  , cliFunArgs   :: [Type]  -- ^ final function arguments
+  , cliFunCxt    :: Cxt     -- ^ constraints of final function
+  , cliUnionName :: Name    -- ^ name of type variable parameterizing 'Sem'
   } deriving Show
 
 ------------------------------------------------------------------------------
--- | Creates info about constructor being lifted from parent type's and it's
--- own info.
+-- | Creates info about smart constructor being created from info about action
+-- and it's parent type.
 mkCLInfo :: DatatypeInfo -> ConstructorInfo -> Q ConLiftInfo
-mkCLInfo
-  (DatatypeInfo
-    { datatypeName = cliTypeName
-    , datatypeVars
-    , datatypeInstTypes
-    })
-  (ConstructorInfo
-    { constructorName = cliConName
-    , constructorContext
-    , constructorFields
-    })
-  = do
-  let cliFunName            = mapNameBase (mapHead toLower) cliConName
-      all_eff_t_args        = normalizeType <$> datatypeInstTypes
-      cliConArgs            = normalizeType <$> constructorFields
-      normalizeType         = removeTypeKind . applySubstitution eq_pairs
+mkCLInfo dti ci = do
+  let cliEffName            = datatypeName dti
+
+  (raw_cli_eff_args, [m_arg, raw_cli_res_arg]) <-
+    case splitFromEnd 2 $ datatypeInstTypes dti of
+      r@(_, [_, _]) -> return r
+      _             -> missingEffTArgs cliEffName
+
+  m_name <-
+    case tVarName m_arg of
+      Just r        -> return r
+      Nothing       -> mArgNotVar cliEffName m_arg
+
+  cliUnionName <- newName "r"
+
+  let normalizeType         = replaceMArg m_name cliUnionName
+                            . simplifyKinds
+                            . applySubstitution eq_pairs
       -- We extract equality constraints with variables to unify them
       -- manually - this makes type errors more readable. Plus we replace
       -- kind of result with 'Type' if it is a type variable.
-      (eq_pairs, cliConCxt) = first (M.fromList . maybeAddResKind)
+      (eq_pairs, cliFunCxt) = first (M.fromList . maybeResKindToType)
                             $ partitionEithers
-                            $ eqPairOrCxt <$> constructorContext
-      -- TODO: we probably want to add requirement for KindSignatures into
-      -- documentation - PolyKinds are already mentioned...
+                            $ eqPairOrCxt <$> constructorContext ci
       -- TODO: take result type by name or position?
-      maybeAddResKind       = maybe id (\k ps -> (k, StarT) : ps)
-                            $ tVarName $ tvKind $ last datatypeVars
+      maybeResKindToType    = maybe id (\k ps -> (k, StarT) : ps)
+                            $ tVarName $ tvKind $ last
+                            $ datatypeVars dti
 
-  (cliEffTArgs, [m_arg, cliResArg]) <-
-    case splitFromEnd 2 all_eff_t_args of
-      r@(_, [_, _]) -> return r
-      _             -> fail $ show $ missingEffTArgs cliTypeName
+      cliEffArgs            = normalizeType <$> raw_cli_eff_args
+      cliResType            = normalizeType     raw_cli_res_arg
+      cliConName            = constructorName ci
+      cliFunName            = mapNameBase (mapHead toLower)
+                            $ constructorName ci
+      cliFunArgs            = normalizeType <$> constructorFields ci
 
-                    -- May happen when used on data families
-  cliMName <- maybe (fail $ show $ mArgNotVar cliTypeName m_arg)
-                    return
-                    (tVarName m_arg)
-
-  return CLInfo { cliTypeName
-                , cliFunName
-                , cliConName
-                , cliEffTArgs
-                , cliMName
-                , cliResArg
-                , cliConCxt
-                , cliConArgs
-                }
+  return CLInfo{..}
 
 ------------------------------------------------------------------------------
--- Error messages
+-- Error messages and checks
 
-mArgNotVar :: Name -> Type -> Doc
-mArgNotVar name mArg
-  =  text "Monad argument ‘" <> ppr mArg <> text "’ in effect ‘"
+mArgNotVar :: Name -> Type -> Q a
+mArgNotVar name mArg = fail $ show
+  $  text "Monad argument ‘" <> ppr mArg <> text "’ in effect ‘"
   <> ppr name <> text "’ is not a type variable"
 
-missingEffTArgs :: Name -> Doc
-missingEffTArgs name
-  | base <- mapNameBase id name
-  , args <- PlainTV . mkName <$> ["m", "a"]
-
-  =   text "Effect ‘" <> ppr name
+missingEffTArgs :: Name -> Q a
+missingEffTArgs name = fail $ show
+  $   text "Effect ‘" <> ppr name
       <> text "’ has not enough type arguments"
   $+$ nest 4
       (   text "At least monad and result argument are required, e.g.:"
@@ -238,21 +243,53 @@ missingEffTArgs name
           $+$ text ""
           )
       )
+  where
+    base = mapNameBase id name
+    args = PlainTV . mkName <$> ["m", "a"]
+
+checkExtensions :: [Extension] -> Q ()
+checkExtensions exts = do
+  states <- zip exts <$> traverse isExtEnabled exts
+  maybe (return ())
+        (\(ext, _) -> fail $ show
+          $ char '‘' <> text (show ext) <> char '’'
+            <+> text "extension needs to be enabled\
+                     \for smart constructors to work")
+        (find (not . snd) states)
 
 ------------------------------------------------------------------------------
--- Removes 'Type' kind signatures from type
-removeTypeKind :: Type -> Type
-removeTypeKind = everywhere $ mkT $ \case
-  SigT t StarT    -> t
-  ForallT bs cs t -> ForallT (goBndr <$> bs) cs t
+-- | Converts names of all type variables in type to capturable ones based on
+-- original name base. Use with caution, may create name conflicts!
+capturableTVars :: Type -> Type
+capturableTVars = everywhere $ mkT $ \case
+  VarT n          -> VarT $ mapNameBase id n
+  ForallT bs cs t -> ForallT (goBndr <$> bs) (capturableTVars <$> cs) t
     where
-      goBndr (KindedTV n StarT) = PlainTV n
+      goBndr (PlainTV n   ) = PlainTV $ mapNameBase id n
+      goBndr (KindedTV n k) = KindedTV (mapNameBase id n) $ capturableTVars k
+  t               -> t
+
+------------------------------------------------------------------------------
+-- | Replaces use of @m@ in type with @Sem r@.
+replaceMArg :: TypeSubstitution t => Name -> Name -> t -> t
+replaceMArg m r = applySubstitution $ M.singleton m $ ConT ''Sem `AppT` VarT r
+
+------------------------------------------------------------------------------
+-- Removes 'Type' and variable kind signatures from type
+simplifyKinds :: Type -> Type
+simplifyKinds = everywhere $ mkT $ \case
+  SigT t StarT    -> t
+  SigT t VarT{}   -> t
+  ForallT bs cs t -> ForallT (goBndr <$> bs) (simplifyKinds <$> cs) t
+    where
+      goBndr (KindedTV n StarT ) = PlainTV n
+      goBndr (KindedTV n VarT{}) = PlainTV n
       goBndr b                  = b
   t               -> t
 
 ------------------------------------------------------------------------------
--- | Converts equality constraint with type variable to name and type pair or
--- leaves predicate as is
+-- | Converts equality constraint with type variable to name and type pair if
+-- possible or leaves constraint as is
 eqPairOrCxt :: Pred -> Either (Name, Type) Pred
 eqPairOrCxt p = case asEqualPred p of
   Just (VarT n, b) -> Left (n, b)
