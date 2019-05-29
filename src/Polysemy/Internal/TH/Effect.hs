@@ -40,6 +40,7 @@ import Data.Char                      (toLower)
 import Data.Either
 import Data.Generics
 import Data.List
+import Data.Tuple
 import Language.Haskell.TH
 import Language.Haskell.TH.PprLib
 import Language.Haskell.TH.Datatype
@@ -70,15 +71,15 @@ makeSem = genFreer True
 -- function.
 --
 -- @
--- data Lang m a where
---   Output :: String -> Lang ()
+-- data Output o m a where
+--   Output :: o -> Output o m ()
 --
--- makeSem_ ''Lang
+-- makeSem_ ''Output
 --
--- -- | Output a string.
--- output :: forall r
---        .  Member Lang r
---        => String    -- ^ String to output.
+-- -- | Output the value \@o\@.
+-- output :: forall o r
+--        .  Member (Output o) r
+--        => o         -- ^ Value to output.
 --        -> Sem r ()  -- ^ No result.
 -- @
 --
@@ -88,8 +89,27 @@ makeSem = genFreer True
 -- * 'makeSem_' must be used /before/ the explicit type signatures
 -- * signatures have to specify argument of 'Sem' representing union of
 -- effects as @r@ (e.g. @'Sem' r ()@)
--- * all effect's type variables and @r@ have to be explicitly qualified using
--- @forall@ (order is not important)
+-- * all arguments in effect's type constructor that are type variables in
+-- action's signature have to use the same names as in type constructor; if
+-- they became more specific, they should use names from constructor's
+-- signature. E.g.:
+--
+-- @
+-- data Foo e m a where
+--   FooC1 :: Foo x m ()
+--   FooC2 :: Foo (Maybe x) m ()
+-- @
+--
+-- should have @e@ in type signature of @fooC1@:
+--
+-- @fooC1 :: forall e r. Member (Foo e) r => Sem r ()@
+--
+-- but @x@ in signature of @fooC2@:
+--
+-- @fooC2 :: forall x r. Member (Foo (Maybe x)) r => Sem r ()@
+--
+-- * all effect's type variables and @r@ have to be explicitly quantified
+-- using @forall@ (order is not important)
 --
 -- These restrictions may be removed in the future, depending on changes to
 -- the compiler.
@@ -189,7 +209,7 @@ mkCLInfo dti ci = do
   let cliEffName            = datatypeName dti
 
   (raw_cli_eff_args, [m_arg, raw_cli_res_arg]) <-
-    case splitFromEnd 2 $ datatypeInstTypes dti of
+    case splitAtEnd 2 $ datatypeInstTypes dti of
       r@(_, [_, _]) -> return r
       _             -> missingEffTArgs cliEffName
 
@@ -217,7 +237,7 @@ mkCLInfo dti ci = do
       cliEffArgs            = normalizeType <$> raw_cli_eff_args
       cliResType            = normalizeType     raw_cli_res_arg
       cliConName            = constructorName ci
-      cliFunName            = mapNameBase (mapHead toLower)
+      cliFunName            = mkName $ mapHead toLower $ nameBase
                             $ constructorName ci
       cliFunArgs            = normalizeType <$> constructorFields ci
 
@@ -244,7 +264,7 @@ missingEffTArgs name = fail $ show
           )
       )
   where
-    base = mapNameBase id name
+    base = mkName $ nameBase $ name
     args = PlainTV . mkName <$> ["m", "a"]
 
 checkExtensions :: [Extension] -> Q ()
@@ -262,12 +282,12 @@ checkExtensions exts = do
 -- original name base. Use with caution, may create name conflicts!
 capturableTVars :: Type -> Type
 capturableTVars = everywhere $ mkT $ \case
-  VarT n          -> VarT $ mapNameBase id n
+  VarT n          -> VarT $ capturableBase n
   ForallT bs cs t -> ForallT (goBndr <$> bs) (capturableTVars <$> cs) t
     where
-      goBndr (PlainTV n   ) = PlainTV $ mapNameBase id n
-      goBndr (KindedTV n k) = KindedTV (mapNameBase id n) $ capturableTVars k
-  t               -> t
+      goBndr (PlainTV n   ) = PlainTV $ capturableBase n
+      goBndr (KindedTV n k) = KindedTV (capturableBase n) $ capturableTVars k
+  t -> t
 
 ------------------------------------------------------------------------------
 -- | Replaces use of @m@ in type with @Sem r@.
@@ -275,7 +295,7 @@ replaceMArg :: TypeSubstitution t => Name -> Name -> t -> t
 replaceMArg m r = applySubstitution $ M.singleton m $ ConT ''Sem `AppT` VarT r
 
 ------------------------------------------------------------------------------
--- Removes 'Type' and variable kind signatures from type
+-- Removes 'Type' and variable kind signatures from type.
 simplifyKinds :: Type -> Type
 simplifyKinds = everywhere $ mkT $ \case
   SigT t StarT    -> t
@@ -284,12 +304,12 @@ simplifyKinds = everywhere $ mkT $ \case
     where
       goBndr (KindedTV n StarT ) = PlainTV n
       goBndr (KindedTV n VarT{}) = PlainTV n
-      goBndr b                  = b
-  t               -> t
+      goBndr b = b
+  t -> t
 
 ------------------------------------------------------------------------------
 -- | Converts equality constraint with type variable to name and type pair if
--- possible or leaves constraint as is
+-- possible or leaves constraint as is.
 eqPairOrCxt :: Pred -> Either (Name, Type) Pred
 eqPairOrCxt p = case asEqualPred p of
   Just (VarT n, b) -> Left (n, b)
@@ -313,22 +333,17 @@ tVarName = \case
   _             -> Nothing
 
 ------------------------------------------------------------------------------
--- | Constructs name from base of input name with function applied
-mapNameBase :: (String -> String) -> Name -> Name
-mapNameBase f = mkName . f . nameBase
+-- | Constructs capturable name from base of input name.
+capturableBase :: Name -> Name
+capturableBase = mkName . nameBase
 
 ------------------------------------------------------------------------------
--- TODO: separate into some module for general utilities (or find them in
--- available dependencies)
+-- | 'splitAt' counting from the end.
+splitAtEnd :: Int -> [a] -> ([a], [a])
+splitAtEnd n = swap . join bimap reverse . splitAt n . reverse
 
-splitFromEnd :: Int -> [a] -> ([a], [a])
-splitFromEnd n lst = go lst $ drop n lst
-  where
-    go xs     []     = ([], xs)
-    go (x:xs) (_:ys) = first (x:) $ go xs ys
-    go []     (_:_)  = error
-      "splitFromEnd: list with dropped elements is longer"
-
+------------------------------------------------------------------------------
+-- | Applies function to head of list, if there is one.
 mapHead :: (a -> a) -> [a] -> [a]
 mapHead _ []     = []
 mapHead f (x:xs) = f x : xs
