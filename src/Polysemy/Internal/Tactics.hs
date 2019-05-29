@@ -5,11 +5,13 @@
 module Polysemy.Internal.Tactics
   ( Tactics (..)
   , getInitialStateT
+  , getEvacuatorT
   , runT
   , bindT
   , pureT
   , liftT
   , runTactics
+  , runEvacuator
   , Tactical
   , WithTactics
   ) where
@@ -17,6 +19,11 @@ module Polysemy.Internal.Tactics
 import Polysemy.Internal
 import Polysemy.Internal.Effect
 import Polysemy.Internal.Union
+
+
+newtype Evacuator f = Evacuator
+  { runEvacuator :: forall x. f x -> Maybe x
+  }
 
 
 ------------------------------------------------------------------------------
@@ -78,6 +85,7 @@ type WithTactics e f m r = Tactics f m (e ': r) ': r
 data Tactics f n r m a where
   GetInitialState     :: Tactics f n r m (f ())
   HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Sem r (f b))
+  GetEvacuator        :: Tactics f n r m (Evacuator f)
 
 
 ------------------------------------------------------------------------------
@@ -143,6 +151,9 @@ liftT m = do
   pureT a
 {-# INLINE liftT #-}
 
+getEvacuatorT :: forall e f m r. Sem (WithTactics e f m r) (Evacuator f)
+getEvacuatorT = send @(Tactics _ m (e ': r)) GetEvacuator
+
 
 ------------------------------------------------------------------------------
 -- | Run the 'Tactics' effect.
@@ -150,15 +161,18 @@ runTactics
    :: Functor f
    => f ()
    -> (∀ x. f (m x) -> Sem r2 (f x))
+   -> (∀ x. f x -> Maybe x)
    -> Sem (Tactics f m r2 ': r) a
    -> Sem r a
-runTactics s d (Sem m) = m $ \u ->
+runTactics s d v (Sem m) = m $ \u ->
   case decomp u of
-    Left x -> liftSem $ hoist (runTactics_b s d) x
-    Right (Yo GetInitialState s' _ y) ->
+    Left x -> liftSem $ hoist (runTactics_b s d v) x
+    Right (Yo GetInitialState s' _ y _) ->
       pure $ y $ s <$ s'
-    Right (Yo (HoistInterpretation na) s' _ y) -> do
+    Right (Yo (HoistInterpretation na) s' _ y _) -> do
       pure $ y $ (d . fmap na) <$ s'
+    Right (Yo GetEvacuator s' _ y _) -> do
+      pure $ y $ Evacuator v <$ s'
 {-# INLINE runTactics #-}
 
 
@@ -166,6 +180,7 @@ runTactics_b
    :: Functor f
    => f ()
    -> (∀ x. f (m x) -> Sem r2 (f x))
+   -> (∀ x. f x -> Maybe x)
    -> Sem (Tactics f m r2 ': r) a
    -> Sem r a
 runTactics_b = runTactics
