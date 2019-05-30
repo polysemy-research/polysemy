@@ -1,3 +1,5 @@
+![Polysemy](https://github.com/isovector/polysemy/blob/d919cbf022d6074011b388062caf487302d01576/polysemy.png?raw=true)
+
 # polysemy
 
 [![Build Status](https://api.travis-ci.org/isovector/polysemy.svg?branch=master)](https://travis-ci.org/isovector/polysemy)
