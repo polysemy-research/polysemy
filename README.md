@@ -1,3 +1,9 @@
+<p align="center">
+<img src="https://raw.githubusercontent.com/isovector/polysemy/master/polysemy.png" alt="Polysemy" title="Polysemy">
+</p>
+
+<p>&nbsp;</p>
+
 # polysemy
 
 [![Build Status](https://api.travis-ci.org/isovector/polysemy.svg?branch=master)](https://travis-ci.org/isovector/polysemy)
