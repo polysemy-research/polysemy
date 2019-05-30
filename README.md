@@ -1,4 +1,6 @@
-<p align="center">![Polysemy](https://github.com/isovector/polysemy/blob/d919cbf022d6074011b388062caf487302d01576/polysemy.png?raw=true)</p>
+<p align="center">
+![Polysemy](https://github.com/isovector/polysemy/blob/d919cbf022d6074011b388062caf487302d01576/polysemy.png?raw=true)
+</p>
 
 # polysemy
 
