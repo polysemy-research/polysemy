@@ -1,5 +1,13 @@
 # Changelog for polysemy
 
+## 0.2.2.0 (2019-05-30)
+
+- Added `getInspectorT` to the `Tactical` functions, which allows polysemy code
+    to be run in external callbacks
+- A complete rewrite of `Polysemy.Internal.TH.Effect` (thanks to @TheMatten)
+- Fixed a bug in the TH generation of effects where the splices could contain
+    usages of effects that were ambiguous
+
 ## 0.2.1.0 (2019-05-27)
 
 - Fixed a bug in the `Alternative` instance for `Sem`, where it would choose the
@@ -42,8 +50,4 @@
 - Initial release
 
 ## Unreleased changes
-
-- A complete rewrite of `Polysemy.Internal.TH.Effect` (thanks to @TheMatten)
-- Fixed a bug in the TH generation of effects where the splices could contain
-    usages of effects that were ambiguous
 
