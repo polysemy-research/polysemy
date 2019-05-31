@@ -121,7 +121,7 @@ getInspectorT = send @(Tactics _ m (e ': r)) GetInspector
 -- | A container for 'inspect'. See the documentation for 'getInspectorT'.
 newtype Inspector f = Inspector
   { inspect :: forall x. f x -> Maybe x
-    -- ^ See the documnetation for 'getInspectorT'.
+    -- ^ See the documentation for 'getInspectorT'.
   }
 
 
