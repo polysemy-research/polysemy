@@ -36,16 +36,16 @@ import Prelude hiding ((<>))
 
 import Control.Monad
 import Data.Bifunctor
-import Data.Char                             (toLower)
+import Data.Char (toLower)
 import Data.Either
-import Data.Generics                  hiding (Fixity)
+import Data.Generics hiding (Fixity)
 import Data.List
 import Data.Tuple
 import Language.Haskell.TH
 import Language.Haskell.TH.PprLib
 import Language.Haskell.TH.Datatype
-import Polysemy.Internal                     (send, Member, Sem)
-import Polysemy.Internal.CustomErrors        (DefiningModule)
+import Polysemy.Internal (send, Member, Sem)
+import Polysemy.Internal.CustomErrors (DefiningModule)
 
 import qualified Data.Map.Strict as M
 
@@ -55,15 +55,17 @@ import qualified Data.Map.Strict as M
 -- | If @T@ is a GADT representing an effect algebra, as described in the
 -- module documentation for "Polysemy", @$('makeSem' ''T)@ automatically
 -- generates a smart constructor for every data constructor of @T@. This also
--- works for data family instances.
+-- works for data family instances. Names of smart constructors are created by
+-- changing first letter to lowercase or @:@ to @\@@ in case of operators.
+-- Fixity declaration is preserved for both normal names and operators.
 --
 -- @since 0.1.2.0
 makeSem :: Name -> Q [Dec]
 makeSem = genFreer True
 
--- | Like 'makeSem', but does not provide type signatures. This can be used
--- to attach Haddock comments to individual arguments for each generated
--- function.
+-- | Like 'makeSem', but does not provide type signatures and fixities. This
+-- can be used to attach Haddock comments to individual arguments for each
+-- generated function.
 --
 -- @
 -- data Output o m a where
@@ -149,7 +151,7 @@ genFreer should_mk_sigs type_name = do
 -- its body on effect's data constructor.
 genSig :: ConLiftInfo -> [Dec]
 genSig cli
-  =  maybe [] ((:[]) . (`InfixD` cliFunName cli)) (cliFunFixity cli)
+  =  maybe [] (pure . flip InfixD (cliFunName cli)) (cliFunFixity cli)
   ++ [ SigD (cliFunName cli) $ quantifyType
        $ ForallT [] (member_cxt : cliFunCxt cli)
        $ foldArrows $ cliFunArgs cli ++ [sem `AppT` cliResType cli]
