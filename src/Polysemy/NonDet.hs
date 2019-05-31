@@ -10,6 +10,7 @@ module Polysemy.NonDet
   ) where
 
 import Control.Applicative
+import Data.Maybe
 import Polysemy.Internal
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.Union
@@ -58,10 +59,14 @@ runNonDet :: Alternative f => Sem (NonDet ': r) a -> Sem r (f a)
 runNonDet (Sem m) = Sem $ \k -> runNonDetC $ m $ \u ->
   case decomp u of
     Left x  -> NonDetC $ \cons nil -> do
-      z <- k $ weave [()] (fmap concat . traverse runNonDet) x
+      z <- k $ weave [()]
+                     (fmap concat . traverse runNonDet)
+                     -- TODO(sandy): Is this the right semantics?
+                     listToMaybe
+                     x
       foldr cons nil z
-    Right (Yo Empty _ _ _) -> empty
-    Right (Yo (Choose ek) s _ y) -> do
-      z <- pure (ek True) <|> pure (ek False)
+    Right (Yo Empty _ _ _ _) -> empty
+    Right (Yo (Choose ek) s _ y _) -> do
+      z <- pure (ek False) <|> pure (ek True)
       pure $ y $ z <$ s
 

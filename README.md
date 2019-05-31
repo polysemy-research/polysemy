@@ -1,7 +1,14 @@
+<p align="center">
+<img src="https://raw.githubusercontent.com/isovector/polysemy/master/polysemy.png" alt="Polysemy" title="Polysemy">
+</p>
+
+<p>&nbsp;</p>
+
 # polysemy
 
 [![Build Status](https://api.travis-ci.org/isovector/polysemy.svg?branch=master)](https://travis-ci.org/isovector/polysemy)
-[![Hackage](https://img.shields.io/hackage/v/polysemy.svg?logo=haskell)](https://hackage.haskell.org/package/polysemy)
+[![Hackage](https://img.shields.io/hackage/v/polysemy.svg?logo=haskell&label=polysemy)](https://hackage.haskell.org/package/polysemy)
+[![Hackage](https://img.shields.io/hackage/v/polysemy-plugin.svg?logo=haskell&label=polysemy-plugin)](https://hackage.haskell.org/package/polysemy-plugin)
 
 ## Dedication
 
@@ -58,7 +65,7 @@ Or by adding `-fplugin=Polysemy.Plugin` to your package.yaml/.cabal file `ghc-op
 
 
 <sup><a name="fn1">1</a></sup>: Unfortunately this is not true in GHC 8.6.3, but
-will be true as soon as [my patch](https://gitlab.haskell.org/ghc/ghc/merge_requests/668/) lands.
+will be true in GHC 8.10.1.
 
 
 ## Examples
@@ -130,7 +137,6 @@ Resource effect:
 {-# LANGUAGE LambdaCase, BlockArguments #-}
 {-# LANGUAGE GADTs, FlexibleContexts, TypeOperators, DataKinds, PolyKinds, TypeApplications #-}
 
-import Prelude hiding (throw, catch, bracket)
 import Polysemy
 import Polysemy.Input
 import Polysemy.Output

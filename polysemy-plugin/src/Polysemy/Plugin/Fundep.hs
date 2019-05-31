@@ -33,6 +33,8 @@ module Polysemy.Plugin.Fundep (fundepPlugin) where
 import Class
 import CoAxiom
 import Control.Monad
+import Data.Bifunctor
+import Data.List
 import Data.Maybe
 import FastString (fsLit)
 import GHC (ModuleName)
@@ -61,10 +63,10 @@ fundepPlugin = TcPlugin
 allMonadEffectConstraints :: Class -> [Ct] -> [(CtLoc, (Type, Type, Type))]
 allMonadEffectConstraints cls cts =
     [ (ctLoc cd, (effName, eff, r))
-        | cd@CDictCan{cc_class = cls', cc_tyargs = [_, r, eff]} <- cts
-        , cls == cls'
-        , let effName = getEffName eff
-              ]
+    | cd@CDictCan{cc_class = cls', cc_tyargs = [_, r, eff]} <- cts
+    , cls == cls'
+    , let effName = getEffName eff
+    ]
 
 singleListToJust :: [a] -> Maybe a
 singleListToJust [a] = Just a
@@ -81,41 +83,51 @@ getEffName :: Type -> Type
 getEffName t = fst $ splitAppTys t
 
 
--- isTyVar :: Type -> Bool
--- isTyVar = isJust . getTyVar_maybe
-
-
 canUnify :: Type -> Type -> Bool
 canUnify wanted given =
   let (w, ws) = splitAppTys wanted
       (g, gs) = splitAppTys given
    in (&& eqType w g) . flip all (zip ws gs) $ \(wt, gt) ->
-        if isTyVarTy gt
-           then isTyVarTy wt
-           else True
+     or [ isTyVarTy wt
+        , eqType gt wt
+        ]
+
 
 
 mkWanted :: Bool -> CtLoc -> Type -> Type -> TcPluginM (Maybe Ct)
-mkWanted mustUnify loc wanted given = do
+mkWanted mustUnify loc wanted given =
   if (not mustUnify || canUnify wanted given)
      then do
        (ev, _) <- unsafeTcPluginTcM $ runTcSDeriveds $ newWantedEq loc Nominal wanted given
-       pure $ Just (CNonCanonical ev)
+       pure $ Just $ CNonCanonical ev
      else
        pure Nothing
 
+thd :: (a, b, c) -> c
+thd (_, _, c) = c
+
+countLength :: (a -> a -> Bool) -> [a] -> [(a, Int)]
+countLength eq as =
+  let grouped = groupBy eq as
+   in zipWith (curry $ bimap head length) grouped grouped
 
 solveFundep :: Class -> [Ct] -> [Ct] -> [Ct] -> TcPluginM TcPluginResult
+solveFundep _ _ _ [] = pure $ TcPluginOk [] []
 solveFundep effCls giv _ want = do
     let wantedEffs = allMonadEffectConstraints effCls want
-    let givenEffs = snd <$> allMonadEffectConstraints effCls giv
-    eqs <- forM wantedEffs $ \(loc, e@(_, eff, r)) ->
+        givenEffs = snd <$> allMonadEffectConstraints effCls giv
+        num_wanteds_by_r = countLength eqType $ fmap (thd . snd) wantedEffs
+        must_unify r =
+          let Just num_wanted = find (eqType r . fst) num_wanteds_by_r
+           in snd num_wanted /= 1
+
+    eqs <- forM wantedEffs $ \(loc, e@(_, eff, r)) -> do
       case findMatchingEffectIfSingular e givenEffs of
         Nothing -> do
           case splitAppTys r of
-            (_, [_, eff', _]) -> mkWanted False loc eff eff'
+            (_, [_, eff', _]) -> mkWanted (must_unify r) loc eff eff'
             _                 -> pure Nothing
         Just eff' -> mkWanted True loc eff eff'
 
-    return (TcPluginOk [] (catMaybes eqs))
+    pure $ TcPluginOk [] $ catMaybes eqs
 

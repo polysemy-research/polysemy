@@ -63,6 +63,7 @@ class Effect e where
       :: (Functor s, Functor m, Functor n)
       => s ()
       -> (∀ x. s (m x) -> n (s x))
+      -> (∀ x. s x -> Maybe x)
       -> e m a
       -> e n (s a)
 
@@ -75,9 +76,10 @@ class Effect e where
          )
       => s ()
       -> (∀ x. s (m x) -> n (s x))
+      -> (∀ x. s x -> Maybe x)
       -> e m a
       -> e n (s a)
-  weave s _ = coerce . fmap' (<$ s)
+  weave s _ _ = coerce . fmap' (<$ s)
   {-# INLINE weave #-}
 
   -- | Lift a natural transformation from @m@ to @n@ over the effect. 'hoist'
@@ -118,5 +120,6 @@ defaultHoist f
   = fmap' runIdentity
   . weave (Identity ())
           (fmap Identity . f . runIdentity)
+          (Just . runIdentity)
 {-# INLINE defaultHoist #-}
 
