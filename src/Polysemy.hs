@@ -107,6 +107,8 @@ module Polysemy
   , pureT
   , runT
   , bindT
+  , getInspectorT
+  , Inspector (..)
 
   -- * Deprecated Names
   -- | The following exports are deprecated, and are exposed only for

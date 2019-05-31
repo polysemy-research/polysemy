@@ -31,6 +31,7 @@ module Polysemy.Internal.Union
   , Nat (..)
   ) where
 
+import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Type.Equality
@@ -61,24 +62,26 @@ data Yo e m a where
      -> f ()
      -> (forall x. f (m x) -> n (f x))
      -> (f a -> b)
+     -> (forall x. f x -> Maybe x)
      -> Yo e n b
 
 instance Functor (Yo e m) where
-  fmap f (Yo e s d f') = Yo e s d (f . f')
+  fmap f (Yo e s d f' v) = Yo e s d (f . f') v
   {-# INLINE fmap #-}
 
 instance Effect (Yo e) where
-  weave s' d (Yo e s nt f) =
+  weave s' d v' (Yo e s nt f v) =
     Yo e (Compose $ s <$ s')
          (fmap Compose . d . fmap nt . getCompose)
          (fmap f . getCompose)
+         (v <=< v' . getCompose)
   {-# INLINE weave #-}
 
   hoist = defaultHoist
   {-# INLINE hoist #-}
 
 liftYo :: Functor m => e m a -> Yo e m a
-liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity
+liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity (Just . runIdentity)
 {-# INLINE liftYo #-}
 
 
@@ -88,7 +91,7 @@ instance Functor (Union r m) where
 
 
 instance Effect (Union r) where
-  weave s f (Union w e) = Union w $ weave s f e
+  weave s f v (Union w e) = Union w $ weave s f v e
   {-# INLINE weave #-}
 
   hoist f (Union w e) = Union w $ hoist f e
