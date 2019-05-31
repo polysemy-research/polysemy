@@ -17,6 +17,9 @@ module Polysemy.Internal.Union
   -- * Building Unions
   , inj
   , weaken
+  , weakenUnder
+  , weakenUnder2
+  , weakenUnder3
   -- * Using Unions
   , decomp
   , prj
@@ -28,6 +31,7 @@ module Polysemy.Internal.Union
   , Nat (..)
   ) where
 
+import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Type.Equality
@@ -58,24 +62,26 @@ data Yo e m a where
      -> f ()
      -> (forall x. f (m x) -> n (f x))
      -> (f a -> b)
+     -> (forall x. f x -> Maybe x)
      -> Yo e n b
 
 instance Functor (Yo e m) where
-  fmap f (Yo e s d f') = Yo e s d (f . f')
+  fmap f (Yo e s d f' v) = Yo e s d (f . f') v
   {-# INLINE fmap #-}
 
 instance Effect (Yo e) where
-  weave s' d (Yo e s nt f) =
+  weave s' d v' (Yo e s nt f v) =
     Yo e (Compose $ s <$ s')
          (fmap Compose . d . fmap nt . getCompose)
          (fmap f . getCompose)
+         (v <=< v' . getCompose)
   {-# INLINE weave #-}
 
   hoist = defaultHoist
   {-# INLINE hoist #-}
 
 liftYo :: Functor m => e m a -> Yo e m a
-liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity
+liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity (Just . runIdentity)
 {-# INLINE liftYo #-}
 
 
@@ -85,7 +91,7 @@ instance Functor (Union r m) where
 
 
 instance Effect (Union r) where
-  weave s f (Union w e) = Union w $ weave s f e
+  weave s f v (Union w e) = Union w $ weave s f v e
   {-# INLINE weave #-}
 
   hoist f (Union w e) = Union w $ hoist f e
@@ -185,6 +191,27 @@ absurdU = absurdU
 weaken :: Union r m a -> Union (e ': r) m a
 weaken (Union n a) = Union (SS n) a
 {-# INLINE weaken #-}
+
+------------------------------------------------------------------------------
+-- | Like 'weaken', but introduces a new effect under the top of the stack.
+weakenUnder :: Union (e1 ': r) m a -> Union (e1 ': e2 ': r) m a
+weakenUnder (Union SZ a) = Union SZ a
+weakenUnder (Union (SS n) a) = Union (SS (SS n)) a
+{-# INLINE weakenUnder #-}
+
+------------------------------------------------------------------------------
+-- | Like 'weaken', but introduces a new effect under the top of the stack.
+weakenUnder2 :: Union (e1 ': r) m a -> Union (e1 ': e2 ': e3 ': r) m a
+weakenUnder2 (Union SZ a) = Union SZ a
+weakenUnder2 (Union (SS n) a) = Union (SS (SS (SS n))) a
+{-# INLINE weakenUnder2 #-}
+
+------------------------------------------------------------------------------
+-- | Like 'weaken', but introduces a new effect under the top of the stack.
+weakenUnder3 :: Union (e1 ': r) m a -> Union (e1 ': e2 ': e3 ': e4 ': r) m a
+weakenUnder3 (Union SZ a) = Union SZ a
+weakenUnder3 (Union (SS n) a) = Union (SS (SS (SS (SS n)))) a
+{-# INLINE weakenUnder3 #-}
 
 
 ------------------------------------------------------------------------------

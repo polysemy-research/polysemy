@@ -15,6 +15,9 @@ module Polysemy.Internal
   , run
   , runM
   , raise
+  , raiseUnder
+  , raiseUnder2
+  , raiseUnder3
   , Lift (..)
   , usingSem
   , liftSem
@@ -24,6 +27,8 @@ module Polysemy.Internal
   ) where
 
 import Control.Applicative
+import Control.Monad
+import Control.Monad.Fail
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
@@ -213,6 +218,15 @@ instance (Member NonDet r) => Alternative (Sem r) where
       True  -> b
   {-# INLINE (<|>) #-}
 
+-- | @since 0.2.1.0
+instance (Member NonDet r) => MonadPlus (Sem r) where
+  mzero = empty
+  mplus = (<|>)
+
+-- | @since 0.2.1.0
+instance (Member NonDet r) => MonadFail (Sem r) where
+  fail = const empty
+
 
 ------------------------------------------------------------------------------
 -- | This instance will only lift 'IO' actions. If you want to lift into some
@@ -254,6 +268,45 @@ raise_b = raise
 
 
 ------------------------------------------------------------------------------
+-- | Like 'raise', but introduces a new effect underneath the head of the
+-- list.
+raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
+raiseUnder = hoistSem $ hoist raiseUnder_b . weakenUnder
+{-# INLINE raiseUnder #-}
+
+
+raiseUnder_b :: Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
+raiseUnder_b = raiseUnder
+{-# NOINLINE raiseUnder_b #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'raise', but introduces two new effects underneath the head of the
+-- list.
+raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
+raiseUnder2 = hoistSem $ hoist raiseUnder2_b . weakenUnder2
+{-# INLINE raiseUnder2 #-}
+
+
+raiseUnder2_b :: Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
+raiseUnder2_b = raiseUnder2
+{-# NOINLINE raiseUnder2_b #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'raise', but introduces two new effects underneath the head of the
+-- list.
+raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
+raiseUnder3 = hoistSem $ hoist raiseUnder3_b . weakenUnder3
+{-# INLINE raiseUnder3 #-}
+
+
+raiseUnder3_b :: Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
+raiseUnder3_b = raiseUnder3
+{-# NOINLINE raiseUnder3_b #-}
+
+
+------------------------------------------------------------------------------
 -- | Lift an effect into a 'Sem'. This is used primarily via
 -- 'Polysemy.makeSem' to implement smart constructors.
 send :: Member e r => e (Sem r) a -> Sem r a
@@ -281,7 +334,7 @@ run (Sem m) = runIdentity $ m absurdU
 runM :: Monad m => Sem '[Lift m] a -> m a
 runM (Sem m) = m $ \z ->
   case extract z of
-    Yo e s _ f -> do
+    Yo e s _ f _ -> do
       a <- unLift e
       pure $ f $ a <$ s
 {-# INLINE runM #-}
@@ -311,6 +364,11 @@ runM (Sem m) = m $ \z ->
 --
 -- The parentheses here are important; without them you'll run into operator
 -- precedence errors.
+--
+-- __Warning:__ This combinator will __duplicate work__ that is intended to be
+-- just for initialization. This can result in rather surprising behavior. For
+-- a version of '.@' that won't duplicate work, see the @.\@!@ operator in
+-- <http://hackage.haskell.org/package/polysemy-zoo/docs/Polysemy-IdempotentLowering.html polysemy-zoo>.
 (.@)
     :: Monad m
     => (∀ x. Sem r x -> m x)
@@ -321,7 +379,7 @@ runM (Sem m) = m $ \z ->
     -> Sem (e ': r) z
     -> m z
 f .@ g = f . g f
-infixl 9 .@
+infixl 8 .@
 
 
 ------------------------------------------------------------------------------
@@ -337,5 +395,5 @@ infixl 9 .@
     -> Sem (e ': r) z
     -> m (f z)
 f .@@ g = f . g f
-infixl 9 .@@
+infixl 8 .@@
 

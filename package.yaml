@@ -1,5 +1,5 @@
 name:                polysemy
-version:             0.1.2.1
+version:             0.2.2.0
 github:              "isovector/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -52,7 +52,7 @@ flags:
     manual:      True
 
 library:
-  ghc-options: -O2 -Wall
+  ghc-options: -Wall
   source-dirs: src
   other-modules: Polysemy.Internal.PluginLookup
 

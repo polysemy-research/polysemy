@@ -64,8 +64,8 @@ interpretH
 interpretH f (Sem m) = m $ \u ->
   case decomp u of
     Left  x -> liftSem $ hoist (interpretH_b f) x
-    Right (Yo e s d y) -> do
-      a <- runTactics s (raise . interpretH_b f . d) (f e)
+    Right (Yo e s d y v) -> do
+      a <- runTactics s d v $ f e
       pure $ y a
 {-# INLINE interpretH #-}
 
@@ -82,9 +82,11 @@ interpretInStateT f s (Sem m) = Sem $ \k ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ interpretInStateT_b f)
+            . weave (s', ())
+                    (uncurry $ interpretInStateT_b f)
+                    (Just . snd)
             $ x
-        Right (Yo e z _ y) ->
+        Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInStateT #-}
 
@@ -101,9 +103,11 @@ interpretInLazyStateT f s (Sem m) = Sem $ \k ->
     case decomp u of
         Left x -> LS.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ interpretInLazyStateT_b f)
+            . weave (s', ())
+                    (uncurry $ interpretInLazyStateT_b f)
+                    (Just . snd)
             $ x
-        Right (Yo e z _ y) ->
+        Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ LS.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInLazyStateT #-}
 
@@ -141,8 +145,8 @@ reinterpretH
 reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ hoist (reinterpretH_b f) $ x
-    Right (Yo e s d y) -> do
-      a <- usingSem k $ runTactics s (raise . reinterpretH_b f . d) $ f e
+    Right (Yo e s d y v) -> do
+      a <- usingSem k $ runTactics s (raiseUnder . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
@@ -176,8 +180,8 @@ reinterpret2H
 reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ weaken $ hoist (reinterpret2H_b f) $ x
-    Right (Yo e s d y) -> do
-      a <- usingSem k $ runTactics s (raise . reinterpret2H_b f . d) $ f e
+    Right (Yo e s d y v) -> do
+      a <- usingSem k $ runTactics s (raiseUnder2 . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpret2H #-}
 
@@ -206,8 +210,8 @@ reinterpret3H
 reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k . weaken . weaken . hoist (reinterpret3H_b f) $ x
-    Right (Yo e s d y) -> do
-      a <- usingSem k $ runTactics s (raise . reinterpret3H_b f . d) $ f e
+    Right (Yo e s d y v) -> do
+      a <- usingSem k $ runTactics s (raiseUnder3 . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpret3H #-}
 
@@ -256,8 +260,8 @@ interceptH
     -> Sem r a
 interceptH f (Sem m) = Sem $ \k -> m $ \u ->
   case prj u of
-    Just (Yo e s d y) ->
-      usingSem k $ fmap y $ runTactics s (raise . d) $ f e
+    Just (Yo e s d y v) ->
+      usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
     Nothing -> k u
 {-# INLINE interceptH #-}
 

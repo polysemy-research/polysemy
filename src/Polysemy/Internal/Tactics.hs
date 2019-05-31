@@ -1,10 +1,12 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
 module Polysemy.Internal.Tactics
   ( Tactics (..)
   , getInitialStateT
+  , getInspectorT
+  , Inspector (..)
   , runT
   , bindT
   , pureT
@@ -78,6 +80,7 @@ type WithTactics e f m r = Tactics f m (e ': r) ': r
 data Tactics f n r m a where
   GetInitialState     :: Tactics f n r m (f ())
   HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Sem r (f b))
+  GetInspector        :: Tactics f n r m (Inspector f)
 
 
 ------------------------------------------------------------------------------
@@ -86,6 +89,40 @@ data Tactics f n r m a where
 -- directly.
 getInitialStateT :: forall f m r e. Sem (WithTactics e f m r) (f ())
 getInitialStateT = send @(Tactics _ m (e ': r)) GetInitialState
+
+
+------------------------------------------------------------------------------
+-- | Get a natural transformation capable of potentially inspecting values
+-- inside of @f@. Binding the result of 'getInspectorT' produces a function that
+-- can sometimes peek inside values returned by 'bindT'.
+--
+-- This is often useful for running callback functions that are not managed by
+-- polysemy code.
+--
+-- ==== Example
+--
+-- We can use the result of 'getInspectT' to "undo" 'pureT' (or any of the other
+-- 'Tactical' functions):
+--
+-- @
+-- ins <- 'getInspectorT'
+-- fa <- 'pureT' "hello"
+-- fb <- 'pureT' True
+-- let a = 'inspect' ins fa   -- Just "hello"
+--     b = 'inspect' ins fb   -- Just True
+-- @
+--
+-- We
+getInspectorT :: forall e f m r. Sem (WithTactics e f m r) (Inspector f)
+getInspectorT = send @(Tactics _ m (e ': r)) GetInspector
+
+
+------------------------------------------------------------------------------
+-- | A container for 'inspect'. See the documentation for 'getInspectorT'.
+newtype Inspector f = Inspector
+  { inspect :: forall x. f x -> Maybe x
+    -- ^ See the documentation for 'getInspectorT'.
+  }
 
 
 ------------------------------------------------------------------------------
@@ -150,15 +187,18 @@ runTactics
    :: Functor f
    => f ()
    -> (∀ x. f (m x) -> Sem r2 (f x))
+   -> (∀ x. f x -> Maybe x)
    -> Sem (Tactics f m r2 ': r) a
    -> Sem r a
-runTactics s d (Sem m) = m $ \u ->
+runTactics s d v (Sem m) = m $ \u ->
   case decomp u of
-    Left x -> liftSem $ hoist (runTactics_b s d) x
-    Right (Yo GetInitialState s' _ y) ->
+    Left x -> liftSem $ hoist (runTactics_b s d v) x
+    Right (Yo GetInitialState s' _ y _) ->
       pure $ y $ s <$ s'
-    Right (Yo (HoistInterpretation na) s' _ y) -> do
+    Right (Yo (HoistInterpretation na) s' _ y _) -> do
       pure $ y $ (d . fmap na) <$ s'
+    Right (Yo GetInspector s' _ y _) -> do
+      pure $ y $ Inspector v <$ s'
 {-# INLINE runTactics #-}
 
 
@@ -166,6 +206,7 @@ runTactics_b
    :: Functor f
    => f ()
    -> (∀ x. f (m x) -> Sem r2 (f x))
+   -> (∀ x. f x -> Maybe x)
    -> Sem (Tactics f m r2 ': r) a
    -> Sem r a
 runTactics_b = runTactics
