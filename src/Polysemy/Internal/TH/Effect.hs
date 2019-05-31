@@ -56,8 +56,9 @@ import qualified Data.Map.Strict as M
 -- module documentation for "Polysemy", @$('makeSem' ''T)@ automatically
 -- generates a smart constructor for every data constructor of @T@. This also
 -- works for data family instances. Names of smart constructors are created by
--- changing first letter to lowercase or @:@ to @\@@ in case of operators.
--- Fixity declaration is preserved for both normal names and operators.
+-- changing first letter to lowercase or removing prefix @:@ in case of
+-- operators. Fixity declaration is preserved for both normal names and
+-- operators.
 --
 -- @since 0.1.2.0
 makeSem :: Name -> Q [Dec]
@@ -245,7 +246,9 @@ mkCLInfo dti ci = do
       cliResType            = normalizeType     raw_cli_res_arg
       cliConName            = constructorName ci
       cliFunName            = mkName
-                            $ mapHead (\case ':' -> '@'; c -> toLower c)
+                            $ (\case ':':cs -> cs
+                                     c  :cs -> toLower c : cs
+                                     ""     -> "")
                             $ nameBase
                             $ constructorName ci
       cliFunArgs            = normalizeType <$> constructorFields ci
@@ -299,6 +302,11 @@ capturableTVars = everywhere $ mkT $ \case
   t -> t
 
 ------------------------------------------------------------------------------
+-- | Constructs capturable name from base of input name.
+capturableBase :: Name -> Name
+capturableBase = mkName . nameBase
+
+------------------------------------------------------------------------------
 -- | Replaces use of @m@ in type with @Sem r@.
 replaceMArg :: TypeSubstitution t => Name -> Name -> t -> t
 replaceMArg m r = applySubstitution $ M.singleton m $ ConT ''Sem `AppT` VarT r
@@ -342,17 +350,6 @@ tVarName = \case
   _             -> Nothing
 
 ------------------------------------------------------------------------------
--- | Constructs capturable name from base of input name.
-capturableBase :: Name -> Name
-capturableBase = mkName . nameBase
-
-------------------------------------------------------------------------------
 -- | 'splitAt' counting from the end.
 splitAtEnd :: Int -> [a] -> ([a], [a])
 splitAtEnd n = swap . join bimap reverse . splitAt n . reverse
-
-------------------------------------------------------------------------------
--- | Applies function to head of list, if there is one.
-mapHead :: (a -> a) -> [a] -> [a]
-mapHead _ []     = []
-mapHead f (x:xs) = f x : xs
