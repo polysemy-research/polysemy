@@ -51,3 +51,8 @@
 
 ## Unreleased changes
 
+- TODO: Remove deprecated names
+- NEEDS NEW MAJOR RELEASE: Moved `Random` effect to `polysemy-zoo`
+- `makeSem` can now be used to create term-level operators (thanks to
+    @TheMatten)
+

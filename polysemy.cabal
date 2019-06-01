@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c0c48158ef37719851ad6b2bef99ba3236628e92c385792bac924109605febe9
+-- hash: e0bd1c00115dcbb08343754f06369914411b0aa48c9838c3fa4cd59cf861607b
 
 name:           polysemy
 version:        0.2.2.0
@@ -57,7 +57,6 @@ library
       Polysemy.IO
       Polysemy.NonDet
       Polysemy.Output
-      Polysemy.Random
       Polysemy.Reader
       Polysemy.Resource
       Polysemy.State
@@ -73,7 +72,6 @@ library
       base >=4.7 && <5
     , containers >=0.6 && <=0.7
     , mtl >=2.2.2 && <3
-    , random >=1.1 && <1.2
     , syb >=0.7 && <=0.8
     , template-haskell >=2.14.0.0 && <2.15
     , th-abstraction >=0.3 && <=0.4
@@ -95,6 +93,7 @@ test-suite polysemy-test
       HigherOrderSpec
       InspectorSpec
       OutputSpec
+      ThEffectSpec
       Paths_polysemy
   hs-source-dirs:
       test
@@ -107,7 +106,6 @@ test-suite polysemy-test
     , inspection-testing >=0.4.1.1 && <0.5
     , mtl >=2.2.2 && <3
     , polysemy
-    , random >=1.1 && <1.2
     , syb >=0.7 && <=0.8
     , template-haskell >=2.14.0.0 && <2.15
     , th-abstraction >=0.3 && <=0.4
@@ -131,7 +129,6 @@ benchmark polysemy-bench
     , freer-simple
     , mtl
     , polysemy
-    , random >=1.1 && <1.2
     , syb >=0.7 && <=0.8
     , template-haskell >=2.14.0.0 && <2.15
     , th-abstraction >=0.3 && <=0.4

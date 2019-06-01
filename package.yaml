@@ -17,13 +17,12 @@ description:         Please see the README on GitHub at <https://github.com/isov
 
 dependencies:
 - base >= 4.7 && < 5
-- transformers >= 0.5.5.0 && < 0.6
-- mtl >= 2.2.2 && <3
-- template-haskell >= 2.14.0.0 && <2.15
-- random >= 1.1 && <1.2
-- th-abstraction >= 0.3 && <= 0.4
 - containers >= 0.6 && <= 0.7
+- mtl >= 2.2.2 && <3
 - syb >= 0.7 && <= 0.8
+- template-haskell >= 2.14.0.0 && <2.15
+- th-abstraction >= 0.3 && <= 0.4
+- transformers >= 0.5.5.0 && < 0.6
 
 default-extensions:
   - DataKinds
