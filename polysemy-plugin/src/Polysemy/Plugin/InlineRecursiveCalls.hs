@@ -14,7 +14,6 @@ import Generics.SYB
 import HscTypes
 import IdInfo
 import Name
-import SrcLoc
 import UniqSupply
 import Unique
 import Var
