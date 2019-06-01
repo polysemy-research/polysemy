@@ -245,11 +245,7 @@ mkCLInfo dti ci = do
       cliEffArgs            = normalizeType <$> raw_cli_eff_args
       cliResType            = normalizeType     raw_cli_res_arg
       cliConName            = constructorName ci
-      cliFunName            = mkName
-                            $ (\case ':':cs -> cs
-                                     c  :cs -> toLower c : cs
-                                     ""     -> "")
-                            $ nameBase cliConName
+      cliFunName            = liftFunNameFromCon cliConName
       cliFunArgs            = normalizeType <$> constructorFields ci
 
   return CLInfo{..}
@@ -331,6 +327,15 @@ eqPairOrCxt p = case asEqualPred p of
   Just (VarT n, b) -> Left (n, b)
   Just (a, VarT n) -> Left (n, a)
   _                -> Right p
+
+------------------------------------------------------------------------------
+-- | Creates name of lifting function from action name
+liftFunNameFromCon :: Name -> Name
+liftFunNameFromCon n = mkName $ case nameBase n of
+                         ':':cs -> cs
+                         c  :cs -> toLower c : cs
+                         ""     -> error
+                           "liftFunNameFromCon: empty constructor name"
 
 ------------------------------------------------------------------------------
 -- | Folds a list of 'Type's into a right-associative arrow 'Type'.
