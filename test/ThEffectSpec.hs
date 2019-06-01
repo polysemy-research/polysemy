@@ -36,19 +36,19 @@ data GADTSyntax m a where
 
 makeSem ''GADTSyntax
 
-data Existential1 m a = (a ~ Int) => Existential1C String
+data ADTSyntax1 m a = (a ~ Int) => ADTSyntax1C String
 
-makeSem ''Existential1
+makeSem ''ADTSyntax1
 
-data Existential2 m a
-  = a ~ Int => Existential2C1 Int
-  | a ~ String => Existential2C2 String
+data ADTSyntax2 m a
+  = a ~ Int => ADTSyntax2C1 Int
+  | a ~ String => ADTSyntax2C2 String
 
-makeSem ''Existential2
+makeSem ''ADTSyntax2
 
-data Existential3 m a = Show a => Existential3C a
+data ADTSyntax3 m a = Show a => ADTSyntax3C a
 
-makeSem ''Existential3
+makeSem ''ADTSyntax3
 
 -- We don't care about named fields (except that we accept them as names from
 -- effect in 'makeSem')
