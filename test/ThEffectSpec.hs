@@ -6,15 +6,23 @@ import Polysemy
 import Test.Hspec
 import GHC.TypeLits
 import Data.Kind
+import Language.Haskell.TH hiding (Type)
+
+spec :: Spec
+spec = it "should compile" True
 
 -- Infix effects and actions -------------------------------------------------
 
-infixr 5 :#>, :#<
 data (:#) m a where
-  (:#>) :: Int -> m :# Int
-  (:#<) :: String -> m :# String
+  (:#) :: a -> b -> m :# a
+
+infixl 4 :#
 
 makeSem ''(:#)
+
+reifyFixity '(#) >>= \case
+  Just (Fixity 4 InfixL) -> return []
+  _                      -> fail "Wrong fixity of generated operator"
 
 -- ADTs and ADT syntax -------------------------------------------------------
 
@@ -42,8 +50,8 @@ data Existential3 m a = Show a => Existential3C a
 
 makeSem ''Existential3
 
--- We shouldn't care about named fields (in other way than accept them as
--- names from effect in 'makeSem')
+-- We don't care about named fields (except that we accept them as names from
+-- effect in 'makeSem')
 data Fields m a = FieldsC { fieldsCF1 :: Int, fieldsCF2 :: String }
 
 makeSem ''Fields
@@ -132,7 +140,7 @@ data HKEffArgs f g m a where
 
 makeSem ''HKEffArgs
 
--- 'makeSem' input name ------------------------------------------------------
+-- 'makeSem' input names -----------------------------------------------------
 
 data ByCon m a where
   ByConC :: Int -> ByCon m String
@@ -143,7 +151,3 @@ data ByField m a where
   ByFieldC :: { byFieldCF :: Int } -> ByField m Int
 
 makeSem 'byFieldCF
-
-------------------------------------------------------------------------------
-spec :: Spec
-spec = return ()  -- TODO
