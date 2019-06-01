@@ -329,7 +329,7 @@ eqPairOrCxt p = case asEqualPred p of
   _                -> Right p
 
 ------------------------------------------------------------------------------
--- | Creates name of lifting function from action name
+-- | Creates name of lifting function from action name.
 liftFunNameFromCon :: Name -> Name
 liftFunNameFromCon n = mkName $ case nameBase n of
                          ':':cs -> cs
