@@ -36,15 +36,15 @@ import Prelude hiding ((<>))
 
 import Control.Monad
 import Data.Bifunctor
-import Data.Char                      (toLower)
+import Data.Char (toLower)
 import Data.Either
-import Data.Generics
+import Data.Generics hiding (Fixity)
 import Data.List
 import Data.Tuple
 import Language.Haskell.TH
 import Language.Haskell.TH.PprLib
 import Language.Haskell.TH.Datatype
-import Polysemy.Internal              (send, Member, Sem)
+import Polysemy.Internal (send, Member, Sem)
 import Polysemy.Internal.CustomErrors (DefiningModule)
 
 import qualified Data.Map.Strict as M
@@ -55,15 +55,18 @@ import qualified Data.Map.Strict as M
 -- | If @T@ is a GADT representing an effect algebra, as described in the
 -- module documentation for "Polysemy", @$('makeSem' ''T)@ automatically
 -- generates a smart constructor for every data constructor of @T@. This also
--- works for data family instances.
+-- works for data family instances. Names of smart constructors are created by
+-- changing first letter to lowercase or removing prefix @:@ in case of
+-- operators. Fixity declaration is preserved for both normal names and
+-- operators.
 --
 -- @since 0.1.2.0
 makeSem :: Name -> Q [Dec]
 makeSem = genFreer True
 
--- | Like 'makeSem', but does not provide type signatures. This can be used
--- to attach Haddock comments to individual arguments for each generated
--- function.
+-- | Like 'makeSem', but does not provide type signatures and fixities. This
+-- can be used to attach Haddock comments to individual arguments for each
+-- generated function.
 --
 -- @
 -- data Output o m a where
@@ -140,18 +143,20 @@ genFreer should_mk_sigs type_name = do
                          ]
   decs       <- traverse (genDec should_mk_sigs) cl_infos
 
-  let sigs = [ genSig <$> cl_infos | should_mk_sigs ]
+  let sigs = if should_mk_sigs then genSig <$> cl_infos else []
 
   return $ join $ def_mod_fi : sigs ++ decs
 
 ------------------------------------------------------------------------------
 -- | Generates signature for lifting function and type arguments to apply in
 -- its body on effect's data constructor.
-genSig :: ConLiftInfo -> Dec
+genSig :: ConLiftInfo -> [Dec]
 genSig cli
-  = SigD (cliFunName cli) $ quantifyType
-  $ ForallT [] (member_cxt : cliFunCxt cli)
-  $ foldArrows $ cliFunArgs cli ++ [sem `AppT` cliResType cli]
+  =  maybe [] (pure . flip InfixD (cliFunName cli)) (cliFunFixity cli)
+  ++ [ SigD (cliFunName cli) $ quantifyType
+       $ ForallT [] (member_cxt : cliFunCxt cli)
+       $ foldArrows $ cliFunArgs cli ++ [sem `AppT` cliResType cli]
+     ]
   where
     member_cxt = classPred ''Member [eff, VarT $ cliUnionName cli]
     eff        = foldl' AppT (ConT $ cliEffName cli) $ cliEffArgs cli
@@ -181,17 +186,27 @@ genDec should_mk_sigs cli = do
         ]
     ]
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 -- | Info about constructor being lifted; use 'mkCLInfo' to create one.
 data ConLiftInfo = CLInfo
-  { cliEffName   :: Name    -- ^ name of effect's type constructor
-  , cliEffArgs   :: [Type]  -- ^ effect specific type arguments
-  , cliResType   :: Type    -- ^ result type specific to action
-  , cliConName   :: Name    -- ^ name of action constructor
-  , cliFunName   :: Name    -- ^ name of final function
-  , cliFunArgs   :: [Type]  -- ^ final function arguments
-  , cliFunCxt    :: Cxt     -- ^ constraints of final function
-  , cliUnionName :: Name    -- ^ name of type variable parameterizing 'Sem'
+  { -- | Name of effect's type constructor
+    cliEffName   :: Name
+    -- | Effect-specific type arguments
+  , cliEffArgs   :: [Type]
+    -- | Result type specific to action
+  , cliResType   :: Type
+    -- | Name of action constructor
+  , cliConName   :: Name
+    -- | Name of final function
+  , cliFunName   :: Name
+    -- | Fixity of function used as an operator
+  , cliFunFixity :: Maybe Fixity
+    -- | Final function arguments
+  , cliFunArgs   :: [Type]
+    -- | Constraints of final function
+  , cliFunCxt    :: Cxt
+    -- | Name of type variable parameterizing 'Sem'
+  , cliUnionName :: Name
   } deriving Show
 
 ------------------------------------------------------------------------------
@@ -204,7 +219,7 @@ mkCLInfo dti ci = do
   (raw_cli_eff_args, [m_arg, raw_cli_res_arg]) <-
     case splitAtEnd 2 $ datatypeInstTypes dti of
       r@(_, [_, _]) -> return r
-      _             -> missingEffTArgs cliEffName
+      _             -> missingEffArgs cliEffName
 
   m_name <-
     case tVarName m_arg of
@@ -212,6 +227,7 @@ mkCLInfo dti ci = do
       Nothing       -> mArgNotVar cliEffName m_arg
 
   cliUnionName <- newName "r"
+  cliFunFixity <- reifyFixity $ constructorName ci
 
   let normalizeType         = replaceMArg m_name cliUnionName
                             . simplifyKinds
@@ -229,8 +245,11 @@ mkCLInfo dti ci = do
       cliEffArgs            = normalizeType <$> raw_cli_eff_args
       cliResType            = normalizeType     raw_cli_res_arg
       cliConName            = constructorName ci
-      cliFunName            = mkName $ mapHead toLower $ nameBase
-                            $ constructorName ci
+      cliFunName            = mkName
+                            $ (\case ':':cs -> cs
+                                     c  :cs -> toLower c : cs
+                                     ""     -> "")
+                            $ nameBase cliConName
       cliFunArgs            = normalizeType <$> constructorFields ci
 
   return CLInfo{..}
@@ -243,8 +262,8 @@ mArgNotVar name mArg = fail $ show
   $  text "Monad argument ‘" <> ppr mArg <> text "’ in effect ‘"
   <> ppr name <> text "’ is not a type variable"
 
-missingEffTArgs :: Name -> Q a
-missingEffTArgs name = fail $ show
+missingEffArgs :: Name -> Q a
+missingEffArgs name = fail $ show
   $   text "Effect ‘" <> ppr name
       <> text "’ has not enough type arguments"
   $+$ nest 4
@@ -256,7 +275,7 @@ missingEffTArgs name = fail $ show
           )
       )
   where
-    base = mkName $ nameBase $ name
+    base = capturableBase name
     args = PlainTV . mkName <$> ["m", "a"]
 
 checkExtensions :: [Extension] -> Q ()
@@ -266,7 +285,7 @@ checkExtensions exts = do
         (\(ext, _) -> fail $ show
           $ char '‘' <> text (show ext) <> char '’'
             <+> text "extension needs to be enabled\
-                     \for smart constructors to work")
+                     \ for smart constructors to work")
         (find (not . snd) states)
 
 ------------------------------------------------------------------------------
@@ -280,6 +299,11 @@ capturableTVars = everywhere $ mkT $ \case
       goBndr (PlainTV n   ) = PlainTV $ capturableBase n
       goBndr (KindedTV n k) = KindedTV (capturableBase n) $ capturableTVars k
   t -> t
+
+------------------------------------------------------------------------------
+-- | Constructs capturable name from base of input name.
+capturableBase :: Name -> Name
+capturableBase = mkName . nameBase
 
 ------------------------------------------------------------------------------
 -- | Replaces use of @m@ in type with @Sem r@.
@@ -325,17 +349,6 @@ tVarName = \case
   _             -> Nothing
 
 ------------------------------------------------------------------------------
--- | Constructs capturable name from base of input name.
-capturableBase :: Name -> Name
-capturableBase = mkName . nameBase
-
-------------------------------------------------------------------------------
 -- | 'splitAt' counting from the end.
 splitAtEnd :: Int -> [a] -> ([a], [a])
 splitAtEnd n = swap . join bimap reverse . splitAt n . reverse
-
-------------------------------------------------------------------------------
--- | Applies function to head of list, if there is one.
-mapHead :: (a -> a) -> [a] -> [a]
-mapHead _ []     = []
-mapHead f (x:xs) = f x : xs
