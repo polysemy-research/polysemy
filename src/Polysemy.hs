@@ -109,47 +109,10 @@ module Polysemy
   , bindT
   , getInspectorT
   , Inspector (..)
-
-  -- * Deprecated Names
-  -- | The following exports are deprecated, and are exposed only for
-  -- backwards compatability reasons. They will be removed in the next major
-  -- release.
-  , Semantic
-  , runSemantic
-  , makeSemantic
-  , makeSemantic_
-  , inlineRecursiveCalls
   ) where
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
 import Polysemy.Internal.TH.Effect
-import Polysemy.Internal.TH.Performance
 import Polysemy.Internal.Tactics
-
--- Imported just for the deprecated names.
-import Polysemy.Internal.Union
-import Language.Haskell.TH
-
---------------------------------------------------------------------------------
--- Deprecated names
-type Semantic = Sem
-{-# DEPRECATED Semantic "Use 'Sem' instead" #-}
-
-runSemantic :: ∀ m r a
-  . Monad m
-  => Semantic r a -> (∀ x. Union r (Sem r) x -> m x)
-  -> m a
-runSemantic = runSem
-{-# DEPRECATED runSemantic "Use 'runSem' instead" #-}
-
-
-makeSemantic :: Name -> Q [Dec]
-makeSemantic = makeSem
-{-# DEPRECATED makeSemantic "Use 'makeSem' instead" #-}
-
-makeSemantic_ :: Name -> Q [Dec]
-makeSemantic_ = makeSem_
-{-# DEPRECATED makeSemantic_ "Use 'makeSem_' instead" #-}
-
 

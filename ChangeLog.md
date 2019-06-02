@@ -1,5 +1,12 @@
 # Changelog for polysemy
 
+## 0.3.0.0 (2019-06-01)
+
+- Removed all deprecated names
+- Moved `Random` effect to `polysemy-zoo`
+- `makeSem` can now be used to create term-level operators (thanks to
+    @TheMatten)
+
 ## 0.2.2.0 (2019-05-30)
 
 - Added `getInspectorT` to the `Tactical` functions, which allows polysemy code
@@ -50,9 +57,4 @@
 - Initial release
 
 ## Unreleased changes
-
-- TODO: Remove deprecated names
-- NEEDS NEW MAJOR RELEASE: Moved `Random` effect to `polysemy-zoo`
-- `makeSem` can now be used to create term-level operators (thanks to
-    @TheMatten)
 
