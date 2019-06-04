@@ -2,6 +2,8 @@
 
 module Polysemy.RPC where
 
+import Control.Monad
+import Data.List
 import Polysemy
 import Polysemy.Error
 import Polysemy.Internal.TH.EffectLib
@@ -36,6 +38,12 @@ recvSomething = fmap read $ recvMessage
 --       labels <- recvSomething
 --       setLabels labels
 --     _ -> throw ()
+
+qSerializer :: Type
+qSerializer = ConT ''Show
+
+qDeserializer :: Type
+qDeserializer = ConT ''Read
 
 getCtorName :: ConLiftInfo -> String
 getCtorName cli = nameBase $ cliConName cli
@@ -95,16 +103,24 @@ genRunRPC name clis = do
     $ interpreter
     ]
 
-sigRunRPC :: Name -> ConLiftInfo -> Q [Dec]
-sigRunRPC n cli = do
+getAllParamsCtx :: [ConLiftInfo] -> [Pred]
+getAllParamsCtx clis =
+  join $ fmap (\p -> [qSerializer `AppT` p, qDeserializer `AppT` p]) $ nub $ do
+    c <- clis
+    cliResType c : fmap snd (cliArgs c)
+
+sigRunRPC :: Name -> [ConLiftInfo] -> Q [Dec]
+sigRunRPC n clis = do
   a <- newName "a"
   let r = cliUnionName cli
+      cli = head clis
   pure
       $ pure
       $ SigD n
       $ quantifyType $ ForallT []
-          [ makeMemberConstraint' r $ ConT ''RPC
-          ]
+          ( makeMemberConstraint' r (ConT ''RPC)
+          : getAllParamsCtx clis
+          )
       $ makeInterpreterType cli r
       $ VarT a
 
@@ -141,23 +157,26 @@ makeDispatch ty n1 n2 = do
       name2 = mkName n2
   clis <- snd <$> getEffectMetadata ty
   (\a b c d -> a ++ b ++ c ++ d)
-       <$> sigDispatch name1 (head clis)
+       <$> sigDispatch name1 clis
        <*> genDispatch name1 clis
-       <*> sigRunRPC name2 (head clis)
+       <*> sigRunRPC name2 clis
        <*> genRunRPC name2 clis
 
 
-sigDispatch :: Name -> ConLiftInfo -> Q [Dec]
-sigDispatch n cli = do
-  let r = cliUnionName cli
+sigDispatch :: Name -> [ConLiftInfo] -> Q [Dec]
+sigDispatch n clis = do
+  let cli = head clis
+      r = cliUnionName cli
   pure
       $ pure
       $ SigD n
       $ quantifyType $ ForallT []
+          (
           [ makeMemberConstraint r cli
           , makeMemberConstraint' r $ ConT ''RPC
           , makeMemberConstraint' r $ ConT ''Error `AppT` ConT ''RPCError
-          ]
+          ] ++ getAllParamsCtx clis
+          )
       $ makeSemType r
       $ TupleT 0
 
