@@ -1,6 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Polysemy.RPC where
+module Polysemy.RPC
+  ( makeDispatch
+  , makeRunRPC
+  ) where
 
 import Control.Monad
 import Data.List
@@ -63,14 +66,14 @@ qRecvSomething = VarE 'recvSomething
 qRecvMessage :: Exp
 qRecvMessage = VarE 'recvMessage
 
-qMissingEffect :: Exp
-qMissingEffect = ConE 'MissingEffect
+_qMissingEffect :: Exp
+_qMissingEffect = ConE 'MissingEffect
 
 qMissingConstructor :: Exp
 qMissingConstructor = ConE 'MissingConstructor
 
-qDecodingError :: Exp
-qDecodingError = ConE 'DecodingError
+_qDecodingError :: Exp
+_qDecodingError = ConE 'DecodingError
 
 qInterpret :: Exp
 qInterpret = VarE 'interpret
@@ -124,18 +127,6 @@ sigRunRPC n clis = do
       $ makeInterpreterType cli r
       $ VarT a
 
--- runLabelerOverRPC :: Labeler :r@> a -> '[RPC] >@r@> a
--- runLabelerOverRPC = interpret \case
---   GetLinkRects -> do
---     sendMessage "Labeler"
---     sendMessage "GetLinkRects"
---     recvSomething
-
---   SetLabels labels -> do
---     sendMessage "Labeler"
---     sendMessage "SetLabels"
---     sendSomething labels
-
 
 
 
@@ -150,17 +141,22 @@ mkDispatch cli = fmap (\n -> BindS (VarP n) qRecvSomething) arg_names
         TupleT 0 -> call
         _        -> VarE '(>>=) `AppE` call `AppE` qSendSomething
 
-
-makeDispatch :: Name -> String -> String -> Q [Dec]
-makeDispatch ty n1 n2 = do
-  let name1 = mkName n1
-      name2 = mkName n2
+makeRunRPC :: Name -> String -> Q [Dec]
+makeRunRPC ty n = do
+  let name = mkName n
   clis <- snd <$> getEffectMetadata ty
-  (\a b c d -> a ++ b ++ c ++ d)
-       <$> sigDispatch name1 clis
-       <*> genDispatch name1 clis
-       <*> sigRunRPC name2 clis
-       <*> genRunRPC name2 clis
+  (++)
+       <$> sigRunRPC name clis
+       <*> genRunRPC name clis
+
+
+makeDispatch :: Name -> String -> Q [Dec]
+makeDispatch ty n = do
+  let name = mkName n
+  clis <- snd <$> getEffectMetadata ty
+  (++)
+       <$> sigDispatch name clis
+       <*> genDispatch name clis
 
 
 sigDispatch :: Name -> [ConLiftInfo] -> Q [Dec]
