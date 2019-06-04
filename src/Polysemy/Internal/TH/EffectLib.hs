@@ -11,6 +11,7 @@ module Polysemy.Internal.TH.EffectLib
   , makeMemberConstraint
   , makeMemberConstraint'
   , makeSemType
+  , makeInterpreterType
   , checkExtensions
   , foldArrows
   ) where
@@ -48,6 +49,15 @@ makeMemberConstraint' r eff = classPred ''Member [eff, VarT r]
 
 makeSemType :: Name -> Type -> Type
 makeSemType r result = ConT ''Sem `AppT` VarT r `AppT` result
+
+
+makeInterpreterType :: ConLiftInfo -> Name -> Type -> Type
+makeInterpreterType cli r result =
+  foldArrows (makeSemType r result)
+    $ pure
+    $ ConT ''Sem
+        `AppT` (PromotedConsT `AppT` ConT (cliEffName cli) `AppT` VarT r)
+        `AppT` result
 
 
 

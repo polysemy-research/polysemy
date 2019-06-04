@@ -40,6 +40,9 @@ recvSomething = fmap read $ recvMessage
 getCtorName :: ConLiftInfo -> String
 getCtorName cli = nameBase $ cliConName cli
 
+getEffName :: ConLiftInfo -> String
+getEffName cli = nameBase $ cliEffName cli
+
 qSendSomething :: Exp
 qSendSomething = VarE 'sendSomething
 
@@ -61,6 +64,65 @@ qMissingConstructor = ConE 'MissingConstructor
 qDecodingError :: Exp
 qDecodingError = ConE 'DecodingError
 
+qInterpret :: Exp
+qInterpret = VarE 'interpret
+
+
+genRunRPC :: Name -> [ConLiftInfo] -> Q [Dec]
+genRunRPC name clis = do
+  let interpreter =
+        AppE qInterpret $ LamCaseE $ do
+          cli <- clis
+          let args = fmap fst $ cliArgs cli
+          pure
+              . flip (Match (ConP (cliConName cli) $ fmap VarP args)) []
+              . NormalB
+              . DoE
+              $ [ NoBindS $ AppE qSendMessage $ LitE $ StringL $ getEffName cli
+                , NoBindS $ AppE qSendMessage $ LitE $ StringL $ getCtorName cli
+                ]
+                ++
+                fmap (NoBindS . AppE qSendMessage . VarE ) args
+                ++
+                case cliResType cli of
+                  TupleT 0 -> []
+                  _        -> [NoBindS qRecvSomething]
+  pure
+    [ FunD name
+    $ pure
+    $ flip (Clause []) []
+    $ NormalB
+    $ interpreter
+    ]
+
+sigRunRPC :: Name -> ConLiftInfo -> Q [Dec]
+sigRunRPC n cli = do
+  a <- newName "a"
+  let r = cliUnionName cli
+  pure
+      $ pure
+      $ SigD n
+      $ ForallT [PlainTV r, PlainTV a]
+          [ makeMemberConstraint' r $ ConT ''RPC
+          ]
+      $ makeInterpreterType cli r
+      $ VarT a
+
+-- runLabelerOverRPC :: Labeler :r@> a -> '[RPC] >@r@> a
+-- runLabelerOverRPC = interpret \case
+--   GetLinkRects -> do
+--     sendMessage "Labeler"
+--     sendMessage "GetLinkRects"
+--     recvSomething
+
+--   SetLabels labels -> do
+--     sendMessage "Labeler"
+--     sendMessage "SetLabels"
+--     sendSomething labels
+
+
+
+
 mkDispatch :: ConLiftInfo -> [Stmt]
 mkDispatch cli = fmap (\n -> BindS (VarP n) qRecvSomething) arg_names
               ++ [NoBindS result]
@@ -71,15 +133,19 @@ mkDispatch cli = fmap (\n -> BindS (VarP n) qRecvSomething) arg_names
     result =
       case cliResType cli of
         TupleT 0 -> call
-        _        -> VarE '(>>=) `AppE` call `AppE` VarE 'sendSomething
+        _        -> VarE '(>>=) `AppE` call `AppE` qSendSomething
 
 
-makeDispatch :: Name -> String -> Q [Dec]
-makeDispatch ty n = do
-  let name = mkName n
+makeDispatch :: Name -> String -> String -> Q [Dec]
+makeDispatch ty n1 n2 = do
+  let name1 = mkName n1
+      name2 = mkName n2
   clis <- snd <$> getEffectMetadata ty
-  (++) <$> sigDispatch name (head clis)
-       <*> genDispatch name clis
+  (\a b c d -> a ++ b ++ c ++ d)
+       <$> sigDispatch name1 (head clis)
+       <*> genDispatch name1 clis
+       <*> sigRunRPC name2 (head clis)
+       <*> genRunRPC name2 clis
 
 
 sigDispatch :: Name -> ConLiftInfo -> Q [Dec]
