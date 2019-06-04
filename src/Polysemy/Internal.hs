@@ -130,6 +130,43 @@ import Polysemy.Internal.Union
 -- Notice that we must use @-XTypeApplications@ to specify that we'd like to
 -- use the ('Polysemy.Output.Output' 'Int') effect.
 --
+-- Note:
+-- Don't use type aliases to distinguish between different types of
+-- effects, the differences are erased at compile-time. The following
+-- will not work as you might expect:
+--
+-- @
+-- type A = String
+-- type B = String
+--
+-- foo
+--   :: ( Member (Input A) r
+--      , Member (Input B) r
+--      )
+--   => Sem r a
+-- foo = do
+--   a <- input @A
+--   b <- input @B
+-- @
+--
+-- The "A" input will bound to both "a" and "b".
+--
+-- Instead, use newtypes:
+--
+-- @
+-- newtype A = A String
+-- newtype B = B String
+--
+-- foo
+--   :: ( Member (Input A) r
+--      , Member (Input B) r
+--      )
+--   => Sem r a
+-- foo = do
+--   a <- input @A
+--   b <- input @B
+-- @
+--
 -- @since 0.1.2.0
 newtype Sem r a = Sem
   { runSem
