@@ -37,7 +37,7 @@ import Data.Generics hiding (Fixity)
 import Data.List
 import Language.Haskell.TH
 import Language.Haskell.TH.Datatype
-import Polysemy.Internal (send, Member, Sem)
+import Polysemy.Internal (send, Sem)
 import Polysemy.Internal.CustomErrors (DefiningModule)
 import Polysemy.Internal.TH.EffectLib
 
@@ -150,12 +150,13 @@ genSig cli
   =  maybe [] (pure . flip InfixD (cliFunName cli)) (cliFunFixity cli)
   ++ [ SigD (cliFunName cli) $ quantifyType
        $ ForallT [] (member_cxt : cliFunCxt cli)
-       $ foldArrows $ fmap snd (cliArgs cli) ++ [sem `AppT` cliResType cli]
+       $ foldArrows sem
+       $ fmap snd
+       $ cliArgs cli
      ]
   where
-    member_cxt = classPred ''Member [eff, VarT $ cliUnionName cli]
-    eff        = foldl' AppT (ConT $ cliEffName cli) $ cliEffArgs cli
-    sem        = ConT ''Sem `AppT` VarT (cliUnionName cli)
+    member_cxt = makeMemberConstraint (cliUnionName cli) cli
+    sem        = makeSemType (cliUnionName cli) (cliResType cli)
 
 
 ------------------------------------------------------------------------------

@@ -8,6 +8,9 @@
 module Polysemy.Internal.TH.EffectLib
   ( ConLiftInfo (..)
   , getEffectMetadata
+  , makeMemberConstraint
+  , makeMemberConstraint'
+  , makeSemType
   , checkExtensions
   , foldArrows
   ) where
@@ -23,7 +26,7 @@ import           Data.Tuple
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Datatype
 import           Language.Haskell.TH.PprLib
-import           Polysemy.Internal (Sem)
+import           Polysemy.Internal (Sem, Member)
 import           Prelude hiding ((<>))
 
 
@@ -32,6 +35,22 @@ getEffectMetadata type_name = do
   dt_info  <- reifyDatatype type_name
   cl_infos <- traverse (mkCLInfo dt_info) $ datatypeCons dt_info
   pure (dt_info, cl_infos)
+
+
+makeMemberConstraint :: Name -> ConLiftInfo -> Pred
+makeMemberConstraint r cli =
+  makeMemberConstraint' r
+    $ foldl' AppT (ConT $ cliEffName cli)
+    $ cliEffArgs cli
+
+makeMemberConstraint' :: Name -> Type -> Pred
+makeMemberConstraint' r eff = classPred ''Member [eff, VarT r]
+
+makeSemType :: Name -> Type -> Type
+makeSemType r result = ConT ''Sem `AppT` VarT r `AppT` result
+
+
+
 
 
 ------------------------------------------------------------------------------
@@ -181,8 +200,8 @@ liftFunNameFromCon n = mkName $ case nameBase n of
 
 ------------------------------------------------------------------------------
 -- | Folds a list of 'Type's into a right-associative arrow 'Type'.
-foldArrows :: [Type] -> Type
-foldArrows = foldr1 $ AppT . AppT ArrowT
+foldArrows :: Type -> [Type] -> Type
+foldArrows = foldr (AppT . AppT ArrowT)
 
 ------------------------------------------------------------------------------
 -- | Extracts name from type variable (possibly nested in signature and/or
