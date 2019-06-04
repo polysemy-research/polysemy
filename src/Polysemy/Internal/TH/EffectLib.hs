@@ -12,6 +12,8 @@ module Polysemy.Internal.TH.EffectLib
   , makeMemberConstraint'
   , makeSemType
   , makeInterpreterType
+  , makeEffectType
+  , makeUnambiguousSend
   , checkExtensions
   , foldArrows
   ) where
@@ -27,7 +29,7 @@ import           Data.Tuple
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Datatype
 import           Language.Haskell.TH.PprLib
-import           Polysemy.Internal (Sem, Member)
+import           Polysemy.Internal (Sem, Member, send)
 import           Prelude hiding ((<>))
 
 
@@ -39,10 +41,12 @@ getEffectMetadata type_name = do
 
 
 makeMemberConstraint :: Name -> ConLiftInfo -> Pred
-makeMemberConstraint r cli =
-  makeMemberConstraint' r
-    $ foldl' AppT (ConT $ cliEffName cli)
-    $ cliEffArgs cli
+makeMemberConstraint r cli = makeMemberConstraint' r $ makeEffectType cli
+
+makeEffectType :: ConLiftInfo -> Type
+makeEffectType cli
+  = foldl' AppT (ConT $ cliEffName cli)
+  $ cliEffArgs cli
 
 makeMemberConstraint' :: Name -> Type -> Pred
 makeMemberConstraint' r eff = classPred ''Member [eff, VarT r]
@@ -56,8 +60,21 @@ makeInterpreterType cli r result =
   foldArrows (makeSemType r result)
     $ pure
     $ ConT ''Sem
-        `AppT` (PromotedConsT `AppT` ConT (cliEffName cli) `AppT` VarT r)
+        `AppT` (PromotedConsT `AppT` makeEffectType cli `AppT` VarT r)
         `AppT` result
+
+
+makeUnambiguousSend :: Bool -> ConLiftInfo -> Exp
+makeUnambiguousSend should_mk_sigs cli =
+  let fun_args_names = fmap fst $ cliArgs cli
+      action = foldl1' AppE
+             $ ConE (cliConName cli) : (VarE <$> fun_args_names)
+      eff    = foldl' AppT (ConT $ cliEffName cli) $ args
+               -- see NOTE(makeSem_)
+      args   = (if should_mk_sigs then id else map capturableTVars)
+             $ cliEffArgs cli ++ [sem, cliResType cli]
+      sem    = ConT ''Sem `AppT` VarT (cliUnionName cli)
+   in AppE (VarE 'send) $ SigE action eff
 
 
 
@@ -228,4 +245,16 @@ tVarName = \case
 -- | 'splitAt' counting from the end.
 splitAtEnd :: Int -> [a] -> ([a], [a])
 splitAtEnd n = swap . join bimap reverse . splitAt n . reverse
+
+------------------------------------------------------------------------------
+-- | Converts names of all type variables in type to capturable ones based on
+-- original name base. Use with caution, may create name conflicts!
+capturableTVars :: Type -> Type
+capturableTVars = everywhere $ mkT $ \case
+  VarT n          -> VarT $ capturableBase n
+  ForallT bs cs t -> ForallT (goBndr <$> bs) (capturableTVars <$> cs) t
+    where
+      goBndr (PlainTV n   ) = PlainTV $ capturableBase n
+      goBndr (KindedTV n k) = KindedTV (capturableBase n) $ capturableTVars k
+  t -> t
 

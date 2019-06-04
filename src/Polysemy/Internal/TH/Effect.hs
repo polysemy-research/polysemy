@@ -33,11 +33,8 @@ module Polysemy.Internal.TH.Effect
   ) where
 
 import Control.Monad
-import Data.Generics hiding (Fixity)
-import Data.List
 import Language.Haskell.TH
 import Language.Haskell.TH.Datatype
-import Polysemy.Internal (send, Sem)
 import Polysemy.Internal.CustomErrors (DefiningModule)
 import Polysemy.Internal.TH.EffectLib
 
@@ -165,39 +162,16 @@ genSig cli
 genDec :: Bool -> ConLiftInfo -> Q [Dec]
 genDec should_mk_sigs cli = do
   let fun_args_names = fmap fst $ cliArgs cli
-      action = foldl1' AppE
-             $ ConE (cliConName cli) : (VarE <$> fun_args_names)
-      eff    = foldl' AppT (ConT $ cliEffName cli) $ args
-               -- see NOTE(makeSem_)
-      args   = (if should_mk_sigs then id else map capturableTVars)
-             $ cliEffArgs cli ++ [sem, cliResType cli]
-      sem    = ConT ''Sem `AppT` VarT (cliUnionName cli)
 
   pure
     [ PragmaD $ InlineP (cliFunName cli) Inlinable ConLike AllPhases
     , FunD (cliFunName cli)
         [ Clause (VarP <$> fun_args_names)
-                 (NormalB $ AppE (VarE 'send) $ SigE action eff)
+                 (NormalB $ makeUnambiguousSend should_mk_sigs cli)
                  []
         ]
     ]
 
 
-------------------------------------------------------------------------------
--- | Converts names of all type variables in type to capturable ones based on
--- original name base. Use with caution, may create name conflicts!
-capturableTVars :: Type -> Type
-capturableTVars = everywhere $ mkT $ \case
-  VarT n          -> VarT $ capturableBase n
-  ForallT bs cs t -> ForallT (goBndr <$> bs) (capturableTVars <$> cs) t
-    where
-      goBndr (PlainTV n   ) = PlainTV $ capturableBase n
-      goBndr (KindedTV n k) = KindedTV (capturableBase n) $ capturableTVars k
-  t -> t
 
-
-------------------------------------------------------------------------------
--- | Constructs capturable name from base of input name.
-capturableBase :: Name -> Name
-capturableBase = mkName . nameBase
 

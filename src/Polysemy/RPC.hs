@@ -2,10 +2,10 @@
 
 module Polysemy.RPC where
 
-import Data.List
 import Polysemy
 import Polysemy.Error
 import Polysemy.Internal.TH.EffectLib
+import Language.Haskell.TH.Datatype
 import Language.Haskell.TH
 
 
@@ -82,7 +82,7 @@ genRunRPC name clis = do
                 , NoBindS $ AppE qSendMessage $ LitE $ StringL $ getCtorName cli
                 ]
                 ++
-                fmap (NoBindS . AppE qSendMessage . VarE ) args
+                fmap (NoBindS . AppE qSendSomething . VarE ) args
                 ++
                 case cliResType cli of
                   TupleT 0 -> []
@@ -102,7 +102,7 @@ sigRunRPC n cli = do
   pure
       $ pure
       $ SigD n
-      $ ForallT [PlainTV r, PlainTV a]
+      $ quantifyType $ ForallT []
           [ makeMemberConstraint' r $ ConT ''RPC
           ]
       $ makeInterpreterType cli r
@@ -128,8 +128,7 @@ mkDispatch cli = fmap (\n -> BindS (VarP n) qRecvSomething) arg_names
               ++ [NoBindS result]
   where
     arg_names = fmap fst $ cliArgs cli
-    call = foldl1' AppE $ VarE (cliFunName cli)
-                        : fmap VarE arg_names
+    call = makeUnambiguousSend True cli
     result =
       case cliResType cli of
         TupleT 0 -> call
@@ -154,7 +153,7 @@ sigDispatch n cli = do
   pure
       $ pure
       $ SigD n
-      $ ForallT [PlainTV r]
+      $ quantifyType $ ForallT []
           [ makeMemberConstraint r cli
           , makeMemberConstraint' r $ ConT ''RPC
           , makeMemberConstraint' r $ ConT ''Error `AppT` ConT ''RPCError
