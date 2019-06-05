@@ -9,3 +9,4 @@ extra-deps:
 - monadLib-3.9
 - ghc-lib-0.20190204
 - th-abstraction-0.3.1.0
+- inspection-testing-0.4.2
