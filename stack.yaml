@@ -9,5 +9,4 @@ extra-deps:
 - monadLib-3.9
 - ghc-lib-0.20190204
 - th-abstraction-0.3.1.0
-- git: https://github.com/nomeata/inspection-testing.git
-  commit: 764025131052b4bbfb99d9a209350f1d99c7a5cb
+- inspection-testing-0.4.2
