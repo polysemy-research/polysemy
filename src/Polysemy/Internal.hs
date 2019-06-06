@@ -18,6 +18,7 @@ module Polysemy.Internal
   , raiseUnder
   , raiseUnder2
   , raiseUnder3
+  , reassoc
   , Lift (..)
   , usingSem
   , liftSem
@@ -265,6 +266,18 @@ raise = hoistSem $ hoist raise_b . weaken
 raise_b :: Sem r a -> Sem (e ': r) a
 raise_b = raise
 {-# NOINLINE raise_b #-}
+
+------------------------------------------------------------------------------
+-- | Like 'raise', but introduces a new effect underneath the head of the
+-- list.
+reassoc :: ∀ e2 e1 r a. Sem (e1 ': e2 ': r) a -> Sem (e2 ': e1 ': r) a
+reassoc = hoistSem $ hoist reassoc_b . shuffle
+{-# INLINE reassoc #-}
+
+
+reassoc_b :: Sem (e1 ': e2 ': r) a -> Sem (e2 ': e1 ': r) a
+reassoc_b = reassoc
+{-# NOINLINE reassoc_b #-}
 
 
 ------------------------------------------------------------------------------

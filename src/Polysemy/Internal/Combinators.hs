@@ -15,6 +15,8 @@ module Polysemy.Internal.Combinators
   , reinterpretH
   , reinterpret2H
   , reinterpret3H
+  , interpretUnderH
+
     -- * Statefulness
   , stateful
   , lazilyStateful
@@ -48,6 +50,23 @@ interpret
     -> Sem r a
 -- TODO(sandy): could probably give a `coerce` impl for `runTactics` here
 interpret f = interpretH $ \(e :: e m x) -> liftT @m $ f e
+
+
+interpretUnderH
+    :: (∀ x m . e m x -> Tactical e m (top ': r) x)
+       -- ^ A natural transformation from the handled effect to other effects
+       -- already in 'Sem'.
+    -> Sem (top ': e ': r) a
+    -> Sem (top ': r) a
+interpretUnderH f (Sem m) = m $ \u ->
+  case decomp u of
+    Left u' -> case decomp u' of
+      Left  x -> liftSem $ weaken $ hoist (interpretUnderH f) x
+      Right (Yo e s d y v) -> do
+        a <- runTactics s (fmap reassoc d) v $ f e
+        pure $ y a
+    Right y -> liftSem $ hoist (interpretUnderH f) $ Union SZ y
+{-# INLINE interpretUnderH #-}
 
 
 ------------------------------------------------------------------------------

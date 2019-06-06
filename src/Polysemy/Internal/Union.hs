@@ -20,6 +20,7 @@ module Polysemy.Internal.Union
   , weakenUnder
   , weakenUnder2
   , weakenUnder3
+  , shuffle
   -- * Using Unions
   , decomp
   , prj
@@ -191,6 +192,14 @@ absurdU = absurdU
 weaken :: Union r m a -> Union (e ': r) m a
 weaken (Union n a) = Union (SS n) a
 {-# INLINE weaken #-}
+
+------------------------------------------------------------------------------
+-- | Weaken a 'Union' so it is capable of storing a new sort of effect.
+shuffle :: Union (e1 ': e2 ': r) m a -> Union (e2 ': e1 ': r) m a
+shuffle (Union SZ a) = Union (SS SZ) a
+shuffle (Union (SS SZ) a) = Union SZ a
+shuffle (Union (SS (SS n)) a) = Union (SS (SS n)) a
+{-# INLINE shuffle #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'weaken', but introduces a new effect under the top of the stack.
