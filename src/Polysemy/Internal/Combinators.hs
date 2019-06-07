@@ -68,8 +68,6 @@ interpret = lower interpretH
 interpretUnder
     :: FirstOrder m0 e "interpretUnder"
     => (∀ x m. e m x -> Sem (top ': r) x)
-       -- ^ A natural transformation from the handled effect to other effects
-       -- already in 'Sem'.
     -> Sem (top ': e ': r) a
     -> Sem (top ': r) a
 interpretUnder = lower interpretUnderH
