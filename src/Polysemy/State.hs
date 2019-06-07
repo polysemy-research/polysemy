@@ -80,11 +80,10 @@ runLazyState = lazilyStateful $ \case
 -- @since 0.1.2.0
 runStateInIORef
     :: forall s r a
-     . Member (Lift IO) r
-    => IORef s
-    -> Sem (State s ': r) a
-    -> Sem r a
-runStateInIORef ref = interpret $ \case
+     . IORef s
+    -> Sem (Lift IO ': State s ': r) a
+    -> Sem (Lift IO ': r) a
+runStateInIORef ref = interpretUnder $ \case
   Get   -> sendM $ readIORef ref
   Put s -> sendM $ writeIORef ref s
 {-# INLINE runStateInIORef #-}
