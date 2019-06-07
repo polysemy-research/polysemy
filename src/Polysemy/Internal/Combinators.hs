@@ -9,6 +9,8 @@ module Polysemy.Internal.Combinators
   , reinterpret
   , reinterpret2
   , reinterpret3
+  , interpretUnder
+
     -- * Higher order
   , interpretH
   , interceptH
@@ -37,6 +39,13 @@ swap :: (a, b) -> (b, a)
 swap ~(a, b) = (b, a)
 
 
+lower
+    :: ((forall m x. e m x -> Tactical e m r x) -> t)
+    -> (forall m x. e m x -> Sem r x)
+    -> t
+lower higher f = higher $ \(e :: e m x) -> liftT @m $ f e
+{-# INLINE lower #-}
+
 
 ------------------------------------------------------------------------------
 -- | The simplest way to produce an effect handler. Interprets an effect @e@ by
@@ -49,7 +58,22 @@ interpret
     -> Sem (e ': r) a
     -> Sem r a
 -- TODO(sandy): could probably give a `coerce` impl for `runTactics` here
-interpret f = interpretH $ \(e :: e m x) -> liftT @m $ f e
+interpret = lower interpretH
+{-# INLINE interpret #-}
+
+
+------------------------------------------------------------------------------
+-- | The simplest way to produce an effect handler. Interprets an effect @e@ by
+-- transforming it into other effects inside of @r@.
+interpretUnder
+    :: FirstOrder m0 e "interpretUnder"
+    => (∀ x m. e m x -> Sem (top ': r) x)
+       -- ^ A natural transformation from the handled effect to other effects
+       -- already in 'Sem'.
+    -> Sem (top ': e ': r) a
+    -> Sem (top ': r) a
+interpretUnder = lower interpretUnderH
+{-# INLINE interpretUnder #-}
 
 
 interpretUnderH
@@ -182,7 +206,7 @@ reinterpret
        -- ^ A natural transformation from the handled effect to the new effect.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': r) a
-reinterpret f = reinterpretH $ \(e :: e m x) -> liftT @m $ f e
+reinterpret = lower reinterpretH
 {-# INLINE[3] reinterpret #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 
@@ -213,7 +237,7 @@ reinterpret2
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': r) a
-reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
+reinterpret2 = lower reinterpret2H
 {-# INLINE[3] reinterpret2 #-}
 
 
@@ -243,7 +267,7 @@ reinterpret3
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': e4 ': r) a
-reinterpret3 f = reinterpret3H $ \(e :: e m x) -> liftT @m $ f e
+reinterpret3 = lower reinterpret3H
 {-# INLINE[3] reinterpret3 #-}
 
 

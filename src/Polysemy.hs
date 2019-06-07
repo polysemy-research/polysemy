@@ -80,6 +80,7 @@ module Polysemy
   , reinterpret
   , reinterpret2
   , reinterpret3
+  , interpretUnder
 
     -- * Combinators for Interpreting Higher-Order Effects
   , interpretH
@@ -87,6 +88,7 @@ module Polysemy
   , reinterpretH
   , reinterpret2H
   , reinterpret3H
+  , interpretUnderH
 
     -- * Composing IO-based Interpreters
   , (.@)
