@@ -254,7 +254,6 @@ hoistSem
 hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSem #-}
 
-
 ------------------------------------------------------------------------------
 -- | Introduce an effect into 'Sem'. Analogous to
 -- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem
@@ -272,6 +271,12 @@ raise_b = raise
 -- list.
 reassoc :: ∀ e2 e1 r a. Sem (e1 ': e2 ': r) a -> Sem (e2 ': e1 ': r) a
 reassoc = hoistSem $ hoist reassoc_b . shuffle
+  where
+    shuffle :: ∀ m x. Union (e1 ': e2 ': r) m x -> Union (e2 ': e1 ': r) m x
+    shuffle (Union SZ a) = Union (SS SZ) a
+    shuffle (Union (SS SZ) a) = Union SZ a
+    shuffle (Union (SS (SS n)) a) = Union (SS (SS n)) a
+    {-# INLINE shuffle #-}
 {-# INLINE reassoc #-}
 
 
@@ -285,6 +290,11 @@ reassoc_b = reassoc
 -- list.
 raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = hoistSem $ hoist raiseUnder_b . weakenUnder
+  where
+    weakenUnder :: ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': r) m x
+    weakenUnder (Union SZ a) = Union SZ a
+    weakenUnder (Union (SS n) a) = Union (SS (SS n)) a
+    {-# INLINE weakenUnder #-}
 {-# INLINE raiseUnder #-}
 
 
@@ -298,6 +308,11 @@ raiseUnder_b = raiseUnder
 -- list.
 raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
 raiseUnder2 = hoistSem $ hoist raiseUnder2_b . weakenUnder2
+  where
+    weakenUnder2 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': r) m x
+    weakenUnder2 (Union SZ a) = Union SZ a
+    weakenUnder2 (Union (SS n) a) = Union (SS (SS (SS n))) a
+    {-# INLINE weakenUnder2 #-}
 {-# INLINE raiseUnder2 #-}
 
 
@@ -311,6 +326,11 @@ raiseUnder2_b = raiseUnder2
 -- list.
 raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
 raiseUnder3 = hoistSem $ hoist raiseUnder3_b . weakenUnder3
+  where
+    weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
+    weakenUnder3 (Union SZ a) = Union SZ a
+    weakenUnder3 (Union (SS n) a) = Union (SS (SS (SS (SS n)))) a
+    {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
 
 
