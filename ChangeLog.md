@@ -58,3 +58,9 @@
 
 ## Unreleased changes
 
+NEEDS NEW RELEASE: 0.4.0.0
+- Added `runResource`, which runs a `Resource` purely
+- Added `onError` to `Resource`
+- Renamed `runResource` to `runResourceInIO`
+
+
