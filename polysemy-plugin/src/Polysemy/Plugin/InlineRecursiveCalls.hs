@@ -61,16 +61,20 @@ replace n n' = everywhere $ mkT go
     go x = x
 
 
+noInlinePragma :: InlinePragma
+noInlinePragma = defaultInlinePragma { inl_inline = NoInline }
+
+
 loopbreaker :: CoreBndr -> CoreExpr -> CoreSupplyM [(Var, CoreExpr)]
 loopbreaker n b = do
   u <- getUniq
   let Just info = zapUsageInfo $ idInfo n
-      info' = replace n n' $ setInlinePragInfo info alwaysInlinePragma
+      info' = setInlinePragInfo info alwaysInlinePragma
       n' = mkLocalVar
              (idDetails n)
              (mkInternalName u (occName n) noSrcSpan)
              (idType n)
-         $ setInlinePragInfo vanillaIdInfo neverInlinePragma
+         $ setInlinePragInfo vanillaIdInfo noInlinePragma
 
   let foo =  [ (lazySetIdInfo n info', replace n n' b)
              , (n', Var n)
