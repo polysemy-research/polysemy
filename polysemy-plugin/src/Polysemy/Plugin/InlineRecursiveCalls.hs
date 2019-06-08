@@ -64,20 +64,35 @@ replace n n' = everywhere $ mkT go
 noInlinePragma :: InlinePragma
 noInlinePragma = defaultInlinePragma { inl_inline = NoInline }
 
+clearIsLoopbreaker :: OccInfo -> OccInfo
+clearIsLoopbreaker (IAmALoopBreaker _ tci) = ManyOccs tci
+clearIsLoopbreaker a = a
+
+setIsLoopbreaker :: OccInfo -> OccInfo
+setIsLoopbreaker (ManyOccs tci) = IAmALoopBreaker False tci
+setIsLoopbreaker a = a
+
+modifyOccInfo :: (OccInfo -> OccInfo) -> IdInfo -> IdInfo
+modifyOccInfo f info = setOccInfo info $ f $ occInfo info
+
 
 loopbreaker :: CoreBndr -> CoreExpr -> CoreSupplyM [(Var, CoreExpr)]
 loopbreaker n b = do
   u <- getUniq
-  let Just info = zapUsageInfo $ idInfo n
-      info' = setInlinePragInfo info alwaysInlinePragma
+  let info1 = idInfo n
+      info1' = setInlinePragInfo info1 alwaysInlinePragma
       n' = mkLocalVar
              (idDetails n)
              (mkInternalName u (occName n) noSrcSpan)
              (idType n)
+         $ modifyOccInfo setIsLoopbreaker
          $ setInlinePragInfo vanillaIdInfo noInlinePragma
 
-  let foo =  [ (lazySetIdInfo n info', replace n n' b)
-             , (n', Var n)
+  let foo =  [ ( lazySetIdInfo n $ modifyOccInfo clearIsLoopbreaker info1'
+               , replace n n' b
+               )
+
+             , ( n', Var n)
              ]
   pprTraceM "loop breaker for " $ ppr $ Rec $ foo
   pure foo
