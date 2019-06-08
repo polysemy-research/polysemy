@@ -67,6 +67,7 @@ import GHC (ModuleName, moduleName)
 import Module (mkModuleName, moduleSetElts)
 import Polysemy.Plugin.Fundep
 import Polysemy.Plugin.InlineRecursiveCalls
+import Outputable
 
 #if __GLASGOW_HASKELL__ >= 810
 import Polysemy.Plugin.Phases
@@ -81,7 +82,7 @@ import Plugins (PluginRecompile(..))
 plugin :: Plugin
 plugin = defaultPlugin
     { tcPlugin = const $ Just fundepPlugin
-    , installCoreToDos = const installTodos
+    , installCoreToDos = installTodos
 #if __GLASGOW_HASKELL__ >= 806
     , pluginRecompile = const $ pure NoForceRecompile
 #endif
@@ -92,20 +93,25 @@ polysemyInternal :: ModuleName
 polysemyInternal = mkModuleName "Polysemy.Internal"
 
 
-installTodos :: [CoreToDo] -> CoreM [CoreToDo]
-installTodos todos = do
+installTodos :: [String] -> [CoreToDo] -> CoreM [CoreToDo]
+installTodos opts todos = do
   dflags <- getDynFlags
 
-  case optLevel dflags of
-    0 -> pure todos
-    _ -> do
-      mods <- moduleSetElts <$> getVisibleOrphanMods
-      pure $ case any ((== polysemyInternal) . moduleName) mods of
-        True  -> CoreDoPluginPass "Inline Recursive Calls" inlineRecursiveCalls
-               : todos
+  let optimized_todos =
+          CoreDoPluginPass "Inline Recursive Calls" inlineRecursiveCalls
+        : todos
 #if __GLASGOW_HASKELL__ >= 810
-              ++ extraPhases dflags
+       ++ extraPhases dflags
 #endif
-        False -> todos
+
+  if elem "force-optimize" opts
+     then pprTrace "FORCED OPTIMIZE" (ppr optimized_todos) $ pure optimized_todos
+     else case optLevel dflags of
+       0 -> pure todos
+       _ -> do
+         mods <- moduleSetElts <$> getVisibleOrphanMods
+         pure $ case any ((== polysemyInternal) . moduleName) mods of
+           True  -> optimized_todos
+           False -> todos
 
 

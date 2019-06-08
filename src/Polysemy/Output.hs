@@ -1,6 +1,8 @@
 {-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 module Polysemy.Output
   ( -- * Effect
     Output (..)
@@ -57,14 +59,13 @@ runIgnoringOutput = interpret \case
 --
 -- @since 0.1.2.0
 runBatchOutput
-    :: forall o r a
-     . Int
+    :: Int
     -> Sem (Output [o] ': r) a
     -> Sem (Output [[o]] ': r) a
 runBatchOutput 0 m = raise $ runIgnoringOutput m
 runBatchOutput size m = do
   ((_, res), a) <-
-    runState (0 :: Int, [] :: [o]) $ reinterpret2 (\case
+    runState (0 :: Int, []) $ reinterpret2 (\case
       Output o -> do
         (nacc, acc) <- get
         let no     = length o

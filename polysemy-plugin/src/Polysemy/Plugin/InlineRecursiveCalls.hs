@@ -17,7 +17,7 @@ import Name
 import UniqSupply
 import Unique
 import Var
-
+import Outputable hiding ((<>))
 
 inlineRecursiveCalls :: ModGuts -> CoreM ModGuts
 inlineRecursiveCalls mg = do
@@ -71,6 +71,7 @@ loopbreaker n b = do
              (mkInternalName u (occName n) noSrcSpan)
              (idType n)
          $ setInlinePragInfo vanillaIdInfo neverInlinePragma
+  pprTraceM "loop breaker for " $ vcat [ppr n, ppr n']
   pure [ (lazySetIdInfo n info', replace n n' b)
        , (n', Var n)
        ]

@@ -23,6 +23,7 @@ dependencies:
 - template-haskell >= 2.14.0.0 && <2.15
 - th-abstraction >= 0.3 && <= 0.4
 - transformers >= 0.5.5.0 && < 0.6
+- polysemy-plugin >= 0.2.0.1
 
 default-extensions:
   - DataKinds
@@ -74,9 +75,12 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -fplugin=Polysemy.Plugin
+    - -O2
     dependencies:
     - polysemy
     - inspection-testing >= 0.4.1.1 && < 0.5
+    - should-not-typecheck >= 2.1.0 && < 3
     - hspec >= 2.6.0 && < 3
 
 benchmarks:

@@ -2,6 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections   #-}
 
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 module Polysemy.Writer
   ( -- * Effect
     Writer (..)
@@ -60,4 +62,5 @@ runWriter = runState mempty . reinterpretH \case
     ~(o, a) <- raise $ runWriter mm
     modify (<> f o)
     pure a
+{-# INLINE runWriter #-}
 

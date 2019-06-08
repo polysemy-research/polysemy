@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9ee186fecebe41f0688aa073f56c51a08f7f3881a86af44a4d91a6cb8b4d6005
+-- hash: 96ba985dedd0b62bd2251bc47763c7636ae881feaf6fd43e4316bb73f9ed0ff2
 
 name:           polysemy
 version:        0.3.0.0
@@ -71,6 +71,7 @@ library
       base >=4.7 && <5
     , containers >=0.6 && <=0.7
     , mtl >=2.2.2 && <3
+    , polysemy-plugin >=0.2.0.1
     , syb >=0.7 && <=0.8
     , template-haskell >=2.14.0.0 && <2.15
     , th-abstraction >=0.3 && <=0.4
@@ -97,7 +98,7 @@ test-suite polysemy-test
   hs-source-dirs:
       test
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -fplugin=Polysemy.Plugin -O2
   build-depends:
       base >=4.7 && <5
     , containers >=0.6 && <=0.7
@@ -105,6 +106,8 @@ test-suite polysemy-test
     , inspection-testing >=0.4.1.1 && <0.5
     , mtl >=2.2.2 && <3
     , polysemy
+    , polysemy-plugin >=0.2.0.1
+    , should-not-typecheck >=2.1.0 && <3
     , syb >=0.7 && <=0.8
     , template-haskell >=2.14.0.0 && <2.15
     , th-abstraction >=0.3 && <=0.4
@@ -128,6 +131,7 @@ benchmark polysemy-bench
     , freer-simple
     , mtl
     , polysemy
+    , polysemy-plugin >=0.2.0.1
     , syb >=0.7 && <=0.8
     , template-haskell >=2.14.0.0 && <2.15
     , th-abstraction >=0.3 && <=0.4

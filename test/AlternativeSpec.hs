@@ -1,9 +1,10 @@
 module AlternativeSpec where
 
+import Control.Applicative
 import Polysemy
 import Polysemy.NonDet
 import Test.Hspec
-import Control.Applicative
+
 
 semFail :: Member NonDet r => Maybe Bool -> Sem r Bool
 semFail mb = do

@@ -60,8 +60,8 @@ go = do
 
 
 tryIt :: Either Bool String
-tryIt = run . runError @Bool $ do
-  catch @Bool
+tryIt = run . runError $ do
+  catch
     do
       throw False
     \_ -> pure "hello"

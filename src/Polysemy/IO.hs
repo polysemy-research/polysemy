@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 module Polysemy.IO
   ( -- * Interpretations
     runIO
@@ -32,12 +34,11 @@ import Control.Monad.IO.Class
 -- @
 --
 runIO
-    :: forall m r a
-     . ( MonadIO m
+    :: ( MonadIO m
        , Member (Lift m) r
        )
     => Sem (Lift IO ': r) a
     -> Sem r a
-runIO = interpret $ sendM . liftIO @m . unLift
+runIO = interpret $ sendM . liftIO . unLift
 {-# INLINE runIO #-}
 

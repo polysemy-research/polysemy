@@ -1,5 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 module Polysemy.Error
   ( -- * Effect
     Error (..)
@@ -46,27 +48,21 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
   case decomp u of
     Left x -> E.ExceptT $ k $
       weave (Right ())
-            (either (pure . Left) runError_b)
+            (either (pure . Left) runError)
             hush
             x
     Right (Yo (Throw e) _ _ _ _) -> E.throwE e
     Right (Yo (Catch try handle) s d y _) ->
       E.ExceptT $ usingSem k $ do
-        ma <- runError_b $ d $ try <$ s
+        ma <- runError $ d $ try <$ s
         case ma of
           Right a -> pure . Right $ y a
           Left e -> do
-            ma' <- runError_b $ d $ (<$ s) $ handle e
+            ma' <- runError $ d $ (<$ s) $ handle e
             case ma' of
               Left e' -> pure $ Left e'
               Right a -> pure . Right $ y a
 {-# INLINE runError #-}
-
-runError_b
-    :: Sem (Error e ': r) a
-    -> Sem r (Either e a)
-runError_b = runError
-{-# NOINLINE runError_b #-}
 
 
 ------------------------------------------------------------------------------
@@ -140,19 +136,8 @@ runErrorAsExc lower = interpretH $ \case
     is <- getInitialStateT
     t  <- runT try
     h  <- bindT handle
-    let runIt = lower . runErrorAsExc_b lower
+    let runIt = lower . runErrorAsExc lower
     sendM $ X.catch (runIt t) $ \(se :: WrappedExc e) ->
       runIt $ h $ unwrapExc se <$ is
 {-# INLINE runErrorAsExc #-}
-
-
-runErrorAsExc_b
-    :: ( Typeable e
-       , Member (Lift IO) r
-       )
-    => (∀ x. Sem r x -> IO x)
-    -> Sem (Error e ': r) a
-    -> Sem r a
-runErrorAsExc_b = runErrorAsExc
-{-# NOINLINE runErrorAsExc_b #-}
 
