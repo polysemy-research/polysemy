@@ -75,6 +75,13 @@ setIsLoopbreaker a = a
 modifyOccInfo :: (OccInfo -> OccInfo) -> IdInfo -> IdInfo
 modifyOccInfo f info = setOccInfo info $ f $ occInfo info
 
+fixUnfolding :: Id -> Id -> Unfolding -> Unfolding
+fixUnfolding n n' cu@CoreUnfolding{uf_tmpl=tmpl} = cu { uf_tmpl = replace n n' tmpl }
+fixUnfolding _ _' a = a
+
+modifyUnfolding :: (Unfolding -> Unfolding) -> IdInfo -> IdInfo
+modifyUnfolding f info = setUnfoldingInfo info $ f $ unfoldingInfo info
+
 
 loopbreaker :: CoreBndr -> CoreExpr -> CoreSupplyM [(Var, CoreExpr)]
 loopbreaker n b = do
@@ -88,7 +95,7 @@ loopbreaker n b = do
          $ modifyOccInfo setIsLoopbreaker
          $ setInlinePragInfo vanillaIdInfo noInlinePragma
 
-  let foo =  [ ( lazySetIdInfo n $ modifyOccInfo clearIsLoopbreaker info1'
+  let foo =  [ ( lazySetIdInfo n $ modifyUnfolding (fixUnfolding n n') $ modifyOccInfo clearIsLoopbreaker info1'
                , replace n n' b
                )
 
