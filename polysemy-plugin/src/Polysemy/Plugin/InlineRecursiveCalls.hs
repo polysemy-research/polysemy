@@ -51,7 +51,7 @@ matches n (Var n') | n == n' = Any True
 matches _ _ = Any False
 
 
-replace :: Id -> Id -> Expr CoreBndr -> Expr CoreBndr
+replace :: Data a => Id -> Id -> a -> a
 replace n n' = everywhere $ mkT go
   where
     go :: Expr CoreBndr -> Expr CoreBndr
@@ -65,16 +65,18 @@ loopbreaker :: CoreBndr -> CoreExpr -> CoreSupplyM [(Var, CoreExpr)]
 loopbreaker n b = do
   u <- getUniq
   let Just info = zapUsageInfo $ idInfo n
-      info' = setInlinePragInfo info alwaysInlinePragma
+      info' = replace n n' $ setInlinePragInfo info alwaysInlinePragma
       n' = mkLocalVar
              (idDetails n)
              (mkInternalName u (occName n) noSrcSpan)
              (idType n)
          $ setInlinePragInfo vanillaIdInfo neverInlinePragma
-  pprTraceM "loop breaker for " $ vcat [ppr n, ppr n']
-  pure [ (lazySetIdInfo n info', replace n n' b)
-       , (n', Var n)
-       ]
+
+  let foo =  [ (lazySetIdInfo n info', replace n n' b)
+             , (n', Var n)
+             ]
+  pprTraceM "loop breaker for " $ ppr $ Rec $ foo
+  pure foo
 
 
 -- TODO(sandy): Make this only break loops in functions whose type ends in `Sem
