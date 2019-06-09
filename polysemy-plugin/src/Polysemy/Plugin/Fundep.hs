@@ -89,14 +89,14 @@ canUnify wanted given =
       (g, gs) = splitAppTys given
    in (&& eqType w g) . flip all (zip ws gs) $ \(wt, gt) ->
      or [ isTyVarTy wt
-        , eqType gt wt
+        , eqType wt gt
+        , canUnify wt gt
         ]
 
 
-
 mkWanted :: Bool -> CtLoc -> Type -> Type -> TcPluginM (Maybe Ct)
-mkWanted mustUnify loc wanted given =
-  if (not mustUnify || canUnify wanted given)
+mkWanted must_unify loc wanted given =
+  if (not must_unify || canUnify wanted given)
      then do
        (ev, _) <- unsafeTcPluginTcM $ runTcSDeriveds $ newWantedEq loc Nominal wanted given
        pure $ Just $ CNonCanonical ev
