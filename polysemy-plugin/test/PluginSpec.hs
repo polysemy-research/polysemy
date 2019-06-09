@@ -10,6 +10,7 @@ import GHC.Exts
 import Polysemy
 import Polysemy.Error
 import Polysemy.State
+import Polysemy.Output
 import Test.Hspec
 
 
@@ -115,6 +116,13 @@ spec = do
       flipShouldBe (Right @String (10 :: Int, True))  . run $ runError $ runState 0 errState
     it "should interpret against Bool/Float" $ do
       flipShouldBe (Right @Bool (10 :: Float, True))  . run $ runError $ runState 0 errState
+
+  describe "Output effect" $ do
+    it "should unify recursively" $ do
+      -- TODO(sandy): This should unify even without the type app. Bug #95
+      flipShouldBe 11 . sum @[] . fst . run . runFoldMapOutput id $ do
+        output [1]
+        output $ replicate 2 5
 
 
   describe "Lift effect" $ do
