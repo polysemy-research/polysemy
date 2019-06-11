@@ -43,7 +43,7 @@ prog = catch @Bool (throw True) (pure . not)
 
 zoinks :: IO (Either Bool Bool)
 zoinks = fmap (fmap snd)
-       . (runM .@ runResource .@@ runErrorInIO)
+       . (runM .@ runResourceInIO .@@ runErrorInIO)
        . runState False
        $ prog
 
