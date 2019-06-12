@@ -133,12 +133,11 @@ genFreer should_mk_sigs type_name = do
   dt_info    <- reifyDatatype type_name
   cl_infos   <- traverse (mkCLInfo dt_info) $ datatypeCons dt_info
   tyfams_on  <- isExtEnabled TypeFamilies
-  def_mod_fi <- sequence [ TySynInstD ''DefiningModule
-                             . TySynEqn [ConT $ datatypeName dt_info]
-                             . LitT
-                             . StrTyLit
-                             . loc_module
-                           <$> location
+  def_mod_fi <- sequence [ tySynInstDCompat
+                             ''DefiningModule
+                             Nothing
+                             [pure . ConT $ datatypeName dt_info]
+                             (LitT . StrTyLit . loc_module <$> location)
                          | tyfams_on
                          ]
   decs       <- traverse (genDec should_mk_sigs) cl_infos
