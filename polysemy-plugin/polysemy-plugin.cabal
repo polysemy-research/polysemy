@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 833a0e985a778fbc94a5830306c89c74928839bc5d967121db306b2744cfe1a5
+-- hash: aceeac8482d66cadbcf9559c89ab7ff683f188490a14d0701c2a56b73fcd9b95
 
 name:           polysemy-plugin
 version:        0.2.0.2

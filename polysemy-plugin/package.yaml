@@ -37,6 +37,7 @@ tests:
     - -fplugin=Polysemy.Plugin
     - -O2
     dependencies:
+    - polysemy >= 0.3
     - polysemy-plugin
     - hspec >= 2.6.0 && < 3
     - should-not-typecheck >= 2.1.0 && < 3
