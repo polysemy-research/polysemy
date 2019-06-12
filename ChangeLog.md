@@ -1,5 +1,9 @@
 # Changelog for polysemy
 
+## 0.3.0.1 (2019-06-09)
+
+- Fixed a type error in the benchmark caused by deprecation of `Semantic`
+
 ## 0.3.0.0 (2019-06-01)
 
 - Removed all deprecated names
