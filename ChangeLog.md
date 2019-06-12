@@ -62,3 +62,9 @@
 
 ## Unreleased changes
 
+NEEDS NEW RELEASE: 0.4.0.0
+- Added `runResource`, which runs a `Resource` purely
+- Added `onException`, `finally` and `bracketOnError` to `Resource`
+- Renamed `runResource` to `runResourceInIO`
+- Added a new function, `runResource` which performs bracketing for pure code
+

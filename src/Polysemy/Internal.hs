@@ -357,10 +357,10 @@ runM (Sem m) = m $ \z ->
 ------------------------------------------------------------------------------
 -- | Some interpreters need to be able to lower down to the base monad (often
 -- 'IO') in order to function properly --- some good examples of this are
--- 'Polysemy.Error.runErrorInIO' and 'Polysemy.Resource.runResource'.
+-- 'Polysemy.Error.runErrorInIO' and 'Polysemy.Resource.runResourceInIO'.
 --
 -- However, these interpreters don't compose particularly nicely; for example,
--- to run 'Polysemy.Resource.runResource', you must write:
+-- to run 'Polysemy.Resource.runResourceInIO', you must write:
 --
 -- @
 -- runM . runErrorInIO runM
