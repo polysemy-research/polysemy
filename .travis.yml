@@ -1,50 +1,79 @@
-# Adapted from https://github.com/commercialhaskell/stack
 language: c
 sudo: false
-
 cache:
-    directories:
-        - $HOME/.ghc
-        - $HOME/.cabal
-        - $HOME/.stack
-        - .stack-work
+  directories:
+  - "$HOME/.ghc"
+  - "$HOME/.cabal"
+  - "$HOME/.stack"
+  - ".stack-work"
 
 matrix:
   include:
     # ghc 8.6.3
   - env: STACK='stack --resolver=lts-13.0' CACHE_NAME=8.6.3
-    addons: {apt: {packages: [libgmp-dev]}}
+    addons:
+      apt:
+        packages:
+        - libgmp-dev
 
     # nightly
   - env: STACK='stack --resolver=nightly' CACHE_NAME=nightly
-    addons: {apt: {packages: [libgmp-dev]}}
+    addons:
+      apt:
+        packages:
+        - libgmp-dev
 
-    # Use the resolver in stack.yaml
+    # built-in stack.yaml
   - env: STACK=stack CACHE_NAME=stack-linux
-    addons: {apt: {packages: [libgmp-dev]}}
+    addons:
+      apt:
+        packages:
+        - libgmp-dev
 
   - env: STACK=stack CACHE_NAME=stack-osx
     os: osx
-    addons: {apt: {packages: [libgmp-dev]}}
-
+    addons:
+      apt:
+        packages:
+        - libgmp-dev
 
 install:
- - unset CC
- - export PATH=$HOME/.local/bin:/opt/ghc/$GHCVER/bin:$PATH
- - ./.travis/install-ghr.sh
- - ./.travis/install-stack.sh
+- unset CC
+- export PATH=$HOME/.local/bin:/opt/ghc/$GHCVER/bin:$PATH
+- "./.travis/install-ghr.sh"
+- "./.travis/install-stack.sh"
 
 script:
- - echo "$($STACK ghc -- --version) [$($STACK ghc -- --print-project-git-commit-id 2> /dev/null || echo '?')]"
- - GHC_OPTIONS="-Werror"
- - |
-   set -ex
-   $STACK --no-terminal build --ghc-options="$GHC_OPTIONS"
-   $STACK test --ghc-options="$GHC_OPTIONS"
-   set +ex
+- echo "$($STACK ghc -- --version) [$($STACK ghc -- --print-project-git-commit-id
+  2> /dev/null || echo '?')]"
+- GHC_OPTIONS="-Werror"
+- |
+  set -ex
+  $STACK --no-terminal build --ghc-options="$GHC_OPTIONS"
+  $STACK test --ghc-options="$GHC_OPTIONS"
+  set +ex
 
-after_success:
- - |
-   # Build and ship binary
-   ./.travis/attach-binary.sh
+before_deploy:
+- git config --local user.name "Sandy Maguire"
+- git config --local user.email "sandy@sandymaguire.me"
+- export PACKAGE_VERSION=$(awk '/^version:\s*(.*)/{ print $2 }' ./*.cabal)
+- git tag "polysemy-${PACKAGE_VERSION}"
+
+
+deploy:
+  - provider: hackage
+    username: isovector
+    password:
+      secure: ua7s4XMUVYNvuBKNyFSr0n87YAj8yxJXRbI5hnYlB81RhuAbJce1HrTfk4/TYNvKW0lc68EklM8f7sYXUGMgiz9NWpv4Bq7aoHxU4XzsiWlMf3DF4aMlhm1f0Pavo3dMYrlcbatRXIVPyeiW4iDvYf5OEXrIMjOmy7Nh2qT6sxWHbbfBvPLrk+N4VhweUXl6saA6c3gvLQMsSi5IKtAI2wO9c3K6W3lVRPlD68YQ9lm7CebVl7RW3zCUO6TaWQbTBEZ6VsgzMnyRqDUknE1gMVgKeBnC8vnIDlHjeQrvfIg8eF9BqFuvB1EWWyjr07jXibbKSTppil6wPLZYRpB/C+9EGMkQr+fOybiybnGFHlQccRYQV0b4VAsx9enmdF6QacWlDYvCMj8x4wOMiqv/QCpHJEY0DX0wFBBN/aGoRvSS5JRXPVG6O5f5BOv9zQSL/sOXA4wtfSPvS0SvUpQDxcBOj42Vgbykdh/fKVuN/YCX08Is38SJoVTd+l6vTR0PuhjndHtvSwzx5V4o6vGefcEsvjuFxtjgXL6mWlyQ9hFIPaai/Nlfp3yUmx/k+MbIPUoiO3NxaFSM0DsZXTGdsdk6MJti8WQkQAFzIwdEbRt5twHEKbBLHI7uJftdMUnhMzL8uHUVedrO9Fw5bO91JK09HMpdiWevQ+Jsvggy1rQ=
+    on:
+      repo: isovector/polysemy
+      branch: release-polysemy
+
+  - provider: releases
+    api_key:
+      secure: ilwBKOiqLe5K7KAOnbQFh3zS9fRUQ4no1hzLidPK/nKbICjAgvg0c1Rtf28RhEXNEV/OK66Geth8X11keJakzz0dvcbY5yNeeBw5KMNEubgZKWsHAWYjjOmk3Kd/YhmY+pa0dCyKeLSNHJ+DUyj9PNNGpG0twPY2Rb/piRxiS9WDRhecf1bwsdL71x+6vK/ZWpA3xsmML+AUMFmM+DS2OP0HfQ6HueQ+Qu/Ck6Sqja28fE6zXz2LSq3WSusBnwaU8W1dGb1FjQ3Dzm0alsLLtwKpYNeb4HC86QVqDGk2g0hwmFiF+JPa9RZd1NyG9Wd9OdLbTYV/LcQgTm5fr4icgCrEHU6AdYilOznh5D22Sn8Lhh4aDP07U0k2kW6+I2mXN+BabyP4aLk38IF5tFnAfvub2F9OHGn9SZPkgQd8faXxWZIzWvAlDt4qYjDNJzbpOTYWjAC9E6nq+pQ5rjFiyYbSH9Ar+PFrFPDxggLfSnN2+EY99YoThleMzg7XQAWF1KzebmCV0DvGoVvljfKI/qu6IDpuBzi865bnecCORKiAj0ZWFheyJAsNco5FGT7A0HXIf8IqP3RduaQTWZP9+PKK6lW6PqxGzElBRTuGfMtiBPoCLZQl9mKsvmxUt8mAMdmCAHEZb8lUP/1NLTPup3880NxiGgc6sZ2FKxWECKA=
+    file: []
+    on:
+      repo: isovector/polysemy
+      branch: release-polysemy
 
