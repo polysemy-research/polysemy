@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
 --
@@ -30,22 +32,25 @@
 
 module Polysemy.Plugin.Fundep (fundepPlugin) where
 
-import Class
-import CoAxiom
-import Control.Monad
-import Data.Bifunctor
-import Data.List
-import Data.Maybe
-import FastString (fsLit)
-import GHC (ModuleName)
-import GHC.TcPluginM.Extra (lookupModule, lookupName)
-import Module (mkModuleName)
-import OccName (mkTcOcc)
-import TcPluginM (TcPluginM, tcLookupClass)
-import TcRnTypes
-import TcSMonad hiding (tcLookupClass)
-import TyCoRep (Type (..))
-import Type
+import           Class
+import           CoAxiom
+import           Control.Monad
+import           Data.Bifunctor
+import           Data.IORef
+import           Data.List
+import           Data.Maybe
+import qualified Data.Set as S
+import           FastString (FastString, fsLit)
+import           GHC (DynFlags, ModuleName)
+import           GHC.TcPluginM.Extra (lookupModule, lookupName)
+import           Module (mkModuleName)
+import           OccName (mkTcOcc)
+import           Outputable
+import           TcPluginM (TcPluginM, tcLookupClass, tcPluginIO)
+import           TcRnTypes
+import           TcSMonad hiding (tcLookupClass)
+import           TyCoRep (Type (..))
+import           Type
 
 
 polysemyInternalUnion :: ModuleName
@@ -56,7 +61,8 @@ fundepPlugin = TcPlugin
     { tcPluginInit = do
         md <- lookupModule polysemyInternalUnion (fsLit "polysemy")
         monadEffectTcNm <- lookupName md (mkTcOcc "Find")
-        tcLookupClass monadEffectTcNm
+        (,) <$> tcPluginIO (newIORef S.empty)
+            <*> tcLookupClass monadEffectTcNm
     , tcPluginSolve = solveFundep
     , tcPluginStop = const (return ()) }
 
@@ -111,9 +117,29 @@ countLength eq as =
   let grouped = groupBy eq as
    in zipWith (curry $ bimap head length) grouped grouped
 
-solveFundep :: Class -> [Ct] -> [Ct] -> [Ct] -> TcPluginM TcPluginResult
+
+newtype HashedCt = HashedCt
+  { getHashedCt :: FastString
+  }
+  deriving (Eq, Ord, Show, Outputable)
+
+
+hashWanted :: DynFlags -> Ct -> HashedCt
+hashWanted dyn ct =
+  HashedCt
+    . fsLit
+    . renderWithStyle dyn (ppr . ctev_pred $ cc_ev ct)
+    $ defaultDumpStyle dyn
+
+
+solveFundep
+    :: (IORef (S.Set HashedCt), Class)
+    -> [Ct]
+    -> [Ct]
+    -> [Ct]
+    -> TcPluginM TcPluginResult
 solveFundep _ _ _ [] = pure $ TcPluginOk [] []
-solveFundep effCls giv _ want = do
+solveFundep (ref, effCls) giv _ want = do
     let wantedEffs = allMonadEffectConstraints effCls want
         givenEffs = snd <$> allMonadEffectConstraints effCls giv
         num_wanteds_by_r = countLength eqType $ fmap (thd . snd) wantedEffs
@@ -129,5 +155,16 @@ solveFundep effCls giv _ want = do
             _                 -> pure Nothing
         Just eff' -> mkWanted True loc eff eff'
 
-    pure $ TcPluginOk [] $ catMaybes eqs
+    dyn <- unsafeTcPluginTcM getDynFlags
+    already_emitted <- tcPluginIO $ readIORef ref
 
+    let eqs' = catMaybes eqs
+        hashes = fmap (hashWanted dyn) eqs'
+        new = filter (not . flip S.member already_emitted . snd)
+            $ zip eqs' hashes
+
+    tcPluginIO $ modifyIORef ref $ S.union $ S.fromList $ fmap snd new
+    -- pprTraceM "emitting" $ ppr new
+
+    pure . TcPluginOk []
+         $ fmap fst new
