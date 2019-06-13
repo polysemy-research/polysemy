@@ -41,12 +41,11 @@ import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import qualified Data.Set as S
-import           FastString (FastString, fsLit)
-import           GHC (DynFlags, ModuleName)
+import           FastString (fsLit)
+import           GHC (ModuleName)
 import           GHC.TcPluginM.Extra (lookupModule, lookupName)
 import           Module (mkModuleName)
 import           OccName (mkTcOcc)
-import           Outputable
 import           TcPluginM (TcPluginM, tcLookupClass, tcPluginIO)
 import           TcRnTypes
 import           TcSMonad hiding (tcLookupClass)
@@ -167,15 +166,10 @@ solveFundep (ref, effCls) giv _ want = do
             _                 -> pure Nothing
         Just eff' -> mkWanted True loc eff eff'
 
-    dyn <- unsafeTcPluginTcM getDynFlags
     already_emitted <- tcPluginIO $ readIORef ref
+    let new_wanteds = filter (not . flip S.member already_emitted . fst)
+                    $ catMaybes eqs
 
-    let eqs' = catMaybes eqs
-        new = filter (not . flip S.member already_emitted . fst) eqs'
+    tcPluginIO $ modifyIORef ref $ S.union $ S.fromList $ fmap fst new_wanteds
+    pure . TcPluginOk [] $ fmap snd new_wanteds
 
-
-    tcPluginIO $ modifyIORef ref $ S.union $ S.fromList $ fmap fst new
-    -- pprTraceM "emitting" $ ppr new
-
-    pure . TcPluginOk []
-         $ fmap snd new
