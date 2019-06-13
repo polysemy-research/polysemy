@@ -118,6 +118,13 @@ countLength eq as =
    in zipWith (curry $ bimap head length) grouped grouped
 
 
+------------------------------------------------------------------------------
+-- | 'Ct's don't have an 'Ord' or 'Hashable' or anything useful for comparing
+-- for equality. So instead we put cheat by pretty-printing the constraint, and
+-- using _that_ as our unique key. It's gross, but it works. Using 'FastString'
+-- here gives us O(1) comparisons.
+--
+-- Use 'hashWanted' to get one of these.
 newtype HashedCt = HashedCt
   { getHashedCt :: FastString
   }
