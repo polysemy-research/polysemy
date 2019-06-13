@@ -36,6 +36,7 @@ import           Class
 import           CoAxiom
 import           Control.Monad
 import           Data.Bifunctor
+import           Data.Function (on)
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
@@ -100,12 +101,21 @@ canUnify wanted given =
         ]
 
 
-mkWanted :: Bool -> CtLoc -> Type -> Type -> TcPluginM (Maybe Ct)
+mkWanted
+    :: Bool
+    -> CtLoc
+    -> Type
+    -> Type
+    -> TcPluginM (Maybe ( (OrdType, OrdType)  -- the types we want to unify
+                        , Ct                  -- the constraint
+                        ))
 mkWanted must_unify loc wanted given =
   if (not must_unify || canUnify wanted given)
      then do
        (ev, _) <- unsafeTcPluginTcM $ runTcSDeriveds $ newWantedEq loc Nominal wanted given
-       pure $ Just $ CNonCanonical ev
+       pure $ Just ( (OrdType wanted, OrdType given)
+                   , CNonCanonical ev
+                   )
      else
        pure Nothing
 
@@ -119,28 +129,23 @@ countLength eq as =
 
 
 ------------------------------------------------------------------------------
--- | 'Ct's don't have an 'Ord' or 'Hashable' or anything useful for comparing
--- for equality. So instead we put cheat by pretty-printing the constraint, and
--- using _that_ as our unique key. It's gross, but it works. Using 'FastString'
--- here gives us O(1) comparisons.
---
--- Use 'hashWanted' to get one of these.
-newtype HashedCt = HashedCt
-  { getHashedCt :: FastString
+-- | 'Type's don't have 'Eq' or 'Ord' instances by default, even though there
+-- are functions in GHC that implement these operations. This newtype gives us
+-- those instances.
+newtype OrdType = OrdType
+  { getOrdType :: Type
   }
-  deriving (Eq, Ord, Show, Outputable)
 
+instance Eq OrdType where
+  (==) = eqType `on` getOrdType
 
-hashWanted :: DynFlags -> Ct -> HashedCt
-hashWanted dyn ct =
-  HashedCt
-    . fsLit
-    . renderWithStyle dyn (ppr . ctev_pred $ cc_ev ct)
-    $ defaultDumpStyle dyn
+instance Ord OrdType where
+  compare = nonDetCmpType `on` getOrdType
+
 
 
 solveFundep
-    :: (IORef (S.Set HashedCt), Class)
+    :: (IORef (S.Set (OrdType, OrdType)), Class)
     -> [Ct]
     -> [Ct]
     -> [Ct]
@@ -166,12 +171,11 @@ solveFundep (ref, effCls) giv _ want = do
     already_emitted <- tcPluginIO $ readIORef ref
 
     let eqs' = catMaybes eqs
-        hashes = fmap (hashWanted dyn) eqs'
-        new = filter (not . flip S.member already_emitted . snd)
-            $ zip eqs' hashes
+        new = filter (not . flip S.member already_emitted . fst) eqs'
 
-    tcPluginIO $ modifyIORef ref $ S.union $ S.fromList $ fmap snd new
+
+    tcPluginIO $ modifyIORef ref $ S.union $ S.fromList $ fmap fst new
     -- pprTraceM "emitting" $ ppr new
 
     pure . TcPluginOk []
-         $ fmap fst new
+         $ fmap snd new
