@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
 --
@@ -30,22 +32,25 @@
 
 module Polysemy.Plugin.Fundep (fundepPlugin) where
 
-import Class
-import CoAxiom
-import Control.Monad
-import Data.Bifunctor
-import Data.List
-import Data.Maybe
-import FastString (fsLit)
-import GHC (ModuleName)
-import GHC.TcPluginM.Extra (lookupModule, lookupName)
-import Module (mkModuleName)
-import OccName (mkTcOcc)
-import TcPluginM (TcPluginM, tcLookupClass)
-import TcRnTypes
-import TcSMonad hiding (tcLookupClass)
-import TyCoRep (Type (..))
-import Type
+import           Class
+import           CoAxiom
+import           Control.Monad
+import           Data.Bifunctor
+import           Data.Function (on)
+import           Data.IORef
+import           Data.List
+import           Data.Maybe
+import qualified Data.Set as S
+import           FastString (fsLit)
+import           GHC (ModuleName)
+import           GHC.TcPluginM.Extra (lookupModule, lookupName)
+import           Module (mkModuleName)
+import           OccName (mkTcOcc)
+import           TcPluginM (TcPluginM, tcLookupClass, tcPluginIO)
+import           TcRnTypes
+import           TcSMonad hiding (tcLookupClass)
+import           TyCoRep (Type (..))
+import           Type
 
 
 polysemyInternalUnion :: ModuleName
@@ -56,7 +61,8 @@ fundepPlugin = TcPlugin
     { tcPluginInit = do
         md <- lookupModule polysemyInternalUnion (fsLit "polysemy")
         monadEffectTcNm <- lookupName md (mkTcOcc "Find")
-        tcLookupClass monadEffectTcNm
+        (,) <$> tcPluginIO (newIORef S.empty)
+            <*> tcLookupClass monadEffectTcNm
     , tcPluginSolve = solveFundep
     , tcPluginStop = const (return ()) }
 
@@ -94,12 +100,21 @@ canUnify wanted given =
         ]
 
 
-mkWanted :: Bool -> CtLoc -> Type -> Type -> TcPluginM (Maybe Ct)
+mkWanted
+    :: Bool
+    -> CtLoc
+    -> Type
+    -> Type
+    -> TcPluginM (Maybe ( (OrdType, OrdType)  -- the types we want to unify
+                        , Ct                  -- the constraint
+                        ))
 mkWanted must_unify loc wanted given =
   if (not must_unify || canUnify wanted given)
      then do
        (ev, _) <- unsafeTcPluginTcM $ runTcSDeriveds $ newWantedEq loc Nominal wanted given
-       pure $ Just $ CNonCanonical ev
+       pure $ Just ( (OrdType wanted, OrdType given)
+                   , CNonCanonical ev
+                   )
      else
        pure Nothing
 
@@ -111,9 +126,31 @@ countLength eq as =
   let grouped = groupBy eq as
    in zipWith (curry $ bimap head length) grouped grouped
 
-solveFundep :: Class -> [Ct] -> [Ct] -> [Ct] -> TcPluginM TcPluginResult
+
+------------------------------------------------------------------------------
+-- | 'Type's don't have 'Eq' or 'Ord' instances by default, even though there
+-- are functions in GHC that implement these operations. This newtype gives us
+-- those instances.
+newtype OrdType = OrdType
+  { getOrdType :: Type
+  }
+
+instance Eq OrdType where
+  (==) = eqType `on` getOrdType
+
+instance Ord OrdType where
+  compare = nonDetCmpType `on` getOrdType
+
+
+
+solveFundep
+    :: (IORef (S.Set (OrdType, OrdType)), Class)
+    -> [Ct]
+    -> [Ct]
+    -> [Ct]
+    -> TcPluginM TcPluginResult
 solveFundep _ _ _ [] = pure $ TcPluginOk [] []
-solveFundep effCls giv _ want = do
+solveFundep (ref, effCls) giv _ want = do
     let wantedEffs = allMonadEffectConstraints effCls want
         givenEffs = snd <$> allMonadEffectConstraints effCls giv
         num_wanteds_by_r = countLength eqType $ fmap (thd . snd) wantedEffs
@@ -129,5 +166,10 @@ solveFundep effCls giv _ want = do
             _                 -> pure Nothing
         Just eff' -> mkWanted True loc eff eff'
 
-    pure $ TcPluginOk [] $ catMaybes eqs
+    already_emitted <- tcPluginIO $ readIORef ref
+    let new_wanteds = filter (not . flip S.member already_emitted . fst)
+                    $ catMaybes eqs
+
+    tcPluginIO $ modifyIORef ref $ S.union $ S.fromList $ fmap fst new_wanteds
+    pure . TcPluginOk [] $ fmap snd new_wanteds
 
