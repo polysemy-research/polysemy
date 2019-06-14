@@ -34,8 +34,10 @@ module Polysemy.Plugin.Fundep (fundepPlugin) where
 
 import           Class
 import           CoAxiom
+import           Control.Applicative
 import           Control.Monad
 import           Data.Bifunctor
+import           Data.Bool
 import           Data.Function (on)
 import           Data.IORef
 import           Data.List
@@ -89,34 +91,56 @@ getEffName :: Type -> Type
 getEffName t = fst $ splitAppTys t
 
 
-canUnify :: Type -> Type -> Bool
-canUnify wanted given =
-  let (w, ws) = splitAppTys wanted
-      (g, gs) = splitAppTys given
-   in (&& eqType w g) . flip all (zip ws gs) $ \(wt, gt) ->
-     or [ isTyVarTy wt
-        , eqType wt gt
-        , canUnify wt gt
-        ]
+canUnifyRecursive :: Bool -> Type -> Type -> Bool
+canUnifyRecursive poly_given_ok = go True
+  where
+    -- On the first go around, we don't want to unify effects with tyvars, but
+    -- we _do_ want to unify their arguments, thus 'is_first'.
+    go :: Bool -> Type -> Type -> Bool
+    go is_first wanted given =
+      let (w, ws) = splitAppTys wanted
+          (g, gs) = splitAppTys given
+       in (&& bool (canUnify poly_given_ok) eqType is_first w g)
+        . flip all (zip ws gs)
+        $ \(wt, gt) -> canUnify poly_given_ok wt gt || go False wt gt
+
+
+canUnify :: Bool -> Type -> Type -> Bool
+canUnify poly_given_ok wt gt =
+  or [ isTyVarTy wt
+     , isTyVarTy gt && poly_given_ok
+     , eqType wt gt
+     ]
+
+
+------------------------------------------------------------------------------
+-- | Like 'Control.Monad.when', but in the context of an 'Alternative'.
+whenA
+    :: (Monad m, Alternative z)
+    => Bool
+    -> m a
+    -> m (z a)
+whenA False _ = pure empty
+whenA True ma = fmap pure ma
 
 
 mkWanted
     :: Bool
+    -> Bool
     -> CtLoc
     -> Type
     -> Type
     -> TcPluginM (Maybe ( (OrdType, OrdType)  -- the types we want to unify
                         , Ct                  -- the constraint
                         ))
-mkWanted must_unify loc wanted given =
-  if (not must_unify || canUnify wanted given)
-     then do
-       (ev, _) <- unsafeTcPluginTcM $ runTcSDeriveds $ newWantedEq loc Nominal wanted given
-       pure $ Just ( (OrdType wanted, OrdType given)
-                   , CNonCanonical ev
-                   )
-     else
-       pure Nothing
+mkWanted must_unify poly_given_ok loc wanted given =
+  whenA (not must_unify || canUnifyRecursive poly_given_ok wanted given) $ do
+    (ev, _) <- unsafeTcPluginTcM
+             . runTcSDeriveds
+             $ newWantedEq loc Nominal wanted given
+    pure ( (OrdType wanted, OrdType given)
+         , CNonCanonical ev
+         )
 
 thd :: (a, b, c) -> c
 thd (_, _, c) = c
@@ -162,9 +186,9 @@ solveFundep (ref, effCls) giv _ want = do
       case findMatchingEffectIfSingular e givenEffs of
         Nothing -> do
           case splitAppTys r of
-            (_, [_, eff', _]) -> mkWanted (must_unify r) loc eff eff'
+            (_, [_, eff', _]) -> mkWanted (must_unify r) True loc eff eff'
             _                 -> pure Nothing
-        Just eff' -> mkWanted True loc eff eff'
+        Just eff' -> mkWanted True False loc eff eff'
 
     already_emitted <- tcPluginIO $ readIORef ref
     let new_wanteds = filter (not . flip S.member already_emitted . fst)
