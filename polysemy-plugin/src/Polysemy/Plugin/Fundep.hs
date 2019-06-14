@@ -91,9 +91,17 @@ getEffName :: Type -> Type
 getEffName t = fst $ splitAppTys t
 
 
-canUnifyRecursive :: Bool -> Type -> Type -> Bool
-canUnifyRecursive poly_given_ok = go True
+canUnifyRecursive :: SolveContext -> Type -> Type -> Bool
+canUnifyRecursive solve_ctx = go True
   where
+    -- It's only OK to solve a polymorphic "given" if we're in the context of
+    -- an interpreter, because it's not really a given!
+    poly_given_ok :: Bool
+    poly_given_ok =
+      case solve_ctx of
+        InterpreterUse _ -> True
+        FunctionDef      -> False
+
     -- On the first go around, we don't want to unify effects with tyvars, but
     -- we _do_ want to unify their arguments, thus 'is_first'.
     go :: Bool -> Type -> Type -> Bool
@@ -125,16 +133,15 @@ whenA True ma = fmap pure ma
 
 
 mkWanted
-    :: Bool
-    -> Bool
+    :: SolveContext
     -> CtLoc
     -> Type
     -> Type
     -> TcPluginM (Maybe ( (OrdType, OrdType)  -- the types we want to unify
                         , Ct                  -- the constraint
                         ))
-mkWanted must_unify poly_given_ok loc wanted given =
-  whenA (not must_unify || canUnifyRecursive poly_given_ok wanted given) $ do
+mkWanted solve_ctx loc wanted given =
+  whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $ do
     (ev, _) <- unsafeTcPluginTcM
              . runTcSDeriveds
              $ newWantedEq loc Nominal wanted given
@@ -166,6 +173,21 @@ instance Ord OrdType where
   compare = nonDetCmpType `on` getOrdType
 
 
+------------------------------------------------------------------------------
+-- | The context in which we're attempting to solve a constraint.
+data SolveContext
+  = -- | In the context of a function definition.
+    FunctionDef
+    -- | In the context of running an interpreter. The 'Bool' corresponds to
+    -- whether we are only trying to solve a single 'Member' constraint right
+    -- now. If so, we *must* produce a unification wanted.
+  | InterpreterUse Bool
+  deriving (Eq, Ord, Show)
+
+mustUnify :: SolveContext -> Bool
+mustUnify FunctionDef = True
+mustUnify (InterpreterUse b) = b
+
 
 solveFundep
     :: (IORef (S.Set (OrdType, OrdType)), Class)
@@ -186,9 +208,9 @@ solveFundep (ref, effCls) giv _ want = do
       case findMatchingEffectIfSingular e givenEffs of
         Nothing -> do
           case splitAppTys r of
-            (_, [_, eff', _]) -> mkWanted (must_unify r) True loc eff eff'
+            (_, [_, eff', _]) -> mkWanted (InterpreterUse $ must_unify r) loc eff eff'
             _                 -> pure Nothing
-        Just eff' -> mkWanted True False loc eff eff'
+        Just eff' -> mkWanted FunctionDef loc eff eff'
 
     already_emitted <- tcPluginIO $ readIORef ref
     let new_wanteds = filter (not . flip S.member already_emitted . fst)
