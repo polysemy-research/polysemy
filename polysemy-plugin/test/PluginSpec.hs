@@ -132,9 +132,8 @@ spec = do
       flipShouldBe (Right @Bool (10 :: Float, True))  . run $ runError $ runState 0 errState
 
   describe "Output effect" $ do
-    it "should unify recursively" $ do
-      -- TODO(sandy): This should unify even without the type app. Bug #95
-      flipShouldBe 11 . sum @[] . fst . run . runFoldMapOutput id $ do
+    it "should unify recursively with tyvars" $ do
+      flipShouldBe 11 . sum . fst . run . runFoldMapOutput id $ do
         output [1]
         output $ replicate 2 5
 
