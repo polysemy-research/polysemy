@@ -11,6 +11,7 @@ import Test.Hspec
 -- >>> :m +Polysemy.Output
 -- >>> :m +Polysemy.Reader
 -- >>> :m +Polysemy.State
+-- >>> :m +Polysemy.Trace
 
 -- |
 -- >>> :{
@@ -76,6 +77,29 @@ interpretBadFirstOrder = ()
 -- SOLUTION: Don't emit the error when `e1` is a tyvar.
 firstOrderReinterpret'WRONG = ()
 
+-- |
+-- >>> :{
+-- let reinterpretScrub :: Sem (Output Int ': m) a -> Sem (State Bool ': Trace ': m) a
+--     reinterpretScrub = undefined
+--     foo :: Sem '[Output Int] ()
+--     foo = pure ()
+--     foo' = reinterpretScrub foo
+--     foo'' = runState True foo'
+--     foo''' = runTraceIO foo''
+--  in runM foo'''
+-- :}
+-- ...
+-- ... Ambiguous use of effect 'Lift'
+-- ...
+-- ... add (Member (Lift IO) '[]) ...
+-- ...
+--
+-- PROBLEM: We're trying to run more effects than exist in the eff row. This is
+-- indeed a problem, but the error message isn't helpful.
+--
+-- SOLUTION: Add a special case to `AmbiguousSend` when `r ~ '[]`.
+runningTooManyEffects'WRONG = ()
+
 
 
 spec :: Spec
@@ -103,5 +127,6 @@ spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doc
   , "src/Polysemy/Output.hs"
   , "src/Polysemy/Reader.hs"
   , "src/Polysemy/State.hs"
+  , "src/Polysemy/Trace.hs"
   ]
 
