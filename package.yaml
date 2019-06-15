@@ -79,8 +79,6 @@ tests:
     - polysemy
     - inspection-testing >= 0.4.1.1 && < 0.5
     - hspec >= 2.6.0 && < 3
-    - should-not-typecheck >= 2.1.0 && < 3
-    - deepseq
     - doctest
 
 benchmarks:

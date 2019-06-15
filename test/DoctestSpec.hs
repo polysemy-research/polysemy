@@ -45,7 +45,7 @@ import Test.Hspec
 -- ... 'interpretH' instead.
 -- ...
 spec :: Spec
-spec = describe "Error messages" $ it "should pass the doctest" $ doctest
+spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doctest
   [ "-isrc/"
   , "--fast"
   , "-XDataKinds"

@@ -40,12 +40,6 @@ import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
 
--- $setup
--- >>> default ()
--- >>> import Polysemy
--- >>> import Polysemy.State
--- >>> import GHC.TypeLits
-
 
 ------------------------------------------------------------------------------
 -- | The 'Sem' monad handles computations of arbitrary extensible effects.
@@ -329,9 +323,6 @@ raiseUnder3_b = raiseUnder3
 ------------------------------------------------------------------------------
 -- | Lift an effect into a 'Sem'. This is used primarily via
 -- 'Polysemy.makeSem' to implement smart constructors.
---
--- === /Type errors/
---
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}
