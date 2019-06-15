@@ -148,7 +148,8 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 --
 -- See the notes on 'Tactical' for how to use this function.
 reinterpretH
-    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
+    :: forall e1 e2 r a
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': r) a
@@ -168,7 +169,8 @@ reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
 -- 'Polysemy.State.runState', meaning it's free to 'reinterpret' in terms of
 -- the 'Polysemy.State.State' effect and immediately run it.
 reinterpret
-    :: FirstOrder m0 e1 "reinterpret"
+    :: forall e1 e2 m0 r a
+     . FirstOrder m0 e1 "reinterpret"
     => (∀ m x. e1 m x -> Sem (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
     -> Sem (e1 ': r) a
@@ -183,7 +185,8 @@ reinterpret = firstOrder reinterpretH
 --
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret2H
-    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
+    :: forall e1 e2 e3 r a
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': r) a
@@ -199,7 +202,8 @@ reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /two/ intermediary effects.
 reinterpret2
-    :: FirstOrder m0 e1 "reinterpret2"
+    :: forall e1 e2 e3 m0 r a
+     . FirstOrder m0 e1 "reinterpret2"
     => (∀ m x. e1 m x -> Sem (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
@@ -213,7 +217,8 @@ reinterpret2 = firstOrder reinterpret2H
 --
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret3H
-    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
+    :: forall e1 e2 e3 e4 r a
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': e4 ': r) a
@@ -229,7 +234,8 @@ reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /three/ intermediary effects.
 reinterpret3
-    :: FirstOrder m0 e1 "reinterpret3"
+    :: forall e1 e2 e3 e4 m0 r a
+     . FirstOrder m0 e1 "reinterpret3"
     => (∀ m x. e1 m x -> Sem (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
