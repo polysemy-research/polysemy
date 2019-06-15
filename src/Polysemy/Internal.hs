@@ -41,6 +41,7 @@ import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
 
 -- $setup
+-- >>> default ()
 -- >>> import Polysemy
 -- >>> import Polysemy.State
 -- >>> import GHC.TypeLits
@@ -331,13 +332,6 @@ raiseUnder3_b = raiseUnder3
 --
 -- === /Type errors/
 --
--- >>> :{
--- foo :: Sem r ()
--- foo = put ()
--- :}
--- ...
--- ... Ambiguous use of effect 'State'
--- ...
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}

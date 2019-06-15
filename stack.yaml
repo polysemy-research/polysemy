@@ -12,6 +12,4 @@ extra-deps:
 - inspection-testing-0.4.2
 - bifunctors-5.5.4
 - aeson-1.4.3.0
-- git: https://github.com/isovector/should-not-typecheck.git
-  commit: a871b99ae9810affc09256c175a887a72f7c3c12
 

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f144b71a3fd86119a3d8f5a726dbadd3dd20a6d9c15788aad9df4a16448ff945
+-- hash: c2d6fdb21f5d20ef066f0adc8fb57846bcf83cf0de06af65ec0164d605294a42
 
 name:           polysemy
 version:        0.4.0.0
@@ -112,6 +112,7 @@ test-suite polysemy-test
   other-modules:
       AlternativeSpec
       BracketSpec
+      DoctestSpec
       FusionSpec
       HigherOrderSpec
       InspectorSpec
@@ -126,6 +127,7 @@ test-suite polysemy-test
       base >=4.7 && <5
     , containers >=0.6 && <=0.7
     , deepseq
+    , doctest
     , hspec >=2.6.0 && <3
     , inspection-testing >=0.4.1.1 && <0.5
     , mtl >=2.2.2 && <3
