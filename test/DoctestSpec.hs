@@ -13,6 +13,8 @@ import Test.Hspec
 -- >>> :m +Polysemy.State
 -- >>> :m +Polysemy.Trace
 
+
+--------------------------------------------------------------------------------
 -- |
 -- >>> :{
 -- foo :: Sem r ()
@@ -25,6 +27,8 @@ import Test.Hspec
 -- ...
 ambiguousMonoState = ()
 
+
+--------------------------------------------------------------------------------
 -- |
 -- >>> :{
 -- foo :: Sem r ()
@@ -39,6 +43,8 @@ ambiguousMonoState = ()
 -- ...
 ambiguousPolyState = ()
 
+
+--------------------------------------------------------------------------------
 -- |
 -- TODO(sandy): should this mention 'Reader i' or just 'Reader'?
 --
@@ -54,6 +60,8 @@ ambiguousPolyState = ()
 -- ...
 interpretBadFirstOrder = ()
 
+
+--------------------------------------------------------------------------------
 -- |
 -- >>> :{
 -- runFoldMapOutput
@@ -77,6 +85,8 @@ interpretBadFirstOrder = ()
 -- SOLUTION: Don't emit the error when `e1` is a tyvar.
 firstOrderReinterpret'WRONG = ()
 
+
+--------------------------------------------------------------------------------
 -- |
 -- >>> :{
 -- let reinterpretScrub :: Sem (Output Int ': m) a -> Sem (State Bool ': Trace ': m) a
@@ -99,6 +109,24 @@ firstOrderReinterpret'WRONG = ()
 --
 -- SOLUTION: Add a special case to `AmbiguousSend` when `r ~ '[]`.
 runningTooManyEffects'WRONG = ()
+
+
+--------------------------------------------------------------------------------
+-- |
+-- >>> :{
+-- foo :: Sem (State Int ': r) ()
+-- foo = put ()
+-- :}
+-- ...
+-- ... Ambiguous use of effect 'State'
+-- ...
+-- ... (Member (State ()) State Int : r) ...
+-- ...
+--
+-- PROBLEM: There should be parentheses around `State Int : r`
+--
+-- SOLUTION: Emit parens only when the effect row is of the form `e1 ': ...`
+missingParens'WRONG = ()
 
 
 
