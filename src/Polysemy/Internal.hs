@@ -40,6 +40,11 @@ import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
 
+-- $setup
+-- >>> import Polysemy
+-- >>> import Polysemy.State
+-- >>> import GHC.TypeLits
+
 
 ------------------------------------------------------------------------------
 -- | The 'Sem' monad handles computations of arbitrary extensible effects.
@@ -326,11 +331,9 @@ raiseUnder3_b = raiseUnder3
 --
 -- === /Type errors/
 --
--- >>> import Polysemy
--- >>> import Polysemy.State
 -- >>> :{
---   foo :: Sem r ()
---   foo = put ()
+-- foo :: Sem r ()
+-- foo = put ()
 -- :}
 -- ...
 -- ... Ambiguous use of effect 'State'

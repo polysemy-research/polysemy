@@ -63,7 +63,9 @@ library:
         - -fplugin-opt DumpCore:core-html
 
     - condition: flag(error-messages)
-      cpp-options: -DERROR_MESSAGES
+      then: {}
+      else:
+        cpp-options: -DNO_ERROR_MESSAGES
 
 tests:
   polysemy-test:

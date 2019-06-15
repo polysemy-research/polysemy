@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.1.
+-- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d39c92655d8fa634f59cc20f0cf802222d8acb406999db97347a4f243d1bfb11
+-- hash: f144b71a3fd86119a3d8f5a726dbadd3dd20a6d9c15788aad9df4a16448ff945
 
 name:           polysemy
 version:        0.4.0.0
@@ -80,7 +80,8 @@ library
     build-depends:
         dump-core
   if flag(error-messages)
-    cpp-options: -DERROR_MESSAGES
+  else
+    cpp-options: -DNO_ERROR_MESSAGES
   default-language: Haskell2010
 
 test-suite doctest
