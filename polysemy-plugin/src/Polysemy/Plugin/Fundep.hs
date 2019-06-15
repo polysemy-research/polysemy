@@ -52,6 +52,8 @@ import           TcSMonad hiding (tcLookupClass)
 import           TyCoRep (Type (..))
 import           Type
 
+import           Outputable
+
 
 polysemyInternalUnion :: ModuleName
 polysemyInternalUnion = mkModuleName "Polysemy.Internal.Union"
@@ -60,7 +62,7 @@ fundepPlugin :: TcPlugin
 fundepPlugin = TcPlugin
     { tcPluginInit = do
         md <- lookupModule polysemyInternalUnion (fsLit "polysemy")
-        monadEffectTcNm <- lookupName md (mkTcOcc "Find")
+        monadEffectTcNm <- lookupName md (mkTcOcc "Member'")
         (,) <$> tcPluginIO (newIORef S.empty)
             <*> tcLookupClass monadEffectTcNm
     , tcPluginSolve = solveFundep
@@ -69,7 +71,7 @@ fundepPlugin = TcPlugin
 allMonadEffectConstraints :: Class -> [Ct] -> [(CtLoc, (Type, Type, Type))]
 allMonadEffectConstraints cls cts =
     [ (ctLoc cd, (effName, eff, r))
-    | cd@CDictCan{cc_class = cls', cc_tyargs = [_, r, eff]} <- cts
+    | cd@CDictCan{cc_class = cls', cc_tyargs = [eff, r]} <- cts
     , cls == cls'
     , let effName = getEffName eff
     ]

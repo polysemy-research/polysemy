@@ -1,13 +1,13 @@
+{-# OPTIONS_HADDOCK not-home #-}
+
 {-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE EmptyCase             #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StrictData            #-}
-{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
-
-{-# OPTIONS_HADDOCK not-home #-}
 
 module Polysemy.Internal.Union
   ( Union (..)
@@ -24,35 +24,44 @@ module Polysemy.Internal.Union
   , absurdU
   , decompCoerce
   -- * Witnesses
-  , SNat (..)
-  , Nat (..)
+  , Elem (..)
   ) where
 
 import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
-import Data.Type.Equality
+import Data.Kind
 import Polysemy.Internal.Effect
 
 #ifdef ERROR_MESSAGES
 import Polysemy.Internal.CustomErrors
 #endif
 
+-- TOOD: move into 'CustomErrors'
+import GHC.TypeLits
+
+
+------------------------------------------------------------------------------
+-- | Kind of effect datatype.
+type Eff = (Type -> Type) -> Type -> Type
 
 ------------------------------------------------------------------------------
 -- | An extensible, type-safe union. The @r@ type parameter is a type-level
 -- list of effects, any one of which may be held within the 'Union'.
-data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
-  Union
-      :: SNat n
-         -- ^ A proof that the effect is actually in @r@.
-      -> Yo (IndexOf r n) m a
-         -- ^ The effect to wrap. The functions 'prj' and 'decomp' can help
-         -- retrieve this value later.
-      -> Union r m a
+data Union :: [Eff] -> (Type -> Type) -> Type -> Type where
+  Union :: Elem e r  -- ^ A proof that the effect is actually in @r@.
+        -> Yo e m a  -- ^ The effect to wrap. The functions 'prj' and 'decomp'
+                     -- can help retrieve this value later.
+        -> Union r m a
 
+------------------------------------------------------------------------------
+-- | Nat describing position of type in type-level list.
+data Elem :: Eff -> [Eff] -> Type where
+  Here ::              Elem e (e ': es)
+  In   :: Elem e es -> Elem e (d ': es)
 
-
+------------------------------------------------------------------------------
+-- TODO: some docs
 data Yo e m a where
   Yo :: Functor f
      => e m a
@@ -77,15 +86,18 @@ instance Effect (Yo e) where
   hoist = defaultHoist
   {-# INLINE hoist #-}
 
+------------------------------------------------------------------------------
+-- TODO: some docs
 liftYo :: Functor m => e m a -> Yo e m a
-liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity (Just . runIdentity)
+liftYo e = Yo e (Identity ())
+                (fmap Identity . runIdentity)
+                runIdentity
+                (Just . runIdentity)
 {-# INLINE liftYo #-}
-
 
 instance Functor (Union r m) where
   fmap f (Union w t) = Union w $ fmap' f t
   {-# INLINE fmap #-}
-
 
 instance Effect (Union r) where
   weave s f v (Union w e) = Union w $ weave s f v e
@@ -94,123 +106,74 @@ instance Effect (Union r) where
   hoist f (Union w e) = Union w $ hoist f e
   {-# INLINE hoist #-}
 
-
 ------------------------------------------------------------------------------
 -- | A proof that the effect @e@ is available somewhere inside of the effect
 -- stack @r@.
-type Member e r = Member' e r
-
-type Member' e r =
-  ( Find r e
-  , e ~ IndexOf r (Found r e)
-#ifdef ERROR_MESSAGES
-  , Break (AmbiguousSend r e) (IndexOf r (Found r e))
-#endif
-  )
-
+type Member e r = Member' e r  -- TODO: check stuckness and empty union
 
 ------------------------------------------------------------------------------
--- | The kind of type-level natural numbers.
-data Nat = Z | S Nat
+class Member' (e :: Eff) (r :: [Eff]) where
+  -- | Lift an effect @e@ into a 'Union' capable of holding it.
+  inj :: Functor m => e m a -> Union r m a
+  -- | Attempt to take an @e@ effect out of a 'Union'.
+  prj :: Union r m a -> Maybe (Yo e m a)
 
+instance {-# OVERLAPPING #-}
+         Member' e (e ': es) where
+  inj = Union Here . liftYo
+  {-# INLINE inj #-}
 
-------------------------------------------------------------------------------
--- | A singleton for 'Nat'.
-data SNat :: Nat -> * where
-  SZ :: SNat 'Z
-  SS :: SNat n -> SNat ('S n)
+  prj (Union Here a) = Just a
+  prj (Union In{} _) = Nothing
+  {-# INLINE prj #-}
 
-instance TestEquality SNat where
-  testEquality SZ     SZ     = Just Refl
-  testEquality (SS _) SZ     = Nothing
-  testEquality SZ     (SS _) = Nothing
-  testEquality (SS n) (SS m) =
-    case testEquality n m of
-      Nothing -> Nothing
-      Just Refl -> Just Refl
-  {-# INLINE testEquality #-}
+instance Member' e es
+      => Member' e (d ': es) where
+  inj = weaken . inj
+  {-# INLINE inj #-}
 
+  prj (Union Here   _) = Nothing
+  prj (Union (In p) a) = prj $ Union p a
+  {-# INLINE prj #-}
 
-type family IndexOf (ts :: [k]) (n :: Nat) :: k where
-  IndexOf (k ': ks) 'Z = k
-  IndexOf (k ': ks) ('S n) = IndexOf ks n
-
-
-type family Found (ts :: [k]) (t :: k) :: Nat where
-#ifdef ERROR_MESSAGES
-  Found '[]       t = UnhandledEffect 'S t
-#endif
-  Found (t ': ts) t = 'Z
-  Found (u ': ts) t = 'S (Found ts t)
-
-
-class Find (r :: [k]) (t :: k) where
-  finder :: SNat (Found r t)
-
-instance {-# OVERLAPPING #-} Find (t ': z) t where
-  finder = SZ
-  {-# INLINE finder #-}
-
-instance ( Find z t
-         , Found (_1 ': z) t ~ 'S (Found z t)
-         ) => Find (_1 ': z) t where
-  finder = SS $ finder @_ @z @t
-  {-# INLINE finder #-}
-
+-- TODO: move into 'CustomErrors', make more informative
+type family NotMember (e :: Eff) (es :: [Eff]) :: k where
+  NotMember e '[] = TypeError
+    (     'Text "Attempt to make '" ':<>: 'ShowType e ':<>: 'Text "' member"
+    ':<>: 'Text " of empty union"
+    )
+  NotMember e (e ': es) = TypeError
+    (     'Text "'" ':<>: 'ShowType e ':<>: 'Text "' is not member of '"
+    ':<>: 'ShowType (e ': es) ':<>: 'Text "'"
+    )
 
 ------------------------------------------------------------------------------
 -- | Decompose a 'Union'. Either this union contains an effect @e@---the head
 -- of the @r@ list---or it doesn't.
 decomp :: Union (e ': r) m a -> Either (Union r m a) (Yo e m a)
-decomp (Union p a) =
-  case p of
-    SZ   -> Right a
-    SS n -> Left $ Union n a
+decomp (Union Here   a) = Right a
+decomp (Union (In p) a) = Left $ Union p a
 {-# INLINE decomp #-}
 
 
 ------------------------------------------------------------------------------
 -- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> Yo e m a
-extract (Union SZ a) = a
-extract _ = error "impossible"
+extract (Union Here   a) = a
+extract (Union (In p) _) = case p of {}
 {-# INLINE extract #-}
 
 
 ------------------------------------------------------------------------------
 -- | An empty union contains nothing, so this function is uncallable.
 absurdU :: Union '[] m a -> b
-absurdU = absurdU
-
+absurdU (Union p _) = case p of {}
 
 ------------------------------------------------------------------------------
 -- | Weaken a 'Union' so it is capable of storing a new sort of effect.
 weaken :: Union r m a -> Union (e ': r) m a
-weaken (Union n a) = Union (SS n) a
+weaken (Union p a) = Union (In p) a
 {-# INLINE weaken #-}
-
-
-------------------------------------------------------------------------------
--- | Lift an effect @e@ into a 'Union' capable of holding it.
-inj :: forall r e a m. (Functor m , Member e r) => e m a -> Union r m a
-inj e = Union (finder @_ @r @e) $ liftYo e
-{-# INLINE inj #-}
-
-
-------------------------------------------------------------------------------
--- | Attempt to take an @e@ effect out of a 'Union'.
-prj :: forall e r a m
-     . ( Member e r
-       )
-    => Union r m a
-    -> Maybe (Yo e m a)
-prj (Union sn a) =
-  let sm = finder @_ @r @e
-   in case testEquality sn sm of
-        Nothing -> Nothing
-        Just Refl -> Just a
-{-# INLINE prj #-}
-
 
 ------------------------------------------------------------------------------
 -- | Like 'decomp', but allows for a more efficient
@@ -218,10 +181,8 @@ prj (Union sn a) =
 decompCoerce
     :: Union (e ': r) m a
     -> Either (Union (f ': r) m a) (Yo e m a)
-decompCoerce (Union p a) =
-  case p of
-    SZ -> Right a
-    SS n -> Left (Union (SS n) a)
+decompCoerce (Union Here   a) = Right a
+decompCoerce (Union (In p) a) = Left $ Union (In p) a
 {-# INLINE decompCoerce #-}
 
 

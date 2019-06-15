@@ -30,7 +30,7 @@ spec :: Spec
 spec = do
   describe "fusion" $ do
     it "Union proofs should simplify" $ do
-      shouldSucceed $(inspectTest $ 'countDown `hasNoType` ''SNat)
+      shouldSucceed $(inspectTest $ 'countDown `hasNoType` ''Elem)
 
     it "internal uses of StateT should simplify" $ do
       shouldSucceed $(inspectTest $ 'countDown `doesNotUse` ''S.StateT)
