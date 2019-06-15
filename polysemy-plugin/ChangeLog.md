@@ -1,5 +1,10 @@
 # Changelog for polysemy-plugin
 
+## 0.2.1.0 (2019-06-14)
+
+- Greatly improved the plugin's ability to unify polymorphic types when running
+    interpreters.
+
 ## 0.2.0.3 (2019-06-13)
 
 - Fixed a bug where the plugin could (incorrectly) loop indefinitely attempting
