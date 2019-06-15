@@ -31,6 +31,7 @@ import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Kind
+import Data.Type.Equality
 import Polysemy.Internal.Effect
 
 #ifdef ERROR_MESSAGES
@@ -49,16 +50,22 @@ type Eff = (Type -> Type) -> Type -> Type
 -- | An extensible, type-safe union. The @r@ type parameter is a type-level
 -- list of effects, any one of which may be held within the 'Union'.
 data Union :: [Eff] -> (Type -> Type) -> Type -> Type where
-  Union :: Elem e r  -- ^ A proof that the effect is actually in @r@.
+  Union :: Elem r e  -- ^ A proof that the effect is actually in @r@.
         -> Yo e m a  -- ^ The effect to wrap. The functions 'prj' and 'decomp'
                      -- can help retrieve this value later.
         -> Union r m a
 
 ------------------------------------------------------------------------------
 -- | Nat describing position of type in type-level list.
-data Elem :: Eff -> [Eff] -> Type where
-  Here ::              Elem e (e ': es)
-  In   :: Elem e es -> Elem e (d ': es)
+data Elem :: [Eff] -> Eff -> Type where
+  Here ::              Elem (e ': es) e
+  In   :: Elem es e -> Elem (d ': es) e
+
+instance TestEquality (Elem r) where
+  testEquality Here   Here   = Just Refl
+  testEquality (In l) (In r) = testEquality l r
+  testEquality _      _      = Nothing
+  {-# INLINE testEquality #-}
 
 ------------------------------------------------------------------------------
 data Yo e m a where
@@ -94,14 +101,14 @@ liftYo e = Yo e (Identity ())
 {-# INLINE liftYo #-}
 
 instance Functor (Union r m) where
-  fmap f (Union w t) = Union w $ fmap' f t
+  fmap f (Union p a) = Union p $ fmap' f a
   {-# INLINE fmap #-}
 
 instance Effect (Union r) where
-  weave s f v (Union w e) = Union w $ weave s f v e
+  weave s f v (Union p a) = Union p $ weave s f v a
   {-# INLINE weave #-}
 
-  hoist f (Union w e) = Union w $ hoist f e
+  hoist f (Union p a) = Union p $ hoist f a
   {-# INLINE hoist #-}
 
 ------------------------------------------------------------------------------
@@ -111,29 +118,31 @@ type Member e r = Member' e r  -- TODO: check stuckness and empty union
 
 ------------------------------------------------------------------------------
 class Member' (e :: Eff) (r :: [Eff]) where
-  -- | Lift an effect @e@ into a 'Union' capable of holding it.
-  inj :: Functor m => e m a -> Union r m a
-  -- | Attempt to take an @e@ effect out of a 'Union'.
-  prj :: Union r m a -> Maybe (Yo e m a)
+  membership :: Elem r e
 
 instance {-# OVERLAPPING #-}
          Member' e (e ': es) where
-  inj = Union Here . liftYo
-  {-# INLINE inj #-}
-
-  prj (Union Here a) = Just a
-  prj (Union In{} _) = Nothing
-  {-# INLINE prj #-}
+  membership = Here
+  {-# INLINE membership #-}
 
 instance Member' e es
       => Member' e (d ': es) where
-  inj = weaken . inj
-  {-# INLINE inj #-}
+  membership = In membership
+  {-# INLINE membership #-}
 
-  prj (Union Here   _) = Nothing
-  prj (Union (In p) a) = prj $ Union p a
-  {-# INLINE prj #-}
+------------------------------------------------------------------------------
+-- | Lift an effect @e@ into a 'Union' capable of holding it.
+inj :: (Member' e r, Functor m) => e m a -> Union r m a
+inj = Union membership . liftYo
+{-# INLINE inj #-}
 
+------------------------------------------------------------------------------
+-- | Attempt to take an @e@ effect out of a 'Union'.
+prj :: forall e r m a. Member' e r => Union r m a -> Maybe (Yo e m a)
+prj (Union p a) = (\Refl -> a) <$> p `testEquality` membership @e @r
+{-# INLINE prj #-}
+
+------------------------------------------------------------------------------
 -- TODO: move into 'CustomErrors', make more informative
 type family NotMember (e :: Eff) (es :: [Eff]) :: k where
   NotMember e '[] = TypeError
@@ -182,5 +191,3 @@ decompCoerce
 decompCoerce (Union Here   a) = Right a
 decompCoerce (Union (In p) a) = Left $ Union (In p) a
 {-# INLINE decompCoerce #-}
-
-
