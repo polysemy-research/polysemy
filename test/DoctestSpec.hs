@@ -6,6 +6,7 @@ import Test.Hspec
 -- $setup
 -- >>> default ()
 -- >>> :m +Polysemy
+-- >>> :m +Polysemy.Reader
 -- >>> :m +Polysemy.State
 
 -- |
@@ -31,6 +32,18 @@ import Test.Hspec
 -- ...
 -- ... 's0' directly...
 -- ...
+--
+-- TODO(sandy): should this mention 'Reader i' or just 'Reader'?
+-- >>> :{
+-- interpret @Reader $ \case
+--   Ask -> undefined
+-- :}
+-- ...
+-- ... 'Reader i' is higher-order, but 'interpret' can help only
+-- ... with first-order effects.
+-- ...
+-- ... 'interpretH' instead.
+-- ...
 spec :: Spec
 spec = describe "Error messages" $ it "should pass the doctest" $ doctest
   [ "-isrc/"
@@ -53,6 +66,7 @@ spec = describe "Error messages" $ it "should pass the doctest" $ doctest
 
   -- Modules that are explicitly imported for this test must be listed here
   , "src/Polysemy.hs"
+  , "src/Polysemy/Reader.hs"
   , "src/Polysemy/State.hs"
   ]
 
