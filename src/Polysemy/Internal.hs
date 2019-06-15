@@ -323,6 +323,18 @@ raiseUnder3_b = raiseUnder3
 ------------------------------------------------------------------------------
 -- | Lift an effect into a 'Sem'. This is used primarily via
 -- 'Polysemy.makeSem' to implement smart constructors.
+--
+-- === /Type errors/
+--
+-- >>> import Polysemy
+-- >>> import Polysemy.State
+-- >>> :{
+--   foo :: Sem r ()
+--   foo = put ()
+-- :}
+-- ...
+-- ... Ambiguous use of effect 'State'
+-- ...
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}

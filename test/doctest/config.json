@@ -1,0 +1,17 @@
+{
+  "doctestOptions":
+    [ "-XDataKinds"
+    , "-XDeriveFunctor"
+    , "-XFlexibleContexts"
+    , "-XGADTs"
+    , "-XLambdaCase"
+    , "-XPolyKinds"
+    , "-XRankNTypes"
+    , "-XScopedTypeVariables"
+    , "-XStandaloneDeriving"
+    , "-XTypeApplications"
+    , "-XTypeOperators"
+    , "-XTypeFamilies"
+    , "-XUnicodeSyntax"
+    ]
+}
