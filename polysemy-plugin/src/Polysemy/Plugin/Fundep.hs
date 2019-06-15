@@ -54,8 +54,6 @@ import           TcSMonad hiding (tcLookupClass)
 import           TyCoRep (Type (..))
 import           Type
 
-import           Outputable
-
 
 polysemyInternalUnion :: ModuleName
 polysemyInternalUnion = mkModuleName "Polysemy.Internal.Union"

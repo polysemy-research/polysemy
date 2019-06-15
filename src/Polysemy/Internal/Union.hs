@@ -37,12 +37,12 @@ import Polysemy.Internal.Effect
 import Polysemy.Internal.CustomErrors
 #endif
 
--- TOOD: move into 'CustomErrors'
+-- TODO: move into 'CustomErrors'
 import GHC.TypeLits
 
 
 ------------------------------------------------------------------------------
--- | Kind of effect datatype.
+-- | Kind of effect type constructor.
 type Eff = (Type -> Type) -> Type -> Type
 
 ------------------------------------------------------------------------------
@@ -61,7 +61,6 @@ data Elem :: Eff -> [Eff] -> Type where
   In   :: Elem e es -> Elem e (d ': es)
 
 ------------------------------------------------------------------------------
--- TODO: some docs
 data Yo e m a where
   Yo :: Functor f
      => e m a
@@ -87,7 +86,6 @@ instance Effect (Yo e) where
   {-# INLINE hoist #-}
 
 ------------------------------------------------------------------------------
--- TODO: some docs
 liftYo :: Functor m => e m a -> Yo e m a
 liftYo e = Yo e (Identity ())
                 (fmap Identity . runIdentity)
