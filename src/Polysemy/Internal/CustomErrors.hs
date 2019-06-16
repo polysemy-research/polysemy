@@ -39,9 +39,6 @@ type family IfStuck (tyvar :: k) (b :: k1) (c :: Exp k1) :: k1 where
   IfStuck T1 b c = b
   IfStuck a  b c = Eval c
 
-type WhenStuck (tyvar :: k) (b :: Constraint) =
-  IfStuck tyvar b (Pure (() :: Constraint))
-
 
 type AmbigousEffectMessage r e t vs =
         ( 'Text "Ambiguous use of effect '"
