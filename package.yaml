@@ -75,6 +75,8 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    build-tools:
+    - hspec-discover >= 2.0
     dependencies:
     - polysemy
     - inspection-testing >= 0.4.1.1 && < 0.5

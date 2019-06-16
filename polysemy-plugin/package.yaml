@@ -36,6 +36,8 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -fplugin=Polysemy.Plugin
+    build-tools:
+    - hspec-discover >= 2.0
     dependencies:
     - polysemy >= 0.3
     - polysemy-plugin
