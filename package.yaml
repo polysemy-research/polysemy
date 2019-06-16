@@ -1,5 +1,5 @@
 name:                polysemy
-version:             0.3.0.0
+version:             0.4.0.0
 github:              "isovector/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -37,7 +37,6 @@ default-extensions:
   - TypeApplications
   - TypeOperators
   - TypeFamilies
-
   - UnicodeSyntax
 
 flags:
@@ -64,7 +63,9 @@ library:
         - -fplugin-opt DumpCore:core-html
 
     - condition: flag(error-messages)
-      cpp-options: -DERROR_MESSAGES
+      then: {}
+      else:
+        cpp-options: -DNO_ERROR_MESSAGES
 
 tests:
   polysemy-test:
@@ -74,10 +75,13 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    build-tools:
+    - hspec-discover >= 2.0
     dependencies:
     - polysemy
     - inspection-testing >= 0.4.1.1 && < 0.5
     - hspec >= 2.6.0 && < 3
+    - doctest >= 0.16.0.1 && < 0.17
 
 benchmarks:
   polysemy-bench:

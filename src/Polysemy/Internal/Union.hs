@@ -17,9 +17,6 @@ module Polysemy.Internal.Union
   -- * Building Unions
   , inj
   , weaken
-  , weakenUnder
-  , weakenUnder2
-  , weakenUnder3
   -- * Using Unions
   , decomp
   , prj
@@ -37,7 +34,7 @@ import Data.Functor.Identity
 import Data.Type.Equality
 import Polysemy.Internal.Effect
 
-#ifdef ERROR_MESSAGES
+#ifndef NO_ERROR_MESSAGES
 import Polysemy.Internal.CustomErrors
 #endif
 
@@ -106,7 +103,7 @@ type Member e r = Member' e r
 type Member' e r =
   ( Find r e
   , e ~ IndexOf r (Found r e)
-#ifdef ERROR_MESSAGES
+#ifndef NO_ERROR_MESSAGES
   , Break (AmbiguousSend r e) (IndexOf r (Found r e))
 #endif
   )
@@ -140,7 +137,7 @@ type family IndexOf (ts :: [k]) (n :: Nat) :: k where
 
 
 type family Found (ts :: [k]) (t :: k) :: Nat where
-#ifdef ERROR_MESSAGES
+#ifndef NO_ERROR_MESSAGES
   Found '[]       t = UnhandledEffect 'S t
 #endif
   Found (t ': ts) t = 'Z
@@ -191,27 +188,6 @@ absurdU = absurdU
 weaken :: Union r m a -> Union (e ': r) m a
 weaken (Union n a) = Union (SS n) a
 {-# INLINE weaken #-}
-
-------------------------------------------------------------------------------
--- | Like 'weaken', but introduces a new effect under the top of the stack.
-weakenUnder :: Union (e1 ': r) m a -> Union (e1 ': e2 ': r) m a
-weakenUnder (Union SZ a) = Union SZ a
-weakenUnder (Union (SS n) a) = Union (SS (SS n)) a
-{-# INLINE weakenUnder #-}
-
-------------------------------------------------------------------------------
--- | Like 'weaken', but introduces a new effect under the top of the stack.
-weakenUnder2 :: Union (e1 ': r) m a -> Union (e1 ': e2 ': e3 ': r) m a
-weakenUnder2 (Union SZ a) = Union SZ a
-weakenUnder2 (Union (SS n) a) = Union (SS (SS (SS n))) a
-{-# INLINE weakenUnder2 #-}
-
-------------------------------------------------------------------------------
--- | Like 'weaken', but introduces a new effect under the top of the stack.
-weakenUnder3 :: Union (e1 ': r) m a -> Union (e1 ': e2 ': e3 ': e4 ': r) m a
-weakenUnder3 (Union SZ a) = Union SZ a
-weakenUnder3 (Union (SS n) a) = Union (SS (SS (SS (SS n)))) a
-{-# INLINE weakenUnder3 #-}
 
 
 ------------------------------------------------------------------------------

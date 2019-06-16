@@ -10,7 +10,9 @@ import GHC.Exts
 import Polysemy
 import Polysemy.Error
 import Polysemy.State
+import Polysemy.Output
 import Test.Hspec
+import Unsafe.Coerce
 
 
 
@@ -54,6 +56,15 @@ newtype MyString = MyString String
   deriving (IsString, Eq, Show)
 
 
+data Janky = forall s. Janky (forall i. Sem '[State s] ())
+
+jankyState :: Janky
+jankyState = Janky $ put True
+
+unsafeUnjank :: Janky -> Sem '[State Bool] ()
+unsafeUnjank (Janky sem) = unsafeCoerce sem
+
+
 spec :: Spec
 spec = do
   describe "State effect" $ do
@@ -95,6 +106,10 @@ spec = do
         it "should interpret against MyString" $ do
           flipShouldBe ("hello" :: MyString, ()) . run $ runState "nothing" oStrState
 
+    describe "existential state" $ do
+      it "JankyState should compile" $ do
+        flipShouldBe (True, ()) . run $ runState False $ unsafeUnjank jankyState
+
 
   describe "Error effect" $ do
     it "should interpret against Int" $ do
@@ -115,6 +130,12 @@ spec = do
       flipShouldBe (Right @String (10 :: Int, True))  . run $ runError $ runState 0 errState
     it "should interpret against Bool/Float" $ do
       flipShouldBe (Right @Bool (10 :: Float, True))  . run $ runError $ runState 0 errState
+
+  describe "Output effect" $ do
+    it "should unify recursively with tyvars" $ do
+      flipShouldBe 11 . sum . fst . run . runFoldMapOutput id $ do
+        output [1]
+        output $ replicate 2 5
 
 
   describe "Lift effect" $ do

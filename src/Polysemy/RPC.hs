@@ -9,7 +9,7 @@ import Control.Monad
 import Data.List
 import Polysemy
 import Polysemy.Error
-import Polysemy.Internal.TH.EffectLib
+import Polysemy.Internal.TH.Common
 import Language.Haskell.TH.Datatype
 import Language.Haskell.TH
 

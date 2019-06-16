@@ -9,7 +9,7 @@ import Data.Kind
 import Language.Haskell.TH hiding (Type)
 
 spec :: Spec
-spec = it "should compile" True
+spec = parallel $ it "should compile" True
 
 -- Infix effects and actions -------------------------------------------------
 

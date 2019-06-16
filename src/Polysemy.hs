@@ -35,7 +35,7 @@ module Polysemy
     -- to generate smart constructors for the actions. These smart constructors
     -- can be invoked directly inside of the 'Sem' monad.
     --
-    -- >>> makeSem ''Console
+    -- > makeSem ''Console
     --
     -- results in the following definitions:
     --
@@ -63,7 +63,7 @@ module Polysemy
     -- where 'Polysemy.Error.Catch' is an action that can run an exception
     -- handler if its first argument calls 'Polysemy.Error.throw'.
     --
-    -- >>> makeSem ''Error
+    -- > makeSem ''Error
     --
     -- @
     -- 'Polysemy.Error.throw' :: 'Member' ('Polysemy.Error.Error' e) r => e -> 'Sem' r a

@@ -5,6 +5,7 @@
 module BadSpec where
 
 import Polysemy
+import Polysemy.State
 import Test.Hspec
 import Test.ShouldNotTypecheck
 
@@ -21,6 +22,9 @@ negativePos :: Member (KVStore String v) r => Sem r (Maybe Bool)
 negativePos = do
   getKV "hello"
 
+badState :: Member (State a) r => Sem r ()
+badState = put ()
+
 
 spec :: Spec
 spec = do
@@ -29,4 +33,6 @@ spec = do
       shouldNotTypecheck positivePos
     it "should not typecheck in negative position" $ do
       shouldNotTypecheck negativePos
+    it "should not typecheck badly polymorphic State" $ do
+      shouldNotTypecheck badState
 

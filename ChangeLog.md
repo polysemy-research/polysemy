@@ -1,9 +1,30 @@
 # Changelog for polysemy
 
+## 0.4.0.0 (2019-06-12)
+
+### Breaking Changes
+
+- Renamed `runResource` to `runResourceInIO`
+
+### Other Changes
+
+- Added `runResource`, which runs a `Resource` purely
+- Added `onException`, `finally` and `bracketOnError` to `Resource`
+- Added a new function, `runResource` which performs bracketing for pure code
+
+## 0.3.0.1 (2019-06-09)
+
+- Fixed a type error in the benchmark caused by deprecation of `Semantic`
+
 ## 0.3.0.0 (2019-06-01)
+
+### Breaking Changes
 
 - Removed all deprecated names
 - Moved `Random` effect to `polysemy-zoo`
+
+### Other Changes
+
 - `makeSem` can now be used to create term-level operators (thanks to
     @TheMatten)
 
@@ -23,9 +44,14 @@
 
 ## 0.2.0.0 (2019-05-23)
 
+### Breaking Changes
+
+- Lower precedence of `.@` and `.@@` to 8, from 9
+
+### Other Changes
+
 - Fixed a serious bug in `interpretH` and friends, where higher-order effects
     would always be run with the current interpreter.
-- Lower precedence of `.@` and `.@@` to 8, from 9
 - Users need no longer require `inlineRecursiveCalls` --- the
     `polysemy-plugin-0.2.0.0` will do  it automatically when compiling with `-O`
 - Deprecated `inlineRecursiveCalls`; slated for removal in the next version

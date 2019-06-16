@@ -1,5 +1,5 @@
 name:                polysemy-plugin
-version:             0.2.0.1
+version:             0.2.1.0
 github:              "isovector/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -22,6 +22,7 @@ dependencies:
 - polysemy >= 0.1
 - syb >= 0.7 && <0.8
 - transformers >= 0.5.5.0 && < 0.6
+- containers >= 0.6 && <= 0.7
 
 library:
   source-dirs: src
@@ -35,12 +36,14 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -fplugin=Polysemy.Plugin
-    - -O2
+    build-tools:
+    - hspec-discover >= 2.0
     dependencies:
+    - polysemy >= 0.3
     - polysemy-plugin
     - hspec >= 2.6.0 && < 3
     - should-not-typecheck >= 2.1.0 && < 3
-    - inspection-testing >= 0.4.1.1 && < 0.5
+    - inspection-testing >= 0.4.2 && < 0.5
 
 default-extensions:
   - DataKinds

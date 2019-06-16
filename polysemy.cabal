@@ -1,13 +1,13 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.1.
+-- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 50a0b5488c7736b47db26114c9a5ddb0a7630f50a0676bb96b39fa9194165d2b
+-- hash: 2a74523483fab7d359f383de6b32a8417932f56a15da11e9ad2820c5ec656c2c
 
 name:           polysemy
-version:        0.3.0.0
+version:        0.4.0.0
 synopsis:       Higher-order, low-boilerplate, zero-cost free monads.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
 category:       Language
@@ -51,11 +51,10 @@ library
       Polysemy.Internal.Lift
       Polysemy.Internal.NonDet
       Polysemy.Internal.Tactics
+      Polysemy.Internal.TH.Common
       Polysemy.Internal.TH.Effect
-      Polysemy.Internal.TH.EffectLib
       Polysemy.Internal.Union
       Polysemy.IO
-      Polysemy.Magic
       Polysemy.NonDet
       Polysemy.Output
       Polysemy.Reader
@@ -83,7 +82,8 @@ library
     build-depends:
         dump-core
   if flag(error-messages)
-    cpp-options: -DERROR_MESSAGES
+  else
+    cpp-options: -DNO_ERROR_MESSAGES
   default-language: Haskell2010
 
 test-suite polysemy-test
@@ -91,6 +91,8 @@ test-suite polysemy-test
   main-is: Main.hs
   other-modules:
       AlternativeSpec
+      BracketSpec
+      DoctestSpec
       FusionSpec
       HigherOrderSpec
       InspectorSpec
@@ -101,9 +103,12 @@ test-suite polysemy-test
       test
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-tool-depends:
+      hspec-discover:hspec-discover >=2.0
   build-depends:
       base >=4.7 && <5
     , containers >=0.6 && <=0.7
+    , doctest >=0.16.0.1 && <0.17
     , hspec >=2.6.0 && <3
     , inspection-testing >=0.4.1.1 && <0.5
     , mtl >=2.2.2 && <3

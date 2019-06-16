@@ -7,7 +7,7 @@ import Test.Hspec
 
 
 spec :: Spec
-spec = do
+spec = parallel $ do
   describe "runBatchOutput" $ do
     it "should return nothing at batch size 0" $ do
       let (ms, ()) = runOutput 0 $ output @[Int] [0..100]

@@ -124,12 +124,11 @@ genFreer should_mk_sigs type_name = do
   checkExtensions [ScopedTypeVariables, FlexibleContexts]
   (dt_info, cl_infos) <- getEffectMetadata type_name
   tyfams_on  <- isExtEnabled TypeFamilies
-  def_mod_fi <- sequence [ TySynInstD ''DefiningModule
-                             . TySynEqn [ConT $ datatypeName dt_info]
-                             . LitT
-                             . StrTyLit
-                             . loc_module
-                           <$> location
+  def_mod_fi <- sequence [ tySynInstDCompat
+                             ''DefiningModule
+                             Nothing
+                             [pure . ConT $ datatypeName dt_info]
+                             (LitT . StrTyLit . loc_module <$> location)
                          | tyfams_on
                          ]
   decs <- traverse (genDec should_mk_sigs) cl_infos

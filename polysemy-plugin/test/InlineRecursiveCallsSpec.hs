@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -ddump-simpl -dsuppress-coercions -dsuppress-uniques -dsuppress-idinfo #-}
+{-# OPTIONS_GHC -O2 #-}
 
 
 module InlineRecursiveCallsSpec
@@ -18,10 +18,7 @@ import           Test.Inspection
 spec :: Spec
 spec = describe "inlining recursive calls" $ do
   it "should explicitly break recursion" $ do
-    -- TODO(sandy): This should use (===) instead of (==-), but can't due to
-    -- a bug in inspection-testing. See:
-    -- https://github.com/nomeata/inspection-testing/pull/19
-    shouldSucceed $(inspectTest $ 'recursive ==- 'mutual)
+    shouldSucceed $(inspectTest $ 'recursive === 'mutual)
 
 
 isSuccess :: Result -> Bool
