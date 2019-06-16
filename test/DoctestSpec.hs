@@ -75,16 +75,9 @@ interpretBadFirstOrder = ()
 --   Output o -> modify (<> f o)
 -- :}
 -- ...
--- ... 'e10' is higher-order, but 'reinterpret' can help only
--- ... with first-order effects.
+-- ... Probable cause: ...reinterpret... is applied to too few arguments
 -- ...
---
--- PROBLEM: Output _is_ first order! But we're not inferring `e1 ~ Output`,
--- because the real type error breaks inference. So instead we get `e10`, which
--- we can't prove is first order, so we emit the error.
---
--- SOLUTION: Don't emit the error when `e1` is a tyvar.
-firstOrderReinterpret'WRONG = ()
+tooFewArgumentsReinterpret = ()
 
 
 --------------------------------------------------------------------------------
