@@ -36,7 +36,6 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -fplugin=Polysemy.Plugin
-    - -O2
     dependencies:
     - polysemy >= 0.3
     - polysemy-plugin

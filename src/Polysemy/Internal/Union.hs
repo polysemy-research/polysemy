@@ -34,7 +34,7 @@ import Data.Functor.Identity
 import Data.Type.Equality
 import Polysemy.Internal.Effect
 
-#ifdef ERROR_MESSAGES
+#ifndef NO_ERROR_MESSAGES
 import Polysemy.Internal.CustomErrors
 #endif
 
@@ -103,7 +103,7 @@ type Member e r = Member' e r
 type Member' e r =
   ( Find r e
   , e ~ IndexOf r (Found r e)
-#ifdef ERROR_MESSAGES
+#ifndef NO_ERROR_MESSAGES
   , Break (AmbiguousSend r e) (IndexOf r (Found r e))
 #endif
   )
@@ -137,7 +137,7 @@ type family IndexOf (ts :: [k]) (n :: Nat) :: k where
 
 
 type family Found (ts :: [k]) (t :: k) :: Nat where
-#ifdef ERROR_MESSAGES
+#ifndef NO_ERROR_MESSAGES
   Found '[]       t = UnhandledEffect 'S t
 #endif
   Found (t ': ts) t = 'Z

@@ -16,7 +16,7 @@ runAlt = run . runNonDet
 
 
 spec :: Spec
-spec = do
+spec = parallel $ do
   describe "Alternative instance" $ do
     it "should choose the first branch" $ do
       runAlt (pure '1' <|> pure '2') `shouldBe` (Just '1')

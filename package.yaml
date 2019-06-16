@@ -37,7 +37,6 @@ default-extensions:
   - TypeApplications
   - TypeOperators
   - TypeFamilies
-
   - UnicodeSyntax
 
 flags:
@@ -64,7 +63,9 @@ library:
         - -fplugin-opt DumpCore:core-html
 
     - condition: flag(error-messages)
-      cpp-options: -DERROR_MESSAGES
+      then: {}
+      else:
+        cpp-options: -DNO_ERROR_MESSAGES
 
 tests:
   polysemy-test:
@@ -78,6 +79,7 @@ tests:
     - polysemy
     - inspection-testing >= 0.4.1.1 && < 0.5
     - hspec >= 2.6.0 && < 3
+    - doctest >= 0.16.0.1 && < 0.17
 
 benchmarks:
   polysemy-bench:

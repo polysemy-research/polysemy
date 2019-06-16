@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -ddump-simpl -dsuppress-coercions -dsuppress-uniques -dsuppress-idinfo #-}
+{-# OPTIONS_GHC -O2 #-}
 
 
 module InlineRecursiveCallsSpec

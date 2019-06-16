@@ -27,7 +27,7 @@ shouldSucceed r = r `shouldSatisfy` isSuccess
 
 
 spec :: Spec
-spec = do
+spec = parallel $ do
   describe "fusion" $ do
     it "Union proofs should simplify" $ do
       shouldSucceed $(inspectTest $ 'countDown `hasNoType` ''SNat)

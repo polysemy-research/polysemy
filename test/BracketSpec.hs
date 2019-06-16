@@ -21,7 +21,7 @@ runTest = run
 
 
 spec :: Spec
-spec = do
+spec = parallel $ do
   describe "pure bracket" $ do
     it "persist state and call the finalizer" $ do
       let (ts, (s, e)) = runTest $ do
