@@ -36,7 +36,7 @@ import Control.Monad
 import Language.Haskell.TH
 import Language.Haskell.TH.Datatype
 import Polysemy.Internal.CustomErrors (DefiningModule)
-import Polysemy.Internal.TH.EffectLib
+import Polysemy.Internal.TH.Common
 
 -- TODO: write tests for what should (not) compile
 
@@ -171,7 +171,4 @@ genDec should_mk_sigs cli = do
                  []
         ]
     ]
-
-
-
 

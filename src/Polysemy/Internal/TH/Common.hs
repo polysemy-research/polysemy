@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections   #-}
 
-module Polysemy.Internal.TH.EffectLib
+module Polysemy.Internal.TH.Common
   ( ConLiftInfo (..)
   , getEffectMetadata
   , makeMemberConstraint
