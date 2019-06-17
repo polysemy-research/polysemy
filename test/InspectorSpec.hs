@@ -19,7 +19,7 @@ makeSem ''Callback
 
 
 spec :: Spec
-spec = describe "Inspector" $ do
+spec = parallel $ describe "Inspector" $ do
   it "should inspect State effects" $ do
     withNewTTY $ \ref -> do
       void . (runM .@ runCallback ref)

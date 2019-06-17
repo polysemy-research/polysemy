@@ -1,5 +1,5 @@
 name:                polysemy-plugin
-version:             0.2.0.3
+version:             0.2.1.0
 github:              "isovector/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -36,7 +36,8 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -fplugin=Polysemy.Plugin
-    - -O2
+    build-tools:
+    - hspec-discover >= 2.0
     dependencies:
     - polysemy >= 0.3
     - polysemy-plugin

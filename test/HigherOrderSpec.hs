@@ -6,7 +6,7 @@ import Test.Hspec
 
 
 spec :: Spec
-spec = describe "Reader local" $ do
+spec = parallel $ describe "Reader local" $ do
   it "should nest with itself" $ do
     let foo = run . runReader "hello" $ do
                 local (++ " world") $ do

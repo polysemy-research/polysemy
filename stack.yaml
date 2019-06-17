@@ -5,10 +5,12 @@ packages:
 - polysemy-plugin
 
 extra-deps:
-- dump-core-0.1.3.2
-- monadLib-3.9
-- ghc-lib-0.20190204
-- th-abstraction-0.3.1.0
-- inspection-testing-0.4.2
-- bifunctors-5.5.4
 - aeson-1.4.3.0
+- bifunctors-5.5.4
+- dump-core-0.1.3.2
+- first-class-families-0.5.0.0
+- ghc-lib-0.20190204
+- inspection-testing-0.4.2
+- monadLib-3.9
+- th-abstraction-0.3.1.0
+

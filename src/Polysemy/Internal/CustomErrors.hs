@@ -16,6 +16,7 @@ module Polysemy.Internal.CustomErrors
 
 import Data.Coerce
 import Data.Kind
+import Fcf
 import GHC.TypeLits
 
 
@@ -26,7 +27,6 @@ type family DefiningModuleForEffect (e :: k) :: Symbol where
   DefiningModuleForEffect e     = DefiningModule e
 
 
-
 data T1 m a
 
 type family Break (c :: Constraint)
@@ -34,6 +34,10 @@ type family Break (c :: Constraint)
   Break _ T1 = ((), ())
   Break _ c  = ()
 
+
+type family IfStuck (tyvar :: k) (b :: k1) (c :: Exp k1) :: k1 where
+  IfStuck T1 b c = b
+  IfStuck a  b c = Eval c
 
 
 type AmbigousEffectMessage r e t vs =
@@ -123,7 +127,14 @@ type family FirstOrderError e (fn :: Symbol) :: k where
 --
 -- Note that the parameter 'm' is only required to work around supporting
 -- versions of GHC without QuantifiedConstraints
-type FirstOrder m e fn = Coercible (e m) (e (FirstOrderError e fn))
+type FirstOrder m e fn = IfStuck e (() :: Constraint) (FirstOrderFcf m e fn)
+
+data FirstOrderFcf
+    :: (Type -> Type)
+    -> ((Type -> Type) -> Type -> Type)
+    -> Symbol
+    -> Exp Constraint
+type instance Eval (FirstOrderFcf m e fn) = Coercible (e m) (e (FirstOrderError e fn))
 
 
 ------------------------------------------------------------------------------
