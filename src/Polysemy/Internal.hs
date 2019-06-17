@@ -33,7 +33,6 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Data.Kind
-import Polysemy.Internal.Effect
 import Polysemy.Internal.Fixpoint
 import Polysemy.Internal.Lift
 import Polysemy.Internal.NonDet
