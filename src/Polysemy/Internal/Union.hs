@@ -28,11 +28,12 @@ module Polysemy.Internal.Union
   , Nat (..)
   ) where
 
-import Control.Monad
-import Data.Functor.Compose
-import Data.Functor.Identity
-import Data.Type.Equality
-import Polysemy.Internal.Effect
+import           Control.Monad
+import           Data.Functor.Compose
+import           Data.Functor.Identity
+import           Data.Type.Equality
+import           Polysemy.Internal.Effect
+import qualified Polysemy.Internal.Kind as K
 
 #ifndef NO_ERROR_MESSAGES
 import Polysemy.Internal.CustomErrors
@@ -42,7 +43,7 @@ import Polysemy.Internal.CustomErrors
 ------------------------------------------------------------------------------
 -- | An extensible, type-safe union. The @r@ type parameter is a type-level
 -- list of effects, any one of which may be held within the 'Union'.
-data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
+data Union (r :: K.EffectRow) (m :: * -> *) a where
   Union
       :: SNat n
          -- ^ A proof that the effect is actually in @r@.

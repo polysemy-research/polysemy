@@ -18,6 +18,7 @@ import Data.Coerce
 import Data.Kind
 import Fcf
 import GHC.TypeLits
+import Polysemy.Internal.Kind
 
 
 type family DefiningModule (t :: k) :: Symbol
@@ -30,7 +31,7 @@ type family DefiningModuleForEffect (e :: k) :: Symbol where
 data T1 m a
 
 type family Break (c :: Constraint)
-                  (rep :: (* -> *) -> * -> *) :: Constraint where
+                  (rep :: Effect) :: Constraint where
   Break _ T1 = ((), ())
   Break _ c  = ()
 
@@ -131,7 +132,7 @@ type FirstOrder m e fn = IfStuck e (() :: Constraint) (FirstOrderFcf m e fn)
 
 data FirstOrderFcf
     :: (Type -> Type)
-    -> ((Type -> Type) -> Type -> Type)
+    -> Effect
     -> Symbol
     -> Exp Constraint
 type instance Eval (FirstOrderFcf m e fn) = Coercible (e m) (e (FirstOrderError e fn))
