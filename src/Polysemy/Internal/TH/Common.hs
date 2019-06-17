@@ -33,6 +33,9 @@ import           Polysemy.Internal (Sem, Member, send)
 import           Prelude hiding ((<>))
 
 
+------------------------------------------------------------------------------
+-- | Given an effect name, eg @''State@, get information about the type
+-- constructor, and about each of its data constructors.
 getEffectMetadata :: Name -> Q (DatatypeInfo, [ConLiftInfo])
 getEffectMetadata type_name = do
   dt_info  <- reifyDatatype type_name
@@ -40,21 +43,37 @@ getEffectMetadata type_name = do
   pure (dt_info, cl_infos)
 
 
+------------------------------------------------------------------------------
+-- | Turn a 'ConLiftInfo' for @Foo@ into a @Member Foo r@ constraint.
 makeMemberConstraint :: Name -> ConLiftInfo -> Pred
 makeMemberConstraint r cli = makeMemberConstraint' r $ makeEffectType cli
 
+
+------------------------------------------------------------------------------
+-- | Given a 'ConLiftInfo', get the corresponding effect type.
 makeEffectType :: ConLiftInfo -> Type
 makeEffectType cli
   = foldl' AppT (ConT $ cliEffName cli)
   $ cliEffArgs cli
 
+
+------------------------------------------------------------------------------
+-- | @'makeMemberConstraint'' r type@ will produce a @Member type r@
+-- constraint.
 makeMemberConstraint' :: Name -> Type -> Pred
 makeMemberConstraint' r eff = classPred ''Member [eff, VarT r]
 
+
+------------------------------------------------------------------------------
+-- | @'makeSemType' r a@ will produce a @'Polysemy.Sem' r a@ type.
 makeSemType :: Name -> Type -> Type
 makeSemType r result = ConT ''Sem `AppT` VarT r `AppT` result
 
 
+------------------------------------------------------------------------------
+-- | @'makeInterpreterType' con r a@ will produce a @'Polysemy.Sem' (Effect ':
+-- r) a -> 'Polysemy.Sem' r a@ type, where @Effect@ is the effect corresponding
+-- to the 'ConLiftInfo' for @con@.
 makeInterpreterType :: ConLiftInfo -> Name -> Type -> Type
 makeInterpreterType cli r result =
   foldArrows (makeSemType r result)
@@ -64,6 +83,10 @@ makeInterpreterType cli r result =
         `AppT` result
 
 
+------------------------------------------------------------------------------
+-- | Given a 'ConLiftInfo', this will produce an action for it. It's arguments
+-- will come from any variables in scope that correspond to the 'cliArgs' of
+-- the 'ConLiftInfo'.
 makeUnambiguousSend :: Bool -> ConLiftInfo -> Exp
 makeUnambiguousSend should_mk_sigs cli =
   let fun_args_names = fmap fst $ cliArgs cli
@@ -75,9 +98,6 @@ makeUnambiguousSend should_mk_sigs cli =
              $ cliEffArgs cli ++ [sem, cliResType cli]
       sem    = ConT ''Sem `AppT` VarT (cliUnionName cli)
    in AppE (VarE 'send) $ SigE action eff
-
-
-
 
 
 ------------------------------------------------------------------------------
@@ -174,6 +194,9 @@ missingEffArgs name = fail $ show
     args = PlainTV . mkName <$> ["m", "a"]
 
 
+------------------------------------------------------------------------------
+-- | Fail the 'Q' monad whenever the given 'Extension's aren't enabled in the
+-- current module.
 checkExtensions :: [Extension] -> Q ()
 checkExtensions exts = do
   states <- zip exts <$> traverse isExtEnabled exts
