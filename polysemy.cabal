@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 45b44bbfb10eb9741561ea8fc127dbacabacbf59bcf754f8875c50ef623fbd48
+-- hash: 8215f1fa69bdaae106988aaf84f4a2dd2338231d1fc11ddf7dd30a9d8b61449b
 
 name:           polysemy
 version:        0.4.0.0
@@ -51,6 +51,7 @@ library
       Polysemy.Internal.Lift
       Polysemy.Internal.NonDet
       Polysemy.Internal.Tactics
+      Polysemy.Internal.TH.Common
       Polysemy.Internal.TH.Effect
       Polysemy.Internal.Union
       Polysemy.IO
@@ -97,6 +98,7 @@ test-suite polysemy-test
       InspectorSpec
       OutputSpec
       ThEffectSpec
+      TypeErrors
       Paths_polysemy
   hs-source-dirs:
       test
