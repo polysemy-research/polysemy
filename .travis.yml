@@ -26,6 +26,12 @@ script:
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
 
+ - cd polysemy-plugin
+ - cabal v2-build
+ - cabal v2-test --enable-test
+ - cabal check
+ - cabal sdist   # tests that a source-distribution can be generated
+
 # Check that the resulting source distribution can be built & installed.
 # If there are no other `.tar.gz` files in `dist`, this can be even simpler:
 # `cabal install --force-reinstalls dist/*-*.tar.gz`

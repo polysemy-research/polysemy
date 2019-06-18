@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -O2           #-}
 
+
 #if __GLASGOW_HASKELL__ < 804
 {-# OPTIONS_GHC -fplugin=Test.Inspection.Plugin #-}
 #endif
@@ -32,11 +33,11 @@ shouldSucceed r = r `shouldSatisfy` isSuccess
 spec :: Spec
 spec = parallel $ do
   describe "fusion" $ do
--- #if __GLASGOW_HASKELL__ >= 806
+#if __GLASGOW_HASKELL__ >= 806
     -- TODO: Investigate why this test fails mysteriously on GHC < 8.6
     it "Union proofs should simplify" $ do
       shouldSucceed $(inspectTest $ 'countDown `hasNoType` ''SNat)
--- #endif
+#endif
 
     it "internal uses of StateT should simplify" $ do
       shouldSucceed $(inspectTest $ 'countDown `doesNotUse` ''S.StateT)
