@@ -40,8 +40,10 @@ default-extensions:
   - TypeFamilies
   - UnicodeSyntax
 
-  - TypeInType
-
+when:
+   - condition: impl(ghc < 8.6)
+     default-extensions:
+       - TypeInType
 
 flags:
   dump-core:

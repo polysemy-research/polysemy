@@ -17,9 +17,13 @@ spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doc
   , "-XScopedTypeVariables"
   , "-XStandaloneDeriving"
   , "-XTypeApplications"
-  , "-XTypeOperators"
   , "-XTypeFamilies"
+  , "-XTypeOperators"
   , "-XUnicodeSyntax"
+
+#if __GLASGOW_HASKELL__ < 806
+  , "-XTypeInType"
+#endif __GLASGOW_HASKELL__ < 806
 
   , "test/TypeErrors.hs"
 
