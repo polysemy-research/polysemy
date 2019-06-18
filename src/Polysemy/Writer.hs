@@ -60,7 +60,7 @@ runWriter = runState mempty . reinterpretH
       Censor f m -> do
         mm <- runT m
         ~(o, a) <- raise $ runWriter mm
-        modify (<> f o)
+        modify (`mappend` f o)
         pure a
   )
 

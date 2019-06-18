@@ -1,9 +1,11 @@
-{-# OPTIONS_HADDOCK not-home #-}
-
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE NamedFieldPuns  #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections   #-}
+
+{-# OPTIONS_HADDOCK not-home #-}
+
 
 module Polysemy.Internal.TH.Common
   ( ConLiftInfo (..)
@@ -30,7 +32,10 @@ import           Language.Haskell.TH
 import           Language.Haskell.TH.Datatype
 import           Language.Haskell.TH.PprLib
 import           Polysemy.Internal (Sem, Member, send)
+
+#if __GLASGOW_HASKELL__ >= 804
 import           Prelude hiding ((<>))
+#endif
 
 
 ------------------------------------------------------------------------------
