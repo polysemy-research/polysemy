@@ -23,11 +23,9 @@ import           Polysemy.Internal
 import           Polysemy.Internal.Union
 
 
--- data Error e m a where
---   Throw :: e -> Error e m a
---   Catch :: ∀ e m a. m a -> (e -> m a) -> Error e m a
-
-data Error e m a = Throw e
+data Error e m a where
+  Throw :: e -> Error e m a
+  Catch :: ∀ e m a. m a -> (e -> m a) -> Error e m a
 
 makeSem ''Error
 
