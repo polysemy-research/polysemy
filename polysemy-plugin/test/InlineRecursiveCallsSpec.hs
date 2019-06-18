@@ -1,6 +1,11 @@
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE TemplateHaskell #-}
+
 {-# OPTIONS_GHC -O2 #-}
 
+#if __GLASGOW_HASKELL__ < 804
+{-# OPTIONS_GHC -fplugin=Test.Inspection.Plugin #-}
+#endif
 
 module InlineRecursiveCallsSpec
   ( spec
