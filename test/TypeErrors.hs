@@ -69,7 +69,7 @@ interpretBadFirstOrder = ()
 --     -> Sem (Output o ': r) a
 --     -> Sem r (m, a)
 -- runFoldMapOutput f = runState mempty . reinterpret $ \case
---   Output o -> modify (<> f o)
+--   Output o -> modify (`mappend` f o)
 -- :}
 -- ...
 -- ... Probable cause: ...reinterpret... is applied to too few arguments

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections   #-}
 
@@ -20,6 +21,7 @@ module Polysemy.Writer
 import Polysemy
 import Polysemy.Output
 import Polysemy.State
+
 
 ------------------------------------------------------------------------------
 -- | An effect capable of emitting and intercepting messages.
@@ -49,7 +51,7 @@ runWriter
 runWriter = runState mempty . reinterpretH
   (\case
       Tell o -> do
-        modify (<> o) >>= pureT
+        modify (`mappend` o) >>= pureT
       Listen m -> do
         mm <- runT m
         -- TODO(sandy): this is fucking stupid

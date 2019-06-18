@@ -36,7 +36,7 @@ runFoldMapOutput
     -> Sem r (m, a)
 runFoldMapOutput f = runState mempty . reinterpret
   (\case
-      Output o -> modify (<> f o)
+      Output o -> modify (`mappend` f o)
   )
 {-# INLINE runFoldMapOutput #-}
 
@@ -69,7 +69,7 @@ runBatchOutput size m = do
       Output o -> do
         (nacc, acc) <- get
         let no     = length o
-            total  = acc <> o
+            total  = mappend acc o
             ntotal = nacc + no
 
             emitting n ls

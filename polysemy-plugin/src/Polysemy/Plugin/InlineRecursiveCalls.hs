@@ -41,7 +41,7 @@ containsName :: CoreBndr -> CoreExpr -> Bool
 containsName n e =
   getAny $
     everything
-      (<>)
+      mappend
       (mkQ (Any False) $ matches n)
       e
 
