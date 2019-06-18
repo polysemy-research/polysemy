@@ -37,6 +37,7 @@ module Polysemy.Internal.Union
 import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
+import Data.Kind
 import Data.Type.Equality
 import Polysemy.Internal.Kind
 
@@ -48,7 +49,7 @@ import Polysemy.Internal.CustomErrors
 ------------------------------------------------------------------------------
 -- | An extensible, type-safe union. The @r@ type parameter is a type-level
 -- list of effects, any one of which may be held within the 'Union'.
-data Union (r :: EffectRow) (m :: * -> *) a where
+data Union (r :: EffectRow) (m :: Type -> Type) a where
   Union
       :: SNat n
          -- ^ A proof that the effect is actually in @r@.
@@ -155,7 +156,7 @@ data Nat = Z | S Nat
 
 ------------------------------------------------------------------------------
 -- | A singleton for 'Nat'.
-data SNat :: Nat -> * where
+data SNat :: Nat -> Type where
   SZ :: SNat 'Z
   SS :: SNat n -> SNat ('S n)
 
