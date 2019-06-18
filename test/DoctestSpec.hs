@@ -24,8 +24,9 @@ spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doc
   , "-XUnicodeSyntax"
 
 #if __GLASGOW_HASKELL__ < 806
+  , "-XMonadFailDesugaring"
   , "-XTypeInType"
-#endif __GLASGOW_HASKELL__ < 806
+#endif
 
   , "test/TypeErrors.hs"
 
