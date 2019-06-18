@@ -14,7 +14,6 @@ import Data.Maybe
 import Polysemy.Internal
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.Union
-import Polysemy.Internal.Effect
 
 
 --------------------------------------------------------------------------------

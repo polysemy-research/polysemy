@@ -11,7 +11,6 @@ import qualified Control.Monad.Trans.State.Strict as S
 import           Polysemy.Error
 import           Polysemy.Internal
 import           Polysemy.Internal.Combinators
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 import           Polysemy.State
 import           Test.Hspec

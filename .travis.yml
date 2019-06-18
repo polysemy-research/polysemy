@@ -31,7 +31,6 @@ matrix:
 install:
  - unset CC
  - export PATH=$HOME/.local/bin:/opt/ghc/$GHCVER/bin:$PATH
- - ./.travis/install-ghr.sh
  - ./.travis/install-stack.sh
 
 script:
@@ -42,9 +41,4 @@ script:
    $STACK --no-terminal build --ghc-options="$GHC_OPTIONS"
    $STACK test --ghc-options="$GHC_OPTIONS"
    set +ex
-
-after_success:
- - |
-   # Build and ship binary
-   ./.travis/attach-binary.sh
 

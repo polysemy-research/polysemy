@@ -14,6 +14,8 @@ module Polysemy.Internal.Union
   , Yo (..)
   , liftYo
   , Member
+  , weave
+  , hoist
   -- * Building Unions
   , inj
   , weaken
@@ -32,7 +34,7 @@ import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Type.Equality
-import Polysemy.Internal.Effect
+import Polysemy.Internal.Kind
 
 #ifndef NO_ERROR_MESSAGES
 import Polysemy.Internal.CustomErrors
@@ -42,7 +44,7 @@ import Polysemy.Internal.CustomErrors
 ------------------------------------------------------------------------------
 -- | An extensible, type-safe union. The @r@ type parameter is a type-level
 -- list of effects, any one of which may be held within the 'Union'.
-data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
+data Union (r :: EffectRow) (m :: * -> *) a where
   Union
       :: SNat n
          -- ^ A proof that the effect is actually in @r@.
@@ -66,33 +68,66 @@ instance Functor (Yo e m) where
   fmap f (Yo e s d f' v) = Yo e s d (f . f') v
   {-# INLINE fmap #-}
 
-instance Effect (Yo e) where
-  weave s' d v' (Yo e s nt f v) =
+weaveYo
+    :: (Functor s, Functor m, Functor n)
+    => s ()
+    -> (∀ x. s (m x) -> n (s x))
+    -> (∀ x. s x -> Maybe x)
+    -> Yo e m a
+    -> Yo e n (s a)
+weaveYo s' d v' (Yo e s nt f v) =
     Yo e (Compose $ s <$ s')
          (fmap Compose . d . fmap nt . getCompose)
          (fmap f . getCompose)
          (v <=< v' . getCompose)
-  {-# INLINE weave #-}
+{-# INLINE weaveYo #-}
 
-  hoist = defaultHoist
-  {-# INLINE hoist #-}
+hoistYo
+      :: ( Functor m
+         , Functor n
+         )
+      => (∀ x. m x -> n x)
+      -> Yo e m a
+      -> Yo e n a
+hoistYo f = fmap runIdentity
+          . weaveYo (Identity ())
+                    (fmap Identity . f . runIdentity)
+                    (Just . runIdentity)
+{-# INLINE hoistYo #-}
 
 liftYo :: Functor m => e m a -> Yo e m a
-liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity (Just . runIdentity)
+liftYo e = Yo e (Identity ())
+                (fmap Identity . runIdentity)
+                runIdentity
+                (Just . runIdentity)
 {-# INLINE liftYo #-}
 
 
 instance Functor (Union r m) where
-  fmap f (Union w t) = Union w $ fmap' f t
+  fmap f (Union w t) = Union w $ fmap f t
   {-# INLINE fmap #-}
 
 
-instance Effect (Union r) where
-  weave s f v (Union w e) = Union w $ weave s f v e
-  {-# INLINE weave #-}
+weave
+    :: (Functor s, Functor m, Functor n)
+    => s ()
+    -> (∀ x. s (m x) -> n (s x))
+    -> (∀ x. s x -> Maybe x)
+    -> Union r m a
+    -> Union r n (s a)
+weave s f v (Union w e) = Union w $ weaveYo s f v e
+{-# INLINE weave #-}
 
-  hoist f (Union w e) = Union w $ hoist f e
-  {-# INLINE hoist #-}
+
+hoist
+    :: ( Functor m
+       , Functor n
+       )
+    => (∀ x. m x -> n x)
+    -> Union r m a
+    -> Union r n a
+hoist f (Union w e) = Union w $ hoistYo f e
+{-# INLINE hoist #-}
 
 
 ------------------------------------------------------------------------------

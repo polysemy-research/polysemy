@@ -9,7 +9,6 @@ module InlineRecursiveCallsSpec
 import qualified Control.Monad.Trans.State as S
 import           Data.Tuple
 import           Polysemy.Internal
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 import           Test.Hspec
 import           Test.Inspection

@@ -26,7 +26,6 @@ import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
 import           Polysemy.Internal
 import           Polysemy.Internal.CustomErrors
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Tactics
 import           Polysemy.Internal.Union
 
