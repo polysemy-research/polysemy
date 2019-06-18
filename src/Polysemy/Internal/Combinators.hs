@@ -9,12 +9,14 @@ module Polysemy.Internal.Combinators
   , reinterpret
   , reinterpret2
   , reinterpret3
+
     -- * Higher order
   , interpretH
   , interceptH
   , reinterpretH
   , reinterpret2H
   , reinterpret3H
+
     -- * Statefulness
   , stateful
   , lazilyStateful
@@ -24,7 +26,6 @@ import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
 import           Polysemy.Internal
 import           Polysemy.Internal.CustomErrors
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Tactics
 import           Polysemy.Internal.Union
 
@@ -34,6 +35,13 @@ import           Polysemy.Internal.Union
 swap :: (a, b) -> (b, a)
 swap ~(a, b) = (b, a)
 
+
+firstOrder
+    :: ((forall m x. e m x -> Tactical e m r x) -> t)
+    -> (forall m x. e m x -> Sem r x)
+    -> t
+firstOrder higher f = higher $ \(e :: e m x) -> liftT @m $ f e
+{-# INLINE firstOrder #-}
 
 
 ------------------------------------------------------------------------------
@@ -47,7 +55,8 @@ interpret
     -> Sem (e ': r) a
     -> Sem r a
 -- TODO(sandy): could probably give a `coerce` impl for `runTactics` here
-interpret f = interpretH $ \(e :: e m x) -> liftT @m $ f e
+interpret = firstOrder interpretH
+{-# INLINE interpret #-}
 
 
 ------------------------------------------------------------------------------
@@ -64,8 +73,8 @@ interpretH
 interpretH f (Sem m) = m $ \u ->
   case decomp u of
     Left  x -> liftSem $ hoist (interpretH_b f) x
-    Right (Yo e s d y) -> do
-      a <- runTactics s d (f e)
+    Right (Yo e s d y v) -> do
+      a <- runTactics s d v $ f e
       pure $ y a
 {-# INLINE interpretH #-}
 
@@ -82,9 +91,11 @@ interpretInStateT f s (Sem m) = Sem $ \k ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ interpretInStateT_b f)
+            . weave (s', ())
+                    (uncurry $ interpretInStateT_b f)
+                    (Just . snd)
             $ x
-        Right (Yo e z _ y) ->
+        Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInStateT #-}
 
@@ -101,9 +112,11 @@ interpretInLazyStateT f s (Sem m) = Sem $ \k ->
     case decomp u of
         Left x -> LS.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ interpretInLazyStateT_b f)
+            . weave (s', ())
+                    (uncurry $ interpretInLazyStateT_b f)
+                    (Just . snd)
             $ x
-        Right (Yo e z _ y) ->
+        Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ LS.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInLazyStateT #-}
 
@@ -134,15 +147,16 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 --
 -- See the notes on 'Tactical' for how to use this function.
 reinterpretH
-    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
+    :: forall e1 e2 r a
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': r) a
 reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ hoist (reinterpretH_b f) $ x
-    Right (Yo e s d y) -> do
-      a <- usingSem k $ runTactics s (raiseUnder . d) $ f e
+    Right (Yo e s d y v) -> do
+      a <- usingSem k $ runTactics s (raiseUnder . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
@@ -154,12 +168,13 @@ reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
 -- 'Polysemy.State.runState', meaning it's free to 'reinterpret' in terms of
 -- the 'Polysemy.State.State' effect and immediately run it.
 reinterpret
-    :: FirstOrder m0 e1 "reinterpret"
+    :: forall e1 e2 m0 r a
+     . FirstOrder m0 e1 "reinterpret"
     => (∀ m x. e1 m x -> Sem (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': r) a
-reinterpret f = reinterpretH $ \(e :: e m x) -> liftT @m $ f e
+reinterpret = firstOrder reinterpretH
 {-# INLINE[3] reinterpret #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 
@@ -169,15 +184,16 @@ reinterpret f = reinterpretH $ \(e :: e m x) -> liftT @m $ f e
 --
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret2H
-    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
+    :: forall e1 e2 e3 r a
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': r) a
 reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ weaken $ hoist (reinterpret2H_b f) $ x
-    Right (Yo e s d y) -> do
-      a <- usingSem k $ runTactics s (raiseUnder2 . d) $ f e
+    Right (Yo e s d y v) -> do
+      a <- usingSem k $ runTactics s (raiseUnder2 . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpret2H #-}
 
@@ -185,12 +201,13 @@ reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /two/ intermediary effects.
 reinterpret2
-    :: FirstOrder m0 e1 "reinterpret2"
+    :: forall e1 e2 e3 m0 r a
+     . FirstOrder m0 e1 "reinterpret2"
     => (∀ m x. e1 m x -> Sem (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': r) a
-reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
+reinterpret2 = firstOrder reinterpret2H
 {-# INLINE[3] reinterpret2 #-}
 
 
@@ -199,15 +216,16 @@ reinterpret2 f = reinterpret2H $ \(e :: e m x) -> liftT @m $ f e
 --
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret3H
-    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
+    :: forall e1 e2 e3 e4 r a
+     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': e4 ': r) a
 reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k . weaken . weaken . hoist (reinterpret3H_b f) $ x
-    Right (Yo e s d y) -> do
-      a <- usingSem k $ runTactics s (raiseUnder3 . d) $ f e
+    Right (Yo e s d y v) -> do
+      a <- usingSem k $ runTactics s (raiseUnder3 . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpret3H #-}
 
@@ -215,12 +233,13 @@ reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /three/ intermediary effects.
 reinterpret3
-    :: FirstOrder m0 e1 "reinterpret3"
+    :: forall e1 e2 e3 e4 m0 r a
+     . FirstOrder m0 e1 "reinterpret3"
     => (∀ m x. e1 m x -> Sem (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': e4 ': r) a
-reinterpret3 f = reinterpret3H $ \(e :: e m x) -> liftT @m $ f e
+reinterpret3 = firstOrder reinterpret3H
 {-# INLINE[3] reinterpret3 #-}
 
 
@@ -256,8 +275,8 @@ interceptH
     -> Sem r a
 interceptH f (Sem m) = Sem $ \k -> m $ \u ->
   case prj u of
-    Just (Yo e s d y) ->
-      usingSem k $ fmap y $ runTactics s (raise . d) $ f e
+    Just (Yo e s d y v) ->
+      usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
     Nothing -> k u
 {-# INLINE interceptH #-}
 

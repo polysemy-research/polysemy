@@ -25,7 +25,6 @@ import           Data.Tuple (swap)
 import           Polysemy
 import           Polysemy.Internal
 import           Polysemy.Internal.Combinators
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 
 
@@ -105,9 +104,10 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
               . weave (s, ())
                       (\(s', m') -> fmap swap
                                   $ S.runStateT m' s')
+                      (Just . snd)
               $ hoist hoistStateIntoStateT_b x
-    Right (Yo Get z _ y)     -> fmap (y . (<$ z)) $ S.get
-    Right (Yo (Put s) z _ y) -> fmap (y . (<$ z)) $ S.put s
+    Right (Yo Get z _ y _)     -> fmap (y . (<$ z)) $ S.get
+    Right (Yo (Put s) z _ y _) -> fmap (y . (<$ z)) $ S.put s
 {-# INLINE hoistStateIntoStateT #-}
 
 

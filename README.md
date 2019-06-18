@@ -1,3 +1,9 @@
+<p align="center">
+<img src="https://raw.githubusercontent.com/isovector/polysemy/master/polysemy.png" alt="Polysemy" title="Polysemy">
+</p>
+
+<p>&nbsp;</p>
+
 # polysemy
 
 [![Build Status](https://api.travis-ci.org/isovector/polysemy.svg?branch=master)](https://travis-ci.org/isovector/polysemy)
@@ -151,7 +157,7 @@ program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
             _             -> writeTTY input >> writeTTY "no exceptions"
 
 main :: IO (Either CustomException ())
-main = (runM .@ runResource .@@ runErrorInIO @CustomException) . runTeletypeIO $ program
+main = (runM .@ runResourceInIO .@@ runErrorInIO @CustomException) . runTeletypeIO $ program
 ```
 
 Easy.
@@ -169,11 +175,9 @@ combinators. If you use the wrong one, the library's got your back:
 ```haskell
 runResource
     :: forall r a
-     . Member (Lift IO) r
-    => (∀ x. Sem r x -> IO x)
-    -> Sem (Resource ': r) a
+     . Sem (Resource ': r) a
     -> Sem r a
-runResource finish = interpret $ \case
+runResource = interpret $ \case
   ...
 ```
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -ddump-simpl -dsuppress-coercions -dsuppress-uniques -dsuppress-idinfo #-}
+{-# OPTIONS_GHC -O2 #-}
 
 
 module InlineRecursiveCallsSpec
@@ -9,7 +9,6 @@ module InlineRecursiveCallsSpec
 import qualified Control.Monad.Trans.State as S
 import           Data.Tuple
 import           Polysemy.Internal
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 import           Test.Hspec
 import           Test.Inspection
@@ -18,10 +17,7 @@ import           Test.Inspection
 spec :: Spec
 spec = describe "inlining recursive calls" $ do
   it "should explicitly break recursion" $ do
-    -- TODO(sandy): This should use (===) instead of (==-), but can't due to
-    -- a bug in inspection-testing. See:
-    -- https://github.com/nomeata/inspection-testing/pull/19
-    shouldSucceed $(inspectTest $ 'recursive ==- 'mutual)
+    shouldSucceed $(inspectTest $ 'recursive === 'mutual)
 
 
 isSuccess :: Result -> Bool
@@ -44,9 +40,11 @@ recursive f s (Sem m) = Sem $ \k ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ recursive f)
+            . weave (s', ())
+                    (uncurry $ recursive f)
+                    (Just . snd)
             $ x
-        Right (Yo e z _ y) ->
+        Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 
 
@@ -61,9 +59,11 @@ mutual f s (Sem m) = Sem $ \k ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
           k . fmap swap
-            . weave (s', ()) (uncurry $ mutual2 f)
+            . weave (s', ())
+                    (uncurry $ mutual2 f)
+                    (Just . snd)
             $ x
-        Right (Yo e z _ y) ->
+        Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 {-# INLINE mutual #-}
 

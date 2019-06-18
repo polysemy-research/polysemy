@@ -35,7 +35,7 @@ module Polysemy
     -- to generate smart constructors for the actions. These smart constructors
     -- can be invoked directly inside of the 'Sem' monad.
     --
-    -- >>> makeSem ''Console
+    -- > makeSem ''Console
     --
     -- results in the following definitions:
     --
@@ -63,7 +63,7 @@ module Polysemy
     -- where 'Polysemy.Error.Catch' is an action that can run an exception
     -- handler if its first argument calls 'Polysemy.Error.throw'.
     --
-    -- >>> makeSem ''Error
+    -- > makeSem ''Error
     --
     -- @
     -- 'Polysemy.Error.throw' :: 'Member' ('Polysemy.Error.Error' e) r => e -> 'Sem' r a
@@ -88,6 +88,10 @@ module Polysemy
   , reinterpret2H
   , reinterpret3H
 
+    -- * Kind Synonyms
+  , Effect
+  , EffectRow
+
     -- * Composing IO-based Interpreters
   , (.@)
   , (.@@)
@@ -107,47 +111,13 @@ module Polysemy
   , pureT
   , runT
   , bindT
-
-  -- * Deprecated Names
-  -- | The following exports are deprecated, and are exposed only for
-  -- backwards compatability reasons. They will be removed in the next major
-  -- release.
-  , Semantic
-  , runSemantic
-  , makeSemantic
-  , makeSemantic_
-  , inlineRecursiveCalls
+  , getInspectorT
+  , Inspector (..)
   ) where
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
+import Polysemy.Internal.Kind
 import Polysemy.Internal.TH.Effect
-import Polysemy.Internal.TH.Performance
 import Polysemy.Internal.Tactics
-
--- Imported just for the deprecated names.
-import Polysemy.Internal.Union
-import Language.Haskell.TH
-
---------------------------------------------------------------------------------
--- Deprecated names
-type Semantic = Sem
-{-# DEPRECATED Semantic "Use 'Sem' instead" #-}
-
-runSemantic :: ∀ m r a
-  . Monad m
-  => Semantic r a -> (∀ x. Union r (Sem r) x -> m x)
-  -> m a
-runSemantic = runSem
-{-# DEPRECATED runSemantic "Use 'runSem' instead" #-}
-
-
-makeSemantic :: Name -> Q [Dec]
-makeSemantic = makeSem
-{-# DEPRECATED makeSemantic "Use 'makeSem' instead" #-}
-
-makeSemantic_ :: Name -> Q [Dec]
-makeSemantic_ = makeSem_
-{-# DEPRECATED makeSemantic_ "Use 'makeSem_' instead" #-}
-
 

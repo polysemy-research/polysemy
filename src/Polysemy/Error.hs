@@ -20,7 +20,6 @@ import           Data.Bifunctor (first)
 import           Data.Typeable
 import           Polysemy
 import           Polysemy.Internal
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 
 
@@ -33,6 +32,11 @@ data Error e m a = Throw e
 makeSem ''Error
 
 
+hush :: Either e a -> Maybe a
+hush (Right a) = Just a
+hush (Left _) = Nothing
+
+
 ------------------------------------------------------------------------------
 -- | Run an 'Error' effect in the style of
 -- 'Control.Monad.Trans.Except.ExceptT'.
@@ -42,9 +46,12 @@ runError
 runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
   case decomp u of
     Left x -> E.ExceptT $ k $
-      weave (Right ()) (either (pure . Left) runError_b) x
-    Right (Yo (Throw e) _ _ _) -> E.throwE e
-    Right (Yo (Catch try handle) s d y) ->
+      weave (Right ())
+            (either (pure . Left) runError_b)
+            hush
+            x
+    Right (Yo (Throw e) _ _ _ _) -> E.throwE e
+    Right (Yo (Catch try handle) s d y _) ->
       E.ExceptT $ usingSem k $ do
         ma <- runError_b $ d $ try <$ s
         case ma of

@@ -1,5 +1,22 @@
 # Changelog for polysemy-plugin
 
+## 0.2.1.0 (2019-06-14)
+
+- Greatly improved the plugin's ability to unify polymorphic types when running
+    interpreters.
+
+## 0.2.0.3 (2019-06-13)
+
+- Fixed a bug where the plugin could (incorrectly) loop indefinitely attempting
+    to solve some constraints.
+- Changed the lower-bound of `inspection-testing` to allow Cabal users to
+    successfully run the test-suite.
+
+## 0.2.0.2 (2019-06-09)
+
+- Fixed a bug where the plugin wouldn't attempt to unify effects recursively
+- Updated the test suite to test against `polysemy-0.3`
+
 ## 0.2.0.1 (2019-05-28)
 
 - Fixed a bug where the plugin would get confused in the context of legitimate

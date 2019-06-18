@@ -1,62 +1,36 @@
-# Adapted from https://github.com/commercialhaskell/stack
-language: c
-sudo: false
+language: haskell
+dist: trusty
 
 cache:
-    directories:
-        - $HOME/.ghc
-        - $HOME/.cabal
-        - $HOME/.stack
-        - .stack-work
+  directories:
+    - $HOME/.cabal/store
+
+cabal: "2.4"
 
 matrix:
   include:
-  #   # ghc 8.0.2
-  # - env: STACK='stack --resolver=lts-8.24' CACHE_NAME=8.0.2
-  #   addons: {apt: {packages: [libgmp-dev]}}
-
-  #   # ghc 8.2.2
-  # - env: STACK='stack --resolver=lts-11.5' CACHE_NAME=8.2.2
-  #   addons: {apt: {packages: [libgmp-dev]}}
-
-    # ghc 8.4.4
-  - env: STACK_YAML=stack-8.4.4.yaml CACHE_NAME=8.4.4
-    addons: {apt: {packages: [libgmp-dev]}}
-
-    # ghc 8.6.4
-  - env: STACK_YAML=stack-8.6.4.yaml CACHE_NAME=8.6.4
-    addons: {apt: {packages: [libgmp-dev]}}
-
-    # nightly
-  - env: STACK='stack --resolver=nightly' CACHE_NAME=nightly
-    addons: {apt: {packages: [libgmp-dev]}}
-
-    # Use the resolver in stack.yaml
-  - env: STACK_YAML=stack.yaml CACHE_NAME=stack-linux
-    addons: {apt: {packages: [libgmp-dev]}}
-
-  - env: STACK_YAML=stack.yaml CACHE_NAME=stack-osx
-    os: osx
-    addons: {apt: {packages: [libgmp-dev]}}
-
+    - ghc: "8.6.3"
+    - ghc: "8.4.4"
+    - ghc: "8.2.2"
+    - ghc: "8.0.2"
+    - ghc: "7.10.3"
+    - ghc: "7.8.4"
+    - ghc: "7.6.3"
 
 install:
- - unset CC
- - export PATH=$HOME/.local/bin:/opt/ghc/$GHCVER/bin:$PATH
- - ./.travis/install-ghr.sh
- - ./.travis/install-stack.sh
+ - cabal --version
+ - ghc --version
 
 script:
- - echo "$($STACK ghc -- --version) [$($STACK ghc -- --print-project-git-commit-id 2> /dev/null || echo '?')]"
- - GHC_OPTIONS="-Werror"
- - |
-   set -ex
-   stack --no-terminal build --ghc-options="$GHC_OPTIONS"
-   stack test --ghc-options="$GHC_OPTIONS"
-   set +ex
+ - cabal v2-update
+ - cabal v2-build
+ - cabal v2-test --enable-test
+ - cabal new-haddock
+ - cabal check
+ - cabal sdist   # tests that a source-distribution can be generated
 
-after_success:
- - |
-   # Build and ship binary
-   ./.travis/attach-binary.sh
-
+# Check that the resulting source distribution can be built & installed.
+# If there are no other `.tar.gz` files in `dist`, this can be even simpler:
+# `cabal install --force-reinstalls dist/*-*.tar.gz`
+ - SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
+   (cd dist && cabal install --force-reinstalls "$SRC_TGZ")

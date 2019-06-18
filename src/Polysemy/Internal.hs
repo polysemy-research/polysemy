@@ -33,7 +33,6 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Data.Kind
-import Polysemy.Internal.Effect
 import Polysemy.Internal.Fixpoint
 import Polysemy.Internal.Lift
 import Polysemy.Internal.NonDet
@@ -253,7 +252,6 @@ hoistSem
 hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSem #-}
 
-
 ------------------------------------------------------------------------------
 -- | Introduce an effect into 'Sem'. Analogous to
 -- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem
@@ -272,6 +270,11 @@ raise_b = raise
 -- list.
 raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = hoistSem $ hoist raiseUnder_b . weakenUnder
+  where
+    weakenUnder :: ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': r) m x
+    weakenUnder (Union SZ a) = Union SZ a
+    weakenUnder (Union (SS n) a) = Union (SS (SS n)) a
+    {-# INLINE weakenUnder #-}
 {-# INLINE raiseUnder #-}
 
 
@@ -285,6 +288,11 @@ raiseUnder_b = raiseUnder
 -- list.
 raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
 raiseUnder2 = hoistSem $ hoist raiseUnder2_b . weakenUnder2
+  where
+    weakenUnder2 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': r) m x
+    weakenUnder2 (Union SZ a) = Union SZ a
+    weakenUnder2 (Union (SS n) a) = Union (SS (SS (SS n))) a
+    {-# INLINE weakenUnder2 #-}
 {-# INLINE raiseUnder2 #-}
 
 
@@ -298,6 +306,11 @@ raiseUnder2_b = raiseUnder2
 -- list.
 raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
 raiseUnder3 = hoistSem $ hoist raiseUnder3_b . weakenUnder3
+  where
+    weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
+    weakenUnder3 (Union SZ a) = Union SZ a
+    weakenUnder3 (Union (SS n) a) = Union (SS (SS (SS (SS n)))) a
+    {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
 
 
@@ -334,7 +347,7 @@ run (Sem m) = runIdentity $ m absurdU
 runM :: Monad m => Sem '[Lift m] a -> m a
 runM (Sem m) = m $ \z ->
   case extract z of
-    Yo e s _ f -> do
+    Yo e s _ f _ -> do
       a <- unLift e
       pure $ f $ a <$ s
 {-# INLINE runM #-}
@@ -343,10 +356,10 @@ runM (Sem m) = m $ \z ->
 ------------------------------------------------------------------------------
 -- | Some interpreters need to be able to lower down to the base monad (often
 -- 'IO') in order to function properly --- some good examples of this are
--- 'Polysemy.Error.runErrorInIO' and 'Polysemy.Resource.runResource'.
+-- 'Polysemy.Error.runErrorInIO' and 'Polysemy.Resource.runResourceInIO'.
 --
 -- However, these interpreters don't compose particularly nicely; for example,
--- to run 'Polysemy.Resource.runResource', you must write:
+-- to run 'Polysemy.Resource.runResourceInIO', you must write:
 --
 -- @
 -- runM . runErrorInIO runM

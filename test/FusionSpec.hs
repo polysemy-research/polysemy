@@ -11,7 +11,6 @@ import qualified Control.Monad.Trans.State.Strict as S
 import           Polysemy.Error
 import           Polysemy.Internal
 import           Polysemy.Internal.Combinators
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 import           Polysemy.State
 import           Test.Hspec
@@ -27,7 +26,7 @@ shouldSucceed r = r `shouldSatisfy` isSuccess
 
 
 spec :: Spec
-spec = do
+spec = parallel $ do
   describe "fusion" $ do
 #if __GLASGOW_HASKELL__ >= 806
     -- TODO: Investigate why this test fails mysteriously on GHC < 8.6
