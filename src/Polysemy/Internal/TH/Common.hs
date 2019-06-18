@@ -208,8 +208,7 @@ checkExtensions exts = do
   maybe (pure ())
         (\(ext, _) -> fail $ show
           $ char '‘' <> text (show ext) <> char '’'
-            <+> text "extension needs to be enabled\
-                     \ for Polysemy's Template Haskell to work")
+            <+> text "extension needs to be enabled for Polysemy's Template Haskell to work")
         (find (not . snd) states)
 
 ------------------------------------------------------------------------------
@@ -247,11 +246,11 @@ eqPairOrCxt p = case asEqualPred p of
 ------------------------------------------------------------------------------
 -- | Creates name of lifting function from action name.
 liftFunNameFromCon :: Name -> Name
-liftFunNameFromCon n = mkName $ case nameBase n of
-                         ':':cs -> cs
-                         c  :cs -> toLower c : cs
-                         ""     -> error
-                           "liftFunNameFromCon: empty constructor name"
+liftFunNameFromCon n = mkName $
+  case nameBase n of
+    ':' : cs -> cs
+    c   : cs -> toLower c : cs
+    ""       -> error "liftFunNameFromCon: empty constructor name"
 
 ------------------------------------------------------------------------------
 -- | Folds a list of 'Type's into a right-associative arrow 'Type'.
