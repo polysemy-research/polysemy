@@ -16,14 +16,14 @@ category:            Language
 description:         Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
 
 dependencies:
-- base >= 4.7 && < 5
-- containers >= 0.6 && <= 0.7
-- mtl >= 2.2.2 && <3
-- syb >= 0.7 && <= 0.8
-- template-haskell >= 2.14.0.0 && <2.15
-- th-abstraction >= 0.3 && <= 0.4
-- transformers >= 0.5.5.0 && < 0.6
-- first-class-families >= 0.5.0.0 && < 0.6
+- base
+- containers
+- mtl
+- syb
+- template-haskell
+- th-abstraction
+- transformers
+- first-class-families
 
 default-extensions:
   - DataKinds
@@ -80,9 +80,9 @@ tests:
     - hspec-discover >= 2.0
     dependencies:
     - polysemy
-    - inspection-testing >= 0.4.1.1 && < 0.5
-    - hspec >= 2.6.0 && < 3
-    - doctest >= 0.16.0.1 && < 0.17
+    - inspection-testing
+    - hspec
+    - doctest
 
 benchmarks:
   polysemy-bench:
