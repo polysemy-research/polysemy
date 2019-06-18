@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module DoctestSpec where
 
 import Test.DocTest
