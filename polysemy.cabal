@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fefae6d91dbd0682e1159089d063381005102b79bbfa7c592fe94dc6397867b5
+-- hash: a3c0a36412c65f38092576f6996fd8ca4cdf5c57fbd75e51f2af64540b0f798b
 
 name:           polysemy
 version:        0.4.0.0
@@ -66,7 +66,7 @@ library
       Polysemy.Internal.PluginLookup
   hs-source-dirs:
       src
-  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
+  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax TypeInType
   ghc-options: -Wall
   build-depends:
       base
@@ -77,8 +77,6 @@ library
     , template-haskell
     , th-abstraction
     , transformers
-  if impl(ghc < 8.6)
-    default-extensions: TypeInType
   if flag(dump-core)
     ghc-options: -fplugin=DumpCore -fplugin-opt DumpCore:core-html
     build-depends:
@@ -104,7 +102,7 @@ test-suite polysemy-test
       Paths_polysemy
   hs-source-dirs:
       test
-  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
+  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax TypeInType
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
@@ -121,8 +119,6 @@ test-suite polysemy-test
     , template-haskell
     , th-abstraction
     , transformers
-  if impl(ghc < 8.6)
-    default-extensions: TypeInType
   default-language: Haskell2010
 
 benchmark polysemy-bench
@@ -133,7 +129,7 @@ benchmark polysemy-bench
       Paths_polysemy
   hs-source-dirs:
       bench
-  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
+  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax TypeInType
   build-depends:
       base
     , containers
@@ -147,6 +143,4 @@ benchmark polysemy-bench
     , template-haskell
     , th-abstraction
     , transformers
-  if impl(ghc < 8.6)
-    default-extensions: TypeInType
   default-language: Haskell2010
