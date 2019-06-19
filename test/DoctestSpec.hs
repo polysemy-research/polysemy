@@ -1,7 +1,9 @@
+{-# LANGUAGE CPP #-}
+
 module DoctestSpec where
 
-import Test.DocTest
 import Test.Hspec
+import Test.DocTest
 
 spec :: Spec
 spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doctest
@@ -17,9 +19,14 @@ spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doc
   , "-XScopedTypeVariables"
   , "-XStandaloneDeriving"
   , "-XTypeApplications"
-  , "-XTypeOperators"
   , "-XTypeFamilies"
+  , "-XTypeOperators"
   , "-XUnicodeSyntax"
+
+#if __GLASGOW_HASKELL__ < 806
+  , "-XMonadFailDesugaring"
+  , "-XTypeInType"
+#endif
 
   , "test/TypeErrors.hs"
 
@@ -31,4 +38,3 @@ spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doc
   , "src/Polysemy/State.hs"
   , "src/Polysemy/Trace.hs"
   ]
-

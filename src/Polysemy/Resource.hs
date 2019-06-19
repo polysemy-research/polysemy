@@ -26,21 +26,21 @@ import           Polysemy
 data Resource m a where
   Bracket
     :: m a
-       -- ^ Action to allocate a resource.
+       -- Action to allocate a resource.
     -> (a -> m c)
-       -- ^ Action to cleanup the resource. This is guaranteed to be
+       -- Action to cleanup the resource. This is guaranteed to be
        -- called.
     -> (a -> m b)
-       -- ^ Action which uses the resource.
+       -- Action which uses the resource.
     -> Resource m b
   BracketOnError
     :: m a
-       -- ^ Action to allocate a resource.
+       -- Action to allocate a resource.
     -> (a -> m c)
-       -- ^ Action to cleanup the resource. This will only be called if the
+       -- Action to cleanup the resource. This will only be called if the
        -- "use" block fails.
     -> (a -> m b)
-       -- ^ Action which uses the resource.
+       -- Action which uses the resource.
     -> Resource m b
 
 makeSem ''Resource

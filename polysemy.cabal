@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8215f1fa69bdaae106988aaf84f4a2dd2338231d1fc11ddf7dd30a9d8b61449b
+-- hash: 3bb11d1562f0640e892b918e3de6086196562200410a660b14851704b64175a0
 
 name:           polysemy
 version:        0.4.0.0
@@ -69,18 +69,23 @@ library
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -Wall
   build-depends:
-      base >=4.7 && <5
-    , containers >=0.6 && <=0.7
+      base >=4.9 && <5
+    , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.6
     , mtl >=2.2.2 && <3
-    , syb >=0.7 && <=0.8
-    , template-haskell >=2.14.0.0 && <2.15
-    , th-abstraction >=0.3 && <=0.4
-    , transformers >=0.5.5.0 && <0.6
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.12.0.0 && <3
+    , th-abstraction >=0.3.1.0 && <0.4
+    , transformers >=0.5.2.0 && <0.6
+  if impl(ghc < 8.6)
+    default-extensions: MonadFailDesugaring TypeInType
   if flag(dump-core)
     ghc-options: -fplugin=DumpCore -fplugin-opt DumpCore:core-html
     build-depends:
         dump-core
+  if impl(ghc < 8.2.2)
+    build-depends:
+        unsupported-ghc-version >1 && <1
   if flag(error-messages)
   else
     cpp-options: -DNO_ERROR_MESSAGES
@@ -107,18 +112,20 @@ test-suite polysemy-test
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
   build-depends:
-      base >=4.7 && <5
-    , containers >=0.6 && <=0.7
+      base >=4.9 && <5
+    , containers >=0.5 && <0.7
     , doctest >=0.16.0.1 && <0.17
     , first-class-families >=0.5.0.0 && <0.6
     , hspec >=2.6.0 && <3
-    , inspection-testing >=0.4.1.1 && <0.5
+    , inspection-testing >=0.4.2.1 && <0.5
     , mtl >=2.2.2 && <3
     , polysemy
-    , syb >=0.7 && <=0.8
-    , template-haskell >=2.14.0.0 && <2.15
-    , th-abstraction >=0.3 && <=0.4
-    , transformers >=0.5.5.0 && <0.6
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.12.0.0 && <3
+    , th-abstraction >=0.3.1.0 && <0.4
+    , transformers >=0.5.2.0 && <0.6
+  if impl(ghc < 8.6)
+    default-extensions: MonadFailDesugaring TypeInType
   default-language: Haskell2010
 
 benchmark polysemy-bench
@@ -131,16 +138,18 @@ benchmark polysemy-bench
       bench
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
-      base >=4.7 && <5
-    , containers >=0.6 && <=0.7
+      base >=4.9 && <5
+    , containers >=0.5 && <0.7
     , criterion
     , first-class-families >=0.5.0.0 && <0.6
     , free
     , freer-simple
     , mtl
     , polysemy
-    , syb >=0.7 && <=0.8
-    , template-haskell >=2.14.0.0 && <2.15
-    , th-abstraction >=0.3 && <=0.4
-    , transformers >=0.5.5.0 && <0.6
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.12.0.0 && <3
+    , th-abstraction >=0.3.1.0 && <0.4
+    , transformers >=0.5.2.0 && <0.6
+  if impl(ghc < 8.6)
+    default-extensions: MonadFailDesugaring TypeInType
   default-language: Haskell2010
