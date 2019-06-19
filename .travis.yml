@@ -34,5 +34,4 @@ script:
 
  - cabal v2-build polysemy-plugin
  - cabal v2-test --enable-test polysemy-plugin
- - cabal check polysemy-plugin
- - cabal sdist polysemy-plugin  # tests that a source-distribution can be generated
+

@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Polysemy.Plugin.Phases
   ( extraPhases
   ) where
@@ -28,7 +30,9 @@ extraPhases dflags =
     base_mode = SimplMode
       { sm_phase      = error "base_mode"
       , sm_names      = []
+#if __GLASGOW_HASKELL__ >= 804
       , sm_dflags     = dflags
+#endif
       , sm_rules      = option Opt_EnableRewriteRules
       , sm_eta_expand = rules_on
       , sm_inline     = True
