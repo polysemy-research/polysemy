@@ -48,9 +48,9 @@ import Polysemy.Internal.CustomErrors
 data Union (r :: EffectRow) (m :: Type -> Type) a where
   Union
       :: SNat n
-         -- ^ A proof that the effect is actually in @r@.
+         -- A proof that the effect is actually in @r@.
       -> Yo (IndexOf r n) m a
-         -- ^ The effect to wrap. The functions 'prj' and 'decomp' can help
+         -- The effect to wrap. The functions 'prj' and 'decomp' can help
          -- retrieve this value later.
       -> Union r m a
 
