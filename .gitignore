@@ -3,3 +3,5 @@ stack.yaml.lock
 core-html/
 *~
 *.prof
+.ghc.environment.*
+dist-newstyle
