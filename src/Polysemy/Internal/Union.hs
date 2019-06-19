@@ -12,7 +12,6 @@
 module Polysemy.Internal.Union
   ( Union (..)
   , Yo (..)
-  , liftYo
   , Member
   , weave
   , hoist
@@ -53,6 +52,9 @@ data Union (r :: EffectRow) (m :: * -> *) a where
          -- retrieve this value later.
       -> Union r m a
 
+instance Functor (Union r m) where
+  fmap f (Union w t) = Union w $ fmap f t
+  {-# INLINE fmap #-}
 
 
 data Yo e m a where
@@ -68,44 +70,6 @@ instance Functor (Yo e m) where
   fmap f (Yo e s d f' v) = Yo e s d (f . f') v
   {-# INLINE fmap #-}
 
-weaveYo
-    :: (Functor s, Functor m, Functor n)
-    => s ()
-    -> (∀ x. s (m x) -> n (s x))
-    -> (∀ x. s x -> Maybe x)
-    -> Yo e m a
-    -> Yo e n (s a)
-weaveYo s' d v' (Yo e s nt f v) =
-    Yo e (Compose $ s <$ s')
-         (fmap Compose . d . fmap nt . getCompose)
-         (fmap f . getCompose)
-         (v <=< v' . getCompose)
-{-# INLINE weaveYo #-}
-
-hoistYo
-      :: ( Functor m
-         , Functor n
-         )
-      => (∀ x. m x -> n x)
-      -> Yo e m a
-      -> Yo e n a
-hoistYo f = fmap runIdentity
-          . weaveYo (Identity ())
-                    (fmap Identity . f . runIdentity)
-                    (Just . runIdentity)
-{-# INLINE hoistYo #-}
-
-liftYo :: Functor m => e m a -> Yo e m a
-liftYo e = Yo e (Identity ())
-                (fmap Identity . runIdentity)
-                runIdentity
-                (Just . runIdentity)
-{-# INLINE liftYo #-}
-
-
-instance Functor (Union r m) where
-  fmap f (Union w t) = Union w $ fmap f t
-  {-# INLINE fmap #-}
 
 
 weave
@@ -115,7 +79,11 @@ weave
     -> (∀ x. s x -> Maybe x)
     -> Union r m a
     -> Union r n (s a)
-weave s f v (Union w e) = Union w $ weaveYo s f v e
+weave s' d v' (Union w (Yo e s nt f v)) = Union w $
+    Yo e (Compose $ s <$ s')
+         (fmap Compose . d . fmap nt . getCompose)
+         (fmap f . getCompose)
+         (v <=< v' . getCompose)
 {-# INLINE weave #-}
 
 
@@ -126,7 +94,7 @@ hoist
     => (∀ x. m x -> n x)
     -> Union r m a
     -> Union r n a
-hoist f (Union w e) = Union w $ hoistYo f e
+hoist f' (Union w (Yo e s nt f v)) = Union w $ Yo e s (f' . nt) f v
 {-# INLINE hoist #-}
 
 
@@ -228,7 +196,11 @@ weaken (Union n a) = Union (SS n) a
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
 inj :: forall r e a m. (Functor m , Member e r) => e m a -> Union r m a
-inj e = Union (finder @_ @r @e) $ liftYo e
+inj e = Union (finder @_ @r @e) $
+  Yo e (Identity ())
+       (fmap Identity . runIdentity)
+       runIdentity
+       (Just . runIdentity)
 {-# INLINE inj #-}
 
 
