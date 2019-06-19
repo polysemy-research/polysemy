@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1cce268782b2993d871149db615066379d028a42a61d74ca18805691489500cf
+-- hash: 71e8ce26010e68d8c20b1cc4f384f6a0ed8ad3c18b2c416025a90eda47c141b9
 
 name:           polysemy
 version:        0.4.0.0
@@ -69,14 +69,14 @@ library
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -Wall
   build-depends:
-      base
-    , containers
-    , first-class-families
-    , mtl
-    , syb
-    , template-haskell
-    , th-abstraction
-    , transformers
+      base >=4.9 && <5
+    , containers >=0.6 && <0.7
+    , first-class-families >=0.5.0.0 && <0.6
+    , mtl >=2.2.2 && <3
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.13.0.0 && <3
+    , th-abstraction >=0.3.1.0 && <0.4
+    , transformers >=0.5.5.0 && <0.6
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
   if flag(dump-core)
@@ -109,18 +109,18 @@ test-suite polysemy-test
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
   build-depends:
-      base
-    , containers
+      base >=4.9 && <5
+    , containers >=0.6 && <0.7
     , doctest
-    , first-class-families
+    , first-class-families >=0.5.0.0 && <0.6
     , hspec
     , inspection-testing
-    , mtl
+    , mtl >=2.2.2 && <3
     , polysemy
-    , syb
-    , template-haskell
-    , th-abstraction
-    , transformers
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.13.0.0 && <3
+    , th-abstraction >=0.3.1.0 && <0.4
+    , transformers >=0.5.5.0 && <0.6
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
   default-language: Haskell2010
@@ -135,18 +135,18 @@ benchmark polysemy-bench
       bench
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
-      base
-    , containers
+      base >=4.9 && <5
+    , containers >=0.6 && <0.7
     , criterion
-    , first-class-families
+    , first-class-families >=0.5.0.0 && <0.6
     , free
     , freer-simple
     , mtl
     , polysemy
-    , syb
-    , template-haskell
-    , th-abstraction
-    , transformers
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.13.0.0 && <3
+    , th-abstraction >=0.3.1.0 && <0.4
+    , transformers >=0.5.5.0 && <0.6
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
   default-language: Haskell2010
