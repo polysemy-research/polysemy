@@ -47,7 +47,7 @@ import Polysemy.Internal.CustomErrors
 -- list of effects, any one of which may be held within the 'Union'.
 data Union (r :: EffectRow) (m :: Type -> Type) a where
   Union
-         -- | A proof that the effect is actually in @r@.
+      :: -- | A proof that the effect is actually in @r@.
          SNat n
          -- | The effect to wrap. The functions 'prj' and 'decomp' can help
          -- retrieve this value later.
