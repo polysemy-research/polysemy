@@ -9,9 +9,10 @@ cabal: "2.4"
 
 matrix:
   include:
-    - ghc: "8.6.3"
+    - ghc: "8.6.5"
     - ghc: "8.4.4"
-    - ghc: "8.2.2"
+#     - ghc: "8.2.2"
+# Disabling GHC 8.2.2 as polysemy-plugin tests do not pass
 
 install:
  - cabal --version
