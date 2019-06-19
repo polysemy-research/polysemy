@@ -25,22 +25,22 @@ import           Polysemy
 -- short-circuiting effects.
 data Resource m a where
   Bracket
-    :: -- | Action to allocate a resource.
-       m a
-       -- | Action to cleanup the resource. This is guaranteed to be
-       -- called.
+    :: m a
+       -- Action to allocate a resource.
     -> (a -> m c)
-       -- | Action which uses the resource.
+       -- Action to cleanup the resource. This is guaranteed to be
+       -- called.
     -> (a -> m b)
+       -- Action which uses the resource.
     -> Resource m b
   BracketOnError
-    :: -- | Action to allocate a resource.
-       m a
-       -- | Action to cleanup the resource. This will only be called if the
-       -- "use" block fails.
+    :: m a
+       -- Action to allocate a resource.
     -> (a -> m c)
-       -- | Action which uses the resource.
+       -- Action to cleanup the resource. This will only be called if the
+       -- "use" block fails.
     -> (a -> m b)
+       -- Action which uses the resource.
     -> Resource m b
 
 makeSem ''Resource
