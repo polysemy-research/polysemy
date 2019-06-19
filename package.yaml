@@ -17,7 +17,7 @@ description:         Please see the README on GitHub at <https://github.com/isov
 
 dependencies:
 - base >= 4.9 && < 5
-- containers >= 0.6 && < 0.7
+- containers >= 0.5 && < 0.7
 - mtl >= 2.2.2 && < 3
 - syb >= 0.7 && < 0.8
 - template-haskell >= 2.12.0.0 && < 3
@@ -45,9 +45,6 @@ when:
     default-extensions:
       - MonadFailDesugaring
       - TypeInType
-  - condition: impl(ghc < 8.2.2)
-    build-depends:
-      - unsupported-ghc-version > 1 && < 1
 
 flags:
   dump-core:
@@ -71,6 +68,10 @@ library:
       ghc-options:
         - -fplugin=DumpCore
         - -fplugin-opt DumpCore:core-html
+
+    - condition: impl(ghc < 8.2.2)
+      dependencies:
+        - unsupported-ghc-version > 1 && < 1
 
     - condition: flag(error-messages)
       then: {}

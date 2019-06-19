@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b35d32ea2edaafce74f4bbd280bdfcbd46c472a6d4281289f3053542358fb1d1
+-- hash: 5d0a33182763e86e1219252267e0912a645a0c8f05094e8f1bbf6f01944a050b
 
 name:           polysemy
 version:        0.4.0.0
@@ -70,7 +70,7 @@ library
   ghc-options: -Wall
   build-depends:
       base >=4.9 && <5
-    , containers >=0.6 && <0.7
+    , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.6
     , mtl >=2.2.2 && <3
     , syb >=0.7 && <0.8
@@ -79,11 +79,13 @@ library
     , transformers >=0.5.5.0 && <0.6
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
-  if impl(ghc < 8.2.2)
   if flag(dump-core)
     ghc-options: -fplugin=DumpCore -fplugin-opt DumpCore:core-html
     build-depends:
         dump-core
+  if impl(ghc < 8.2.2)
+    build-depends:
+        unsupported-ghc-version >1 && <1
   if flag(error-messages)
   else
     cpp-options: -DNO_ERROR_MESSAGES
@@ -111,7 +113,7 @@ test-suite polysemy-test
       hspec-discover:hspec-discover >=2.0
   build-depends:
       base >=4.9 && <5
-    , containers >=0.6 && <0.7
+    , containers >=0.5 && <0.7
     , doctest
     , first-class-families >=0.5.0.0 && <0.6
     , hspec
@@ -124,7 +126,6 @@ test-suite polysemy-test
     , transformers >=0.5.5.0 && <0.6
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
-  if impl(ghc < 8.2.2)
   default-language: Haskell2010
 
 benchmark polysemy-bench
@@ -138,7 +139,7 @@ benchmark polysemy-bench
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
       base >=4.9 && <5
-    , containers >=0.6 && <0.7
+    , containers >=0.5 && <0.7
     , criterion
     , first-class-families >=0.5.0.0 && <0.6
     , free
@@ -151,5 +152,4 @@ benchmark polysemy-bench
     , transformers >=0.5.5.0 && <0.6
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
-  if impl(ghc < 8.2.2)
   default-language: Haskell2010
