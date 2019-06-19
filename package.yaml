@@ -90,7 +90,7 @@ tests:
     - hspec-discover >= 2.0
     dependencies:
     - polysemy
-    - inspection-testing >= 0.4.1.1 && < 0.5
+    - inspection-testing >= 0.4.2.1 && < 0.5
     - hspec >= 2.6.0 && < 3
     - doctest >= 0.16.0.1 && < 0.17
 
