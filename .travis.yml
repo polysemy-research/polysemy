@@ -20,7 +20,7 @@ script:
  - cabal v2-update
  - cabal v2-build
  - cabal v2-test --enable-test
- - cabal new-haddock || echo $?
+ - cabal new-haddock
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
 
