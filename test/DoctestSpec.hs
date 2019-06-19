@@ -3,8 +3,6 @@
 module DoctestSpec where
 
 import Test.Hspec
-
-#if __GLASGOW_HASKELL__ >= 806
 import Test.DocTest
 
 spec :: Spec
@@ -40,10 +38,3 @@ spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doc
   , "src/Polysemy/State.hs"
   , "src/Polysemy/Trace.hs"
   ]
-#else
--- TODO(sandy): doctest fails to load `Fcf` on older versions on older versions
-spec :: Spec
-spec =
-  it "polysemy's custom error messages are not supported on GHC < 8.6" $
-    True `shouldBe` True
-#endif
