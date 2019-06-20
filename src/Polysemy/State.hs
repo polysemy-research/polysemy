@@ -9,9 +9,11 @@ module Polysemy.State
   , gets
   , put
   , modify
+  , modify'
 
     -- * Interpretations
   , runState
+  , evalState
   , runLazyState
   , runStateInIORef
 
@@ -54,6 +56,12 @@ modify f = do
   put $ f s
 {-# INLINABLE modify #-}
 
+modify' :: Member (State s) r => (s -> s) -> Sem r ()
+modify' f = do
+  s <- get
+  put $! f s
+{-# INLINABLE modify' #-}
+
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect with local state.
@@ -62,6 +70,13 @@ runState = stateful $ \case
   Get   -> \s -> pure (s, s)
   Put s -> const $ pure (s, ())
 {-# INLINE[3] runState #-}
+
+
+------------------------------------------------------------------------------
+-- | Run a 'State' effect with local state, ignoring the resulting value.
+-- TODO(sandy): exec and also lazy versions
+evalState :: s -> Sem (State s ': r) a -> Sem r a
+evalState s = fmap snd . runState s
 
 
 ------------------------------------------------------------------------------
