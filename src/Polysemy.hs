@@ -88,6 +88,10 @@ module Polysemy
   , reinterpret2H
   , reinterpret3H
 
+    -- * Kind Synonyms
+  , Effect
+  , EffectRow
+
     -- * Composing IO-based Interpreters
   , (.@)
   , (.@@)
@@ -113,6 +117,7 @@ module Polysemy
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
+import Polysemy.Internal.Kind
 import Polysemy.Internal.TH.Effect
 import Polysemy.Internal.Tactics
 

@@ -4,6 +4,8 @@
 
 module Polysemy.Internal.Lift where
 
+import Data.Kind
+
 
 ------------------------------------------------------------------------------
 -- | An effect which allows a regular 'Monad' @m@ into the 'Polysemy.Sem'
@@ -25,6 +27,6 @@ module Polysemy.Internal.Lift where
 --
 -- Consider using 'Polysemy.Trace.trace' and 'Polysemy.Trace.runTraceIO' as
 -- a substitute for using 'putStrLn' directly.
-newtype Lift m (z :: * -> *) a where
+newtype Lift m (z :: Type -> Type) a where
   Lift :: { unLift :: m a } -> Lift m z a
 

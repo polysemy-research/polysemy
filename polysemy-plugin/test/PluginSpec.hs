@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes        #-}
-{-# LANGUAGE BlockArguments             #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
@@ -37,9 +36,8 @@ oStrState = put "hello"
 err :: Member (Error e) r => Sem r Bool
 err =
   catch
-    do
-      throw undefined
-    \_ -> pure True
+    (throw undefined)
+    (\_ -> pure True)
 
 
 errState :: Num s => Members '[Error e, State s] r => Sem r Bool

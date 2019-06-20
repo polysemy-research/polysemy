@@ -17,7 +17,6 @@ module Polysemy.Internal.Tactics
   ) where
 
 import Polysemy.Internal
-import Polysemy.Internal.Effect
 import Polysemy.Internal.Union
 
 

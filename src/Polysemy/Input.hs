@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.Input
@@ -31,7 +30,7 @@ makeSem ''Input
 ------------------------------------------------------------------------------
 -- | Run an 'Input' effect by always giving back the same value.
 runConstInput :: i -> Sem (Input i ': r) a -> Sem r a
-runConstInput c = interpret \case
+runConstInput c = interpret $ \case
   Input -> pure c
 {-# INLINE runConstInput #-}
 
@@ -43,18 +42,20 @@ runListInput
     :: [i]
     -> Sem (Input (Maybe i) ': r) a
     -> Sem r a
-runListInput is = fmap snd . runState is . reinterpret \case
-  Input -> do
-    s <- gets uncons
-    for_ s $ put . snd
-    pure $ fmap fst s
+runListInput is = fmap snd . runState is . reinterpret
+  (\case
+      Input -> do
+        s <- gets uncons
+        for_ s $ put . snd
+        pure $ fmap fst s
+  )
 {-# INLINE runListInput #-}
 
 
 ------------------------------------------------------------------------------
 -- | Runs an 'Input' effect by evaluating a monadic action for each request.
 runMonadicInput :: Sem r i -> Sem (Input i ': r) a -> Sem r a
-runMonadicInput m = interpret \case
+runMonadicInput m = interpret $ \case
   Input -> m
 {-# INLINE runMonadicInput #-}
 

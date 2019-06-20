@@ -1,6 +1,11 @@
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE TemplateHaskell #-}
+
 {-# OPTIONS_GHC -O2 #-}
 
+#if __GLASGOW_HASKELL__ < 804
+{-# OPTIONS_GHC -fplugin=Test.Inspection.Plugin #-}
+#endif
 
 module InlineRecursiveCallsSpec
   ( spec
@@ -9,7 +14,6 @@ module InlineRecursiveCallsSpec
 import qualified Control.Monad.Trans.State as S
 import           Data.Tuple
 import           Polysemy.Internal
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 import           Test.Hspec
 import           Test.Inspection

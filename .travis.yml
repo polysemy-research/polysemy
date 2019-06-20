@@ -1,50 +1,35 @@
-# Adapted from https://github.com/commercialhaskell/stack
-language: c
-sudo: false
+language: haskell
+dist: trusty
 
 cache:
-    directories:
-        - $HOME/.ghc
-        - $HOME/.cabal
-        - $HOME/.stack
-        - .stack-work
+  directories:
+    - $HOME/.cabal/store
+
+cabal: "2.4"
 
 matrix:
   include:
-    # ghc 8.6.3
-  - env: STACK='stack --resolver=lts-13.0' CACHE_NAME=8.6.3
-    addons: {apt: {packages: [libgmp-dev]}}
-
-    # nightly
-  - env: STACK='stack --resolver=nightly' CACHE_NAME=nightly
-    addons: {apt: {packages: [libgmp-dev]}}
-
-    # Use the resolver in stack.yaml
-  - env: STACK=stack CACHE_NAME=stack-linux
-    addons: {apt: {packages: [libgmp-dev]}}
-
-  - env: STACK=stack CACHE_NAME=stack-osx
-    os: osx
-    addons: {apt: {packages: [libgmp-dev]}}
-
+    - ghc: "8.6.5"
+    - ghc: "8.4.4"
 
 install:
- - unset CC
- - export PATH=$HOME/.local/bin:/opt/ghc/$GHCVER/bin:$PATH
- - ./.travis/install-ghr.sh
- - ./.travis/install-stack.sh
+ - cabal --version
+ - ghc --version
 
 script:
- - echo "$($STACK ghc -- --version) [$($STACK ghc -- --print-project-git-commit-id 2> /dev/null || echo '?')]"
- - GHC_OPTIONS="-Werror"
- - |
-   set -ex
-   $STACK --no-terminal build --ghc-options="$GHC_OPTIONS"
-   $STACK test --ghc-options="$GHC_OPTIONS"
-   set +ex
+ - cabal v2-update
+ - cabal v2-build
+ - cabal v2-test --enable-test
+ - cabal new-haddock
+ - cabal check
+ - cabal sdist   # tests that a source-distribution can be generated
 
-after_success:
- - |
-   # Build and ship binary
-   ./.travis/attach-binary.sh
+# Check that the resulting source distribution can be built & installed.
+# If there are no other `.tar.gz` files in `dist`, this can be even simpler:
+# `cabal install --force-reinstalls dist/*-*.tar.gz`
+ - SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
+   (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
+
+ - cabal v2-build polysemy-plugin
+ - cabal v2-test --enable-test polysemy-plugin
 
