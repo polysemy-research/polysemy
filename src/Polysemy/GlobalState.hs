@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.GlobalState
@@ -39,7 +38,12 @@ makeSem ''GlobalState
 modifyGlobal :: Member GlobalState r => (forall p. Key p s) -> (s -> s) -> Sem r ()
 modifyGlobal k f = getGlobal k >>= putGlobal k . f
 
-runStateAsGlobal :: forall s r a. Member GlobalState r => s -> Sem (State s ': r) a -> Sem r a
+runStateAsGlobal
+    :: forall s r a
+     . Member GlobalState r
+    => s
+    -> Sem (State s ': r) a
+    -> Sem r a
 runStateAsGlobal s m = allocate s $ \key ->
   interpret
     ( \case
@@ -49,7 +53,7 @@ runStateAsGlobal s m = allocate s $ \key ->
 
 
 runGlobalState :: Sem (GlobalState ': r) a -> Sem r a
-runGlobalState = evalState @(AnyStore Any) emptyS . reinterpretH \case
+runGlobalState = evalState @(AnyStore Any) emptyS . reinterpretH (\case
   Allocate a f -> do
     (store', key) <- gets $ allocS @Any a
     key' <- pureT key
@@ -62,6 +66,7 @@ runGlobalState = evalState @(AnyStore Any) emptyS . reinterpretH \case
   PutGlobal key a -> do
     modify' $ putS @Any (fiddleKey key) a
     getInitialStateT
+  )
 
 
 runGlobalStateInIO :: Member (Lift IO) r => Sem (GlobalState ': r) a -> Sem r a
