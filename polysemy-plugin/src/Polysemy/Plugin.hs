@@ -61,51 +61,35 @@ module Polysemy.Plugin
   ( plugin
   ) where
 
-import CoreMonad
-import DynFlags
-import GHC (ModuleName, moduleName)
-import Module (mkModuleName, moduleSetElts)
+import GhcPlugins
+
 import Polysemy.Plugin.Fundep
 import Polysemy.Plugin.InlineRecursiveCalls
-
 #if __GLASGOW_HASKELL__ >= 810
 import Polysemy.Plugin.Phases
 #endif
 
-import Plugins (Plugin (..), defaultPlugin)
-#if __GLASGOW_HASKELL__ >= 806
-import Plugins (PluginRecompile(..))
-#endif
-
-
+------------------------------------------------------------------------------
 plugin :: Plugin
 plugin = defaultPlugin
-    { tcPlugin = const $ Just fundepPlugin
-    , installCoreToDos = const installTodos
+    { tcPlugin            = const $ Just fundepPlugin
 #if __GLASGOW_HASKELL__ >= 806
-    , pluginRecompile = const $ pure NoForceRecompile
+    , pluginRecompile     = purePlugin
+    , renamedResultAction = \_ env group ->
+        traverse inlineRecCallsAction (env, group)
+    , installCoreToDos    = const installTodos
 #endif
     }
 
-
-polysemyInternal :: ModuleName
-polysemyInternal = mkModuleName "Polysemy.Internal"
-
-
+------------------------------------------------------------------------------
 installTodos :: [CoreToDo] -> CoreM [CoreToDo]
 installTodos todos = do
-  dflags <- getDynFlags
+  dyn_flags <- getDynFlags
 
-  case optLevel dflags of
-    0 -> pure todos
-    _ -> do
-      mods <- moduleSetElts <$> getVisibleOrphanMods
-      pure $ case any ((== polysemyInternal) . moduleName) mods of
-        True  -> CoreDoPluginPass "Inline Recursive Calls" inlineRecursiveCalls
-               : todos
+  pure [ pass
+       | optLevel dyn_flags > 0
+       , pass <- todos
 #if __GLASGOW_HASKELL__ >= 810
-              ++ extraPhases dflags
+              ++ extraPhases dyn_flags
 #endif
-        False -> todos
-
-
+       ]
