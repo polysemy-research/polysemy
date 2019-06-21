@@ -90,8 +90,8 @@ inlineRecCall (b, mtype)
               , loopb_decl
               ]
           )
-          (  [ inline alwaysInlinePragma fun_name
-             , inline neverInlinePragma  loopb_name
+          (  [ inline alwaysInlinePragma                           fun_name
+             , inline defaultInlinePragma{ inl_inline = NoInline } loopb_name
              ]
           ++ maybeToList (loopbreakerSig loopb_name <$> mtype)
           )
