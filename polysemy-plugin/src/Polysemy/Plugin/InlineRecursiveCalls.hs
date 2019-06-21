@@ -1,7 +1,13 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns      #-}
+{-# LANGUAGE PatternSynonyms   #-}
 
+#if __GLASGOW_HASKELL__ < 806
+module Polysemy.Plugin.InlineRecursiveCalls
+
+#else
 module Polysemy.Plugin.InlineRecursiveCalls
   ( inlineRecCallsAction
   ) where
@@ -35,6 +41,7 @@ inlineRecCallsAction group = do
 ------------------------------------------------------------------------------
 inlineRecCalls :: MonadUnique m => HsGroup GhcRn -> m (HsGroup GhcRn)
 inlineRecCalls group@(hs_valds -> XValBindsLR (NValBinds binds sigs)) = do
+
   (binds', extra_sigs) <- second concat . unzip
                       <$> traverse inlineRecCall (pairTypes binds sigs)
 
@@ -116,8 +123,7 @@ loopbreakerSig loopb_name fun_type =
   noLoc $ TypeSig NoExt [noLoc loopb_name] fun_type
 
 ------------------------------------------------------------------------------
-inline :: (XInlineSig p ~ NoExt, Eq (IdP p))
-       => InlinePragma -> IdP p -> LSig p
+inline :: InlinePragma -> IdP GhcRn -> LSig GhcRn
 inline how name = noLoc $ InlineSig NoExt (noLoc name) how
 
 ------------------------------------------------------------------------------
@@ -130,8 +136,8 @@ maybeReplaceVarNames from to expr =
     _                 -> Nothing
  where
   go :: HsExpr GhcRn -> (Any, HsExpr GhcRn)
-  go (HsVar x (L loc name))
-    | name == from = (Any True, HsVar x $ L loc to)
+  go (HsVar _ (L loc name))
+    | name == from = (Any True, HsVar NoExt $ L loc to)
   go e             = (Any False, e)
 
 ------------------------------------------------------------------------------
@@ -141,3 +147,5 @@ findMapPop = state . go where
   go f (x:xs) = case f x of
     Nothing -> second (x:) $ go f xs
     just    -> (just, xs)
+
+#endif

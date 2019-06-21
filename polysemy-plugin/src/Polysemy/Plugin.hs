@@ -86,10 +86,9 @@ installTodos :: [CoreToDo] -> CoreM [CoreToDo]
 installTodos todos = do
   dyn_flags <- getDynFlags
 
-  pure [ pass
-       | optLevel dyn_flags > 0
-       , pass <- todos
+  pure $ todos
 #if __GLASGOW_HASKELL__ >= 810
-              ++ extraPhases dyn_flags
+      ++ if optLevel dyn_flags > 0
+           then extraPhases dyn_flags
+           else []
 #endif
-       ]
