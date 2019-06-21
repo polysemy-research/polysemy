@@ -5,9 +5,11 @@
 {-# LANGUAGE PatternSynonyms   #-}
 
 #if __GLASGOW_HASKELL__ < 806
-module Polysemy.Plugin.InlineRecursiveCalls
+
+module Polysemy.Plugin.InlineRecursiveCalls where
 
 #else
+
 module Polysemy.Plugin.InlineRecursiveCalls
   ( inlineRecCallsAction
   ) where
