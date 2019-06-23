@@ -119,22 +119,23 @@ magic
        )
     => ((forall x. Sem r x -> IO x) -> IO () -> IO a)
     -> Sem (WithTactics e f m r) a
-magic zerp = do
+magic action = do
   (inchan, outchan) <- sendM newChan
   signal <- sendM newEmptyMVar
+
   res <- sendM $ A.async $ do
     let finish :: Sem r x -> IO x
         finish = runM . dispatchEverything inchan
-    zerp finish (putMVar signal ())
+    action finish (putMVar signal ())
         <* putMVar signal ()
 
-  Sem $ \k -> fix $ \me -> do
-    raced <- k $ inj $ Lift $ A.race (takeMVar signal) $ readChan outchan
+  fix $ \me -> do
+    raced <- sendM $ A.race (takeMVar signal) $ readChan outchan
     case raced of
-      Left () -> k $ inj $ Lift $ A.wait res
+      Left () -> sendM $ A.wait res
       Right (Request mvar req) -> do
-        resp <- k $ weaken $ hoist raise req
-        k $ inj $ Lift $ putMVar mvar $ pure resp
+        resp <- liftSem $ weaken $ hoist raise req
+        sendM $ putMVar mvar $ pure resp
         me
 
 
