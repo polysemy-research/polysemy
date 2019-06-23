@@ -7,6 +7,7 @@ import Polysemy.Resource
 import Polysemy.State
 import Polysemy.Trace
 import Test.Hspec
+import Polysemy.Dispatch
 
 
 runTest
@@ -18,6 +19,16 @@ runTest = run
         . runState ""
         . runResource
         . runError @()
+
+runTest2
+  :: Sem '[Error (), Resource, State [Char], Trace, Output String, Lift IO] a
+  -> IO ([String], ([Char], Either () a))
+runTest2 = runM
+         . runFoldMapOutput @String (:[])
+         . runTraceAsOutput
+         . runState ""
+         . runResource'
+         . runError @()
 
 
 spec :: Spec
@@ -78,5 +89,56 @@ spec = parallel $ do
       ts `shouldContain` ["allocated"]
       ts `shouldNotContain` ["starting block"]
       s `shouldBe` "don't get here"
+      e `shouldBe` Right ()
+
+
+  describe "io dispatched bracket" $ do
+    it "persist state and call the finalizer" $ do
+      (ts, (s, e)) <- runTest2 $ do
+            bracket
+              (put "allocated" >> pure ())
+              (\() -> do
+                get >>= trace
+                put "finalized"
+              )
+              (\() -> do
+                get >>= trace
+                put "starting block"
+                _ <- throw ()
+                put "don't get here"
+              )
+      ts `shouldContain` ["allocated"]
+      ts `shouldContain` ["starting block"]
+      s `shouldBe` "finalized"
+      e `shouldBe` Left ()
+
+    it "should not lock when done recursively" $ do
+      (ts, (s, e)) <- runTest2 $ do
+            bracket
+              (put "hello 1")
+              (\() -> do
+                get >>= trace
+              )
+              (\() -> do
+                get >>= trace
+                bracket (put "hello 2")
+                        (const $ do
+                          get >>= trace
+                          put "goodbye 2"
+                        )
+                        (const $ do
+                          get >>= trace
+                          put "RUNNING"
+                        )
+                get >>= trace
+                put "goodbye 1"
+              )
+      ts `shouldContain` [ "hello 1"
+                         , "hello 2"
+                         , "RUNNING"
+                         , "goodbye 2"
+                         , "goodbye 1"
+                         ]
+      s `shouldBe` "goodbye 1"
       e `shouldBe` Right ()
 

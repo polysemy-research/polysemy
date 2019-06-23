@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: da0a79be95bb6daf48eb805630547c13c2524f9c92e47d3ca4f417aac076ceff
+-- hash: a670c8b913742626772bf874400ab16aac4960b38ae5e3ddd332fbfd193ad07d
 
 name:           polysemy
 version:        0.4.0.0
@@ -121,7 +121,7 @@ test-suite polysemy-test
     , doctest >=0.16.0.1 && <0.17
     , first-class-families >=0.5.0.0 && <0.6
     , hspec >=2.6.0 && <3
-    , inspection-testing >=0.4.2.1 && <0.5
+    , inspection-testing >=0.4.2 && <0.5
     , mtl >=2.2.2 && <3
     , polysemy
     , syb >=0.7 && <0.8

@@ -4,15 +4,18 @@
 
 module Polysemy.Dispatch where
 
+import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as A
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
-import           Control.Concurrent (threadDelay)
+import qualified Control.Exception as X
 import           Control.Monad
 import           Polysemy
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
+import           Polysemy.Resource
 import           Polysemy.State
+import Data.Function
 
 
 data Request r end = forall a. Request
@@ -72,6 +75,43 @@ runAsync chan = interpretH $ \case
                  $ runAsync chan ma'
     ins <- getInspectorT
     pureT $ fmap (inspect ins) res
+
+
+runResource'
+    :: forall r a
+     . ( LastMembers (Lift IO) r
+       , Member (Lift IO) r
+       )
+    => Sem (Resource ': r) a
+    -> Sem r a
+runResource' = interpretH $ \case
+  Bracket a b c -> do
+    ma <- runT a
+    mb <- bindT b
+    mc <- bindT c
+
+    (inchan, outchan) <- sendM newChan
+    signal <- sendM newEmptyMVar
+    res <- sendM $ A.async $ do
+      let finish :: Sem (Resource ': r) x -> IO x
+          finish = runM . dispatchEverything inchan . runResource'
+      X.bracket (finish ma)
+                (\x -> finish (mb x) >> putMVar signal ())
+                (finish . mc)
+
+    Sem $ \k -> fix $ \me -> do
+      raced <- k $ inj $ Lift $ A.race (takeMVar signal) $ readChan outchan
+      case raced of
+        Left () -> k $ inj $ Lift $ A.wait res
+        Right (Request mvar req) -> do
+          resp <- k $ weaken $ hoist raise req
+          k $ inj $ Lift $ putMVar mvar $ pure resp
+          me
+
+
+
+
+
 
 
 test :: IO ()
