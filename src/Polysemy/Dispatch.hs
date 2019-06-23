@@ -9,7 +9,6 @@ import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
-import           Data.Maybe
 import           Polysemy
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
@@ -50,7 +49,7 @@ receiveEverything chan = Sem $ \k -> forever $ do
 
 
 data Async m a where
-  Async :: m a -> Async m (A.Async a)
+  Async :: m a -> Async m (A.Async (Maybe a))
   Await :: A.Async a -> Async m a
 
 makeSem ''Async
@@ -72,9 +71,7 @@ runAsync chan = interpretH $ \case
                  $ dispatchEverything chan
                  $ runAsync chan ma'
     ins <- getInspectorT
-    -- safe as long as runAsync is run before runError
-    let res' = fmap (fromJust . inspect ins) res
-    pureT res'
+    pureT $ fmap (inspect ins) res
 
 
 test :: IO ()
