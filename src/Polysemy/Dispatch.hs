@@ -83,22 +83,29 @@ test = do
   void $ A.async $ do
     runM $ runState "hello" $ receiveEverything outchan
 
+  let message :: Member (Lift IO) r => Int -> String -> Sem r ()
+      message n msg = sendM $ putStrLn $ mconcat
+        [ "thread ", show n, "> ", msg ]
+
   res <- runM $ dispatchEverything inchan $ runAsync inchan $ do
     a1 <- async $ do
       v <- get @String
-      sendM $ putStrLn $ "thread 1> " ++ v
+      message 1 v
       put $ reverse v
+
       sendM $ threadDelay 1e6
       v' <- get @String
-      sendM $ putStrLn $ "thread 1> " ++ v'
+      message 1 v'
+
       sendM $ threadDelay 1e6
       get @String
 
     void $ async $ do
       sendM $ threadDelay 5e5
       v <- get @String
-      sendM $ putStrLn $ "thread 2> " ++ v
+      message 2 v
       put "pong"
+
     await a1
 
   print res
