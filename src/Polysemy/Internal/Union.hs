@@ -240,13 +240,13 @@ decompCoerce (Union p a) =
 class LastMembers end effs | effs -> end where
   decompLast
       :: Union effs m a
-      -> Either (Union effs m a) (Union end m a)
+      -> Either (Union effs m a) (Union '[end] m a)
 
 instance {-# OVERLAPPABLE #-} LastMembers end effs => LastMembers end (eff ': effs) where
   decompLast (Union SZ u)     = Left $ Union SZ u
   decompLast (Union (SS n) u) = first weaken $ decompLast $ Union n u
 
-instance LastMembers end end where
+instance LastMembers end (end ': '[]) where
   decompLast = Right
 
 

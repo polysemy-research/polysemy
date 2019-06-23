@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a9f72cc745122ada9725004a3eb4ef94020898f64816a06b61427530eac89048
+-- hash: da0a79be95bb6daf48eb805630547c13c2524f9c92e47d3ca4f417aac076ceff
 
 name:           polysemy
 version:        0.4.0.0
@@ -70,7 +70,8 @@ library
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -Wall
   build-depends:
-      base >=4.9 && <5
+      async
+    , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.6
     , mtl >=2.2.2 && <3
@@ -114,7 +115,8 @@ test-suite polysemy-test
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
   build-depends:
-      base >=4.9 && <5
+      async
+    , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , doctest >=0.16.0.1 && <0.17
     , first-class-families >=0.5.0.0 && <0.6
@@ -141,7 +143,8 @@ benchmark polysemy-bench
       bench
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
-      base >=4.9 && <5
+      async
+    , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , criterion
     , first-class-families >=0.5.0.0 && <0.6
