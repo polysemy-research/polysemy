@@ -93,9 +93,10 @@ runResource' = interpretH $ \case
     magic $ \lower finish -> do
       let done :: Sem (Resource ': r) x -> IO x
           done = lower . runResource'
-      X.bracket (done ma)
-                (\x -> done (mb x) >> finish)
-                (done . mc) <* finish
+      X.bracket
+          (done ma)
+          (\x -> done (mb x) >> finish)
+          (done . mc)
 
   BracketOnError a b c -> do
     ma <- runT a
@@ -105,9 +106,10 @@ runResource' = interpretH $ \case
     magic $ \lower finish -> do
       let done :: Sem (Resource ': r) x -> IO x
           done = lower . runResource'
-      X.bracketOnError (done ma)
-                (\x -> done (mb x) >> finish)
-                (done . mc) <* finish
+      X.bracketOnError
+          (done ma)
+          (\x -> done (mb x) >> finish)
+          (done . mc)
 
 
 magic
@@ -123,7 +125,8 @@ magic zerp = do
   res <- sendM $ A.async $ do
     let finish :: Sem r x -> IO x
         finish = runM . dispatchEverything inchan
-    zerp finish $ putMVar signal ()
+    zerp finish (putMVar signal ())
+        <* putMVar signal ()
 
   Sem $ \k -> fix $ \me -> do
     raced <- k $ inj $ Lift $ A.race (takeMVar signal) $ readChan outchan
