@@ -1,11 +1,13 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE CPP                   #-}
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE StrictData            #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE AllowAmbiguousTypes     #-}
+{-# LANGUAGE CPP                     #-}
+{-# LANGUAGE ConstraintKinds         #-}
+{-# LANGUAGE FlexibleInstances       #-}
+{-# LANGUAGE FunctionalDependencies  #-}
+{-# LANGUAGE MultiParamTypeClasses   #-}
+{-# LANGUAGE StrictData              #-}
+{-# LANGUAGE TypeFamilies            #-}
+{-# LANGUAGE UndecidableInstances    #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -27,8 +29,10 @@ module Polysemy.Internal.Union
   -- * Witnesses
   , SNat (..)
   , Nat (..)
+  , LastMembers (..)
   ) where
 
+import Data.Bifunctor
 import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
@@ -189,9 +193,10 @@ absurdU = absurdU
 
 ------------------------------------------------------------------------------
 -- | Weaken a 'Union' so it is capable of storing a new sort of effect.
-weaken :: Union r m a -> Union (e ': r) m a
+weaken :: forall e r m a. Union r m a -> Union (e ': r) m a
 weaken (Union n a) = Union (SS n) a
 {-# INLINE weaken #-}
+
 
 
 ------------------------------------------------------------------------------
@@ -232,4 +237,20 @@ decompCoerce (Union p a) =
     SS n -> Left (Union (SS n) a)
 {-# INLINE decompCoerce #-}
 
+class LastMembers end effs | effs -> end where
+  decompLast
+      :: Union effs m a
+      -> Either (Union effs m a) (Union end m a)
+
+instance {-# OVERLAPPABLE #-} LastMembers end effs => LastMembers end (eff ': effs) where
+  decompLast (Union SZ u)     = Left $ Union SZ u
+  decompLast (Union (SS n) u) = first weaken $ decompLast $ Union n u
+
+instance LastMembers end end where
+  decompLast = Right
+
+
+type family Append (as :: [a]) (bs :: [a]) :: [a] where
+  Append '[] bs = bs
+  Append (a ': as) bs = a ': Append as bs
 

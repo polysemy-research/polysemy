@@ -24,6 +24,7 @@ dependencies:
 - th-abstraction >= 0.3.1.0 && < 0.4
 - transformers >= 0.5.2.0 && < 0.6
 - first-class-families >= 0.5.0.0 && < 0.6
+- unagi-chan
 
 default-extensions:
   - DataKinds
