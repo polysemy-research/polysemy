@@ -118,6 +118,7 @@ spec = parallel $ do
               (put "hello 1")
               (\() -> do
                 get >>= trace
+                put "finished"
               )
               (\() -> do
                 get >>= trace
@@ -129,7 +130,9 @@ spec = parallel $ do
                         (const $ do
                           get >>= trace
                           put "RUNNING"
+                          throw ()
                         )
+                -- This doesn't run due to the thrown error above
                 get >>= trace
                 put "goodbye 1"
               )
@@ -137,8 +140,7 @@ spec = parallel $ do
                          , "hello 2"
                          , "RUNNING"
                          , "goodbye 2"
-                         , "goodbye 1"
                          ]
-      s `shouldBe` "goodbye 1"
-      e `shouldBe` Right ()
+      s `shouldBe` "finished"
+      e `shouldBe` Left ()
 

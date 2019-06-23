@@ -90,28 +90,49 @@ runResource' = interpretH $ \case
     mb <- bindT b
     mc <- bindT c
 
-    (inchan, outchan) <- sendM newChan
-    signal <- sendM newEmptyMVar
-    res <- sendM $ A.async $ do
-      let finish :: Sem (Resource ': r) x -> IO x
-          finish = runM . dispatchEverything inchan . runResource'
-      X.bracket (finish ma)
-                (\x -> finish (mb x) >> putMVar signal ())
-                (finish . mc)
+    magic $ \lower finish -> do
+      let done :: Sem (Resource ': r) x -> IO x
+          done = lower . runResource'
+      X.bracket (done ma)
+                (\x -> done (mb x) >> finish)
+                (done . mc) <* finish
 
-    Sem $ \k -> fix $ \me -> do
-      raced <- k $ inj $ Lift $ A.race (takeMVar signal) $ readChan outchan
-      case raced of
-        Left () -> k $ inj $ Lift $ A.wait res
-        Right (Request mvar req) -> do
-          resp <- k $ weaken $ hoist raise req
-          k $ inj $ Lift $ putMVar mvar $ pure resp
-          me
+  BracketOnError a b c -> do
+    ma <- runT a
+    mb <- bindT b
+    mc <- bindT c
 
-
-
+    magic $ \lower finish -> do
+      let done :: Sem (Resource ': r) x -> IO x
+          done = lower . runResource'
+      X.bracketOnError (done ma)
+                (\x -> done (mb x) >> finish)
+                (done . mc) <* finish
 
 
+magic
+    :: forall r e m f a
+     . ( LastMembers (Lift IO) r
+       , Member (Lift IO) r
+       )
+    => ((forall x. Sem r x -> IO x) -> IO () -> IO a)
+    -> Sem (WithTactics e f m r) a
+magic zerp = do
+  (inchan, outchan) <- sendM newChan
+  signal <- sendM newEmptyMVar
+  res <- sendM $ A.async $ do
+    let finish :: Sem r x -> IO x
+        finish = runM . dispatchEverything inchan
+    zerp finish $ putMVar signal ()
+
+  Sem $ \k -> fix $ \me -> do
+    raced <- k $ inj $ Lift $ A.race (takeMVar signal) $ readChan outchan
+    case raced of
+      Left () -> k $ inj $ Lift $ A.wait res
+      Right (Request mvar req) -> do
+        resp <- k $ weaken $ hoist raise req
+        k $ inj $ Lift $ putMVar mvar $ pure resp
+        me
 
 
 test :: IO ()
