@@ -86,4 +86,6 @@
 
 - Lots of hard work on the package and CI infrastructure to make it green on
     GHC 8.4.4 (thanks to @jkachmar)
+- runTraceAsList
+- New effect: Async
 
