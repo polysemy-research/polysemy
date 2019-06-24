@@ -38,10 +38,10 @@ receiveEverything
     :: LastMember (Lift IO) r
     => OutChan (Request r)
     -> Sem r a
-receiveEverything chan = Sem $ \k -> forever $ do
-  Request mvar req <- k $ inj $ Lift $ readChan chan
-  resp <- k req
-  k $ inj $ Lift $ putMVar mvar $ pure resp
+receiveEverything chan = forever $ do
+  Request mvar req <- sendM $ readChan chan
+  resp <- liftSem req
+  sendM $ putMVar mvar $ pure resp
 
 
 withLowerToIO
@@ -90,3 +90,4 @@ runAsync chan = interpretH $ \case
                  $ runAsync chan ma'
     ins <- getInspectorT
     pureT $ fmap (inspect ins) res
+

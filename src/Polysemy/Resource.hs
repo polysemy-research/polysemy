@@ -18,7 +18,6 @@ module Polysemy.Resource
 
 import qualified Control.Exception as X
 import           Polysemy
-import           Polysemy.Internal.Union
 import           Polysemy.Internal.Dispatch
 
 
