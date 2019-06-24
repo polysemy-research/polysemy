@@ -13,4 +13,5 @@ extra-deps:
 - inspection-testing-0.4.2
 - monadLib-3.9
 - th-abstraction-0.3.1.0
+- unagi-chan-0.4.1.0
 
