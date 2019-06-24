@@ -18,7 +18,7 @@ module Polysemy.Resource
 
 import qualified Control.Exception as X
 import           Polysemy
-import           Polysemy.Internal.Dispatch
+import           Polysemy.Internal.Forklift
 
 
 ------------------------------------------------------------------------------
@@ -177,7 +177,7 @@ runResourceBase = interpretH $ \case
 
     withLowerToIO $ \lower finish -> do
       let done :: Sem (Resource ': r) x -> IO x
-          done = lower . runResourceBase_b
+          done = lower . raise . runResourceBase_b
       X.bracket
           (done ma)
           (\x -> done (mb x) >> finish)
@@ -190,7 +190,7 @@ runResourceBase = interpretH $ \case
 
     withLowerToIO $ \lower finish -> do
       let done :: Sem (Resource ': r) x -> IO x
-          done = lower . runResourceBase_b
+          done = lower . raise . runResourceBase_b
       X.bracketOnError
           (done ma)
           (\x -> done (mb x) >> finish)

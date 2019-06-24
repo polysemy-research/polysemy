@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: aed053031f57049a8b5a0e60a81224850df7a70775fc6f5bf1405b2f662fec60
+-- hash: ead323ed2aee76a2eff3d8ae331bc04042b7eb229bd7e48cd3e658b53090e446
 
 name:           polysemy
 version:        0.4.0.0
@@ -40,14 +40,15 @@ flag error-messages
 library
   exposed-modules:
       Polysemy
+      Polysemy.Async
       Polysemy.Error
       Polysemy.Fixpoint
       Polysemy.Input
       Polysemy.Internal
       Polysemy.Internal.Combinators
       Polysemy.Internal.CustomErrors
-      Polysemy.Internal.Dispatch
       Polysemy.Internal.Fixpoint
+      Polysemy.Internal.Forklift
       Polysemy.Internal.Kind
       Polysemy.Internal.Lift
       Polysemy.Internal.NonDet
@@ -99,6 +100,7 @@ test-suite polysemy-test
   main-is: Main.hs
   other-modules:
       AlternativeSpec
+      AsyncSpec
       BracketSpec
       DoctestSpec
       FusionSpec

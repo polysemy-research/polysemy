@@ -10,21 +10,19 @@ import Test.Hspec
 
 
 runTest
-  :: Sem '[Error (), Resource, State [Char], Trace, Output String] a
+  :: Sem '[Error (), Resource, State [Char], Trace] a
   -> ([String], ([Char], Either () a))
 runTest = run
-        . runFoldMapOutput @String (:[])
-        . runTraceAsOutput
+        . runTraceAsList
         . runState ""
         . runResource
         . runError @()
 
 runTest2
-  :: Sem '[Error (), Resource, State [Char], Trace, Output String, Lift IO] a
+  :: Sem '[Error (), Resource, State [Char], Trace, Lift IO] a
   -> IO ([String], ([Char], Either () a))
 runTest2 = runM
-         . runFoldMapOutput @String (:[])
-         . runTraceAsOutput
+         . runTraceAsList
          . runState ""
          . runResourceBase
          . runError @()
