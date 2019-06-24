@@ -35,8 +35,7 @@ dispatchEverything chan (Sem m) = Sem $ \k -> m $ \u -> do
 
 
 receiveEverything
-    :: ( LastMember (Lift IO) r
-       )
+    :: LastMember (Lift IO) r
     => OutChan (Request r)
     -> Sem r a
 receiveEverything chan = Sem $ \k -> forever $ do
@@ -46,8 +45,7 @@ receiveEverything chan = Sem $ \k -> forever $ do
 
 
 withLowerToIO
-    :: ( LastMember (Lift IO) r
-       )
+    :: LastMember (Lift IO) r
     => ((forall x. Sem r x -> IO x) -> IO () -> IO a)
     -> Sem (WithTactics e f m r) a
 withLowerToIO action = do
