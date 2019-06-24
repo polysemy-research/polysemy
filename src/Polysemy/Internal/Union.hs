@@ -241,6 +241,11 @@ decompCoerce (Union p a) =
     SS n -> Left (Union (SS n) a)
 {-# INLINE decompCoerce #-}
 
+
+------------------------------------------------------------------------------
+-- | A proof that @end@ is the last effect in the row.
+--
+-- TODO(sandy): @since
 class MemberNoError end r => LastMember end r | r -> end where
   decompLast
       :: Union r m a
@@ -253,9 +258,4 @@ instance {-# OVERLAPPABLE #-} (LastMember end r, MemberNoError end (eff ': r))
 
 instance LastMember end '[end] where
   decompLast = Right
-
-
-type family Append (as :: [a]) (bs :: [a]) :: [a] where
-  Append '[] bs = bs
-  Append (a ': as) bs = a ': Append as bs
 
