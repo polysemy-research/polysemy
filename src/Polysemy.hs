@@ -3,6 +3,7 @@ module Polysemy
     Sem ()
   , Member
   , Members
+  , LastMember
 
   -- * Running Sem
   , run
@@ -120,4 +121,5 @@ import Polysemy.Internal.Combinators
 import Polysemy.Internal.Kind
 import Polysemy.Internal.TH.Effect
 import Polysemy.Internal.Tactics
+import Polysemy.Internal.Union
 

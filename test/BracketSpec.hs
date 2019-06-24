@@ -2,7 +2,6 @@ module BracketSpec where
 
 import Polysemy
 import Polysemy.Error
-import Polysemy.Internal.Dispatch
 import Polysemy.Output
 import Polysemy.Resource
 import Polysemy.State
@@ -27,7 +26,7 @@ runTest2 = runM
          . runFoldMapOutput @String (:[])
          . runTraceAsOutput
          . runState ""
-         . runResource'
+         . runResourceBase
          . runError @()
 
 

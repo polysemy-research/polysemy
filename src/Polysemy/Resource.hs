@@ -13,10 +13,13 @@ module Polysemy.Resource
     -- * Interpretations
   , runResource
   , runResourceInIO
+  , runResourceBase
   ) where
 
 import qualified Control.Exception as X
 import           Polysemy
+import           Polysemy.Internal.Union
+import           Polysemy.Internal.Dispatch
 
 
 ------------------------------------------------------------------------------
@@ -147,6 +150,55 @@ runResource = interpretH $ \case
 {-# INLINE runResource #-}
 
 
+------------------------------------------------------------------------------
+-- | A more flexible --- though less safe ---  version of 'runResourceInIO'.
+--
+-- This function is capable of running 'Resource' effects anywhere within an
+-- effect stack, without relying on an explicit function to lower it into 'IO'.
+-- Notably, this means that 'Polysemy.State.State' effects will be consistent
+-- in the presence of 'Resource'.
+--
+-- 'runResourceBase' is safe whenever you're concerned about exceptions thrown
+-- by effects _already handled_ in your effect stack, or in 'IO' code run
+-- directly inside of 'bracket'. It is not safe against exceptions thrown
+-- explicitly at the main thread. If this is not safe enough for your use-case,
+-- use 'runResourceInIO' instead.
+--
+-- TODO(sandy): @since version
+runResourceBase
+    :: forall r a
+     . LastMember (Lift IO) r
+    => Sem (Resource ': r) a
+    -> Sem r a
+runResourceBase = interpretH $ \case
+  Bracket a b c -> do
+    ma <- runT a
+    mb <- bindT b
+    mc <- bindT c
+
+    withLowerToIO $ \lower finish -> do
+      let done :: Sem (Resource ': r) x -> IO x
+          done = lower . runResourceBase_b
+      X.bracket
+          (done ma)
+          (\x -> done (mb x) >> finish)
+          (done . mc)
+
+  BracketOnError a b c -> do
+    ma <- runT a
+    mb <- bindT b
+    mc <- bindT c
+
+    withLowerToIO $ \lower finish -> do
+      let done :: Sem (Resource ': r) x -> IO x
+          done = lower . runResourceBase_b
+      X.bracketOnError
+          (done ma)
+          (\x -> done (mb x) >> finish)
+          (done . mc)
+{-# INLINE runResourceBase #-}
+
+
 runResource_b
     :: ∀ r a
      . Sem (Resource ': r) a
@@ -162,4 +214,12 @@ runResourceInIO_b
     -> Sem r a
 runResourceInIO_b = runResourceInIO
 {-# NOINLINE runResourceInIO_b #-}
+
+runResourceBase_b
+    :: forall r a
+     . LastMember (Lift IO) r
+    => Sem (Resource ': r) a
+    -> Sem r a
+runResourceBase_b = runResourceBase
+{-# NOINLINE runResourceBase_b #-}
 
