@@ -29,7 +29,7 @@ module Polysemy.Internal.Union
   -- * Witnesses
   , SNat (..)
   , Nat (..)
-  , LastMembers (..)
+  , LastMember (..)
   ) where
 
 import Data.Bifunctor
@@ -109,11 +109,15 @@ hoist f' (Union w (Yo e s nt f v)) = Union w $ Yo e s (f' . nt) f v
 type Member e r = Member' e r
 
 type Member' e r =
-  ( Find r e
-  , e ~ IndexOf r (Found r e)
+  ( MemberNoError e r
 #ifndef NO_ERROR_MESSAGES
   , Break (AmbiguousSend r e) (IndexOf r (Found r e))
 #endif
+  )
+
+type MemberNoError e r =
+  ( Find r e
+  , e ~ IndexOf r (Found r e)
   )
 
 
@@ -237,16 +241,17 @@ decompCoerce (Union p a) =
     SS n -> Left (Union (SS n) a)
 {-# INLINE decompCoerce #-}
 
-class LastMembers end effs | effs -> end where
+class MemberNoError end r => LastMember end r | r -> end where
   decompLast
-      :: Union effs m a
-      -> Either (Union effs m a) (Union '[end] m a)
+      :: Union r m a
+      -> Either (Union r m a) (Union '[end] m a)
 
-instance {-# OVERLAPPABLE #-} LastMembers end effs => LastMembers end (eff ': effs) where
+instance {-# OVERLAPPABLE #-} (LastMember end r, MemberNoError end (eff ': r))
+      => LastMember end (eff ': r) where
   decompLast (Union SZ u)     = Left $ Union SZ u
   decompLast (Union (SS n) u) = first weaken $ decompLast $ Union n u
 
-instance LastMembers end (end ': '[]) where
+instance LastMember end '[end] where
   decompLast = Right
 
 

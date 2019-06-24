@@ -2,12 +2,12 @@ module BracketSpec where
 
 import Polysemy
 import Polysemy.Error
+import Polysemy.Internal.Dispatch
 import Polysemy.Output
 import Polysemy.Resource
 import Polysemy.State
 import Polysemy.Trace
 import Test.Hspec
-import Polysemy.Dispatch
 
 
 runTest

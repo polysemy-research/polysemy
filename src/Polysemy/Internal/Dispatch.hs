@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies    #-}
 
-module Polysemy.Dispatch where
+module Polysemy.Internal.Dispatch where
 
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as A
@@ -10,26 +10,24 @@ import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
 import qualified Control.Exception as X
 import           Control.Monad
+import           Data.Function
 import           Polysemy
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
 import           Polysemy.Resource
 import           Polysemy.State
-import Data.Function
 
 
-data Request r end = forall a. Request
-  { responseMVar :: MVar (Sem '[end] a)
+data Request r = forall a. Request
+  { responseMVar :: MVar (Sem '[Lift IO] a)
   , request      :: Union r (Sem r) a
   }
 
 dispatchEverything
-    :: ( LastMembers end r
-       , Member (Lift IO) '[end]
-       )
-    => InChan (Request r end)
+    :: LastMember (Lift IO) r
+    => InChan (Request r)
     -> Sem r a
-    -> Sem '[end] a
+    -> Sem '[Lift IO] a
 dispatchEverything chan (Sem m) = Sem $ \k -> m $ \u -> do
   case decompLast u of
     Left x -> usingSem k $ join $ sendM $ do
@@ -40,10 +38,9 @@ dispatchEverything chan (Sem m) = Sem $ \k -> m $ \u -> do
 
 
 receiveEverything
-    :: ( LastMembers end r
-       , Member (Lift IO) r
+    :: ( LastMember (Lift IO) r
        )
-    => OutChan (Request r end)
+    => OutChan (Request r)
     -> Sem r a
 receiveEverything chan = Sem $ \k -> forever $ do
   Request mvar req <- k $ inj $ Lift $ readChan chan
@@ -59,10 +56,8 @@ makeSem ''Async
 
 
 runAsync
-    :: ( LastMembers (Lift IO) r
-       , Member (Lift IO) r
-       )
-    => InChan (Request r (Lift IO))
+    :: LastMember (Lift IO) r
+    => InChan (Request r)
     -> Sem (Async ': r) a
     -> Sem r a
 runAsync chan = interpretH $ \case
@@ -79,9 +74,7 @@ runAsync chan = interpretH $ \case
 
 runResource'
     :: forall r a
-     . ( LastMembers (Lift IO) r
-       , Member (Lift IO) r
-       )
+     . LastMember (Lift IO) r
     => Sem (Resource ': r) a
     -> Sem r a
 runResource' = interpretH $ \case
@@ -113,8 +106,7 @@ runResource' = interpretH $ \case
 
 
 withLowerToIO
-    :: ( LastMembers (Lift IO) r
-       , Member (Lift IO) r
+    :: ( LastMember (Lift IO) r
        )
     => ((forall x. Sem r x -> IO x) -> IO () -> IO a)
     -> Sem (WithTactics e f m r) a
@@ -170,7 +162,4 @@ test = do
     await a1
 
   print res
-
-
-
 
