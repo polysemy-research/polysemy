@@ -28,18 +28,28 @@ data Forklift r = forall a. Forklift
 -- just shipping them off to some other interpretation context.
 --
 -- TODO(sandy): @since
-viaForklift
+runViaForklift
     :: LastMember (Lift IO) r
     => InChan (Forklift r)
     -> Sem r a
     -> Sem '[Lift IO] a
-viaForklift chan (Sem m) = Sem $ \k -> m $ \u -> do
+runViaForklift chan (Sem m) = Sem $ \k -> m $ \u -> do
   case decompLast u of
     Left x -> usingSem k $ join $ sendM $ do
       mvar <- newEmptyMVar
       writeChan chan $ Forklift mvar x
       takeMVar mvar
-    Right y -> k $ hoist (viaForklift chan) y
+    Right y -> k $ hoist (runViaForklift_b chan) y
+{-# INLINE runViaForklift #-}
+
+
+runViaForklift_b
+    :: LastMember (Lift IO) r
+    => InChan (Forklift r)
+    -> Sem r a
+    -> Sem '[Lift IO] a
+runViaForklift_b = runViaForklift
+{-# NOINLINE runViaForklift_b #-}
 
 
 ------------------------------------------------------------------------------
@@ -59,7 +69,7 @@ withLowerToIO action = do
   signal <- sendM newEmptyMVar
 
   res <- sendM $ A.async $ do
-    a <- action (runM . viaForklift inchan)
+    a <- action (runM . runViaForklift inchan)
                 (putMVar signal ())
     putMVar signal ()
     pure a
