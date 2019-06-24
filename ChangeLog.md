@@ -87,4 +87,6 @@
 - Lots of hard work on the package and CI infrastructure to make it green on
     GHC 8.4.4 (thanks to @jkachmar)
 - runResourceBase
+- runTraceAsList
+- New effect: Async
 

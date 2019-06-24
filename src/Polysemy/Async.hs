@@ -57,3 +57,4 @@ runAsync_b
     -> Sem r a
 runAsync_b = runAsync
 {-# NOINLINE runAsync_b #-}
+

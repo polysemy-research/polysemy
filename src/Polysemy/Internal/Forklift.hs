@@ -8,18 +8,26 @@ import qualified Control.Concurrent.Async as A
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
 import           Control.Monad
-import           Data.Function
 import           Polysemy
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
 
 
+------------------------------------------------------------------------------
+-- | A promise for interpreting an effect of the union @r@ in another thread.
+--
+-- TODO(sandy): @since
 data Forklift r = forall a. Forklift
   { responseMVar :: MVar (Sem '[Lift IO] a)
   , request      :: Union r (Sem r) a
   }
 
 
+------------------------------------------------------------------------------
+-- | A strategy for automatically interpreting an entire stack of effects by
+-- just shipping them off to some other interpretation context.
+--
+-- TODO(sandy): @since
 viaForklift
     :: LastMember (Lift IO) r
     => InChan (Forklift r)
@@ -34,9 +42,17 @@ viaForklift chan (Sem m) = Sem $ \k -> m $ \u -> do
     Right y -> k $ hoist (viaForklift chan) y
 
 
+------------------------------------------------------------------------------
+-- | Run an effect stack all the way down to 'IO' by running it in a new
+-- thread, and temporarily turning the current thread into an event poll.
+--
+-- TODO(sandy): @since
 withLowerToIO
     :: LastMember (Lift IO) r
     => ((forall x. Sem r x -> IO x) -> IO () -> IO a)
+       -- ^ A lambda that takes the lowering function, and a finalizing 'IO'
+       -- action to mark a the forked thread as being complete. The finalizing
+       -- action need not be called.
     -> Sem r a
 withLowerToIO action = do
   (inchan, outchan) <- sendM newChan
@@ -48,12 +64,18 @@ withLowerToIO action = do
     putMVar signal ()
     pure a
 
-  fix $ \me -> do
-    raced <- sendM $ A.race (takeMVar signal) $ readChan outchan
-    case raced of
-      Left () -> sendM $ A.wait res
-      Right (Forklift mvar req) -> do
-        resp <- liftSem req
-        sendM $ putMVar mvar $ pure resp
-        me
+  let me = do
+        raced <- sendM $ A.race (takeMVar signal) $ readChan outchan
+        case raced of
+          Left () -> sendM $ A.wait res
+          Right (Forklift mvar req) -> do
+            resp <- liftSem req
+            sendM $ putMVar mvar $ pure resp
+            me_b
+      {-# INLINE me #-}
+
+      me_b = me
+      {-# NOINLINE me_b #-}
+
+  me
 
