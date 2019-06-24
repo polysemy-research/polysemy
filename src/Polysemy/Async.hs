@@ -1,10 +1,22 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Polysemy.Async where
+module Polysemy.Async
+  ( -- * Effect
+    Async (..)
+
+    -- * Actions
+  , async
+  , await
+
+    -- * Interpretations
+  , runAsync
+  ) where
 
 import qualified Control.Concurrent.Async as A
 import           Polysemy
 import           Polysemy.Internal.Forklift
+
+
 
 ------------------------------------------------------------------------------
 -- |
@@ -31,10 +43,17 @@ runAsync m = withLowerToIO $ \lower _ -> lower $
         Async a -> do
           ma  <- runT a
           ins <- getInspectorT
-          fa  <- sendM $ A.async $ lower $ runAsync $ ma
+          fa  <- sendM $ A.async $ lower $ runAsync_b $ ma
           pureT $ fmap (inspect ins) fa
 
         Await a -> pureT =<< sendM (A.wait a)
     )  m
+{-# INLINE runAsync #-}
 
 
+runAsync_b
+    :: LastMember (Lift IO) r
+    => Sem (Async ': r) a
+    -> Sem r a
+runAsync_b = runAsync
+{-# NOINLINE runAsync_b #-}

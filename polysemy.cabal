@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ead323ed2aee76a2eff3d8ae331bc04042b7eb229bd7e48cd3e658b53090e446
+-- hash: 89bd1eac9f4b2121d6cd6394446982b43db63e8ba7c5ccd8e295dae66fd20969
 
 name:           polysemy
 version:        0.4.0.0
@@ -71,7 +71,7 @@ library
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -Wall
   build-depends:
-      async
+      async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.6
@@ -80,7 +80,7 @@ library
     , template-haskell >=2.12.0.0 && <3
     , th-abstraction >=0.3.1.0 && <0.4
     , transformers >=0.5.2.0 && <0.6
-    , unagi-chan
+    , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
   if flag(dump-core)
@@ -117,7 +117,7 @@ test-suite polysemy-test
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
   build-depends:
-      async
+      async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , doctest >=0.16.0.1 && <0.17
@@ -130,7 +130,7 @@ test-suite polysemy-test
     , template-haskell >=2.12.0.0 && <3
     , th-abstraction >=0.3.1.0 && <0.4
     , transformers >=0.5.2.0 && <0.6
-    , unagi-chan
+    , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
   default-language: Haskell2010
@@ -145,7 +145,7 @@ benchmark polysemy-bench
       bench
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
-      async
+      async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , criterion
@@ -158,7 +158,7 @@ benchmark polysemy-bench
     , template-haskell >=2.12.0.0 && <3
     , th-abstraction >=0.3.1.0 && <0.4
     , transformers >=0.5.2.0 && <0.6
-    , unagi-chan
+    , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
   default-language: Haskell2010
