@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE BlockArguments #-}
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module ExampleSpec where
@@ -34,7 +33,7 @@ program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
             _             -> writeTTY i >> writeTTY "no exceptions"
 
 foo :: IO (Either CustomException ())
-foo = (runM .@ runResource .@@ runErrorInIO @CustomException) $ runTeletypeIO program
+foo = (runM .@ runResourceInIO .@@ runErrorInIO @CustomException) $ runTeletypeIO program
 
 spec :: Spec
 spec = describe "example" $ do

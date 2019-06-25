@@ -35,7 +35,7 @@ module Polysemy
     -- to generate smart constructors for the actions. These smart constructors
     -- can be invoked directly inside of the 'Sem' monad.
     --
-    -- >>> makeSem ''Console
+    -- > makeSem ''Console
     --
     -- results in the following definitions:
     --
@@ -63,7 +63,7 @@ module Polysemy
     -- where 'Polysemy.Error.Catch' is an action that can run an exception
     -- handler if its first argument calls 'Polysemy.Error.throw'.
     --
-    -- >>> makeSem ''Error
+    -- > makeSem ''Error
     --
     -- @
     -- 'Polysemy.Error.throw' :: 'Member' ('Polysemy.Error.Error' e) r => e -> 'Sem' r a
@@ -87,6 +87,10 @@ module Polysemy
   , reinterpretH
   , reinterpret2H
   , reinterpret3H
+
+    -- * Kind Synonyms
+  , Effect
+  , EffectRow
 
     -- * Composing IO-based Interpreters
   , (.@)
@@ -113,6 +117,7 @@ module Polysemy
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
+import Polysemy.Internal.Kind
 import Polysemy.Internal.TH.Effect
 import Polysemy.Internal.Tactics
 

@@ -12,8 +12,9 @@
 module Polysemy.Internal.Union
   ( Union (..)
   , Yo (..)
-  , liftYo
   , Member
+  , weave
+  , hoist
   -- * Building Unions
   , inj
   , weaken
@@ -31,10 +32,11 @@ module Polysemy.Internal.Union
 import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
+import Data.Kind
 import Data.Type.Equality
-import Polysemy.Internal.Effect
+import Polysemy.Internal.Kind
 
-#ifdef ERROR_MESSAGES
+#ifndef NO_ERROR_MESSAGES
 import Polysemy.Internal.CustomErrors
 #endif
 
@@ -42,15 +44,18 @@ import Polysemy.Internal.CustomErrors
 ------------------------------------------------------------------------------
 -- | An extensible, type-safe union. The @r@ type parameter is a type-level
 -- list of effects, any one of which may be held within the 'Union'.
-data Union (r :: [(* -> *) -> * -> *]) (m :: * -> *) a where
+data Union (r :: EffectRow) (m :: Type -> Type) a where
   Union
-      :: SNat n
-         -- ^ A proof that the effect is actually in @r@.
-      -> Yo (IndexOf r n) m a
-         -- ^ The effect to wrap. The functions 'prj' and 'decomp' can help
+      :: -- A proof that the effect is actually in @r@.
+         SNat n
+         -- The effect to wrap. The functions 'prj' and 'decomp' can help
          -- retrieve this value later.
+      -> Yo (IndexOf r n) m a
       -> Union r m a
 
+instance Functor (Union r m) where
+  fmap f (Union w t) = Union w $ fmap f t
+  {-# INLINE fmap #-}
 
 
 data Yo e m a where
@@ -66,33 +71,32 @@ instance Functor (Yo e m) where
   fmap f (Yo e s d f' v) = Yo e s d (f . f') v
   {-# INLINE fmap #-}
 
-instance Effect (Yo e) where
-  weave s' d v' (Yo e s nt f v) =
+
+
+weave
+    :: (Functor s, Functor m, Functor n)
+    => s ()
+    -> (∀ x. s (m x) -> n (s x))
+    -> (∀ x. s x -> Maybe x)
+    -> Union r m a
+    -> Union r n (s a)
+weave s' d v' (Union w (Yo e s nt f v)) = Union w $
     Yo e (Compose $ s <$ s')
          (fmap Compose . d . fmap nt . getCompose)
          (fmap f . getCompose)
          (v <=< v' . getCompose)
-  {-# INLINE weave #-}
-
-  hoist = defaultHoist
-  {-# INLINE hoist #-}
-
-liftYo :: Functor m => e m a -> Yo e m a
-liftYo e = Yo e (Identity ()) (fmap Identity . runIdentity) runIdentity (Just . runIdentity)
-{-# INLINE liftYo #-}
+{-# INLINE weave #-}
 
 
-instance Functor (Union r m) where
-  fmap f (Union w t) = Union w $ fmap' f t
-  {-# INLINE fmap #-}
-
-
-instance Effect (Union r) where
-  weave s f v (Union w e) = Union w $ weave s f v e
-  {-# INLINE weave #-}
-
-  hoist f (Union w e) = Union w $ hoist f e
-  {-# INLINE hoist #-}
+hoist
+    :: ( Functor m
+       , Functor n
+       )
+    => (∀ x. m x -> n x)
+    -> Union r m a
+    -> Union r n a
+hoist f' (Union w (Yo e s nt f v)) = Union w $ Yo e s (f' . nt) f v
+{-# INLINE hoist #-}
 
 
 ------------------------------------------------------------------------------
@@ -103,7 +107,7 @@ type Member e r = Member' e r
 type Member' e r =
   ( Find r e
   , e ~ IndexOf r (Found r e)
-#ifdef ERROR_MESSAGES
+#ifndef NO_ERROR_MESSAGES
   , Break (AmbiguousSend r e) (IndexOf r (Found r e))
 #endif
   )
@@ -116,7 +120,7 @@ data Nat = Z | S Nat
 
 ------------------------------------------------------------------------------
 -- | A singleton for 'Nat'.
-data SNat :: Nat -> * where
+data SNat :: Nat -> Type where
   SZ :: SNat 'Z
   SS :: SNat n -> SNat ('S n)
 
@@ -137,7 +141,7 @@ type family IndexOf (ts :: [k]) (n :: Nat) :: k where
 
 
 type family Found (ts :: [k]) (t :: k) :: Nat where
-#ifdef ERROR_MESSAGES
+#ifndef NO_ERROR_MESSAGES
   Found '[]       t = UnhandledEffect 'S t
 #endif
   Found (t ': ts) t = 'Z
@@ -193,7 +197,11 @@ weaken (Union n a) = Union (SS n) a
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
 inj :: forall r e a m. (Functor m , Member e r) => e m a -> Union r m a
-inj e = Union (finder @_ @r @e) $ liftYo e
+inj e = Union (finder @_ @r @e) $
+  Yo e (Identity ())
+       (fmap Identity . runIdentity)
+       runIdentity
+       (Just . runIdentity)
 {-# INLINE inj #-}
 
 

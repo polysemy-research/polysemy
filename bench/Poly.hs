@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments   #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
@@ -43,7 +42,7 @@ prog = catch @Bool (throw True) (pure . not)
 
 zoinks :: IO (Either Bool Bool)
 zoinks = fmap (fmap snd)
-       . (runM .@ runResource .@@ runErrorInIO)
+       . (runM .@ runResourceInIO .@@ runErrorInIO)
        . runState False
        $ prog
 
@@ -57,7 +56,9 @@ runConsoleBoring :: [String] -> Sem (Console ': r) a -> Sem r ([String], a)
 runConsoleBoring inputs
   = runFoldMapOutput (:[])
   . runListInput inputs
-  . reinterpret2 \case
+  . reinterpret2
+  (\case
       ReadLine -> maybe "" id <$> input
       WriteLine msg -> output msg
+  )
 

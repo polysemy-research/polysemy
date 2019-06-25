@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes        #-}
-{-# LANGUAGE BlockArguments             #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
@@ -12,6 +11,7 @@ import Polysemy.Error
 import Polysemy.State
 import Polysemy.Output
 import Test.Hspec
+import Unsafe.Coerce
 
 
 
@@ -36,9 +36,8 @@ oStrState = put "hello"
 err :: Member (Error e) r => Sem r Bool
 err =
   catch
-    do
-      throw undefined
-    \_ -> pure True
+    (throw undefined)
+    (\_ -> pure True)
 
 
 errState :: Num s => Members '[Error e, State s] r => Sem r Bool
@@ -53,6 +52,15 @@ lifted = sendM $ pure ()
 
 newtype MyString = MyString String
   deriving (IsString, Eq, Show)
+
+
+data Janky = forall s. Janky (forall i. Sem '[State s] ())
+
+jankyState :: Janky
+jankyState = Janky $ put True
+
+unsafeUnjank :: Janky -> Sem '[State Bool] ()
+unsafeUnjank (Janky sem) = unsafeCoerce sem
 
 
 spec :: Spec
@@ -96,6 +104,10 @@ spec = do
         it "should interpret against MyString" $ do
           flipShouldBe ("hello" :: MyString, ()) . run $ runState "nothing" oStrState
 
+    describe "existential state" $ do
+      it "JankyState should compile" $ do
+        flipShouldBe (True, ()) . run $ runState False $ unsafeUnjank jankyState
+
 
   describe "Error effect" $ do
     it "should interpret against Int" $ do
@@ -118,9 +130,8 @@ spec = do
       flipShouldBe (Right @Bool (10 :: Float, True))  . run $ runError $ runState 0 errState
 
   describe "Output effect" $ do
-    it "should unify recursively" $ do
-      -- TODO(sandy): This should unify even without the type app. Bug #95
-      flipShouldBe 11 . sum @[] . fst . run . runFoldMapOutput id $ do
+    it "should unify recursively with tyvars" $ do
+      flipShouldBe 11 . sum . fst . run . runFoldMapOutput id $ do
         output [1]
         output $ replicate 2 5
 

@@ -20,7 +20,6 @@ import           Data.Bifunctor (first)
 import           Data.Typeable
 import           Polysemy
 import           Polysemy.Internal
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 
 
