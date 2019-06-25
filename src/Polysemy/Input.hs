@@ -54,7 +54,7 @@ runListInput is = fmap snd . runState is . reinterpret
 
 ------------------------------------------------------------------------------
 -- | Runs an 'Input' effect by evaluating a monadic action for each request.
-runMonadicInput :: Sem r i -> Sem (Input i ': r) a -> Sem r a
+runMonadicInput :: forall i r a. Sem r i -> Sem (Input i ': r) a -> Sem r a
 runMonadicInput m = interpret $ \case
   Input -> m
 {-# INLINE runMonadicInput #-}
