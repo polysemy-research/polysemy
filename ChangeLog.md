@@ -89,4 +89,6 @@
 - runResourceBase
 - runTraceAsList
 - New effect: Async
+- Changed the order of the types for `runMonadicInput` to be more helpful
+    (thanks to @tempname11)
 

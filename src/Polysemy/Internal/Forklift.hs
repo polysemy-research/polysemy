@@ -56,6 +56,8 @@ runViaForklift_b = runViaForklift
 -- | Run an effect stack all the way down to 'IO' by running it in a new
 -- thread, and temporarily turning the current thread into an event poll.
 --
+-- This function creates a thread, and so should be compiled with @-threaded@.
+--
 -- TODO(sandy): @since
 withLowerToIO
     :: LastMember (Lift IO) r
