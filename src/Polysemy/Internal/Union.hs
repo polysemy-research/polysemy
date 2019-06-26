@@ -1,11 +1,13 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE CPP                   #-}
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE StrictData            #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE AllowAmbiguousTypes     #-}
+{-# LANGUAGE CPP                     #-}
+{-# LANGUAGE ConstraintKinds         #-}
+{-# LANGUAGE FlexibleInstances       #-}
+{-# LANGUAGE FunctionalDependencies  #-}
+{-# LANGUAGE MultiParamTypeClasses   #-}
+{-# LANGUAGE StrictData              #-}
+{-# LANGUAGE TypeFamilies            #-}
+{-# LANGUAGE UndecidableInstances    #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -27,8 +29,10 @@ module Polysemy.Internal.Union
   -- * Witnesses
   , SNat (..)
   , Nat (..)
+  , LastMember (..)
   ) where
 
+import Data.Bifunctor
 import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
@@ -105,11 +109,15 @@ hoist f' (Union w (Yo e s nt f v)) = Union w $ Yo e s (f' . nt) f v
 type Member e r = Member' e r
 
 type Member' e r =
-  ( Find r e
-  , e ~ IndexOf r (Found r e)
+  ( MemberNoError e r
 #ifndef NO_ERROR_MESSAGES
   , Break (AmbiguousSend r e) (IndexOf r (Found r e))
 #endif
+  )
+
+type MemberNoError e r =
+  ( Find r e
+  , e ~ IndexOf r (Found r e)
   )
 
 
@@ -189,9 +197,10 @@ absurdU = absurdU
 
 ------------------------------------------------------------------------------
 -- | Weaken a 'Union' so it is capable of storing a new sort of effect.
-weaken :: Union r m a -> Union (e ': r) m a
+weaken :: forall e r m a. Union r m a -> Union (e ': r) m a
 weaken (Union n a) = Union (SS n) a
 {-# INLINE weaken #-}
+
 
 
 ------------------------------------------------------------------------------
@@ -232,4 +241,21 @@ decompCoerce (Union p a) =
     SS n -> Left (Union (SS n) a)
 {-# INLINE decompCoerce #-}
 
+
+------------------------------------------------------------------------------
+-- | A proof that @end@ is the last effect in the row.
+--
+-- TODO(sandy): @since
+class MemberNoError end r => LastMember end r | r -> end where
+  decompLast
+      :: Union r m a
+      -> Either (Union r m a) (Union '[end] m a)
+
+instance {-# OVERLAPPABLE #-} (LastMember end r, MemberNoError end (eff ': r))
+      => LastMember end (eff ': r) where
+  decompLast (Union SZ u)     = Left $ Union SZ u
+  decompLast (Union (SS n) u) = first weaken $ decompLast $ Union n u
+
+instance LastMember end '[end] where
+  decompLast = Right
 
