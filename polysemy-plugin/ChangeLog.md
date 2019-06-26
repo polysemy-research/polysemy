@@ -1,5 +1,9 @@
 # Changelog for polysemy-plugin
 
+## 0.2.1.1 (2019-06-26)
+
+- Updated the test suite to test against `polysemy-0.5.0.0`
+
 ## 0.2.1.0 (2019-06-14)
 
 - Greatly improved the plugin's ability to unify polymorphic types when running
