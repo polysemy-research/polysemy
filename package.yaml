@@ -76,7 +76,9 @@ library:
         - unsupported-ghc-version > 1 && < 1
 
     - condition: flag(error-messages)
-      then: {}
+      then:
+        # dummy value because cabal is stupid
+        cpp-options: -DCABAL_SERIOUSLY_CMON_MATE
       else:
         cpp-options: -DNO_ERROR_MESSAGES
 
