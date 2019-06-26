@@ -1,0 +1,98 @@
+{-# LANGUAGE TemplateHaskell #-}
+
+module Polysemy.Async
+  ( -- * Effect
+    Async (..)
+
+    -- * Actions
+  , async
+  , await
+
+    -- * Interpretations
+  , runAsync
+  , runAsyncInIO
+  ) where
+
+import qualified Control.Concurrent.Async as A
+import           Polysemy
+import           Polysemy.Internal.Forklift
+
+
+
+------------------------------------------------------------------------------
+-- |
+--
+-- TODO(sandy): @since
+data Async m a where
+  Async :: m a -> Async m (A.Async (Maybe a))
+  Await :: A.Async a -> Async m a
+
+makeSem ''Async
+
+------------------------------------------------------------------------------
+-- | A more flexible --- though less performant ---  version of 'runAsyncInIO'.
+--
+-- This function is capable of running 'Async' effects anywhere within an
+-- effect stack, without relying on an explicit function to lower it into 'IO'.
+-- Notably, this means that 'Polysemy.State.State' effects will be consistent
+-- in the presence of 'Async'.
+--
+-- TODO(sandy): @since
+runAsync
+    :: LastMember (Lift IO) r
+    => Sem (Async ': r) a
+    -> Sem r a
+runAsync m = withLowerToIO $ \lower _ -> lower $
+  interpretH
+    ( \case
+        Async a -> do
+          ma  <- runT a
+          ins <- getInspectorT
+          fa  <- sendM $ A.async $ lower $ runAsync_b ma
+          pureT $ fmap (inspect ins) fa
+
+        Await a -> pureT =<< sendM (A.wait a)
+    )  m
+{-# INLINE runAsync #-}
+
+
+runAsync_b
+    :: LastMember (Lift IO) r
+    => Sem (Async ': r) a
+    -> Sem r a
+runAsync_b = runAsync
+{-# NOINLINE runAsync_b #-}
+
+
+------------------------------------------------------------------------------
+-- | Run an 'Async' effect via in terms of 'A.async'.
+--
+--
+-- TODO(sandy): @since
+runAsyncInIO
+    :: Member (Lift IO) r
+    => (forall x. Sem r x -> IO x)
+       -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is likely
+       -- some combination of 'runM' and other interpreters composed via '.@'.
+    -> Sem (Async ': r) a
+    -> Sem r a
+runAsyncInIO lower m = interpretH
+    ( \case
+        Async a -> do
+          ma  <- runT a
+          ins <- getInspectorT
+          fa  <- sendM $ A.async $ lower $ runAsyncInIO_b lower ma
+          pureT $ fmap (inspect ins) fa
+
+        Await a -> pureT =<< sendM (A.wait a)
+    )  m
+{-# INLINE runAsyncInIO #-}
+
+runAsyncInIO_b
+    :: Member (Lift IO) r
+    => (forall x. Sem r x -> IO x)
+    -> Sem (Async ': r) a
+    -> Sem r a
+runAsyncInIO_b = runAsyncInIO
+{-# NOINLINE runAsyncInIO_b #-}
+
