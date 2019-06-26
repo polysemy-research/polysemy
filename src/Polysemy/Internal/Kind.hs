@@ -5,12 +5,12 @@ import Data.Kind
 ------------------------------------------------------------------------------
 -- | The kind of effects.
 --
--- TODO(sandy): @since
+-- @since 0.5.0.0
 type Effect    = (Type -> Type) -> Type -> Type
 
 ------------------------------------------------------------------------------
 -- | The kind of effect rows.
 --
--- TODO(sandy): @since
+-- @since 0.5.0.0
 type EffectRow = [Effect]
 

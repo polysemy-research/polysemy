@@ -15,14 +15,16 @@ module Polysemy.Async
 
 import qualified Control.Concurrent.Async as A
 import           Polysemy
-import           Polysemy.Internal.Forklift
 
 
 
 ------------------------------------------------------------------------------
--- |
+-- | An effect for spawning asynchronous computations.
 --
--- TODO(sandy): @since
+-- The 'Maybe' returned by 'async' is due to the fact that we can't be sure an
+-- 'Polysemy.Error.Error' effect didn't fail locally.
+--
+-- @since 0.5.0.0
 data Async m a where
   Async :: m a -> Async m (A.Async (Maybe a))
   Await :: A.Async a -> Async m a
@@ -37,7 +39,7 @@ makeSem ''Async
 -- Notably, this means that 'Polysemy.State.State' effects will be consistent
 -- in the presence of 'Async'.
 --
--- TODO(sandy): @since
+-- @since 0.5.0.0
 runAsync
     :: LastMember (Lift IO) r
     => Sem (Async ': r) a
@@ -68,7 +70,7 @@ runAsync_b = runAsync
 -- | Run an 'Async' effect via in terms of 'A.async'.
 --
 --
--- TODO(sandy): @since
+-- @since 0.5.0.0
 runAsyncInIO
     :: Member (Lift IO) r
     => (forall x. Sem r x -> IO x)

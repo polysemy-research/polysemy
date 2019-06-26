@@ -18,7 +18,6 @@ module Polysemy.Resource
 
 import qualified Control.Exception as X
 import           Polysemy
-import           Polysemy.Internal.Forklift
 
 
 ------------------------------------------------------------------------------
@@ -163,7 +162,9 @@ runResource = interpretH $ \case
 -- explicitly at the main thread. If this is not safe enough for your use-case,
 -- use 'runResourceInIO' instead.
 --
--- TODO(sandy): @since version
+-- This function creates a thread, and so should be compiled with @-threaded@.
+--
+-- @since 0.5.0.0
 runResourceBase
     :: forall r a
      . LastMember (Lift IO) r

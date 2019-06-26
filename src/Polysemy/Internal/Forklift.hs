@@ -2,13 +2,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies    #-}
 
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.Forklift where
 
 import qualified Control.Concurrent.Async as A
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
 import           Control.Monad
-import           Polysemy
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
 
@@ -16,7 +17,7 @@ import           Polysemy.Internal.Union
 ------------------------------------------------------------------------------
 -- | A promise for interpreting an effect of the union @r@ in another thread.
 --
--- TODO(sandy): @since
+-- @since 0.5.0.0
 data Forklift r = forall a. Forklift
   { responseMVar :: MVar (Sem '[Lift IO] a)
   , request      :: Union r (Sem r) a
@@ -27,7 +28,7 @@ data Forklift r = forall a. Forklift
 -- | A strategy for automatically interpreting an entire stack of effects by
 -- just shipping them off to some other interpretation context.
 --
--- TODO(sandy): @since
+-- @since 0.5.0.0
 runViaForklift
     :: LastMember (Lift IO) r
     => InChan (Forklift r)
@@ -58,7 +59,7 @@ runViaForklift_b = runViaForklift
 --
 -- This function creates a thread, and so should be compiled with @-threaded@.
 --
--- TODO(sandy): @since
+-- @since 0.5.0.0
 withLowerToIO
     :: LastMember (Lift IO) r
     => ((forall x. Sem r x -> IO x) -> IO () -> IO a)

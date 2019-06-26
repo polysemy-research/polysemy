@@ -59,7 +59,7 @@ runTraceAsOutput = interpret $ \case
 ------------------------------------------------------------------------------
 -- | Get the result of a 'Trace' effect as a list of 'String's.
 --
--- TODO(sandy): @since
+-- @since 0.5.0.0
 runTraceAsList
     :: Sem (Trace ': r) a
     -> Sem r ([String], a)

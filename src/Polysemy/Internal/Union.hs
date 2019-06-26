@@ -245,7 +245,7 @@ decompCoerce (Union p a) =
 ------------------------------------------------------------------------------
 -- | A proof that @end@ is the last effect in the row.
 --
--- TODO(sandy): @since
+-- @since 0.5.0.0
 class MemberNoError end r => LastMember end r | r -> end where
   decompLast
       :: Union r m a

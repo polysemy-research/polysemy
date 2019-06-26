@@ -89,6 +89,9 @@ module Polysemy
   , reinterpret2H
   , reinterpret3H
 
+    -- * Combinators for Interpreting Directly to IO
+  , withLowerToIO
+
     -- * Kind Synonyms
   , Effect
   , EffectRow
@@ -118,6 +121,7 @@ module Polysemy
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
+import Polysemy.Internal.Forklift
 import Polysemy.Internal.Kind
 import Polysemy.Internal.TH.Effect
 import Polysemy.Internal.Tactics
