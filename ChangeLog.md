@@ -1,5 +1,10 @@
 # Changelog for polysemy
 
+## 0.5.0.1 (2019-06-27)
+
+- Fixed a bug where `intercept` and `interceptH` wouldn't correctly handle
+    higher-order effects
+
 ## 0.5.0.0 (2019-06-26)
 
 ### Breaking Changes
