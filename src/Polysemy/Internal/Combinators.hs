@@ -277,7 +277,7 @@ interceptH f (Sem m) = Sem $ \k -> m $ \u ->
   case prj u of
     Just (Yo e s d y v) ->
       usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
-    Nothing -> k u
+    Nothing -> k $ hoist (interceptH_b f) u
 {-# INLINE interceptH #-}
 
 
@@ -289,6 +289,15 @@ interpretH_b
     -> Sem r a
 interpretH_b = interpretH
 {-# NOINLINE interpretH_b #-}
+
+
+interceptH_b
+    :: Member e r
+    => (∀ x m. e m x -> Tactical e m r x)
+    -> Sem r a
+    -> Sem r a
+interceptH_b = interceptH
+{-# NOINLINE interceptH_b #-}
 
 
 interpretInStateT_b
