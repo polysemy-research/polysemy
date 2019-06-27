@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments  #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections   #-}
 
@@ -22,6 +21,7 @@ import Polysemy
 import Polysemy.Output
 import Polysemy.State
 
+
 ------------------------------------------------------------------------------
 -- | An effect capable of emitting and intercepting messages.
 data Writer o m a where
@@ -35,7 +35,7 @@ makeSem ''Writer
 ------------------------------------------------------------------------------
 -- | Transform an 'Output' effect into a 'Writer' effect.
 runOutputAsWriter :: Member (Writer o) r => Sem (Output o ': r) a -> Sem r a
-runOutputAsWriter = interpret \case
+runOutputAsWriter = interpret $ \case
   Output o -> tell o
 {-# INLINE runOutputAsWriter #-}
 
@@ -47,17 +47,18 @@ runWriter
     :: Monoid o
     => Sem (Writer o ': r) a
     -> Sem r (o, a)
-runWriter = runState mempty . reinterpretH \case
-  Tell o -> do
-    modify (<> o) >>= pureT
-  Listen m -> do
-    mm <- runT m
-    -- TODO(sandy): this is stupid
-    (o, fa) <- raise $ runWriter mm
-    pure $ fmap (o, ) fa
-  Censor f m -> do
-    mm <- runT m
-    ~(o, a) <- raise $ runWriter mm
-    modify (<> f o)
-    pure a
-
+runWriter = runState mempty . reinterpretH
+  (\case
+      Tell o -> do
+        modify (`mappend` o) >>= pureT
+      Listen m -> do
+        mm <- runT m
+        -- TODO(sandy): this is stupid
+        (o, fa) <- raise $ runWriter mm
+        pure $ fmap (o, ) fa
+      Censor f m -> do
+        mm <- runT m
+        ~(o, a) <- raise $ runWriter mm
+        modify (`mappend` f o)
+        pure a
+  )

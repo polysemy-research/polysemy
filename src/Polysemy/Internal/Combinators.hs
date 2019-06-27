@@ -26,7 +26,6 @@ import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
 import           Polysemy.Internal
 import           Polysemy.Internal.CustomErrors
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Tactics
 import           Polysemy.Internal.Union
 
@@ -79,6 +78,7 @@ interpretH f (Sem m) = m $ \u ->
       pure $ y a
 {-# INLINE interpretH #-}
 
+
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
 -- 'stateful' for a more user-friendly variety of this function.
@@ -100,6 +100,7 @@ interpretInStateT f s (Sem m) = Sem $ \k ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInStateT #-}
 
+
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
 -- 'stateful' for a more user-friendly variety of this function.
@@ -120,6 +121,7 @@ interpretInLazyStateT f s (Sem m) = Sem $ \k ->
         Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ LS.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInLazyStateT #-}
+
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but with access to an intermediate state @s@.
@@ -278,6 +280,5 @@ interceptH f (Sem m) = Sem $ \k -> m $ \u ->
   case prj u of
     Just (Yo e s d y v) ->
       usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
-    Nothing -> k u
+    Nothing -> k $ hoist (interceptH f) u
 {-# INLINE interceptH #-}
-

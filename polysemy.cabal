@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 06b078f6925c3850e6fd0698c0b475ea9c1dc82f8e80882aafa451f4957d0daf
+-- hash: 8fb03647195837a675f9058f99e2e51b3f1e765923d7a09509354ee3cca5a92a
 
 name:           polysemy
-version:        0.4.0.0
+version:        0.5.0.1
 synopsis:       Higher-order, low-boilerplate, zero-cost free monads.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
 category:       Language
@@ -40,17 +40,20 @@ flag error-messages
 library
   exposed-modules:
       Polysemy
+      Polysemy.Async
       Polysemy.Error
       Polysemy.Fixpoint
       Polysemy.Input
       Polysemy.Internal
       Polysemy.Internal.Combinators
       Polysemy.Internal.CustomErrors
-      Polysemy.Internal.Effect
       Polysemy.Internal.Fixpoint
+      Polysemy.Internal.Forklift
+      Polysemy.Internal.Kind
       Polysemy.Internal.Lift
       Polysemy.Internal.NonDet
       Polysemy.Internal.Tactics
+      Polysemy.Internal.TH.Common
       Polysemy.Internal.TH.Effect
       Polysemy.Internal.Union
       Polysemy.IO
@@ -68,20 +71,28 @@ library
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -Wall -fplugin=Loopbreaker
   build-depends:
-      base >=4.7 && <5
-    , containers >=0.6 && <=0.7
+      async >=2.2 && <3
+    , base >=4.9 && <5
+    , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.6
     , loopbreaker >=0.1 && <0.2
     , mtl >=2.2.2 && <3
-    , syb >=0.7 && <=0.8
-    , template-haskell >=2.14.0.0 && <2.15
-    , th-abstraction >=0.3 && <=0.4
-    , transformers >=0.5.5.0 && <0.6
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.12.0.0 && <3
+    , th-abstraction >=0.3.1.0 && <0.4
+    , transformers >=0.5.2.0 && <0.6
+    , unagi-chan >=0.4.0.0 && <0.5
+  if impl(ghc < 8.6)
+    default-extensions: MonadFailDesugaring TypeInType
   if flag(dump-core)
     ghc-options: -fplugin=DumpCore -fplugin-opt=DumpCore:core-html
     build-depends:
         dump-core
+  if impl(ghc < 8.2.2)
+    build-depends:
+        unsupported-ghc-version >1 && <1
   if flag(error-messages)
+    cpp-options: -DCABAL_SERIOUSLY_CMON_MATE
   else
     cpp-options: -DNO_ERROR_MESSAGES
   default-language: Haskell2010
@@ -91,13 +102,16 @@ test-suite polysemy-test
   main-is: Main.hs
   other-modules:
       AlternativeSpec
+      AsyncSpec
       BracketSpec
       DoctestSpec
       FusionSpec
       HigherOrderSpec
       InspectorSpec
+      InterceptSpec
       OutputSpec
       ThEffectSpec
+      TypeErrors
       Paths_polysemy
   hs-source-dirs:
       test
@@ -106,19 +120,23 @@ test-suite polysemy-test
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
   build-depends:
-      base >=4.7 && <5
-    , containers >=0.6 && <=0.7
+      async >=2.2 && <3
+    , base >=4.9 && <5
+    , containers >=0.5 && <0.7
     , doctest >=0.16.0.1 && <0.17
     , first-class-families >=0.5.0.0 && <0.6
     , hspec >=2.6.0 && <3
-    , inspection-testing >=0.4.1.1 && <0.5
+    , inspection-testing >=0.4.2 && <0.5
     , loopbreaker >=0.1 && <0.2
     , mtl >=2.2.2 && <3
     , polysemy
-    , syb >=0.7 && <=0.8
-    , template-haskell >=2.14.0.0 && <2.15
-    , th-abstraction >=0.3 && <=0.4
-    , transformers >=0.5.5.0 && <0.6
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.12.0.0 && <3
+    , th-abstraction >=0.3.1.0 && <0.4
+    , transformers >=0.5.2.0 && <0.6
+    , unagi-chan >=0.4.0.0 && <0.5
+  if impl(ghc < 8.6)
+    default-extensions: MonadFailDesugaring TypeInType
   default-language: Haskell2010
 
 benchmark polysemy-bench
@@ -131,8 +149,9 @@ benchmark polysemy-bench
       bench
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
-      base >=4.7 && <5
-    , containers >=0.6 && <=0.7
+      async >=2.2 && <3
+    , base >=4.9 && <5
+    , containers >=0.5 && <0.7
     , criterion
     , first-class-families >=0.5.0.0 && <0.6
     , free
@@ -140,8 +159,11 @@ benchmark polysemy-bench
     , loopbreaker >=0.1 && <0.2
     , mtl
     , polysemy
-    , syb >=0.7 && <=0.8
-    , template-haskell >=2.14.0.0 && <2.15
-    , th-abstraction >=0.3 && <=0.4
-    , transformers >=0.5.5.0 && <0.6
+    , syb >=0.7 && <0.8
+    , template-haskell >=2.12.0.0 && <3
+    , th-abstraction >=0.3.1.0 && <0.4
+    , transformers >=0.5.2.0 && <0.6
+    , unagi-chan >=0.4.0.0 && <0.5
+  if impl(ghc < 8.6)
+    default-extensions: MonadFailDesugaring TypeInType
   default-language: Haskell2010

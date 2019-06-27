@@ -9,6 +9,7 @@ module Polysemy.Trace
 
     -- * Interpretations
   , runTraceIO
+  , runTraceAsList
   , runIgnoringTrace
   , runTraceAsOutput
 
@@ -53,6 +54,21 @@ runTraceAsOutput
 runTraceAsOutput = interpret $ \case
   Trace m -> output m
 {-# INLINE runTraceAsOutput #-}
+
+
+------------------------------------------------------------------------------
+-- | Get the result of a 'Trace' effect as a list of 'String's.
+--
+-- @since 0.5.0.0
+runTraceAsList
+    :: Sem (Trace ': r) a
+    -> Sem r ([String], a)
+runTraceAsList = runFoldMapOutput @String (: []) . reinterpret (
+  \case
+    Trace m -> output m
+  )
+{-# INLINE runTraceAsList #-}
+
 
 ------------------------------------------------------------------------------
 -- | Transform a 'Trace' effect into a 'Output' 'String' effect.

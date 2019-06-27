@@ -6,7 +6,7 @@
 
 # polysemy
 
-[![Build Status](https://api.travis-ci.org/isovector/polysemy.svg?branch=master)](https://travis-ci.org/isovector/polysemy)
+[![Build Status](https://api.travis-ci.org/polysemy-research/polysemy.svg?branch=master)](https://travis-ci.org/polysemy-research/polysemy)
 [![Hackage](https://img.shields.io/hackage/v/polysemy.svg?logo=haskell&label=polysemy)](https://hackage.haskell.org/package/polysemy)
 [![Hackage](https://img.shields.io/hackage/v/polysemy-plugin.svg?logo=haskell&label=polysemy-plugin)](https://hackage.haskell.org/package/polysemy-plugin)
 
@@ -35,7 +35,7 @@ It's like `fused-effects` but with an order of magnitude less boilerplate.
 
 Additionally, unlike `mtl`, `polysemy` has no functional dependencies, so you
 can use multiple copies of the same effect. This alleviates the need for ~~ugly
-hacks~~band-aids like [classy
+hacks~~ band-aids like [classy
 lenses](http://hackage.haskell.org/package/lens-4.17.1/docs/Control-Lens-TH.html#v:makeClassy),
 the [`ReaderT`
 pattern](https://www.fpcomplete.com/blog/2017/06/readert-design-pattern) and

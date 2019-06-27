@@ -25,7 +25,6 @@ import           Data.Tuple (swap)
 import           Polysemy
 import           Polysemy.Internal
 import           Polysemy.Internal.Combinators
-import           Polysemy.Internal.Effect
 import           Polysemy.Internal.Union
 
 
