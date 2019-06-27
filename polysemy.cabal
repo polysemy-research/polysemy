@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a6d973da5703808ae7d4cfe9848c4403e9aa0f9f2d47dfdba64a80d761b4e4fb
+-- hash: 06b078f6925c3850e6fd0698c0b475ea9c1dc82f8e80882aafa451f4957d0daf
 
 name:           polysemy
 version:        0.4.0.0
@@ -66,18 +66,19 @@ library
   hs-source-dirs:
       src
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
-  ghc-options: -Wall
+  ghc-options: -Wall -fplugin=Loopbreaker
   build-depends:
       base >=4.7 && <5
     , containers >=0.6 && <=0.7
     , first-class-families >=0.5.0.0 && <0.6
+    , loopbreaker >=0.1 && <0.2
     , mtl >=2.2.2 && <3
     , syb >=0.7 && <=0.8
     , template-haskell >=2.14.0.0 && <2.15
     , th-abstraction >=0.3 && <=0.4
     , transformers >=0.5.5.0 && <0.6
   if flag(dump-core)
-    ghc-options: -fplugin=DumpCore -fplugin-opt DumpCore:core-html
+    ghc-options: -fplugin=DumpCore -fplugin-opt=DumpCore:core-html
     build-depends:
         dump-core
   if flag(error-messages)
@@ -111,6 +112,7 @@ test-suite polysemy-test
     , first-class-families >=0.5.0.0 && <0.6
     , hspec >=2.6.0 && <3
     , inspection-testing >=0.4.1.1 && <0.5
+    , loopbreaker >=0.1 && <0.2
     , mtl >=2.2.2 && <3
     , polysemy
     , syb >=0.7 && <=0.8
@@ -135,6 +137,7 @@ benchmark polysemy-bench
     , first-class-families >=0.5.0.0 && <0.6
     , free
     , freer-simple
+    , loopbreaker >=0.1 && <0.2
     , mtl
     , polysemy
     , syb >=0.7 && <=0.8

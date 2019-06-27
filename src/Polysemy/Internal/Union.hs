@@ -223,5 +223,3 @@ decompCoerce (Union p a) =
     SZ -> Right a
     SS n -> Left (Union (SS n) a)
 {-# INLINE decompCoerce #-}
-
-

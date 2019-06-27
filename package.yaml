@@ -24,6 +24,7 @@ dependencies:
 - th-abstraction >= 0.3 && <= 0.4
 - transformers >= 0.5.5.0 && < 0.6
 - first-class-families >= 0.5.0.0 && < 0.6
+- loopbreaker >= 0.1 && < 0.2
 
 default-extensions:
   - DataKinds
@@ -51,7 +52,9 @@ flags:
     manual:      True
 
 library:
-  ghc-options: -Wall
+  ghc-options:
+    - -Wall
+    - -fplugin=Loopbreaker
   source-dirs: src
   other-modules: Polysemy.Internal.PluginLookup
 
@@ -61,7 +64,7 @@ library:
         - dump-core
       ghc-options:
         - -fplugin=DumpCore
-        - -fplugin-opt DumpCore:core-html
+        - -fplugin-opt=DumpCore:core-html
 
     - condition: flag(error-messages)
       then: {}
