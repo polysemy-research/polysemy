@@ -7,6 +7,9 @@ module Polysemy.Error
     -- * Actions
   , throw
   , catch
+  , hush
+  , hoistError
+  , sendMError
 
     -- * Interpretations
   , runError
@@ -15,6 +18,7 @@ module Polysemy.Error
   ) where
 
 import qualified Control.Exception as X
+import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
 import           Data.Bifunctor (first)
 import           Data.Typeable
@@ -33,6 +37,23 @@ makeSem ''Error
 hush :: Either e a -> Maybe a
 hush (Right a) = Just a
 hush (Left _) = Nothing
+
+
+hoistError
+    :: Member (Error e) r
+    => Either e a
+    -> Sem r a
+hoistError (Left e) = throw e
+hoistError (Right a) = pure a
+
+
+sendMError
+    :: ( Member (Error e) r
+       , Member (Lift m) r
+       )
+    => m (Either e a)
+    -> Sem r a
+sendMError = hoistError <=< sendM
 
 
 ------------------------------------------------------------------------------
