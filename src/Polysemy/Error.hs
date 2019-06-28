@@ -7,8 +7,8 @@ module Polysemy.Error
     -- * Actions
   , throw
   , catch
-  , hoistError
-  , sendMError
+  , fromEither
+  , fromEitherM
 
     -- * Interpretations
   , runError
@@ -42,26 +42,26 @@ hush (Left _) = Nothing
 -- | Upgrade an 'Either' into an 'Error' effect.
 --
 -- @since 0.5.1.0
-hoistError
+fromEither
     :: Member (Error e) r
     => Either e a
     -> Sem r a
-hoistError (Left e) = throw e
-hoistError (Right a) = pure a
+fromEither (Left e) = throw e
+fromEither (Right a) = pure a
 
 
 ------------------------------------------------------------------------------
--- | A combinator doing 'sendM' and 'hoistError' at the same time. Useful for
+-- | A combinator doing 'sendM' and 'fromEither' at the same time. Useful for
 -- interoperating with 'IO'.
 --
 -- @since 0.5.1.0
-sendMError
+fromEitherM
     :: ( Member (Error e) r
        , Member (Lift m) r
        )
     => m (Either e a)
     -> Sem r a
-sendMError = hoistError <=< sendM
+fromEitherM = fromEither <=< sendM
 
 
 ------------------------------------------------------------------------------
