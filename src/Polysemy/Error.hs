@@ -7,7 +7,6 @@ module Polysemy.Error
     -- * Actions
   , throw
   , catch
-  , hush
   , hoistError
   , sendMError
 
@@ -39,6 +38,10 @@ hush (Right a) = Just a
 hush (Left _) = Nothing
 
 
+------------------------------------------------------------------------------
+-- | Upgrade an 'Either' into an 'Error' effect.
+--
+-- @since 0.5.1.0
 hoistError
     :: Member (Error e) r
     => Either e a
@@ -47,6 +50,11 @@ hoistError (Left e) = throw e
 hoistError (Right a) = pure a
 
 
+------------------------------------------------------------------------------
+-- | A combinator doing 'sendM' and 'hoistError' at the same time. Useful for
+-- interoperating with 'IO'.
+--
+-- @since 0.5.1.0
 sendMError
     :: ( Member (Error e) r
        , Member (Lift m) r
@@ -147,6 +155,7 @@ runErrorInIO lower
 {-# INLINE runErrorInIO #-}
 
 
+-- TODO(sandy): Can we use the new withLowerToIO machinery for this?
 runErrorAsExc
     :: forall e r a. ( Typeable e
        , Member (Lift IO) r
