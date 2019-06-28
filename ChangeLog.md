@@ -1,5 +1,9 @@
 # Changelog for polysemy
 
+## 0.5.1.0 (2019-06-28)
+
+- New combinators for `Polysemy.Error`: `fromEither` and `fromEitherM`
+
 ## 0.5.0.1 (2019-06-27)
 
 - Fixed a bug where `intercept` and `interceptH` wouldn't correctly handle
