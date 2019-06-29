@@ -63,7 +63,7 @@ runTraceAsOutput = interpret $ \case
 runTraceAsList
     :: Sem (Trace ': r) a
     -> Sem r ([String], a)
-runTraceAsList = runFoldMapOutput @String (: []) . reinterpret (
+runTraceAsList = runOutputAsList . reinterpret (
   \case
     Trace m -> output m
   )
