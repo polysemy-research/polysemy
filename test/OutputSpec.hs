@@ -25,8 +25,14 @@ spec = parallel $ do
           length ms `shouldBe` (div 100 size + 1)
           length (head ms) `shouldBe` min size 100
           concat ms `shouldBe` [0..99]
+  describe "runOutputAsList" $ do
+    it "should return elements in the order they were output" $ do
+      let (xs, ()) = runOutputAsList' $ traverse_ (output @Int) [0..100]
+       in xs `shouldBe` [0..100]
 
 
 runOutput :: Int -> Sem '[Output [Int]] a -> ([[Int]], a)
 runOutput size = run . runFoldMapOutput id . runBatchOutput size
 
+runOutputAsList' :: Sem '[Output Int] a -> ([Int], a)
+runOutputAsList' = run . runOutputAsList
