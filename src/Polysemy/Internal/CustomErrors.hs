@@ -8,6 +8,8 @@
 module Polysemy.Internal.CustomErrors
   ( AmbiguousSend
   , Break
+  , IfStuck
+  , WhenStuck
   , FirstOrder
   , UnhandledEffect
   , DefiningModule
@@ -39,6 +41,8 @@ type family Break (c :: Constraint)
 type family IfStuck (tyvar :: k) (b :: k1) (c :: Exp k1) :: k1 where
   IfStuck T1 b c = b
   IfStuck a  b c = Eval c
+
+type WhenStuck a b = IfStuck a b (Pure (() :: Constraint))
 
 
 type AmbigousEffectMessage r e t vs =

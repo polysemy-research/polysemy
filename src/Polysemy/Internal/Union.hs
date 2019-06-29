@@ -111,7 +111,7 @@ type Member e r = Member' e r
 type Member' e r =
   ( MemberNoError e r
 #ifndef NO_ERROR_MESSAGES
-  , Break (AmbiguousSend r e) (IndexOf r (Found r e))
+  , WhenStuck (IndexOf r (Found r e)) (AmbiguousSend r e)
 #endif
   )
 

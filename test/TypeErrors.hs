@@ -10,6 +10,7 @@ module TypeErrors where
 -- >>> :m +Polysemy.Resource
 -- >>> :m +Polysemy.State
 -- >>> :m +Polysemy.Trace
+-- >>> :m +Data.Maybe
 
 
 --------------------------------------------------------------------------------
@@ -90,16 +91,12 @@ tooFewArgumentsReinterpret = ()
 --  in runM foo'''
 -- :}
 -- ...
--- ... Ambiguous use of effect 'Lift'
+-- ... Unhandled effect 'Lift IO'
 -- ...
--- ... add (Member (Lift IO) '[]) ...
+-- ... Expected type: Sem '[Lift m] (Bool, ())
+-- ... Actual type: Sem '[] (Bool, ())
 -- ...
---
--- PROBLEM: We're trying to run more effects than exist in the eff row. This is
--- indeed a problem, but the error message isn't helpful.
---
--- SOLUTION: Add a special case to `AmbiguousSend` when `r ~ '[]`.
-runningTooManyEffects'WRONG = ()
+runningTooManyEffects = ()
 
 
 --------------------------------------------------------------------------------
@@ -162,6 +159,18 @@ missingParens'WRONG = ()
 --
 -- SOLUTION: Honestly I'm not sure!
 missingArgumentToRunResourceInIO'WRONG = ()
+
+--------------------------------------------------------------------------------
+-- |
+-- >>> :{
+-- existsKV :: Member (State (Maybe Int)) r => Sem r Bool
+-- existsKV = isJust get
+-- :}
+-- ...
+-- ... Ambiguous use of effect 'State'
+-- ...
+--
+missingFmap'WRONG = ()
 
 
 
