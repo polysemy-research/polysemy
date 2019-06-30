@@ -93,10 +93,11 @@ installTodos todos = do
   case optLevel dflags of
     0 -> pure todos
     _ -> do
-      mods <- moduleSetElts <$> getVisibleOrphanMods
-      pure $ todos
 #if __GLASGOW_HASKELL__ >= 810
-          ++ bool []
-                  (extraPhases dflags)
-                  (any ((== polysemyInternal) . moduleName) mods)
+      mods <- moduleSetElts <$> getVisibleOrphanMods
+      pure $ todos ++ bool []
+                           (extraPhases dflags)
+                           (any ((== polysemyInternal) . moduleName) mods)
+#else
+      pure todos
 #endif
