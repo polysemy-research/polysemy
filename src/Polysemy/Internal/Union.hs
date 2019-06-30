@@ -15,6 +15,7 @@ module Polysemy.Internal.Union
   ( Union (..)
   , Yo (..)
   , Member
+  , MemberWithError
   , weave
   , hoist
   -- * Building Unions
@@ -106,9 +107,9 @@ hoist f' (Union w (Yo e s nt f v)) = Union w $ Yo e s (f' . nt) f v
 ------------------------------------------------------------------------------
 -- | A proof that the effect @e@ is available somewhere inside of the effect
 -- stack @r@.
-type Member e r = Member' e r
+type Member e r = MemberNoError e r
 
-type Member' e r =
+type MemberWithError e r =
   ( MemberNoError e r
 #ifndef NO_ERROR_MESSAGES
   , WhenStuck (IndexOf r (Found r e)) (AmbiguousSend r e)

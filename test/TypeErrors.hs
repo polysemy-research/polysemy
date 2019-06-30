@@ -42,6 +42,21 @@ ambiguousMonoState = ()
 -- ...
 ambiguousPolyState = ()
 
+--------------------------------------------------------------------------------
+-- |
+-- >>> :{
+-- foo :: Member (State Int) r => Sem r ()
+-- foo = put 5
+-- :}
+-- ...
+-- ... Ambiguous use of effect 'State'
+-- ...
+-- ... (Member (State s0) r) ...
+-- ...
+-- ... 's0' directly...
+-- ...
+ambiguousNumPolyState = ()
+
 
 --------------------------------------------------------------------------------
 -- |
@@ -125,40 +140,11 @@ missingParens'WRONG = ()
 --  in runM $ runResourceInIO foo
 -- :}
 -- ...
--- ... Ambiguous use of effect 'Lift'
+-- ... Couldn't match expected type ...
+-- ... with actual type ...
+-- ... Probable cause: ... is applied to too few arguments
 -- ...
--- ... (Member (Lift IO) r0) ...
--- ...
--- ... Could not deduce: (Member Resource r1)
--- ...
---
--- PROBLEM: This error is totally bogus. We forgot to give an argument to
--- 'runResourceInIO'. For comparison, the standard error GHC gives in this case
--- is significantly more helpful:
---
---    <interactive>:192:13: error:
---        • Couldn't match expected type ‘Sem '[Lift m] a’
---                      with actual type ‘Sem (Resource : r0) a0 -> Sem r0 a0’
---        • Probable cause: ‘runResourceInIO’ is applied to too few arguments
---          In the second argument of ‘($)’, namely ‘runResourceInIO foo’
---          In the expression: runM $ runResourceInIO foo
---          In the expression:
---            let
---              foo :: Member Resource r => Sem r ()
---              foo = undefined
---            in runM $ runResourceInIO foo
---        • Relevant bindings include
---            it :: m a (bound at <interactive>:190:2)
---    <interactive>:192:29: error:
---        • Couldn't match expected type ‘Sem r0 x -> IO x’
---                      with actual type ‘Sem r1 ()’
---        • In the first argument of ‘runResourceInIO’, namely ‘foo’
---          In the second argument of ‘($)’, namely ‘runResourceInIO foo’
---          In the expression: runM $ runResourceInIO foo
---
---
--- SOLUTION: Honestly I'm not sure!
-missingArgumentToRunResourceInIO'WRONG = ()
+missingArgumentToRunResourceInIO = ()
 
 --------------------------------------------------------------------------------
 -- |
