@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 11d5fb86c1da3902ef83b9621e3c0c09388dc66764d4bd65ce62da8022925c79
+-- hash: ff6fea2ddd3cabf8d86e7fa6816a4b0b0874e3f1b19a6ef84c4c4c706e27f193
 
 name:           polysemy
 version:        0.5.1.0
@@ -69,13 +69,12 @@ library
   hs-source-dirs:
       src
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
-  ghc-options: -Wall -fplugin=Loopbreaker
+  ghc-options: -Wall
   build-depends:
       async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.6
-    , loopbreaker >=0.1 && <0.2
     , mtl >=2.2.2 && <3
     , syb >=0.7 && <0.8
     , template-haskell >=2.12.0.0 && <3
@@ -84,6 +83,9 @@ library
     , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
+  else
+    build-depends:
+        loopbreaker >=0.1 && <0.2
   if flag(dump-core)
     ghc-options: -fplugin=DumpCore -fplugin-opt=DumpCore:core-html
     build-depends:
@@ -91,6 +93,8 @@ library
   if impl(ghc < 8.2.2)
     build-depends:
         unsupported-ghc-version >1 && <1
+  if impl(ghc >= 8.6)
+    ghc-options: -fplugin=Loopbreaker
   if flag(error-messages)
     cpp-options: -DCABAL_SERIOUSLY_CMON_MATE
   else
@@ -127,7 +131,6 @@ test-suite polysemy-test
     , first-class-families >=0.5.0.0 && <0.6
     , hspec >=2.6.0 && <3
     , inspection-testing >=0.4.2 && <0.5
-    , loopbreaker >=0.1 && <0.2
     , mtl >=2.2.2 && <3
     , polysemy
     , syb >=0.7 && <0.8
@@ -137,6 +140,9 @@ test-suite polysemy-test
     , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
+  else
+    build-depends:
+        loopbreaker >=0.1 && <0.2
   default-language: Haskell2010
 
 benchmark polysemy-bench
@@ -156,7 +162,6 @@ benchmark polysemy-bench
     , first-class-families >=0.5.0.0 && <0.6
     , free
     , freer-simple
-    , loopbreaker >=0.1 && <0.2
     , mtl
     , polysemy
     , syb >=0.7 && <0.8
@@ -166,4 +171,7 @@ benchmark polysemy-bench
     , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
+  else
+    build-depends:
+        loopbreaker >=0.1 && <0.2
   default-language: Haskell2010

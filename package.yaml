@@ -24,7 +24,6 @@ dependencies:
 - th-abstraction >= 0.3.1.0 && < 0.4
 - transformers >= 0.5.2.0 && < 0.6
 - first-class-families >= 0.5.0.0 && < 0.6
-- loopbreaker >= 0.1 && < 0.2
 - unagi-chan >= 0.4.0.0 && < 0.5
 - async >= 2.2 && < 3
 
@@ -44,10 +43,14 @@ default-extensions:
   - UnicodeSyntax
 
 when:
-  - condition: impl(ghc < 8.6)
+  condition: impl(ghc < 8.6)
+  then:
     default-extensions:
       - MonadFailDesugaring
       - TypeInType
+  else:
+    dependencies:
+      - loopbreaker >= 0.1 && < 0.2
 
 flags:
   dump-core:
@@ -60,9 +63,7 @@ flags:
     manual:      True
 
 library:
-  ghc-options:
-    - -Wall
-    - -fplugin=Loopbreaker
+  ghc-options: -Wall
   source-dirs: src
   other-modules: Polysemy.Internal.PluginLookup
 
@@ -77,6 +78,10 @@ library:
     - condition: impl(ghc < 8.2.2)
       dependencies:
         - unsupported-ghc-version > 1 && < 1
+
+    - condition: impl(ghc >= 8.6)
+      ghc-options:
+        - -fplugin=Loopbreaker
 
     - condition: flag(error-messages)
       then:
