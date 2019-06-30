@@ -22,6 +22,12 @@ import GHC.TypeLits
 import Polysemy.Internal.Kind
 
 
+------------------------------------------------------------------------------
+-- | The module this effect was originally defined in. This type family is used
+-- only for providing better error messages.
+--
+-- Calls to 'Polysemy.Internal.TH.Effect.makeSem' will automatically give
+-- instances of 'DefiningModule'.
 type family DefiningModule (t :: k) :: Symbol
 
 type family DefiningModuleForEffect (e :: k) :: Symbol where
