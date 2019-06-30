@@ -79,6 +79,9 @@ library:
       dependencies:
         - unsupported-ghc-version > 1 && < 1
 
+    # We use this plugin to get to more agressive inlining without need for
+    # explicit "loopbreakers" in function definitions all over ther codebase
+    # --- sadly it can only work on newer versions of GHC currently
     - condition: impl(ghc >= 8.6)
       ghc-options:
         - -fplugin=Loopbreaker
