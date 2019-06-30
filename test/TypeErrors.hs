@@ -42,21 +42,6 @@ ambiguousMonoState = ()
 -- ...
 ambiguousPolyState = ()
 
---------------------------------------------------------------------------------
--- |
--- >>> :{
--- foo :: Member (State Int) r => Sem r ()
--- foo = put 5
--- :}
--- ...
--- ... Ambiguous use of effect 'State'
--- ...
--- ... (Member (State s0) r) ...
--- ...
--- ... 's0' directly...
--- ...
-ambiguousNumPolyState = ()
-
 
 --------------------------------------------------------------------------------
 -- |
@@ -146,6 +131,7 @@ missingParens'WRONG = ()
 -- ...
 missingArgumentToRunResourceInIO = ()
 
+
 --------------------------------------------------------------------------------
 -- |
 -- >>> :{
@@ -157,6 +143,4 @@ missingArgumentToRunResourceInIO = ()
 -- ...
 --
 missingFmap'WRONG = ()
-
-
 
