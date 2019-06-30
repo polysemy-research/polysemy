@@ -33,8 +33,11 @@ data T1 m a
 
 
 type family IfStuck (tyvar :: k) (b :: k1) (c :: Exp k1) :: k1 where
-  IfStuck T1 b c = b
-  IfStuck a  b c = Eval c
+  -- TODO(sandy): This behavior is wrong when k is not one of these things
+  IfStuck T1                  b c = b
+  IfStuck "NOT_A_REAL_SYMBOL" b c = b
+  IfStuck 9999999999999999999 b c = b
+  IfStuck a                   b c = Eval c
 
 type WhenStuck a b = IfStuck a b (Pure (() :: Constraint))
 
@@ -153,12 +156,13 @@ type CheckDocumentation e
   ':<>: 'Text (DefiningModuleForEffect e)
   ':<>: 'Text "'"
 
-type family BreakSym (z :: k -> k) e (c :: Constraint)
-                       (rep :: Symbol) :: k where
-  BreakSym _ e _ "" =  TypeError (UnhandledEffectMsg e ':$$: CheckDocumentation e)
-  BreakSym z e _ c  = z (TypeError (UnhandledEffectMsg e ':$$: CheckDocumentation e))
+type family UnhandledEffect e where
+  UnhandledEffect e =
+    IfStuck (DefiningModule e)
+            (TypeError (UnhandledEffectMsg e))
+            (DoError (UnhandledEffectMsg e ':$$: CheckDocumentation e))
 
-type family UnhandledEffect z e where
-  UnhandledEffect z e =
-    BreakSym z e (TypeError (UnhandledEffectMsg e)) (DefiningModuleForEffect e)
+
+data DoError :: ErrorMessage -> Exp k
+type instance Eval (DoError a) = TypeError a
 
