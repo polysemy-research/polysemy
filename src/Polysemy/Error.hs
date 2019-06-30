@@ -7,6 +7,8 @@ module Polysemy.Error
     -- * Actions
   , throw
   , catch
+  , fromEither
+  , fromEitherM
 
     -- * Interpretations
   , runError
@@ -15,6 +17,7 @@ module Polysemy.Error
   ) where
 
 import qualified Control.Exception as X
+import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
 import           Data.Bifunctor (first)
 import           Data.Typeable
@@ -33,6 +36,32 @@ makeSem ''Error
 hush :: Either e a -> Maybe a
 hush (Right a) = Just a
 hush (Left _) = Nothing
+
+
+------------------------------------------------------------------------------
+-- | Upgrade an 'Either' into an 'Error' effect.
+--
+-- @since 0.5.1.0
+fromEither
+    :: Member (Error e) r
+    => Either e a
+    -> Sem r a
+fromEither (Left e) = throw e
+fromEither (Right a) = pure a
+
+
+------------------------------------------------------------------------------
+-- | A combinator doing 'sendM' and 'fromEither' at the same time. Useful for
+-- interoperating with 'IO'.
+--
+-- @since 0.5.1.0
+fromEitherM
+    :: ( Member (Error e) r
+       , Member (Lift m) r
+       )
+    => m (Either e a)
+    -> Sem r a
+fromEitherM = fromEither <=< sendM
 
 
 ------------------------------------------------------------------------------
@@ -120,6 +149,7 @@ runErrorInIO lower
 {-# INLINE runErrorInIO #-}
 
 
+-- TODO(sandy): Can we use the new withLowerToIO machinery for this?
 runErrorAsExc
     :: forall e r a. ( Typeable e
        , Member (Lift IO) r

@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8fb03647195837a675f9058f99e2e51b3f1e765923d7a09509354ee3cca5a92a
+-- hash: 11d5fb86c1da3902ef83b9621e3c0c09388dc66764d4bd65ce62da8022925c79
 
 name:           polysemy
-version:        0.5.0.1
+version:        0.5.1.0
 synopsis:       Higher-order, low-boilerplate, zero-cost free monads.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
 category:       Language

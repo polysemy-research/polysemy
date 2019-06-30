@@ -8,11 +8,13 @@ module Polysemy.Output
   , output
 
     -- * Interpretations
+  , runOutputAsList
   , runFoldMapOutput
   , runIgnoringOutput
   , runBatchOutput
   ) where
 
+import Data.Bifunctor (first)
 import Polysemy
 import Polysemy.State
 
@@ -25,6 +27,18 @@ data Output o m a where
 
 makeSem ''Output
 
+
+------------------------------------------------------------------------------
+-- | Run an 'Output' effect by transforming it into a list of its values.
+runOutputAsList
+    :: forall o r a
+     . Sem (Output o ': r) a
+    -> Sem r ([o], a)
+runOutputAsList = fmap (first reverse) . runState [] . reinterpret
+  (\case
+      Output o -> modify (o :)
+  )
+{-# INLINE runOutputAsList #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into a monoid.
