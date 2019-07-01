@@ -20,6 +20,7 @@ import Data.Kind
 import Fcf
 import GHC.TypeLits
 import Polysemy.Internal.Kind
+import Type.Errors
 
 
 ------------------------------------------------------------------------------
@@ -33,19 +34,6 @@ type family DefiningModule (t :: k) :: Symbol
 type family DefiningModuleForEffect (e :: k) :: Symbol where
   DefiningModuleForEffect (e a) = DefiningModuleForEffect e
   DefiningModuleForEffect e     = DefiningModule e
-
-
-data T1 m a
-
-
-type family IfStuck (tyvar :: k) (b :: k1) (c :: Exp k1) :: k1 where
-  -- TODO(sandy): This behavior is wrong when k is not one of these things
-  IfStuck T1                  b c = b
-  IfStuck "NOT_A_REAL_SYMBOL" b c = b
-  IfStuck 9999999999999999999 b c = b
-  IfStuck a                   b c = Eval c
-
-type WhenStuck a b = IfStuck a b (Pure (() :: Constraint))
 
 
 type AmbigousEffectMessage r e t vs =
@@ -62,21 +50,10 @@ type AmbigousEffectMessage r e t vs =
     ':$$: 'Text "If you already have the constraint you want, instead"
     ':$$: 'Text "  add a type application to specify"
     ':$$: 'Text "    "
-    ':<>: PrettyPrint vs
+    ':<>: PrettyPrintList vs
     ':<>: 'Text " directly, or activate polysemy-plugin which"
     ':$$: 'Text "      can usually infer the type correctly."
         )
-
-type family PrettyPrint (vs :: [k]) where
-  PrettyPrint '[a] =
-    'Text "'" ':<>: 'ShowType a ':<>: 'Text "'"
-  PrettyPrint '[a, b] =
-    'Text "'" ':<>: 'ShowType a ':<>: 'Text "', and "
-    ':<>:
-    'Text "'" ':<>: 'ShowType b ':<>: 'Text "'"
-  PrettyPrint (a ': vs) =
-    'Text "'" ':<>: 'ShowType a ':<>: 'Text "', "
-    ':<>: PrettyPrint vs
 
 
 type family AmbiguousSend r e where
@@ -132,17 +109,13 @@ type family FirstOrderError e (fn :: Symbol) :: k where
 ------------------------------------------------------------------------------
 -- | This constraint gives helpful error messages if you attempt to use a
 -- first-order combinator with a higher-order type.
---
--- Note that the parameter 'm' is only required to work around supporting
--- versions of GHC without QuantifiedConstraints
-type FirstOrder m e fn = IfStuck e (() :: Constraint) (FirstOrderFcf m e fn)
+type FirstOrder e fn = UnlessStuck e (FirstOrderFcf e fn)
 
 data FirstOrderFcf
-    :: (Type -> Type)
-    -> Effect
+    :: Effect
     -> Symbol
     -> Exp Constraint
-type instance Eval (FirstOrderFcf m e fn) = Coercible (e m) (e (FirstOrderError e fn))
+type instance Eval (FirstOrderFcf e fn) = Coercible (e Stuck) (e (FirstOrderError e fn))
 
 
 ------------------------------------------------------------------------------
