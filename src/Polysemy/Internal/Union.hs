@@ -259,4 +259,3 @@ instance {-# OVERLAPPABLE #-} (LastMember end r, MemberNoError end (eff ': r))
 
 instance LastMember end '[end] where
   decompLast = Right
-

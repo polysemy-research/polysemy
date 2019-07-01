@@ -72,11 +72,12 @@ interpretH
     -> Sem r a
 interpretH f (Sem m) = m $ \u ->
   case decomp u of
-    Left  x -> liftSem $ hoist (interpretH_b f) x
+    Left  x -> liftSem $ hoist (interpretH f) x
     Right (Yo e s d y v) -> do
       a <- runTactics s d v $ f e
       pure $ y a
 {-# INLINE interpretH #-}
+
 
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
@@ -92,12 +93,13 @@ interpretInStateT f s (Sem m) = Sem $ \k ->
         Left x -> S.StateT $ \s' ->
           k . fmap swap
             . weave (s', ())
-                    (uncurry $ interpretInStateT_b f)
+                    (uncurry $ interpretInStateT f)
                     (Just . snd)
             $ x
         Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInStateT #-}
+
 
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
@@ -113,12 +115,13 @@ interpretInLazyStateT f s (Sem m) = Sem $ \k ->
         Left x -> LS.StateT $ \s' ->
           k . fmap swap
             . weave (s', ())
-                    (uncurry $ interpretInLazyStateT_b f)
+                    (uncurry $ interpretInLazyStateT f)
                     (Just . snd)
             $ x
         Right (Yo e z _ y _) ->
           fmap (y . (<$ z)) $ LS.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInLazyStateT #-}
+
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but with access to an intermediate state @s@.
@@ -154,7 +157,7 @@ reinterpretH
     -> Sem (e2 ': r) a
 reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
-    Left x  -> k $ hoist (reinterpretH_b f) $ x
+    Left x  -> k $ hoist (reinterpretH f) $ x
     Right (Yo e s d y v) -> do
       a <- usingSem k $ runTactics s (raiseUnder . d) v $ f e
       pure $ y a
@@ -191,7 +194,7 @@ reinterpret2H
     -> Sem (e2 ': e3 ': r) a
 reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
-    Left x  -> k $ weaken $ hoist (reinterpret2H_b f) $ x
+    Left x  -> k $ weaken $ hoist (reinterpret2H f) $ x
     Right (Yo e s d y v) -> do
       a <- usingSem k $ runTactics s (raiseUnder2 . d) v $ f e
       pure $ y a
@@ -223,7 +226,7 @@ reinterpret3H
     -> Sem (e2 ': e3 ': e4 ': r) a
 reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
-    Left x  -> k . weaken . weaken . hoist (reinterpret3H_b f) $ x
+    Left x  -> k . weaken . weaken . hoist (reinterpret3H f) $ x
     Right (Yo e s d y v) -> do
       a <- usingSem k $ runTactics s (raiseUnder3 . d) v $ f e
       pure $ y a
@@ -277,67 +280,5 @@ interceptH f (Sem m) = Sem $ \k -> m $ \u ->
   case prj u of
     Just (Yo e s d y v) ->
       usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
-    Nothing -> k $ hoist (interceptH_b f) u
+    Nothing -> k $ hoist (interceptH f) u
 {-# INLINE interceptH #-}
-
-
-------------------------------------------------------------------------------
--- Loop breakers
-interpretH_b
-    :: (∀ x m . e m x -> Tactical e m r x)
-    -> Sem (e ': r) a
-    -> Sem r a
-interpretH_b = interpretH
-{-# NOINLINE interpretH_b #-}
-
-
-interceptH_b
-    :: Member e r
-    => (∀ x m. e m x -> Tactical e m r x)
-    -> Sem r a
-    -> Sem r a
-interceptH_b = interceptH
-{-# NOINLINE interceptH_b #-}
-
-
-interpretInStateT_b
-    :: (∀ x m. e m x -> S.StateT s (Sem r) x)
-    -> s
-    -> Sem (e ': r) a
-    -> Sem r (s, a)
-interpretInStateT_b = interpretInStateT
-{-# NOINLINE interpretInStateT_b #-}
-
-
-interpretInLazyStateT_b
-    :: (∀ x m. e m x -> LS.StateT s (Sem r) x)
-    -> s
-    -> Sem (e ': r) a
-    -> Sem r (s, a)
-interpretInLazyStateT_b = interpretInLazyStateT
-{-# NOINLINE interpretInLazyStateT_b #-}
-
-
-reinterpretH_b
-    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
-    -> Sem (e1 ': r) a
-    -> Sem (e2 ': r) a
-reinterpretH_b = reinterpretH
-{-# NOINLINE reinterpretH_b #-}
-
-
-reinterpret2H_b
-    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
-    -> Sem (e1 ': r) a
-    -> Sem (e2 ': e3 ': r) a
-reinterpret2H_b = reinterpret2H
-{-# NOINLINE reinterpret2H_b #-}
-
-
-reinterpret3H_b
-    :: (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
-    -> Sem (e1 ': r) a
-    -> Sem (e2 ': e3 ': e4 ': r) a
-reinterpret3H_b = reinterpret3H
-{-# NOINLINE reinterpret3H_b #-}
-

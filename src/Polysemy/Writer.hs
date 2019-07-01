@@ -53,7 +53,7 @@ runWriter = runState mempty . reinterpretH
         modify (`mappend` o) >>= pureT
       Listen m -> do
         mm <- runT m
-        -- TODO(sandy): this is fucking stupid
+        -- TODO(sandy): this is stupid
         (o, fa) <- raise $ runWriter mm
         pure $ fmap (o, ) fa
       Censor f m -> do
@@ -62,4 +62,3 @@ runWriter = runState mempty . reinterpretH
         modify (`mappend` f o)
         pure a
   )
-

@@ -94,7 +94,7 @@ runResourceInIO finish = interpretH $ \case
     u <- bindT use
 
     let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ runResourceInIO_b
+        run_it = finish .@ runResourceInIO
 
     sendM $ X.bracket (run_it a) (run_it . d) (run_it . u)
 
@@ -104,9 +104,10 @@ runResourceInIO finish = interpretH $ \case
     u <- bindT use
 
     let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ runResourceInIO_b
+        run_it = finish .@ runResourceInIO
 
     sendM $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
+{-# INLINE runResourceInIO #-}
 
 
 ------------------------------------------------------------------------------
@@ -123,7 +124,7 @@ runResource = interpretH $ \case
     d <- bindT dealloc
     u <- bindT use
 
-    let run_it = raise . runResource_b
+    let run_it = raise . runResource
     resource <- run_it a
     result <- run_it $ u resource
     _ <- run_it $ d resource
@@ -134,7 +135,7 @@ runResource = interpretH $ \case
     d <- bindT dealloc
     u <- bindT use
 
-    let run_it = raise . runResource_b
+    let run_it = raise . runResource
 
     resource <- run_it a
     result <- run_it $ u resource
@@ -178,7 +179,7 @@ runResourceBase = interpretH $ \case
 
     withLowerToIO $ \lower finish -> do
       let done :: Sem (Resource ': r) x -> IO x
-          done = lower . raise . runResourceBase_b
+          done = lower . raise . runResourceBase
       X.bracket
           (done ma)
           (\x -> done (mb x) >> finish)
@@ -191,35 +192,9 @@ runResourceBase = interpretH $ \case
 
     withLowerToIO $ \lower finish -> do
       let done :: Sem (Resource ': r) x -> IO x
-          done = lower . raise . runResourceBase_b
+          done = lower . raise . runResourceBase
       X.bracketOnError
           (done ma)
           (\x -> done (mb x) >> finish)
           (done . mc)
 {-# INLINE runResourceBase #-}
-
-
-runResource_b
-    :: ∀ r a
-     . Sem (Resource ': r) a
-    -> Sem r a
-runResource_b = runResource
-{-# NOINLINE runResource_b #-}
-
-runResourceInIO_b
-    :: ∀ r a
-     . Member (Lift IO) r
-    => (∀ x. Sem r x -> IO x)
-    -> Sem (Resource ': r) a
-    -> Sem r a
-runResourceInIO_b = runResourceInIO
-{-# NOINLINE runResourceInIO_b #-}
-
-runResourceBase_b
-    :: forall r a
-     . LastMember (Lift IO) r
-    => Sem (Resource ': r) a
-    -> Sem r a
-runResourceBase_b = runResourceBase
-{-# NOINLINE runResourceBase_b #-}
-

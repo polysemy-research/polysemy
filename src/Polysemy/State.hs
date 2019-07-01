@@ -105,15 +105,10 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
                       (\(s', m') -> fmap swap
                                   $ S.runStateT m' s')
                       (Just . snd)
-              $ hoist hoistStateIntoStateT_b x
+              $ hoist hoistStateIntoStateT x
     Right (Yo Get z _ y _)     -> fmap (y . (<$ z)) $ S.get
     Right (Yo (Put s) z _ y _) -> fmap (y . (<$ z)) $ S.put s
 {-# INLINE hoistStateIntoStateT #-}
-
-
-hoistStateIntoStateT_b :: Sem (State s ': r) a -> S.StateT s (Sem r) a
-hoistStateIntoStateT_b = hoistStateIntoStateT
-{-# NOINLINE hoistStateIntoStateT_b #-}
 
 
 {-# RULES "runState/reinterpret"

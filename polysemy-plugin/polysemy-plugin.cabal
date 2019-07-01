@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: df45f7f2f338b1cac819daf739829c387626de2fb09a1e1c2424004faf90d6b8
+-- hash: 50ca26f4a5eaf57d215e1a89d157fd1adc6170d4c2233710224ee466693fa127
 
 name:           polysemy-plugin
 version:        0.2.1.1
@@ -31,7 +31,6 @@ library
   exposed-modules:
       Polysemy.Plugin
       Polysemy.Plugin.Fundep
-      Polysemy.Plugin.InlineRecursiveCalls
       Polysemy.Plugin.Phases
   other-modules:
       Paths_polysemy_plugin
@@ -54,7 +53,6 @@ test-suite polysemy-plugin-test
   other-modules:
       BadSpec
       ExampleSpec
-      InlineRecursiveCallsSpec
       LegitimateTypeErrorSpec
       PluginSpec
       VDQSpec
