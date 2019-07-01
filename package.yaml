@@ -43,12 +43,12 @@ default-extensions:
   - UnicodeSyntax
 
 when:
-  condition: impl(ghc < 8.6)
-  then:
+  - condition: impl(ghc < 8.6)
     default-extensions:
       - MonadFailDesugaring
       - TypeInType
-  else:
+
+  - condition: impl(ghc >= 8.6)
     dependencies:
       - loopbreaker >= 0.1 && < 0.2
 
