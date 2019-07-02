@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes  #-}
 {-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -15,7 +16,6 @@ module Polysemy.Internal.CustomErrors
   , DefiningModuleForEffect
   ) where
 
-import Data.Coerce
 import Data.Kind
 import Fcf
 import GHC.TypeLits
@@ -92,24 +92,26 @@ type family AmbiguousSend r e where
 
 
 
-type family FirstOrderError e (fn :: Symbol) :: ErrorMessage where
-  FirstOrderError e fn =
-    ( 'Text "'"
-          ':<>: 'ShowType e
-          ':<>: 'Text "' is higher-order, but '"
-          ':<>: 'Text fn
-          ':<>: 'Text "' can help only"
-          ':$$: 'Text "with first-order effects."
-          ':$$: 'Text "Fix:"
-          ':$$: 'Text "  use '"
-          ':<>: 'Text fn
-          ':<>: 'Text "H' instead."
-              )
+data FirstOrderErrorFcf :: k -> Symbol -> Exp Constraint
+type instance Eval (FirstOrderErrorFcf e fn) = $(tt[t|
+    UnlessPhantom
+        (e PHANTOM)
+        ( 'Text "'"
+    ':<>: 'ShowType e
+    ':<>: 'Text "' is higher-order, but '"
+    ':<>: 'Text fn
+    ':<>: 'Text "' can help only"
+    ':$$: 'Text "with first-order effects."
+    ':$$: 'Text "Fix:"
+    ':$$: 'Text "  use '"
+    ':<>: 'Text fn
+    ':<>: 'Text "H' instead."
+        ) |])
 
 ------------------------------------------------------------------------------
 -- | This constraint gives helpful error messages if you attempt to use a
 -- first-order combinator with a higher-order type.
-type FirstOrder (e :: Effect) fn = UnlessStuck e (UnlessPhantomFcf (Type -> Type) (e (PHANTOM :: Type -> Type)) (FirstOrderError e fn))
+type FirstOrder (e :: Effect) fn = UnlessStuck e (FirstOrderErrorFcf e fn)
 
 
 ------------------------------------------------------------------------------
