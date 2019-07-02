@@ -92,9 +92,9 @@ type family AmbiguousSend r e where
 
 
 
-type family FirstOrderError e (fn :: Symbol) :: k where
+type family FirstOrderError e (fn :: Symbol) :: ErrorMessage where
   FirstOrderError e fn =
-    TypeError ( 'Text "'"
+    ( 'Text "'"
           ':<>: 'ShowType e
           ':<>: 'Text "' is higher-order, but '"
           ':<>: 'Text fn
@@ -109,13 +109,7 @@ type family FirstOrderError e (fn :: Symbol) :: k where
 ------------------------------------------------------------------------------
 -- | This constraint gives helpful error messages if you attempt to use a
 -- first-order combinator with a higher-order type.
-type FirstOrder e fn = UnlessStuck e (FirstOrderFcf e fn)
-
-data FirstOrderFcf
-    :: Effect
-    -> Symbol
-    -> Exp Constraint
-type instance Eval (FirstOrderFcf e fn) = Coercible (e Stuck) (e (FirstOrderError e fn))
+type FirstOrder (e :: Effect) fn = UnlessStuck e (UnlessPhantomFcf (Type -> Type) (e (PHANTOM :: Type -> Type)) (FirstOrderError e fn))
 
 
 ------------------------------------------------------------------------------

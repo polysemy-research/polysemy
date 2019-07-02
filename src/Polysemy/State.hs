@@ -26,6 +26,7 @@ import           Polysemy
 import           Polysemy.Internal
 import           Polysemy.Internal.Combinators
 import           Polysemy.Internal.Union
+import Data.Kind
 
 
 ------------------------------------------------------------------------------
@@ -36,7 +37,7 @@ import           Polysemy.Internal.Union
 --
 -- Interpreters which require statefulness can 'Polysemy.reinterpret'
 -- themselves in terms of 'State', and subsequently call 'runState'.
-data State s m a where
+data State (s :: Type) m a where
   Get :: State s m s
   Put :: s -> State s m ()
 
