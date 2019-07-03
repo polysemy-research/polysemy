@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f9e13ddfab719fa2b6474d9952cd8a60e0bc1d0fbbd729e0727fb84fc52cb7bc
+-- hash: 20f03d2a73f70cbe054f5ad3b47d63fa80d7cb594ef590f8ce07d55d4a49dd45
 
 name:           polysemy
 version:        0.5.1.0
@@ -80,7 +80,7 @@ library
     , template-haskell >=2.12.0.0 && <3
     , th-abstraction >=0.3.1.0 && <0.4
     , transformers >=0.5.2.0 && <0.6
-    , type-errors >=0.1.0.0
+    , type-errors >=0.2.0.0
     , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
@@ -133,7 +133,7 @@ test-suite polysemy-test
     , template-haskell >=2.12.0.0 && <3
     , th-abstraction >=0.3.1.0 && <0.4
     , transformers >=0.5.2.0 && <0.6
-    , type-errors >=0.1.0.0
+    , type-errors >=0.2.0.0
     , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
@@ -162,7 +162,7 @@ benchmark polysemy-bench
     , template-haskell >=2.12.0.0 && <3
     , th-abstraction >=0.3.1.0 && <0.4
     , transformers >=0.5.2.0 && <0.6
-    , type-errors >=0.1.0.0
+    , type-errors >=0.2.0.0
     , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType

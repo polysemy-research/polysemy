@@ -93,7 +93,7 @@ type family AmbiguousSend r e where
 
 
 data FirstOrderErrorFcf :: k -> Symbol -> Exp Constraint
-type instance Eval (FirstOrderErrorFcf e fn) = $(tt[t|
+type instance Eval (FirstOrderErrorFcf e fn) = $(te[t|
     UnlessPhantom
         (e PHANTOM)
         ( 'Text "'"

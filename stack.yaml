@@ -2,7 +2,6 @@ resolver: lts-13.0
 
 packages:
 - .
-- ../type-errors
 - polysemy-plugin
 
 extra-deps:
@@ -15,5 +14,5 @@ extra-deps:
 - monadLib-3.9
 - th-abstraction-0.3.1.0
 - unagi-chan-0.4.1.0
-# - type-errors-0.1.0.0
+- type-errors-0.2.0.0
 
