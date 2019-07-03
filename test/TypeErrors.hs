@@ -45,14 +45,12 @@ ambiguousPolyState = ()
 
 --------------------------------------------------------------------------------
 -- |
--- TODO(sandy): should this mention 'Reader i' or just 'Reader'?
---
 -- >>> :{
--- interpret @Reader $ \case
+-- interpret @(Reader Bool) $ \case
 --   Ask -> undefined
 -- :}
 -- ...
--- ... 'Reader i' is higher-order, but 'interpret' can help only
+-- ... 'Reader Bool' is higher-order, but 'interpret' can help only
 -- ... with first-order effects.
 -- ...
 -- ... 'interpretH' instead.

@@ -26,6 +26,7 @@ dependencies:
 - first-class-families >= 0.5.0.0 && < 0.6
 - unagi-chan >= 0.4.0.0 && < 0.5
 - async >= 2.2 && < 3
+- type-errors >= 0.2.0.0
 
 default-extensions:
   - DataKinds

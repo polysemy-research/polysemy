@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes  #-}
 {-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -7,7 +8,6 @@
 
 module Polysemy.Internal.CustomErrors
   ( AmbiguousSend
-  , IfStuck
   , WhenStuck
   , FirstOrder
   , UnhandledEffect
@@ -15,28 +15,24 @@ module Polysemy.Internal.CustomErrors
   , DefiningModuleForEffect
   ) where
 
-import Data.Coerce
 import Data.Kind
 import Fcf
 import GHC.TypeLits
 import Polysemy.Internal.Kind
+import Type.Errors
 
 
+------------------------------------------------------------------------------
+-- | The module this effect was originally defined in. This type family is used
+-- only for providing better error messages.
+--
+-- Calls to 'Polysemy.Internal.TH.Effect.makeSem' will automatically give
+-- instances of 'DefiningModule'.
 type family DefiningModule (t :: k) :: Symbol
 
 type family DefiningModuleForEffect (e :: k) :: Symbol where
   DefiningModuleForEffect (e a) = DefiningModuleForEffect e
   DefiningModuleForEffect e     = DefiningModule e
-
-
-data T1 m a
-
-
-type family IfStuck (tyvar :: k) (b :: k1) (c :: Exp k1) :: k1 where
-  IfStuck T1 b c = b
-  IfStuck a  b c = Eval c
-
-type WhenStuck a b = IfStuck a b (Pure (() :: Constraint))
 
 
 type AmbigousEffectMessage r e t vs =
@@ -53,21 +49,10 @@ type AmbigousEffectMessage r e t vs =
     ':$$: 'Text "If you already have the constraint you want, instead"
     ':$$: 'Text "  add a type application to specify"
     ':$$: 'Text "    "
-    ':<>: PrettyPrint vs
+    ':<>: PrettyPrintList vs
     ':<>: 'Text " directly, or activate polysemy-plugin which"
     ':$$: 'Text "      can usually infer the type correctly."
         )
-
-type family PrettyPrint (vs :: [k]) where
-  PrettyPrint '[a] =
-    'Text "'" ':<>: 'ShowType a ':<>: 'Text "'"
-  PrettyPrint '[a, b] =
-    'Text "'" ':<>: 'ShowType a ':<>: 'Text "', and "
-    ':<>:
-    'Text "'" ':<>: 'ShowType b ':<>: 'Text "'"
-  PrettyPrint (a ': vs) =
-    'Text "'" ':<>: 'ShowType a ':<>: 'Text "', "
-    ':<>: PrettyPrint vs
 
 
 type family AmbiguousSend r e where
@@ -103,37 +88,26 @@ type family AmbiguousSend r e where
         )
 
 
-
-
-
-type family FirstOrderError e (fn :: Symbol) :: k where
-  FirstOrderError e fn =
-    TypeError ( 'Text "'"
-          ':<>: 'ShowType e
-          ':<>: 'Text "' is higher-order, but '"
-          ':<>: 'Text fn
-          ':<>: 'Text "' can help only"
-          ':$$: 'Text "with first-order effects."
-          ':$$: 'Text "Fix:"
-          ':$$: 'Text "  use '"
-          ':<>: 'Text fn
-          ':<>: 'Text "H' instead."
-              )
+data FirstOrderErrorFcf :: k -> Symbol -> Exp Constraint
+type instance Eval (FirstOrderErrorFcf e fn) = $(te[t|
+    UnlessPhantom
+        (e PHANTOM)
+        ( 'Text "'"
+    ':<>: 'ShowType e
+    ':<>: 'Text "' is higher-order, but '"
+    ':<>: 'Text fn
+    ':<>: 'Text "' can help only"
+    ':$$: 'Text "with first-order effects."
+    ':$$: 'Text "Fix:"
+    ':$$: 'Text "  use '"
+    ':<>: 'Text fn
+    ':<>: 'Text "H' instead."
+        ) |])
 
 ------------------------------------------------------------------------------
 -- | This constraint gives helpful error messages if you attempt to use a
 -- first-order combinator with a higher-order type.
---
--- Note that the parameter 'm' is only required to work around supporting
--- versions of GHC without QuantifiedConstraints
-type FirstOrder m e fn = IfStuck e (() :: Constraint) (FirstOrderFcf m e fn)
-
-data FirstOrderFcf
-    :: (Type -> Type)
-    -> Effect
-    -> Symbol
-    -> Exp Constraint
-type instance Eval (FirstOrderFcf m e fn) = Coercible (e m) (e (FirstOrderError e fn))
+type FirstOrder (e :: Effect) fn = UnlessStuck e (FirstOrderErrorFcf e fn)
 
 
 ------------------------------------------------------------------------------
@@ -153,12 +127,13 @@ type CheckDocumentation e
   ':<>: 'Text (DefiningModuleForEffect e)
   ':<>: 'Text "'"
 
-type family BreakSym (z :: k -> k) e (c :: Constraint)
-                       (rep :: Symbol) :: k where
-  BreakSym _ e _ "" =  TypeError (UnhandledEffectMsg e ':$$: CheckDocumentation e)
-  BreakSym z e _ c  = z (TypeError (UnhandledEffectMsg e ':$$: CheckDocumentation e))
+type family UnhandledEffect e where
+  UnhandledEffect e =
+    IfStuck (DefiningModule e)
+            (TypeError (UnhandledEffectMsg e))
+            (DoError (UnhandledEffectMsg e ':$$: CheckDocumentation e))
 
-type family UnhandledEffect z e where
-  UnhandledEffect z e =
-    BreakSym z e (TypeError (UnhandledEffectMsg e)) (DefiningModuleForEffect e)
+
+data DoError :: ErrorMessage -> Exp k
+type instance Eval (DoError a) = TypeError a
 

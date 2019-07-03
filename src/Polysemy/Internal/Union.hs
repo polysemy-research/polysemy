@@ -151,7 +151,7 @@ type family IndexOf (ts :: [k]) (n :: Nat) :: k where
 
 type family Found (ts :: [k]) (t :: k) :: Nat where
 #ifndef NO_ERROR_MESSAGES
-  Found '[]       t = UnhandledEffect 'S t
+  Found '[]       t = UnhandledEffect t
 #endif
   Found (t ': ts) t = 'Z
   Found (u ': ts) t = 'S (Found ts t)
