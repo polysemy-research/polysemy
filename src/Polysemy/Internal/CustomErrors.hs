@@ -8,7 +8,6 @@
 
 module Polysemy.Internal.CustomErrors
   ( AmbiguousSend
-  , IfStuck
   , WhenStuck
   , FirstOrder
   , UnhandledEffect
@@ -87,9 +86,6 @@ type family AmbiguousSend r e where
     ':<>: 'Text ") to the context of"
     ':$$: 'Text "    the type signature"
         )
-
-
-
 
 
 data FirstOrderErrorFcf :: k -> Symbol -> Exp Constraint
