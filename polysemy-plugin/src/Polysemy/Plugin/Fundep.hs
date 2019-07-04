@@ -37,15 +37,14 @@ import           CoAxiom
 import           Control.Applicative
 import           Control.Monad
 import           Data.Bifunctor
-import           Data.Bool
 import           Data.Coerce
-import           Data.Function (on)
 import           Data.IORef
 import           Data.List
+import qualified Data.Map as M
 import           Data.Maybe
 import qualified Data.Set as S
-import qualified Data.Map as M
 import           Polysemy.Plugin.Fundep.Stuff
+import           Polysemy.Plugin.Fundep.Unification
 import           TcEvidence
 import           TcPluginM (TcPluginM, tcPluginIO)
 import           TcRnTypes
@@ -57,11 +56,13 @@ import           Type
 
 fundepPlugin :: TcPlugin
 fundepPlugin = TcPlugin
-    { tcPluginInit =
-        (,) <$> tcPluginIO (newIORef S.empty)
-            <*> polysemyStuff
-    , tcPluginSolve = solveFundep
-    , tcPluginStop = const (return ()) }
+  { tcPluginInit =
+      (,) <$> tcPluginIO (newIORef S.empty)
+          <*> polysemyStuff
+  , tcPluginSolve = solveFundep
+  , tcPluginStop = const $ pure ()
+  }
+
 
 data FindConstraint = FindConstraint
   { fcLoc        :: CtLoc
@@ -70,63 +71,38 @@ data FindConstraint = FindConstraint
   , fcRow        :: Type
   }
 
+
 getFindConstraints :: PolysemyStuff 'Things -> [Ct] -> [FindConstraint]
-getFindConstraints (findClass -> cls) cts =
-    [ FindConstraint
-        { fcLoc = ctLoc cd
-        , fcEffectName = effName
-        , fcEffect = eff
-        , fcRow = r
-        }
-    | cd@CDictCan{cc_class = cls', cc_tyargs = [_, r, eff]} <- cts
-    , cls == cls'
-    , let effName = getEffName eff
-    ]
+getFindConstraints (findClass -> cls) cts = do
+  cd@CDictCan{cc_class = cls', cc_tyargs = [_, r, eff]} <- cts
+  guard $ cls == cls'
+  pure $ FindConstraint
+    { fcLoc = ctLoc cd
+    , fcEffectName = getEffName eff
+    , fcEffect = eff
+    , fcRow = r
+    }
+
 
 singleListToJust :: [a] -> Maybe a
 singleListToJust [a] = Just a
 singleListToJust _ = Nothing
 
-findMatchingEffectIfSingular :: FindConstraint -> [FindConstraint] -> Maybe Type
-findMatchingEffectIfSingular (FindConstraint _ effName _ mon) ts = singleListToJust
-    [ eff'
-        | FindConstraint _ effName' eff' mon' <- ts
-        , eqType effName effName'
-        , eqType mon mon'
-        ]
+
+findMatchingEffectIfSingular
+    :: FindConstraint
+    -> [FindConstraint]
+    -> Maybe Type
+findMatchingEffectIfSingular (FindConstraint _ effName _ mon) ts =
+  singleListToJust $ do
+    FindConstraint _ effName' eff' mon' <- ts
+    guard $ eqType effName effName'
+    guard $ eqType mon mon'
+    pure eff'
+
 
 getEffName :: Type -> Type
 getEffName t = fst $ splitAppTys t
-
-
-canUnifyRecursive :: SolveContext -> Type -> Type -> Bool
-canUnifyRecursive solve_ctx = go True
-  where
-    -- It's only OK to solve a polymorphic "given" if we're in the context of
-    -- an interpreter, because it's not really a given!
-    poly_given_ok :: Bool
-    poly_given_ok =
-      case solve_ctx of
-        InterpreterUse _ -> True
-        FunctionDef      -> False
-
-    -- On the first go around, we don't want to unify effects with tyvars, but
-    -- we _do_ want to unify their arguments, thus 'is_first'.
-    go :: Bool -> Type -> Type -> Bool
-    go is_first wanted given =
-      let (w, ws) = splitAppTys wanted
-          (g, gs) = splitAppTys given
-       in (&& bool (canUnify poly_given_ok) eqType is_first w g)
-        . flip all (zip ws gs)
-        $ \(wt, gt) -> canUnify poly_given_ok wt gt || go False wt gt
-
-
-canUnify :: Bool -> Type -> Type -> Bool
-canUnify poly_given_ok wt gt =
-  or [ isTyVarTy wt
-     , isTyVarTy gt && poly_given_ok
-     , eqType wt gt
-     ]
 
 
 ------------------------------------------------------------------------------
@@ -138,12 +114,6 @@ whenA
     -> m (z a)
 whenA False _ = pure empty
 whenA True ma = fmap pure ma
-
-data Unification = Unification
-  { _unifyLHS :: OrdType
-  , _unifyRHS :: OrdType
-  }
-  deriving (Eq, Ord)
 
 
 mkWanted
@@ -170,50 +140,20 @@ countLength as =
 
 
 ------------------------------------------------------------------------------
--- | 'Type's don't have 'Eq' or 'Ord' instances by default, even though there
--- are functions in GHC that implement these operations. This newtype gives us
--- those instances.
-newtype OrdType = OrdType
-  { getOrdType :: Type
-  }
-
-instance Eq OrdType where
-  (==) = eqType `on` getOrdType
-
-instance Ord OrdType where
-  compare = nonDetCmpType `on` getOrdType
-
-
-------------------------------------------------------------------------------
--- | The context in which we're attempting to solve a constraint.
-data SolveContext
-  = -- | In the context of a function definition.
-    FunctionDef
-    -- | In the context of running an interpreter. The 'Bool' corresponds to
-    -- whether we are only trying to solve a single 'Member' constraint right
-    -- now. If so, we *must* produce a unification wanted.
-  | InterpreterUse Bool
-  deriving (Eq, Ord, Show)
-
-mustUnify :: SolveContext -> Bool
-mustUnify FunctionDef = True
-mustUnify (InterpreterUse b) = b
-
-
-------------------------------------------------------------------------------
 -- | Given a list of 'Ct's, find any that are of the form
 -- @[Irred] Sem r a ~ Something@, and return their @r@s.
 getBogusRs :: PolysemyStuff 'Things -> [Ct] -> [Type]
 getBogusRs stuff wanteds = do
   CIrredCan ct _ <- wanteds
   (_, [_, _, a, b]) <- pure . splitAppTys $ ctev_pred ct
-  maybeToList (getRIfSem stuff a) ++ maybeToList (getRIfSem stuff b)
+  maybeToList (extractRowFromSem stuff a)
+    ++ maybeToList (extractRowFromSem stuff b)
 
 
 ------------------------------------------------------------------------------
 -- | Take the @r@ out of @Sem r a@.
-getRIfSem :: PolysemyStuff 'Things -> Type -> Maybe Type
-getRIfSem (semTyCon -> sem) ty = do
+extractRowFromSem :: PolysemyStuff 'Things -> Type -> Maybe Type
+extractRowFromSem (semTyCon -> sem) ty = do
   (tycon, [r, _]) <- splitTyConApp_maybe ty
   guard $ tycon == sem
   pure r
@@ -236,10 +176,6 @@ solveBogusError stuff wanteds = do
   pure (error "bogus proof for stuck type family", ct)
 
 
-unzipNewWanteds :: S.Set Unification -> [(Unification, Ct)] -> ([Unification], [Ct])
-unzipNewWanteds old = unzip . filter (not . flip S.member old . fst)
-
-
 mustItUnify :: [FindConstraint] -> Type -> Bool
 mustItUnify fcs = fromMaybe False
                 . flip M.lookup singular_r
@@ -249,8 +185,6 @@ mustItUnify fcs = fromMaybe False
                . fmap (second (/= 1))
                . countLength
                $ fmap (OrdType . fcRow) fcs
-
-
 
 
 solveFundep
