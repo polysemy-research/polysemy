@@ -147,19 +147,20 @@ data Unification = Unification
 
 
 mkWanted
-    :: SolveContext
-    -> CtLoc
-    -> Type
+    :: FindConstraint
+    -> SolveContext
     -> Type
     -> TcPluginM (Maybe (Unification, Ct))
-mkWanted solve_ctx loc wanted given =
+mkWanted fc solve_ctx given =
   whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $ do
     (ev, _) <- unsafeTcPluginTcM
              . runTcSDeriveds
-             $ newWantedEq loc Nominal wanted given
+             $ newWantedEq (fcLoc fc) Nominal wanted given
     pure ( Unification (OrdType wanted) (OrdType given)
          , CNonCanonical ev
          )
+  where
+    wanted = fcEffect fc
 
 
 countLength ::  Eq a => [a] -> [(a, Int)]
@@ -221,10 +222,11 @@ getRIfSem (semTyCon -> sem) ty = do
 ------------------------------------------------------------------------------
 -- | Given a list of bogus @r@s, and the wanted constraints, produce bogus
 -- evidence terms that will prevent @IfStuck (IndexOf r _) _ _@ error messsages.
-solveBogusError :: PolysemyStuff 'Things -> [Type] -> [Ct] -> [(EvTerm, Ct)]
-solveBogusError stuff bogus wanteds = do
+solveBogusError :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
+solveBogusError stuff wanteds = do
   let splitTyConApp_list = maybeToList  . splitTyConApp_maybe
 
+  let bogus = getBogusRs stuff wanteds
   ct@(CIrredCan ce _) <- wanteds
   (stuck, [_, _, expr, _, _]) <- splitTyConApp_list $ ctev_pred ce
   guard $ stuck == ifStuckTyCon stuff
@@ -258,25 +260,23 @@ solveFundep
     -> [Ct]
     -> TcPluginM TcPluginResult
 solveFundep _ _ _ [] = pure $ TcPluginOk [] []
-solveFundep (ref, stuff) giv _ want = do
-    let solved_bogus = solveBogusError stuff (getBogusRs stuff want) want
-        wanted_finds = getFindConstraints stuff want
-        given_finds  = getFindConstraints stuff giv
+solveFundep (ref, stuff) given _ wanted = do
+  let wanted_finds = getFindConstraints stuff wanted
+      given_finds  = getFindConstraints stuff given
 
-    eqs <- forM wanted_finds $ \fc -> do
-      let loc = fcLoc fc
-          eff = fcEffect fc
-          r  = fcRow fc
-      case findMatchingEffectIfSingular fc given_finds of
-        Nothing -> do
-          case splitAppTys r of
-            (_, [_, eff', _]) -> mkWanted (InterpreterUse $ mustItUnify wanted_finds r) loc eff eff'
-            _                 -> pure Nothing
-        Just eff' -> mkWanted FunctionDef loc eff eff'
+  eqs <- forM wanted_finds $ \fc -> do
+    let r  = fcRow fc
+    case findMatchingEffectIfSingular fc given_finds of
+      Nothing ->
+        case splitAppTys r of
+          (_, [_, eff', _]) ->
+            mkWanted fc (InterpreterUse $ mustItUnify wanted_finds r) eff'
+          _ -> pure Nothing
+      Just eff' -> mkWanted fc FunctionDef eff'
 
-    already_emitted <- tcPluginIO $ readIORef ref
-    let (unifications, new_wanteds) = unzipNewWanteds already_emitted $ catMaybes eqs
+  already_emitted <- tcPluginIO $ readIORef ref
+  let (unifications, new_wanteds) = unzipNewWanteds already_emitted $ catMaybes eqs
+  tcPluginIO $ modifyIORef ref $ S.union $ S.fromList unifications
 
-    tcPluginIO $ modifyIORef ref $ S.union $ S.fromList unifications
-    pure $ TcPluginOk solved_bogus new_wanteds
+  pure $ TcPluginOk (solveBogusError stuff wanted) new_wanteds
 
