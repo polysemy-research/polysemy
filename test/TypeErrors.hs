@@ -140,11 +140,6 @@ missingArgumentToRunResourceInIO = ()
 -- ... Ambiguous use of effect 'State'
 -- ...
 --
--- PROBLEM: because this doesn't typecheck, `get` has type `Sem r0 a1`, which
--- truly is ambiguous!
---
--- SOLUTION: maybe the plugin can detect the case that we're trying to compare
--- a `Sem r` with something completely unrelated, and then just emit bogus
--- `Find` dictionaries?
-missingFmap'WRONG = ()
+-- NOTE: This is fixed by enabling the plugin!
+missingFmap'PLUGIN = ()
 

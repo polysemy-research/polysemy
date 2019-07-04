@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 50ca26f4a5eaf57d215e1a89d157fd1adc6170d4c2233710224ee466693fa127
+-- hash: d8cd2995085b0503fd8a705c9adeb55802c4feebce00cf811bf71474bbceed1f
 
 name:           polysemy-plugin
 version:        0.2.1.1
@@ -45,6 +45,7 @@ library
     , polysemy >=0.1
     , syb >=0.7 && <0.8
     , transformers >=0.5.2.0 && <0.6
+    , type-errors >=0.2
   default-language: Haskell2010
 
 test-suite polysemy-plugin-test
@@ -52,9 +53,11 @@ test-suite polysemy-plugin-test
   main-is: Main.hs
   other-modules:
       BadSpec
+      DoctestSpec
       ExampleSpec
       LegitimateTypeErrorSpec
       PluginSpec
+      TypeErrors
       VDQSpec
       Paths_polysemy_plugin
   hs-source-dirs:
@@ -66,6 +69,7 @@ test-suite polysemy-plugin-test
   build-depends:
       base >=4.9 && <5
     , containers >=0.5 && <0.7
+    , doctest >=0.16.0.1 && <0.17
     , ghc >=8.4.4 && <9
     , ghc-tcplugins-extra >=0.3 && <0.4
     , hspec >=2.6.0 && <3
@@ -75,4 +79,5 @@ test-suite polysemy-plugin-test
     , should-not-typecheck >=2.1.0 && <3
     , syb >=0.7 && <0.8
     , transformers >=0.5.2.0 && <0.6
+    , type-errors >=0.2
   default-language: Haskell2010
