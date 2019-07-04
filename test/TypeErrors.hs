@@ -136,7 +136,8 @@ missingArgumentToRunResourceInIO = ()
 -- ... Ambiguous use of effect 'State'
 -- ...
 --
-missingFmap'WRONG = ()
+-- NOTE: This is fixed by enabling the plugin!
+missingFmap'PLUGIN = ()
 
 --------------------------------------------------------------------------------
 -- |

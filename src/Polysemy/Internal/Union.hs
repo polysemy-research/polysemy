@@ -112,9 +112,11 @@ type Member e r = MemberNoError e r
 type MemberWithError e r =
   ( MemberNoError e r
 #ifndef NO_ERROR_MESSAGES
-  , WhenStuck
-      (IndexOf r (Found r e))
-      (AmbiguousSend r e)
+    -- NOTE: The plugin explicitly pattern matches on
+    -- `WhenStuck (IndexOf r _) _`, so if you change this, make sure to change
+    -- the corresponding implementation in
+    -- Polysemy.Plugin.Fundep.solveBogusError
+  , WhenStuck (IndexOf r (Found r e)) (AmbiguousSend r e)
 #endif
   )
 
