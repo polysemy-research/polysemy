@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TupleSections              #-}
 
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
@@ -38,33 +39,50 @@ import           Control.Applicative
 import           Control.Monad
 import           Data.Bifunctor
 import           Data.Bool
+import           Data.Coerce
 import           Data.Function (on)
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import qualified Data.Set as S
 import           FastString (fsLit)
-import           GHC (ModuleName)
+import           GHC (ModuleName, TyCon)
 import           GHC.TcPluginM.Extra (lookupModule, lookupName)
 import           Module (mkModuleName)
 import           OccName (mkTcOcc)
-import           TcPluginM (TcPluginM, tcLookupClass, tcPluginIO)
+import           TcEvidence
+import           TcPluginM (TcPluginM, tcLookupClass, tcLookupTyCon, tcPluginIO)
 import           TcRnTypes
 import           TcSMonad hiding (tcLookupClass)
 import           TyCoRep (Type (..))
 import           Type
 
 
+polysemyInternal :: ModuleName
+polysemyInternal = mkModuleName "Polysemy.Internal"
+
 polysemyInternalUnion :: ModuleName
 polysemyInternalUnion = mkModuleName "Polysemy.Internal.Union"
+
+typeErrors :: ModuleName
+typeErrors = mkModuleName "Type.Errors"
 
 fundepPlugin :: TcPlugin
 fundepPlugin = TcPlugin
     { tcPluginInit = do
-        md <- lookupModule polysemyInternalUnion (fsLit "polysemy")
-        monadEffectTcNm <- lookupName md (mkTcOcc "Find")
-        (,) <$> tcPluginIO (newIORef S.empty)
-            <*> tcLookupClass monadEffectTcNm
+        teMod  <- lookupModule typeErrors (fsLit "type-errors")
+        piMod  <- lookupModule polysemyInternal (fsLit "polysemy")
+        ifStuckNm <- lookupName teMod (mkTcOcc "IfStuck")
+        semNm <- lookupName piMod (mkTcOcc "Sem")
+        piuMod <- lookupModule polysemyInternalUnion (fsLit "polysemy")
+        monadEffectTcNm <- lookupName piuMod (mkTcOcc "Find")
+        indexOfNm <- lookupName piuMod (mkTcOcc "IndexOf")
+
+        (,,,,) <$> tcPluginIO (newIORef S.empty)
+               <*> tcLookupClass monadEffectTcNm
+               <*> tcLookupTyCon semNm
+               <*> tcLookupTyCon ifStuckNm
+               <*> tcLookupTyCon indexOfNm
     , tcPluginSolve = solveFundep
     , tcPluginStop = const (return ()) }
 
@@ -137,9 +155,10 @@ mkWanted
     -> CtLoc
     -> Type
     -> Type
-    -> TcPluginM (Maybe ( (OrdType, OrdType)  -- the types we want to unify
-                        , Ct                  -- the constraint
-                        ))
+    -> TcPluginM ( Maybe ( (OrdType, OrdType)  -- the types we want to unify
+                         , Ct                  -- the constraint
+                         )
+                 )
 mkWanted solve_ctx loc wanted given =
   whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $ do
     (ev, _) <- unsafeTcPluginTcM
@@ -188,15 +207,47 @@ mustUnify :: SolveContext -> Bool
 mustUnify FunctionDef = True
 mustUnify (InterpreterUse b) = b
 
+getBogusRs :: TyCon -> [Ct] -> [Type]
+getBogusRs sem wanteds = do
+  CIrredCan ct _ <- wanteds
+  case splitAppTys $ ctev_pred ct of
+    (_, [_, _, a, b]) ->
+      maybeToList (getRIfSem sem a)
+        ++ maybeToList (getRIfSem sem b)
+    (_, _) -> []
+
+getRIfSem :: TyCon -> Type -> Maybe Type
+getRIfSem sem ty =
+  case splitTyConApp_maybe ty of
+    Just (tycon, [r, _]) | tycon == sem -> pure r
+    _                                   -> Nothing
+
+
+solveBogusError :: [Type] -> TyCon -> TyCon -> [Ct] -> [(EvTerm, Ct)]
+solveBogusError bogus if_stuck index_of wanteds = do
+  ct@(CIrredCan ce _) <- wanteds
+  case splitTyConApp_maybe $ ctev_pred ce of
+    Just (stuck, [_, _, expr, _, _]) | stuck == if_stuck -> do
+      case splitTyConApp_maybe expr of
+        Just (idx, [_, r, _]) | idx == index_of -> do
+          case elem @[] (OrdType r) $ coerce bogus of
+            True -> pure (error "bogus proof for stuck type family", ct)
+            False -> []
+        _ -> []
+    _ -> []
+
 
 solveFundep
-    :: (IORef (S.Set (OrdType, OrdType)), Class)
+    :: (IORef (S.Set (OrdType, OrdType)), Class, TyCon, TyCon, TyCon)
     -> [Ct]
     -> [Ct]
     -> [Ct]
     -> TcPluginM TcPluginResult
 solveFundep _ _ _ [] = pure $ TcPluginOk [] []
-solveFundep (ref, effCls) giv _ want = do
+solveFundep (ref, effCls, sem, if_stuck, index_of) giv _ want = do
+    let bogus = getBogusRs sem want
+        solved_bogus = solveBogusError bogus if_stuck index_of want
+
     let wantedEffs = allMonadEffectConstraints effCls want
         givenEffs = snd <$> allMonadEffectConstraints effCls giv
         num_wanteds_by_r = countLength eqType $ fmap (thd . snd) wantedEffs
@@ -217,5 +268,5 @@ solveFundep (ref, effCls) giv _ want = do
                     $ catMaybes eqs
 
     tcPluginIO $ modifyIORef ref $ S.union $ S.fromList $ fmap fst new_wanteds
-    pure . TcPluginOk [] $ fmap snd new_wanteds
+    pure . TcPluginOk solved_bogus $ fmap snd new_wanteds
 
