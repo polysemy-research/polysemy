@@ -167,11 +167,11 @@ solveBogusError stuff wanteds = do
 
 ------------------------------------------------------------------------------
 -- | Determine if there is exactly one wanted find for the @r@ in question.
-mustItUnify
+exactlyOneWantedForR
     :: [FindConstraint]  -- ^ Wanted finds
     -> Type              -- ^ Effect row
     -> Bool
-mustItUnify wanteds
+exactlyOneWantedForR wanteds
     = fromMaybe False
     . flip M.lookup singular_r
     . OrdType
@@ -211,7 +211,9 @@ solveFundep (ref, stuff) given _ wanted = do
       Nothing ->
         case splitAppTys r of
           (_, [_, eff', _]) ->
-            mkWanted fc (InterpreterUse $ mustItUnify wanted_finds r) eff'
+            mkWanted fc
+                     (InterpreterUse $ exactlyOneWantedForR wanted_finds r)
+                     eff'
           _ -> pure Nothing
 
   -- We only want to emit a unification wanted once, otherwise a type error can
