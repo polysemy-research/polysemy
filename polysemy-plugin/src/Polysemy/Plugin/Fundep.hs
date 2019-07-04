@@ -157,6 +157,9 @@ mustItUnify fcs = fromMaybe False
                 . OrdType
   where
     singular_r = M.fromList
+               -- TODO(sandy): Nothing fails if this is just @second (const
+               -- True)@. Why not? Incomplete test suite, or doing too much
+               -- work?
                . fmap (second (/= 1))
                . countLength
                $ fmap (OrdType . fcRow) fcs

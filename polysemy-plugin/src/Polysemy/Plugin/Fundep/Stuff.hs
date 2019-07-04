@@ -13,6 +13,10 @@ import TcPluginM (TcPluginM, tcLookupClass, tcLookupTyCon)
 
 
 
+------------------------------------------------------------------------------
+-- | All of the things from "polysemy" that we need access to in the plugin.
+-- When @l ~ 'Locations@, each of these is just a pair of strings. When @l
+-- ~ 'Things@, it's actually references to the stuff.
 data PolysemyStuff (l :: LookupState) = PolysemyStuff
   { findClass    :: ThingOf l Class
   , semTyCon     :: ThingOf l TyCon
@@ -21,6 +25,8 @@ data PolysemyStuff (l :: LookupState) = PolysemyStuff
   }
 
 
+------------------------------------------------------------------------------
+-- | All of the things we need to lookup.
 polysemyStuffLocations :: PolysemyStuff 'Locations
 polysemyStuffLocations = PolysemyStuff
   { findClass    = ("Polysemy.Internal.Union",                  "Find")
@@ -30,6 +36,8 @@ polysemyStuffLocations = PolysemyStuff
   }
 
 
+------------------------------------------------------------------------------
+-- | Lookup all of the 'PolysemyStuff'.
 polysemyStuff :: TcPluginM (PolysemyStuff 'Things)
 polysemyStuff =
   let PolysemyStuff a b c d = polysemyStuffLocations
@@ -39,16 +47,22 @@ polysemyStuff =
                     <*> doLookup d
 
 
+------------------------------------------------------------------------------
+-- | Data kind for 'ThingOf'.
 data LookupState
   = Locations
   | Things
 
 
+------------------------------------------------------------------------------
+-- | HKD indexed by the 'LookupState'; used by 'PolysemyStuff'.
 type family ThingOf (l :: LookupState) (a :: Type) :: Type where
   ThingOf 'Locations _ = (String, String)
-  ThingOf 'Things a = a
+  ThingOf 'Things    a = a
 
 
+------------------------------------------------------------------------------
+-- | Things that can be found in a 'TcPluginM' environment.
 class CanLookup a where
   lookupStrategy :: Name -> TcPluginM a
 
@@ -59,6 +73,8 @@ instance CanLookup TyCon where
   lookupStrategy = tcLookupTyCon
 
 
+------------------------------------------------------------------------------
+-- | Transform a @'ThingOf' 'Locations@ into a @'ThingOf' 'Things@.
 doLookup :: CanLookup a => ThingOf 'Locations a -> TcPluginM (ThingOf 'Things a)
 doLookup (mdname, name) = do
   md <- lookupModule (mkModuleName mdname) $ fsLit "polysemy"

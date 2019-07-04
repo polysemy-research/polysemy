@@ -6,6 +6,8 @@ import Data.List
 
 
 
+------------------------------------------------------------------------------
+-- | Returns the head of the list iff there is exactly one element.
 singleListToJust :: [a] -> Maybe a
 singleListToJust [a] = Just a
 singleListToJust _ = Nothing
@@ -22,6 +24,8 @@ whenA False _ = pure empty
 whenA True ma = fmap pure ma
 
 
+------------------------------------------------------------------------------
+-- | Count the number of times 'a' is present in the list.
 countLength ::  Eq a => [a] -> [(a, Int)]
 countLength as =
   let grouped = group as
