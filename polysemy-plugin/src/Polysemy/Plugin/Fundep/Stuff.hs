@@ -45,7 +45,7 @@ data LookupState
 
 
 type family ThingOf (l :: LookupState) (a :: Type) :: Type where
-  ThingOf 'Locations _ = (String, String, String)
+  ThingOf 'Locations _ = (String, String)
   ThingOf 'Things a = a
 
 
@@ -64,5 +64,4 @@ doLookup (mdname, name) = do
   md  <- lookupModule (mkModuleName mdname) $ fsLit "polysemy"
   nm <- lookupName md $ mkTcOcc name
   lookupStrategy nm
-
 
