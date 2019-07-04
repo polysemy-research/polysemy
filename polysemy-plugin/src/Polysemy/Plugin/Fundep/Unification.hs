@@ -18,9 +18,11 @@ data SolveContext
   | InterpreterUse Bool
   deriving (Eq, Ord, Show)
 
+
 mustUnify :: SolveContext -> Bool
 mustUnify FunctionDef = True
 mustUnify (InterpreterUse b) = b
+
 
 canUnifyRecursive :: SolveContext -> Type -> Type -> Bool
 canUnifyRecursive solve_ctx = go True
@@ -43,6 +45,7 @@ canUnifyRecursive solve_ctx = go True
         . flip all (zip ws gs)
         $ \(wt, gt) -> canUnify poly_given_ok wt gt || go False wt gt
 
+
 canUnify :: Bool -> Type -> Type -> Bool
 canUnify poly_given_ok wt gt =
   or [ isTyVarTy wt
@@ -50,11 +53,13 @@ canUnify poly_given_ok wt gt =
      , eqType wt gt
      ]
 
+
 data Unification = Unification
   { _unifyLHS :: OrdType
   , _unifyRHS :: OrdType
   }
   deriving (Eq, Ord)
+
 
 ------------------------------------------------------------------------------
 -- | 'Type's don't have 'Eq' or 'Ord' instances by default, even though there
@@ -69,6 +74,7 @@ instance Eq OrdType where
 
 instance Ord OrdType where
   compare = nonDetCmpType `on` getOrdType
+
 
 unzipNewWanteds :: S.Set Unification -> [(Unification, Ct)] -> ([Unification], [Ct])
 unzipNewWanteds old = unzip . filter (not . flip S.member old . fst)

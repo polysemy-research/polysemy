@@ -33,23 +33,20 @@
 
 module Polysemy.Plugin.Fundep (fundepPlugin) where
 
-import           CoAxiom
-import           Control.Applicative
 import           Control.Monad
 import           Data.Bifunctor
 import           Data.Coerce
 import           Data.IORef
-import           Data.List
 import qualified Data.Map as M
 import           Data.Maybe
 import qualified Data.Set as S
 import           Polysemy.Plugin.Fundep.Stuff
 import           Polysemy.Plugin.Fundep.Unification
+import           Polysemy.Plugin.Fundep.Utils
 import           TcEvidence
 import           TcPluginM (TcPluginM, tcPluginIO)
 import           TcRnTypes
 import           TcSMonad hiding (tcLookupClass)
-import           TyCoRep (Type (..))
 import           Type
 
 
@@ -84,36 +81,20 @@ getFindConstraints (findClass -> cls) cts = do
     }
 
 
-singleListToJust :: [a] -> Maybe a
-singleListToJust [a] = Just a
-singleListToJust _ = Nothing
-
-
 findMatchingEffectIfSingular
     :: FindConstraint
     -> [FindConstraint]
     -> Maybe Type
-findMatchingEffectIfSingular (FindConstraint _ effName _ mon) ts =
+findMatchingEffectIfSingular (FindConstraint _ eff_name _ r) ts =
   singleListToJust $ do
-    FindConstraint _ effName' eff' mon' <- ts
-    guard $ eqType effName effName'
-    guard $ eqType mon mon'
+    FindConstraint _ eff_name' eff' r' <- ts
+    guard $ eqType eff_name eff_name'
+    guard $ eqType r r'
     pure eff'
 
 
 getEffName :: Type -> Type
 getEffName t = fst $ splitAppTys t
-
-
-------------------------------------------------------------------------------
--- | Like 'Control.Monad.when', but in the context of an 'Alternative'.
-whenA
-    :: (Monad m, Alternative z)
-    => Bool
-    -> m a
-    -> m (z a)
-whenA False _ = pure empty
-whenA True ma = fmap pure ma
 
 
 mkWanted
@@ -131,12 +112,6 @@ mkWanted fc solve_ctx given =
          )
   where
     wanted = fcEffect fc
-
-
-countLength ::  Eq a => [a] -> [(a, Int)]
-countLength as =
-  let grouped = group as
-   in zipWith (curry $ bimap head length) grouped grouped
 
 
 ------------------------------------------------------------------------------
@@ -188,7 +163,9 @@ mustItUnify fcs = fromMaybe False
 
 
 solveFundep
-    :: (IORef (S.Set Unification), PolysemyStuff 'Things)
+    :: ( IORef (S.Set Unification)
+       , PolysemyStuff 'Things
+       )
     -> [Ct]
     -> [Ct]
     -> [Ct]
