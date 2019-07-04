@@ -33,7 +33,6 @@
 
 module Polysemy.Plugin.Fundep (fundepPlugin) where
 
-import           Class
 import           CoAxiom
 import           Control.Applicative
 import           Control.Monad
@@ -42,80 +41,24 @@ import           Data.Bool
 import           Data.Coerce
 import           Data.Function (on)
 import           Data.IORef
-import qualified Data.Kind as K
 import           Data.List
 import           Data.Maybe
 import qualified Data.Set as S
-import           FastString (fsLit)
-import           GHC (TyCon, Name)
-import           GHC.TcPluginM.Extra (lookupModule, lookupName)
-import           Module (mkModuleName)
-import           OccName (mkTcOcc)
+import           Polysemy.Plugin.Fundep.Stuff
 import           TcEvidence
-import           TcPluginM (TcPluginM, tcLookupClass, tcLookupTyCon, tcPluginIO)
+import           TcPluginM (TcPluginM, tcPluginIO)
 import           TcRnTypes
 import           TcSMonad hiding (tcLookupClass)
 import           TyCoRep (Type (..))
 import           Type
 
 
-data LookupState
-  = Locations
-  | Things
-
-
-type family ThingOf (l :: LookupState) (a :: K.Type) :: K.Type where
-  ThingOf 'Locations _ = (String, String, String)
-  ThingOf 'Things a = a
-
-
-data PolysemyStuff (l :: LookupState) = PolysemyStuff
-  { findClass    :: ThingOf l Class
-  , semTyCon     :: ThingOf l TyCon
-  , ifStuckTyCon :: ThingOf l TyCon
-  , indexOfTyCon :: ThingOf l TyCon
-  }
-
-
-class CanLookup a where
-  lookupStrategy :: Name -> TcPluginM a
-
-instance CanLookup Class where
-  lookupStrategy = tcLookupClass
-
-instance CanLookup TyCon where
-  lookupStrategy = tcLookupTyCon
-
-
-doLookup :: CanLookup a => ThingOf 'Locations a -> TcPluginM (ThingOf 'Things a)
-doLookup (package, mdname, name) = do
-  md  <- lookupModule (mkModuleName mdname) $ fsLit package
-  nm <- lookupName md $ mkTcOcc name
-  lookupStrategy nm
-
-
-lookupEverything :: PolysemyStuff 'Locations -> TcPluginM (PolysemyStuff 'Things)
-lookupEverything (PolysemyStuff a b c d) =
-  PolysemyStuff <$> doLookup a
-                <*> doLookup b
-                <*> doLookup c
-                <*> doLookup d
-
-
-polysemyStuffLocations :: PolysemyStuff 'Locations
-polysemyStuffLocations = PolysemyStuff
-  { findClass    = ("polysemy",    "Polysemy.Internal.Union", "Find")
-  , semTyCon     = ("polysemy",    "Polysemy.Internal",       "Sem")
-  , ifStuckTyCon = ("type-errors", "Type.Errors",             "IfStuck")
-  , indexOfTyCon = ("polysemy",    "Polysemy.Internal.Union", "IndexOf")
-  }
-
 
 fundepPlugin :: TcPlugin
 fundepPlugin = TcPlugin
     { tcPluginInit =
         (,) <$> tcPluginIO (newIORef S.empty)
-            <*> lookupEverything polysemyStuffLocations
+            <*> polysemyStuff
     , tcPluginSolve = solveFundep
     , tcPluginStop = const (return ()) }
 
