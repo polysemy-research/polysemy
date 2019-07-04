@@ -5,7 +5,7 @@ module TypeErrors where
 -- $setup
 -- >>> default ()
 -- >>> :set -package polysemy-plugin
--- Loaded package ...
+-- ...
 -- >>> :set -fplugin=Polysemy.Plugin
 -- >>> :m +Polysemy
 -- >>> :m +Polysemy.State
