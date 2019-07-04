@@ -62,9 +62,21 @@ fundepPlugin = TcPlugin
     , tcPluginSolve = solveFundep
     , tcPluginStop = const (return ()) }
 
-allMonadEffectConstraints :: PolysemyStuff 'Things -> [Ct] -> [(CtLoc, (Type, Type, Type))]
-allMonadEffectConstraints (findClass -> cls) cts =
-    [ (ctLoc cd, (effName, eff, r))
+data FindConstraint = FindConstraint
+  { fcLoc        :: CtLoc
+  , fcEffectName :: Type
+  , fcEffect     :: Type
+  , fcRow        :: Type
+  }
+
+getFindConstraints :: PolysemyStuff 'Things -> [Ct] -> [FindConstraint]
+getFindConstraints (findClass -> cls) cts =
+    [ FindConstraint
+        { fcLoc = ctLoc cd
+        , fcEffectName = effName
+        , fcEffect = eff
+        , fcRow = r
+        }
     | cd@CDictCan{cc_class = cls', cc_tyargs = [_, r, eff]} <- cts
     , cls == cls'
     , let effName = getEffName eff
@@ -74,12 +86,13 @@ singleListToJust :: [a] -> Maybe a
 singleListToJust [a] = Just a
 singleListToJust _ = Nothing
 
-findMatchingEffectIfSingular :: (Type, Type, Type) -> [(Type, Type, Type)] -> Maybe Type
-findMatchingEffectIfSingular (effName, _, mon) ts = singleListToJust
+findMatchingEffectIfSingular :: FindConstraint -> [FindConstraint] -> Maybe Type
+findMatchingEffectIfSingular (FindConstraint _ effName _ mon) ts = singleListToJust
     [ eff'
-        | (effName', eff', mon') <- ts
+        | FindConstraint _ effName' eff' mon' <- ts
         , eqType effName effName'
-        , eqType mon mon' ]
+        , eqType mon mon'
+        ]
 
 getEffName :: Type -> Type
 getEffName t = fst $ splitAppTys t
@@ -125,13 +138,19 @@ whenA
 whenA False _ = pure empty
 whenA True ma = fmap pure ma
 
+data Unification = Unification
+  { _unifyLHS :: OrdType
+  , _unifyRHS :: OrdType
+  }
+  deriving (Eq, Ord)
+
 
 mkWanted
     :: SolveContext
     -> CtLoc
     -> Type
     -> Type
-    -> TcPluginM (Maybe ( (OrdType, OrdType)  -- the types we want to unify
+    -> TcPluginM (Maybe ( Unification  -- the types we want to unify
                         , Ct                  -- the constraint
                         ))
 mkWanted solve_ctx loc wanted given =
@@ -139,12 +158,10 @@ mkWanted solve_ctx loc wanted given =
     (ev, _) <- unsafeTcPluginTcM
              . runTcSDeriveds
              $ newWantedEq loc Nominal wanted given
-    pure ( (OrdType wanted, OrdType given)
+    pure ( Unification (OrdType wanted) (OrdType given)
          , CNonCanonical ev
          )
 
-thd :: (a, b, c) -> c
-thd (_, _, c) = c
 
 countLength :: (a -> a -> Bool) -> [a] -> [(a, Int)]
 countLength eq as =
@@ -221,8 +238,13 @@ solveBogusError stuff bogus wanteds = do
     _ -> []
 
 
+unzipNewWanteds :: S.Set Unification -> [(Unification, Ct)] -> ([Unification], [Ct])
+unzipNewWanteds old = unzip . filter (not . flip S.member old . fst)
+
+
+
 solveFundep
-    :: (IORef (S.Set (OrdType, OrdType)), PolysemyStuff 'Things)
+    :: (IORef (S.Set Unification), PolysemyStuff 'Things)
     -> [Ct]
     -> [Ct]
     -> [Ct]
@@ -232,15 +254,18 @@ solveFundep (ref, stuff) giv _ want = do
     let bogus = getBogusRs stuff want
         solved_bogus = solveBogusError stuff bogus want
 
-    let wantedEffs = allMonadEffectConstraints stuff want
-        givenEffs = snd <$> allMonadEffectConstraints stuff giv
-        num_wanteds_by_r = countLength eqType $ fmap (thd . snd) wantedEffs
+    let wantedEffs = getFindConstraints stuff want
+        givenEffs = getFindConstraints stuff giv
+        num_wanteds_by_r = countLength eqType $ fmap fcRow wantedEffs
         must_unify r =
           let Just num_wanted = find (eqType r . fst) num_wanteds_by_r
            in snd num_wanted /= 1
 
-    eqs <- forM wantedEffs $ \(loc, e@(_, eff, r)) -> do
-      case findMatchingEffectIfSingular e givenEffs of
+    eqs <- forM wantedEffs $ \fc -> do
+      let loc = fcLoc fc
+          eff = fcEffect fc
+          r  = fcRow fc
+      case findMatchingEffectIfSingular fc givenEffs of
         Nothing -> do
           case splitAppTys r of
             (_, [_, eff', _]) -> mkWanted (InterpreterUse $ must_unify r) loc eff eff'
@@ -248,9 +273,8 @@ solveFundep (ref, stuff) giv _ want = do
         Just eff' -> mkWanted FunctionDef loc eff eff'
 
     already_emitted <- tcPluginIO $ readIORef ref
-    let new_wanteds = filter (not . flip S.member already_emitted . fst)
-                    $ catMaybes eqs
+    let (unifications, new_wanteds) = unzipNewWanteds already_emitted $ catMaybes eqs
 
-    tcPluginIO $ modifyIORef ref $ S.union $ S.fromList $ fmap fst new_wanteds
-    pure . TcPluginOk solved_bogus $ fmap snd new_wanteds
+    tcPluginIO $ modifyIORef ref $ S.union $ S.fromList unifications
+    pure $ TcPluginOk solved_bogus new_wanteds
 

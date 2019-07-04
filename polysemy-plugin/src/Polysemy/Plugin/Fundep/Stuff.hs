@@ -61,7 +61,7 @@ instance CanLookup TyCon where
 
 doLookup :: CanLookup a => ThingOf 'Locations a -> TcPluginM (ThingOf 'Things a)
 doLookup (mdname, name) = do
-  md  <- lookupModule (mkModuleName mdname) $ fsLit "polysemy"
+  md <- lookupModule (mkModuleName mdname) $ fsLit "polysemy"
   nm <- lookupName md $ mkTcOcc name
   lookupStrategy nm
 
