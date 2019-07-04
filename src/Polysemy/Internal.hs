@@ -256,20 +256,15 @@ hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 -- | Introduce an effect into 'Sem'. Analogous to
 -- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem
 raise :: ∀ e r a. Sem r a -> Sem (e ': r) a
-raise = hoistSem $ hoist raise_b . weaken
+raise = hoistSem $ hoist raise . weaken
 {-# INLINE raise #-}
-
-
-raise_b :: Sem r a -> Sem (e ': r) a
-raise_b = raise
-{-# NOINLINE raise_b #-}
 
 
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces a new effect underneath the head of the
 -- list.
 raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
-raiseUnder = hoistSem $ hoist raiseUnder_b . weakenUnder
+raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
   where
     weakenUnder :: ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': r) m x
     weakenUnder (Union SZ a) = Union SZ a
@@ -278,16 +273,11 @@ raiseUnder = hoistSem $ hoist raiseUnder_b . weakenUnder
 {-# INLINE raiseUnder #-}
 
 
-raiseUnder_b :: Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
-raiseUnder_b = raiseUnder
-{-# NOINLINE raiseUnder_b #-}
-
-
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces two new effects underneath the head of the
 -- list.
 raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
-raiseUnder2 = hoistSem $ hoist raiseUnder2_b . weakenUnder2
+raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
   where
     weakenUnder2 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': r) m x
     weakenUnder2 (Union SZ a) = Union SZ a
@@ -296,27 +286,17 @@ raiseUnder2 = hoistSem $ hoist raiseUnder2_b . weakenUnder2
 {-# INLINE raiseUnder2 #-}
 
 
-raiseUnder2_b :: Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
-raiseUnder2_b = raiseUnder2
-{-# NOINLINE raiseUnder2_b #-}
-
-
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces two new effects underneath the head of the
 -- list.
 raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
-raiseUnder3 = hoistSem $ hoist raiseUnder3_b . weakenUnder3
+raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
   where
     weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
     weakenUnder3 (Union SZ a) = Union SZ a
     weakenUnder3 (Union (SS n) a) = Union (SS (SS (SS (SS n)))) a
     {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
-
-
-raiseUnder3_b :: Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
-raiseUnder3_b = raiseUnder3
-{-# NOINLINE raiseUnder3_b #-}
 
 
 ------------------------------------------------------------------------------

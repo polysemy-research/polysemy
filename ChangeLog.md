@@ -1,5 +1,38 @@
 # Changelog for polysemy
 
+## 0.5.1.0 (2019-06-28)
+
+- New combinators for `Polysemy.Error`: `fromEither` and `fromEitherM`
+
+## 0.5.0.1 (2019-06-27)
+
+- Fixed a bug where `intercept` and `interceptH` wouldn't correctly handle
+    higher-order effects
+
+## 0.5.0.0 (2019-06-26)
+
+### Breaking Changes
+
+- Removed the internal `Effect` machinery
+
+### New Effects and Interpretations
+
+- New effect; `Async`, for describing asynchronous computations
+- New interpretation for `Resource`: `runResourceBase`, which can lower
+    `Resource` effects without giving a lowering natural transformation
+- New interpretation for `Trace`: `runTraceAsList`
+- New combinator: `withLowerToIO`, which is capable of transforming
+    `IO`-invariant functions as effects.
+
+### Other Changes
+
+- Lots of hard work on the package and CI infrastructure to make it green on
+    GHC 8.4.4 (thanks to @jkachmar)
+- Changed the order of the types for `runMonadicInput` to be more helpful
+    (thanks to @tempname11)
+- Improved the error machinery to be more selective about when it runs
+- Factored out the TH into a common library for third-party consumers
+
 ## 0.4.0.0 (2019-06-12)
 
 ### Breaking Changes
@@ -83,7 +116,4 @@
 - Initial release
 
 ## Unreleased changes
-
-- Lots of hard work on the package and CI infrastructure to make it green on
-    GHC 8.4.4 (thanks to @jkachmar)
 

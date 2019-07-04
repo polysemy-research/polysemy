@@ -1,11 +1,13 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE CPP                   #-}
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE StrictData            #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE AllowAmbiguousTypes     #-}
+{-# LANGUAGE CPP                     #-}
+{-# LANGUAGE ConstraintKinds         #-}
+{-# LANGUAGE FlexibleInstances       #-}
+{-# LANGUAGE FunctionalDependencies  #-}
+{-# LANGUAGE MultiParamTypeClasses   #-}
+{-# LANGUAGE StrictData              #-}
+{-# LANGUAGE TypeFamilies            #-}
+{-# LANGUAGE UndecidableInstances    #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -13,6 +15,7 @@ module Polysemy.Internal.Union
   ( Union (..)
   , Yo (..)
   , Member
+  , MemberWithError
   , weave
   , hoist
   -- * Building Unions
@@ -27,8 +30,10 @@ module Polysemy.Internal.Union
   -- * Witnesses
   , SNat (..)
   , Nat (..)
+  , LastMember (..)
   ) where
 
+import Data.Bifunctor
 import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
@@ -102,14 +107,22 @@ hoist f' (Union w (Yo e s nt f v)) = Union w $ Yo e s (f' . nt) f v
 ------------------------------------------------------------------------------
 -- | A proof that the effect @e@ is available somewhere inside of the effect
 -- stack @r@.
-type Member e r = Member' e r
+type Member e r = MemberNoError e r
 
-type Member' e r =
+type MemberWithError e r =
+  ( MemberNoError e r
+#ifndef NO_ERROR_MESSAGES
+    -- NOTE: The plugin explicitly pattern matches on
+    -- `WhenStuck (IndexOf r _) _`, so if you change this, make sure to change
+    -- the corresponding implementation in
+    -- Polysemy.Plugin.Fundep.solveBogusError
+  , WhenStuck (IndexOf r (Found r e)) (AmbiguousSend r e)
+#endif
+  )
+
+type MemberNoError e r =
   ( Find r e
   , e ~ IndexOf r (Found r e)
-#ifndef NO_ERROR_MESSAGES
-  , Break (AmbiguousSend r e) (IndexOf r (Found r e))
-#endif
   )
 
 
@@ -142,7 +155,7 @@ type family IndexOf (ts :: [k]) (n :: Nat) :: k where
 
 type family Found (ts :: [k]) (t :: k) :: Nat where
 #ifndef NO_ERROR_MESSAGES
-  Found '[]       t = UnhandledEffect 'S t
+  Found '[]       t = UnhandledEffect t
 #endif
   Found (t ': ts) t = 'Z
   Found (u ': ts) t = 'S (Found ts t)
@@ -189,9 +202,10 @@ absurdU = absurdU
 
 ------------------------------------------------------------------------------
 -- | Weaken a 'Union' so it is capable of storing a new sort of effect.
-weaken :: Union r m a -> Union (e ': r) m a
+weaken :: forall e r m a. Union r m a -> Union (e ': r) m a
 weaken (Union n a) = Union (SS n) a
 {-# INLINE weaken #-}
+
 
 
 ------------------------------------------------------------------------------
@@ -233,3 +247,19 @@ decompCoerce (Union p a) =
 {-# INLINE decompCoerce #-}
 
 
+------------------------------------------------------------------------------
+-- | A proof that @end@ is the last effect in the row.
+--
+-- @since 0.5.0.0
+class MemberNoError end r => LastMember end r | r -> end where
+  decompLast
+      :: Union r m a
+      -> Either (Union r m a) (Union '[end] m a)
+
+instance {-# OVERLAPPABLE #-} (LastMember end r, MemberNoError end (eff ': r))
+      => LastMember end (eff ': r) where
+  decompLast (Union SZ u)     = Left $ Union SZ u
+  decompLast (Union (SS n) u) = first weaken $ decompLast $ Union n u
+
+instance LastMember end '[end] where
+  decompLast = Right

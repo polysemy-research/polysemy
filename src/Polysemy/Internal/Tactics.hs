@@ -191,7 +191,7 @@ runTactics
    -> Sem r a
 runTactics s d v (Sem m) = m $ \u ->
   case decomp u of
-    Left x -> liftSem $ hoist (runTactics_b s d v) x
+    Left x -> liftSem $ hoist (runTactics s d v) x
     Right (Yo GetInitialState s' _ y _) ->
       pure $ y $ s <$ s'
     Right (Yo (HoistInterpretation na) s' _ y _) -> do
@@ -199,15 +199,4 @@ runTactics s d v (Sem m) = m $ \u ->
     Right (Yo GetInspector s' _ y _) -> do
       pure $ y $ Inspector v <$ s'
 {-# INLINE runTactics #-}
-
-
-runTactics_b
-   :: Functor f
-   => f ()
-   -> (∀ x. f (m x) -> Sem r2 (f x))
-   -> (∀ x. f x -> Maybe x)
-   -> Sem (Tactics f m r2 ': r) a
-   -> Sem r a
-runTactics_b = runTactics
-{-# NOINLINE runTactics_b #-}
 

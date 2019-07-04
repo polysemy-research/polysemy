@@ -7,6 +7,8 @@ module Polysemy.Error
     -- * Actions
   , throw
   , catch
+  , fromEither
+  , fromEitherM
 
     -- * Interpretations
   , runError
@@ -15,6 +17,7 @@ module Polysemy.Error
   ) where
 
 import qualified Control.Exception as X
+import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
 import           Data.Bifunctor (first)
 import           Data.Typeable
@@ -36,6 +39,32 @@ hush (Left _) = Nothing
 
 
 ------------------------------------------------------------------------------
+-- | Upgrade an 'Either' into an 'Error' effect.
+--
+-- @since 0.5.1.0
+fromEither
+    :: Member (Error e) r
+    => Either e a
+    -> Sem r a
+fromEither (Left e) = throw e
+fromEither (Right a) = pure a
+
+
+------------------------------------------------------------------------------
+-- | A combinator doing 'sendM' and 'fromEither' at the same time. Useful for
+-- interoperating with 'IO'.
+--
+-- @since 0.5.1.0
+fromEitherM
+    :: ( Member (Error e) r
+       , Member (Lift m) r
+       )
+    => m (Either e a)
+    -> Sem r a
+fromEitherM = fromEither <=< sendM
+
+
+------------------------------------------------------------------------------
 -- | Run an 'Error' effect in the style of
 -- 'Control.Monad.Trans.Except.ExceptT'.
 runError
@@ -45,27 +74,21 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
   case decomp u of
     Left x -> E.ExceptT $ k $
       weave (Right ())
-            (either (pure . Left) runError_b)
+            (either (pure . Left) runError)
             hush
             x
     Right (Yo (Throw e) _ _ _ _) -> E.throwE e
     Right (Yo (Catch try handle) s d y _) ->
       E.ExceptT $ usingSem k $ do
-        ma <- runError_b $ d $ try <$ s
+        ma <- runError $ d $ try <$ s
         case ma of
           Right a -> pure . Right $ y a
           Left e -> do
-            ma' <- runError_b $ d $ (<$ s) $ handle e
+            ma' <- runError $ d $ (<$ s) $ handle e
             case ma' of
               Left e' -> pure $ Left e'
               Right a -> pure . Right $ y a
 {-# INLINE runError #-}
-
-runError_b
-    :: Sem (Error e ': r) a
-    -> Sem r (Either e a)
-runError_b = runError
-{-# NOINLINE runError_b #-}
 
 
 ------------------------------------------------------------------------------
@@ -126,6 +149,7 @@ runErrorInIO lower
 {-# INLINE runErrorInIO #-}
 
 
+-- TODO(sandy): Can we use the new withLowerToIO machinery for this?
 runErrorAsExc
     :: forall e r a. ( Typeable e
        , Member (Lift IO) r
@@ -139,19 +163,8 @@ runErrorAsExc lower = interpretH $ \case
     is <- getInitialStateT
     t  <- runT try
     h  <- bindT handle
-    let runIt = lower . runErrorAsExc_b lower
+    let runIt = lower . runErrorAsExc lower
     sendM $ X.catch (runIt t) $ \(se :: WrappedExc e) ->
       runIt $ h $ unwrapExc se <$ is
 {-# INLINE runErrorAsExc #-}
-
-
-runErrorAsExc_b
-    :: ( Typeable e
-       , Member (Lift IO) r
-       )
-    => (∀ x. Sem r x -> IO x)
-    -> Sem (Error e ': r) a
-    -> Sem r a
-runErrorAsExc_b = runErrorAsExc
-{-# NOINLINE runErrorAsExc_b #-}
 

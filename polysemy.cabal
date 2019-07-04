@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3bb11d1562f0640e892b918e3de6086196562200410a660b14851704b64175a0
+-- hash: 25e48329e5ee5f51e4a893420673166950aa3e236cad9156a38250ca0d782dc0
 
 name:           polysemy
-version:        0.4.0.0
+version:        0.5.1.0
 synopsis:       Higher-order, low-boilerplate, zero-cost free monads.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
 category:       Language
@@ -40,6 +40,7 @@ flag error-messages
 library
   exposed-modules:
       Polysemy
+      Polysemy.Async
       Polysemy.Error
       Polysemy.Fixpoint
       Polysemy.Input
@@ -47,6 +48,7 @@ library
       Polysemy.Internal.Combinators
       Polysemy.Internal.CustomErrors
       Polysemy.Internal.Fixpoint
+      Polysemy.Internal.Forklift
       Polysemy.Internal.Kind
       Polysemy.Internal.Lift
       Polysemy.Internal.NonDet
@@ -69,7 +71,8 @@ library
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -Wall
   build-depends:
-      base >=4.9 && <5
+      async >=2.2 && <3
+    , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.6
     , mtl >=2.2.2 && <3
@@ -77,16 +80,24 @@ library
     , template-haskell >=2.12.0.0 && <3
     , th-abstraction >=0.3.1.0 && <0.4
     , transformers >=0.5.2.0 && <0.6
+    , type-errors >=0.2.0.0
+    , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
+  if impl(ghc >= 8.6)
+    build-depends:
+        loopbreaker >=0.1 && <0.2
   if flag(dump-core)
-    ghc-options: -fplugin=DumpCore -fplugin-opt DumpCore:core-html
+    ghc-options: -fplugin=DumpCore -fplugin-opt=DumpCore:core-html
     build-depends:
         dump-core
   if impl(ghc < 8.2.2)
     build-depends:
         unsupported-ghc-version >1 && <1
+  if impl(ghc >= 8.6)
+    ghc-options: -fplugin=Loopbreaker
   if flag(error-messages)
+    cpp-options: -DCABAL_SERIOUSLY_CMON_MATE
   else
     cpp-options: -DNO_ERROR_MESSAGES
   default-language: Haskell2010
@@ -96,11 +107,13 @@ test-suite polysemy-test
   main-is: Main.hs
   other-modules:
       AlternativeSpec
+      AsyncSpec
       BracketSpec
       DoctestSpec
       FusionSpec
       HigherOrderSpec
       InspectorSpec
+      InterceptSpec
       OutputSpec
       ThEffectSpec
       TypeErrors
@@ -112,20 +125,26 @@ test-suite polysemy-test
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
   build-depends:
-      base >=4.9 && <5
+      async >=2.2 && <3
+    , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , doctest >=0.16.0.1 && <0.17
     , first-class-families >=0.5.0.0 && <0.6
     , hspec >=2.6.0 && <3
-    , inspection-testing >=0.4.2.1 && <0.5
+    , inspection-testing >=0.4.2 && <0.5
     , mtl >=2.2.2 && <3
     , polysemy
     , syb >=0.7 && <0.8
     , template-haskell >=2.12.0.0 && <3
     , th-abstraction >=0.3.1.0 && <0.4
     , transformers >=0.5.2.0 && <0.6
+    , type-errors >=0.2.0.0
+    , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
+  if impl(ghc >= 8.6)
+    build-depends:
+        loopbreaker >=0.1 && <0.2
   default-language: Haskell2010
 
 benchmark polysemy-bench
@@ -138,7 +157,8 @@ benchmark polysemy-bench
       bench
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
-      base >=4.9 && <5
+      async >=2.2 && <3
+    , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , criterion
     , first-class-families >=0.5.0.0 && <0.6
@@ -150,6 +170,11 @@ benchmark polysemy-bench
     , template-haskell >=2.12.0.0 && <3
     , th-abstraction >=0.3.1.0 && <0.4
     , transformers >=0.5.2.0 && <0.6
+    , type-errors >=0.2.0.0
+    , unagi-chan >=0.4.0.0 && <0.5
   if impl(ghc < 8.6)
     default-extensions: MonadFailDesugaring TypeInType
+  if impl(ghc >= 8.6)
+    build-depends:
+        loopbreaker >=0.1 && <0.2
   default-language: Haskell2010

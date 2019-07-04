@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes  #-}
 {-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -7,20 +8,26 @@
 
 module Polysemy.Internal.CustomErrors
   ( AmbiguousSend
-  , Break
+  , WhenStuck
   , FirstOrder
   , UnhandledEffect
   , DefiningModule
   , DefiningModuleForEffect
   ) where
 
-import Data.Coerce
 import Data.Kind
 import Fcf
 import GHC.TypeLits
 import Polysemy.Internal.Kind
+import Type.Errors
 
 
+------------------------------------------------------------------------------
+-- | The module this effect was originally defined in. This type family is used
+-- only for providing better error messages.
+--
+-- Calls to 'Polysemy.Internal.TH.Effect.makeSem' will automatically give
+-- instances of 'DefiningModule'.
 type family DefiningModule (t :: k) :: Symbol
 
 type family DefiningModuleForEffect (e :: k) :: Symbol where
@@ -28,20 +35,38 @@ type family DefiningModuleForEffect (e :: k) :: Symbol where
   DefiningModuleForEffect e     = DefiningModule e
 
 
-data T1 m a
-
-type family Break (c :: Constraint)
-                  (rep :: Effect) :: Constraint where
-  Break _ T1 = ((), ())
-  Break _ c  = ()
+-- TODO(sandy): Put in type-errors
+type ShowTypeBracketed t = 'Text "("
+                     ':<>: 'ShowType t
+                     ':<>: 'Text ")"
 
 
-type family IfStuck (tyvar :: k) (b :: k1) (c :: Exp k1) :: k1 where
-  IfStuck T1 b c = b
-  IfStuck a  b c = Eval c
+------------------------------------------------------------------------------
+-- | The constructor of the effect row --- it's either completely polymorphic,
+-- a nil, or a cons.
+data EffectRowCtor = TyVarR | NilR | ConsR
 
 
-type AmbigousEffectMessage r e t vs =
+------------------------------------------------------------------------------
+-- | Given that @r@ isn't stuck, determine which constructor it has.
+type family UnstuckRState (r :: EffectRow) :: EffectRowCtor where
+  UnstuckRState '[]      = 'NilR
+  UnstuckRState (_ ': _) = 'ConsR
+
+
+------------------------------------------------------------------------------
+-- | Put brackets around @r@ if it's a cons.
+type family ShowRQuoted (rstate :: EffectRowCtor) (r :: EffectRow) :: ErrorMessage where
+  ShowRQuoted 'TyVarR r = 'ShowType r
+  ShowRQuoted 'NilR   r = 'ShowType r
+  ShowRQuoted 'ConsR  r = ShowTypeBracketed r
+
+
+type AmbigousEffectMessage (rstate :: EffectRowCtor)
+                           (r :: EffectRow)
+                           (e :: k)
+                           (t :: Effect)
+                           (vs :: [Type]) =
         ( 'Text "Ambiguous use of effect '"
     ':<>: 'ShowType e
     ':<>: 'Text "'"
@@ -49,51 +74,45 @@ type AmbigousEffectMessage r e t vs =
     ':$$: 'Text "  add (Member ("
     ':<>: 'ShowType t
     ':<>: 'Text ") "
-    ':<>: 'ShowType r
+    ':<>: ShowRQuoted rstate r
     ':<>: 'Text ") to the context of "
     ':$$: 'Text "    the type signature"
     ':$$: 'Text "If you already have the constraint you want, instead"
     ':$$: 'Text "  add a type application to specify"
     ':$$: 'Text "    "
-    ':<>: PrettyPrint vs
+    ':<>: PrettyPrintList vs
     ':<>: 'Text " directly, or activate polysemy-plugin which"
     ':$$: 'Text "      can usually infer the type correctly."
         )
 
-type family PrettyPrint (vs :: [k]) where
-  PrettyPrint '[a] =
-    'Text "'" ':<>: 'ShowType a ':<>: 'Text "'"
-  PrettyPrint '[a, b] =
-    'Text "'" ':<>: 'ShowType a ':<>: 'Text "', and "
-    ':<>:
-    'Text "'" ':<>: 'ShowType b ':<>: 'Text "'"
-  PrettyPrint (a ': vs) =
-    'Text "'" ':<>: 'ShowType a ':<>: 'Text "', "
-    ':<>: PrettyPrint vs
+type AmbiguousSend r e =
+      (IfStuck r
+        (AmbiguousSendError 'TyVarR r e)
+        (Pure (AmbiguousSendError (UnstuckRState r) r e)))
 
 
-type family AmbiguousSend r e where
-  AmbiguousSend r (e a b c d f) =
-    TypeError (AmbigousEffectMessage r e (e a b c d f) '[a, b c d f])
+type family AmbiguousSendError rstate r e where
+  AmbiguousSendError rstate r (e a b c d f) =
+    TypeError (AmbigousEffectMessage rstate r e (e a b c d f) '[a, b c d f])
 
-  AmbiguousSend r (e a b c d) =
-    TypeError (AmbigousEffectMessage r e (e a b c d) '[a, b c d])
+  AmbiguousSendError rstate r (e a b c d) =
+    TypeError (AmbigousEffectMessage rstate r e (e a b c d) '[a, b c d])
 
-  AmbiguousSend r (e a b c) =
-    TypeError (AmbigousEffectMessage r e (e a b c) '[a, b c])
+  AmbiguousSendError rstate r (e a b c) =
+    TypeError (AmbigousEffectMessage rstate r e (e a b c) '[a, b c])
 
-  AmbiguousSend r (e a b) =
-    TypeError (AmbigousEffectMessage r e (e a b) '[a, b])
+  AmbiguousSendError rstate r (e a b) =
+    TypeError (AmbigousEffectMessage rstate r e (e a b) '[a, b])
 
-  AmbiguousSend r (e a) =
-    TypeError (AmbigousEffectMessage r e (e a) '[a])
+  AmbiguousSendError rstate r (e a) =
+    TypeError (AmbigousEffectMessage rstate r e (e a) '[a])
 
-  AmbiguousSend r e =
+  AmbiguousSendError rstate r e =
     TypeError
         ( 'Text "Could not deduce: (Member "
     ':<>: 'ShowType e
     ':<>: 'Text " "
-    ':<>: 'ShowType r
+    ':<>: ShowRQuoted rstate r
     ':<>: 'Text ") "
     ':$$: 'Text "Fix:"
     ':$$: 'Text "  add (Member "
@@ -105,37 +124,26 @@ type family AmbiguousSend r e where
         )
 
 
-
-
-
-type family FirstOrderError e (fn :: Symbol) :: k where
-  FirstOrderError e fn =
-    TypeError ( 'Text "'"
-          ':<>: 'ShowType e
-          ':<>: 'Text "' is higher-order, but '"
-          ':<>: 'Text fn
-          ':<>: 'Text "' can help only"
-          ':$$: 'Text "with first-order effects."
-          ':$$: 'Text "Fix:"
-          ':$$: 'Text "  use '"
-          ':<>: 'Text fn
-          ':<>: 'Text "H' instead."
-              )
+data FirstOrderErrorFcf :: k -> Symbol -> Exp Constraint
+type instance Eval (FirstOrderErrorFcf e fn) = $(te[t|
+    UnlessPhantom
+        (e PHANTOM)
+        ( 'Text "'"
+    ':<>: 'ShowType e
+    ':<>: 'Text "' is higher-order, but '"
+    ':<>: 'Text fn
+    ':<>: 'Text "' can help only"
+    ':$$: 'Text "with first-order effects."
+    ':$$: 'Text "Fix:"
+    ':$$: 'Text "  use '"
+    ':<>: 'Text fn
+    ':<>: 'Text "H' instead."
+        ) |])
 
 ------------------------------------------------------------------------------
 -- | This constraint gives helpful error messages if you attempt to use a
 -- first-order combinator with a higher-order type.
---
--- Note that the parameter 'm' is only required to work around supporting
--- versions of GHC without QuantifiedConstraints
-type FirstOrder m e fn = IfStuck e (() :: Constraint) (FirstOrderFcf m e fn)
-
-data FirstOrderFcf
-    :: (Type -> Type)
-    -> Effect
-    -> Symbol
-    -> Exp Constraint
-type instance Eval (FirstOrderFcf m e fn) = Coercible (e m) (e (FirstOrderError e fn))
+type FirstOrder (e :: Effect) fn = UnlessStuck e (FirstOrderErrorFcf e fn)
 
 
 ------------------------------------------------------------------------------
@@ -155,12 +163,13 @@ type CheckDocumentation e
   ':<>: 'Text (DefiningModuleForEffect e)
   ':<>: 'Text "'"
 
-type family BreakSym (z :: k -> k) e (c :: Constraint)
-                       (rep :: Symbol) :: k where
-  BreakSym _ e _ "" =  TypeError (UnhandledEffectMsg e ':$$: CheckDocumentation e)
-  BreakSym z e _ c  = z (TypeError (UnhandledEffectMsg e ':$$: CheckDocumentation e))
+type family UnhandledEffect e where
+  UnhandledEffect e =
+    IfStuck (DefiningModule e)
+            (TypeError (UnhandledEffectMsg e))
+            (DoError (UnhandledEffectMsg e ':$$: CheckDocumentation e))
 
-type family UnhandledEffect z e where
-  UnhandledEffect z e =
-    BreakSym z e (TypeError (UnhandledEffectMsg e)) (DefiningModuleForEffect e)
+
+data DoError :: ErrorMessage -> Exp k
+type instance Eval (DoError a) = TypeError a
 

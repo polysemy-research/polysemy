@@ -13,6 +13,7 @@ module Polysemy.Resource
     -- * Interpretations
   , runResource
   , runResourceInIO
+  , runResourceBase
   ) where
 
 import qualified Control.Exception as X
@@ -93,7 +94,7 @@ runResourceInIO finish = interpretH $ \case
     u <- bindT use
 
     let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ runResourceInIO_b
+        run_it = finish .@ runResourceInIO
 
     sendM $ X.bracket (run_it a) (run_it . d) (run_it . u)
 
@@ -103,9 +104,10 @@ runResourceInIO finish = interpretH $ \case
     u <- bindT use
 
     let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ runResourceInIO_b
+        run_it = finish .@ runResourceInIO
 
     sendM $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
+{-# INLINE runResourceInIO #-}
 
 
 ------------------------------------------------------------------------------
@@ -122,7 +124,7 @@ runResource = interpretH $ \case
     d <- bindT dealloc
     u <- bindT use
 
-    let run_it = raise . runResource_b
+    let run_it = raise . runResource
     resource <- run_it a
     result <- run_it $ u resource
     _ <- run_it $ d resource
@@ -133,7 +135,7 @@ runResource = interpretH $ \case
     d <- bindT dealloc
     u <- bindT use
 
-    let run_it = raise . runResource_b
+    let run_it = raise . runResource
 
     resource <- run_it a
     result <- run_it $ u resource
@@ -147,19 +149,52 @@ runResource = interpretH $ \case
 {-# INLINE runResource #-}
 
 
-runResource_b
-    :: ∀ r a
-     . Sem (Resource ': r) a
+------------------------------------------------------------------------------
+-- | A more flexible --- though less safe ---  version of 'runResourceInIO'.
+--
+-- This function is capable of running 'Resource' effects anywhere within an
+-- effect stack, without relying on an explicit function to lower it into 'IO'.
+-- Notably, this means that 'Polysemy.State.State' effects will be consistent
+-- in the presence of 'Resource'.
+--
+-- 'runResourceBase' is safe whenever you're concerned about exceptions thrown
+-- by effects _already handled_ in your effect stack, or in 'IO' code run
+-- directly inside of 'bracket'. It is not safe against exceptions thrown
+-- explicitly at the main thread. If this is not safe enough for your use-case,
+-- use 'runResourceInIO' instead.
+--
+-- This function creates a thread, and so should be compiled with @-threaded@.
+--
+-- @since 0.5.0.0
+runResourceBase
+    :: forall r a
+     . LastMember (Lift IO) r
+    => Sem (Resource ': r) a
     -> Sem r a
-runResource_b = runResource
-{-# NOINLINE runResource_b #-}
+runResourceBase = interpretH $ \case
+  Bracket a b c -> do
+    ma <- runT a
+    mb <- bindT b
+    mc <- bindT c
 
-runResourceInIO_b
-    :: ∀ r a
-     . Member (Lift IO) r
-    => (∀ x. Sem r x -> IO x)
-    -> Sem (Resource ': r) a
-    -> Sem r a
-runResourceInIO_b = runResourceInIO
-{-# NOINLINE runResourceInIO_b #-}
+    withLowerToIO $ \lower finish -> do
+      let done :: Sem (Resource ': r) x -> IO x
+          done = lower . raise . runResourceBase
+      X.bracket
+          (done ma)
+          (\x -> done (mb x) >> finish)
+          (done . mc)
 
+  BracketOnError a b c -> do
+    ma <- runT a
+    mb <- bindT b
+    mc <- bindT c
+
+    withLowerToIO $ \lower finish -> do
+      let done :: Sem (Resource ': r) x -> IO x
+          done = lower . raise . runResourceBase
+      X.bracketOnError
+          (done ma)
+          (\x -> done (mb x) >> finish)
+          (done . mc)
+{-# INLINE runResourceBase #-}

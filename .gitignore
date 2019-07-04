@@ -5,3 +5,5 @@ core-html/
 *.prof
 .ghc.environment.*
 dist-newstyle
+*.hi
+*.o

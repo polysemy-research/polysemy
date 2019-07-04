@@ -1,6 +1,6 @@
 # polysemy-plugin
 
-[![Build Status](https://api.travis-ci.org/isovector/polysemy.svg?branch=master)](https://travis-ci.org/isovector/polysemy)
+[![Build Status](https://api.travis-ci.org/polysemy-research/polysemy.svg?branch=master)](https://travis-ci.org/isovector/polysemy-research)
 [![Hackage](https://img.shields.io/hackage/v/polysemy-plugin.svg?logo=haskell)](https://hackage.haskell.org/package/polysemy-plugin)
 
 ## Dedication

@@ -41,12 +41,8 @@ runReader i = interpretH $ \case
   Ask -> pureT i
   Local f m -> do
     mm <- runT m
-    raise $ runReader_b (f i) mm
+    raise $ runReader (f i) mm
 {-# INLINE runReader #-}
-
-runReader_b :: i -> Sem (Reader i ': r) a -> Sem r a
-runReader_b = runReader
-{-# NOINLINE runReader_b #-}
 
 
 ------------------------------------------------------------------------------
