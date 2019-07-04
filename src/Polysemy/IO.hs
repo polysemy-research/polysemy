@@ -3,10 +3,13 @@
 module Polysemy.IO
   ( -- * Interpretations
     runIO
+  , runEmbedded
   ) where
 
-import Polysemy
 import Control.Monad.IO.Class
+import Polysemy
+import Polysemy.Internal
+import Polysemy.Internal.Union
 
 
 ------------------------------------------------------------------------------
@@ -40,4 +43,31 @@ runIO
     -> Sem r a
 runIO = interpret $ sendM . liftIO @m . unLift
 {-# INLINE runIO #-}
+
+
+------------------------------------------------------------------------------
+-- | Given some @'MonadIO' m@, interpret all @'Lift' m@ actions in that monad
+-- at once. This is useful for interpreting effects like databases, which use
+-- their own monad for describing actions.
+--
+-- This function creates a thread, and so should be compiled with @-threaded@.
+--
+-- TODO(sandy): @since
+runEmbedded
+    :: ( LastMember (Lift IO) r
+       , MonadIO m
+       )
+    => (forall x. m x -> IO x)  -- ^ The means of running this monad.
+    -> Sem (Lift m ': r) a
+    -> Sem r a
+runEmbedded run_m (Sem m) = withLowerToIO $ \lower _ ->
+  run_m $ m $ \u ->
+    case decomp u of
+      Left x -> liftIO
+              . lower
+              . liftSem
+              $ hoist (runEmbedded run_m) x
+
+      Right (Yo (Lift wd) s _ y _) ->
+        fmap y $ fmap (<$ s) wd
 

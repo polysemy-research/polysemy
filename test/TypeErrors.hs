@@ -106,13 +106,9 @@ runningTooManyEffects = ()
 -- ...
 -- ... Ambiguous use of effect 'State'
 -- ...
--- ... (Member (State ()) State Int : r) ...
+-- ... (Member (State ()) (State Int : r)) ...
 -- ...
---
--- PROBLEM: There should be parentheses around `State Int : r`
---
--- SOLUTION: Emit parens only when the effect row is of the form `e1 ': ...`
-missingParens'WRONG = ()
+ambiguousSendInConcreteR = ()
 
 
 --------------------------------------------------------------------------------
@@ -142,4 +138,17 @@ missingArgumentToRunResourceInIO = ()
 --
 -- NOTE: This is fixed by enabling the plugin!
 missingFmap'PLUGIN = ()
+
+--------------------------------------------------------------------------------
+-- |
+-- >>> :{
+-- foo :: Sem '[State Int, Lift IO] ()
+-- foo = output ()
+-- :}
+-- ...
+-- ... Unhandled effect 'Output ()'
+-- ...
+-- ... add an interpretation for 'Output ()'
+-- ...
+missingEffectInStack'WRONG = ()
 

@@ -40,17 +40,9 @@ runViaForklift chan (Sem m) = Sem $ \k -> m $ \u -> do
       mvar <- newEmptyMVar
       writeChan chan $ Forklift mvar x
       takeMVar mvar
-    Right y -> k $ hoist (runViaForklift_b chan) y
+    Right y -> k $ hoist (runViaForklift chan) y
 {-# INLINE runViaForklift #-}
 
-
-runViaForklift_b
-    :: LastMember (Lift IO) r
-    => InChan (Forklift r)
-    -> Sem r a
-    -> Sem '[Lift IO] a
-runViaForklift_b = runViaForklift
-{-# NOINLINE runViaForklift_b #-}
 
 
 ------------------------------------------------------------------------------
