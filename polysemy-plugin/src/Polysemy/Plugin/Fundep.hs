@@ -150,9 +150,7 @@ mkWanted
     -> CtLoc
     -> Type
     -> Type
-    -> TcPluginM (Maybe ( Unification  -- the types we want to unify
-                        , Ct                  -- the constraint
-                        ))
+    -> TcPluginM (Maybe (Unification, Ct))
 mkWanted solve_ctx loc wanted given =
   whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $ do
     (ev, _) <- unsafeTcPluginTcM
@@ -206,19 +204,17 @@ mustUnify (InterpreterUse b) = b
 getBogusRs :: PolysemyStuff 'Things -> [Ct] -> [Type]
 getBogusRs stuff wanteds = do
   CIrredCan ct _ <- wanteds
-  case splitAppTys $ ctev_pred ct of
-    (_, [_, _, a, b]) ->
-      maybeToList (getRIfSem stuff a) ++ maybeToList (getRIfSem stuff b)
-    (_, _) -> []
+  (_, [_, _, a, b]) <- pure . splitAppTys $ ctev_pred ct
+  maybeToList (getRIfSem stuff a) ++ maybeToList (getRIfSem stuff b)
 
 
 ------------------------------------------------------------------------------
 -- | Take the @r@ out of @Sem r a@.
 getRIfSem :: PolysemyStuff 'Things -> Type -> Maybe Type
-getRIfSem (semTyCon -> sem) ty =
-  case splitTyConApp_maybe ty of
-    Just (tycon, [r, _]) | tycon == sem -> pure r
-    _                                   -> Nothing
+getRIfSem (semTyCon -> sem) ty = do
+  (tycon, [r, _]) <- splitTyConApp_maybe ty
+  guard $ tycon == sem
+  pure r
 
 
 ------------------------------------------------------------------------------
@@ -226,16 +222,15 @@ getRIfSem (semTyCon -> sem) ty =
 -- evidence terms that will prevent @IfStuck (IndexOf r _) _ _@ error messsages.
 solveBogusError :: PolysemyStuff 'Things -> [Type] -> [Ct] -> [(EvTerm, Ct)]
 solveBogusError stuff bogus wanteds = do
+  let splitTyConApp_list = maybeToList  . splitTyConApp_maybe
+
   ct@(CIrredCan ce _) <- wanteds
-  case splitTyConApp_maybe $ ctev_pred ce of
-    Just (stuck, [_, _, expr, _, _]) | stuck == ifStuckTyCon stuff -> do
-      case splitTyConApp_maybe expr of
-        Just (idx, [_, r, _]) | idx == indexOfTyCon stuff -> do
-          case elem @[] (OrdType r) $ coerce bogus of
-            True -> pure (error "bogus proof for stuck type family", ct)
-            False -> []
-        _ -> []
-    _ -> []
+  (stuck, [_, _, expr, _, _]) <- splitTyConApp_list $ ctev_pred ce
+  guard $ stuck == ifStuckTyCon stuff
+  (idx, [_, r, _]) <- splitTyConApp_list expr
+  guard $ idx == indexOfTyCon stuff
+  guard $ elem @[] (OrdType r) $ coerce bogus
+  pure (error "bogus proof for stuck type family", ct)
 
 
 unzipNewWanteds :: S.Set Unification -> [(Unification, Ct)] -> ([Unification], [Ct])
