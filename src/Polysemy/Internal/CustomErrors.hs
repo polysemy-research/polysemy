@@ -35,7 +35,38 @@ type family DefiningModuleForEffect (e :: k) :: Symbol where
   DefiningModuleForEffect e     = DefiningModule e
 
 
-type AmbigousEffectMessage r e t vs =
+-- TODO(sandy): Put in type-errors
+type ShowTypeBracketed t = 'Text "("
+                     ':<>: 'ShowType t
+                     ':<>: 'Text ")"
+
+
+------------------------------------------------------------------------------
+-- | The constructor of the effect row --- it's either completely polymorphic,
+-- a nil, or a cons.
+data EffectRowCtor = TyVarR | NilR | ConsR
+
+
+------------------------------------------------------------------------------
+-- | Given that @r@ isn't stuck, determine which constructor it has.
+type family UnstuckRState (r :: EffectRow) :: EffectRowCtor where
+  UnstuckRState '[]      = 'NilR
+  UnstuckRState (_ ': _) = 'ConsR
+
+
+------------------------------------------------------------------------------
+-- | Put brackets around @r@ if it's a cons.
+type family ShowRQuoted (rstate :: EffectRowCtor) (r :: EffectRow) :: ErrorMessage where
+  ShowRQuoted 'TyVarR r = 'ShowType r
+  ShowRQuoted 'NilR   r = 'ShowType r
+  ShowRQuoted 'ConsR  r = ShowTypeBracketed r
+
+
+type AmbigousEffectMessage (rstate :: EffectRowCtor)
+                           (r :: EffectRow)
+                           (e :: k)
+                           (t :: Effect)
+                           (vs :: [Type]) =
         ( 'Text "Ambiguous use of effect '"
     ':<>: 'ShowType e
     ':<>: 'Text "'"
@@ -43,7 +74,7 @@ type AmbigousEffectMessage r e t vs =
     ':$$: 'Text "  add (Member ("
     ':<>: 'ShowType t
     ':<>: 'Text ") "
-    ':<>: 'ShowType r
+    ':<>: ShowRQuoted rstate r
     ':<>: 'Text ") to the context of "
     ':$$: 'Text "    the type signature"
     ':$$: 'Text "If you already have the constraint you want, instead"
@@ -54,29 +85,34 @@ type AmbigousEffectMessage r e t vs =
     ':$$: 'Text "      can usually infer the type correctly."
         )
 
+type AmbiguousSend r e =
+      (IfStuck r
+        (AmbiguousSendError 'TyVarR r e)
+        (Pure (AmbiguousSendError (UnstuckRState r) r e)))
 
-type family AmbiguousSend r e where
-  AmbiguousSend r (e a b c d f) =
-    TypeError (AmbigousEffectMessage r e (e a b c d f) '[a, b c d f])
 
-  AmbiguousSend r (e a b c d) =
-    TypeError (AmbigousEffectMessage r e (e a b c d) '[a, b c d])
+type family AmbiguousSendError rstate r e where
+  AmbiguousSendError rstate r (e a b c d f) =
+    TypeError (AmbigousEffectMessage rstate r e (e a b c d f) '[a, b c d f])
 
-  AmbiguousSend r (e a b c) =
-    TypeError (AmbigousEffectMessage r e (e a b c) '[a, b c])
+  AmbiguousSendError rstate r (e a b c d) =
+    TypeError (AmbigousEffectMessage rstate r e (e a b c d) '[a, b c d])
 
-  AmbiguousSend r (e a b) =
-    TypeError (AmbigousEffectMessage r e (e a b) '[a, b])
+  AmbiguousSendError rstate r (e a b c) =
+    TypeError (AmbigousEffectMessage rstate r e (e a b c) '[a, b c])
 
-  AmbiguousSend r (e a) =
-    TypeError (AmbigousEffectMessage r e (e a) '[a])
+  AmbiguousSendError rstate r (e a b) =
+    TypeError (AmbigousEffectMessage rstate r e (e a b) '[a, b])
 
-  AmbiguousSend r e =
+  AmbiguousSendError rstate r (e a) =
+    TypeError (AmbigousEffectMessage rstate r e (e a) '[a])
+
+  AmbiguousSendError rstate r e =
     TypeError
         ( 'Text "Could not deduce: (Member "
     ':<>: 'ShowType e
     ':<>: 'Text " "
-    ':<>: 'ShowType r
+    ':<>: ShowRQuoted rstate r
     ':<>: 'Text ") "
     ':$$: 'Text "Fix:"
     ':$$: 'Text "  add (Member "
