@@ -23,7 +23,6 @@ dependencies:
 - syb >= 0.7 && < 0.8
 - transformers >= 0.5.2.0 && < 0.6
 - containers >= 0.5 && < 0.7
-- type-errors >= 0.2
 
 library:
   source-dirs: src
