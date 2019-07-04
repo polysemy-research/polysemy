@@ -44,6 +44,7 @@ import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import qualified Data.Set as S
+import qualified Data.Map as M
 import           Polysemy.Plugin.Fundep.Stuff
 import           TcEvidence
 import           TcPluginM (TcPluginM, tcPluginIO)
@@ -161,9 +162,9 @@ mkWanted solve_ctx loc wanted given =
          )
 
 
-countLength :: (a -> a -> Bool) -> [a] -> [(a, Int)]
-countLength eq as =
-  let grouped = groupBy eq as
+countLength ::  Eq a => [a] -> [(a, Int)]
+countLength as =
+  let grouped = group as
    in zipWith (curry $ bimap head length) grouped grouped
 
 
@@ -237,6 +238,18 @@ unzipNewWanteds :: S.Set Unification -> [(Unification, Ct)] -> ([Unification], [
 unzipNewWanteds old = unzip . filter (not . flip S.member old . fst)
 
 
+mustItUnify :: [FindConstraint] -> Type -> Bool
+mustItUnify fcs = fromMaybe False
+                . flip M.lookup singular_r
+                . OrdType
+  where
+    singular_r = M.fromList
+               . fmap (second (/= 1))
+               . countLength
+               $ fmap (OrdType . fcRow) fcs
+
+
+
 
 solveFundep
     :: (IORef (S.Set Unification), PolysemyStuff 'Things)
@@ -246,24 +259,18 @@ solveFundep
     -> TcPluginM TcPluginResult
 solveFundep _ _ _ [] = pure $ TcPluginOk [] []
 solveFundep (ref, stuff) giv _ want = do
-    let bogus = getBogusRs stuff want
-        solved_bogus = solveBogusError stuff bogus want
+    let solved_bogus = solveBogusError stuff (getBogusRs stuff want) want
+        wanted_finds = getFindConstraints stuff want
+        given_finds  = getFindConstraints stuff giv
 
-    let wantedEffs = getFindConstraints stuff want
-        givenEffs = getFindConstraints stuff giv
-        num_wanteds_by_r = countLength eqType $ fmap fcRow wantedEffs
-        must_unify r =
-          let Just num_wanted = find (eqType r . fst) num_wanteds_by_r
-           in snd num_wanted /= 1
-
-    eqs <- forM wantedEffs $ \fc -> do
+    eqs <- forM wanted_finds $ \fc -> do
       let loc = fcLoc fc
           eff = fcEffect fc
           r  = fcRow fc
-      case findMatchingEffectIfSingular fc givenEffs of
+      case findMatchingEffectIfSingular fc given_finds of
         Nothing -> do
           case splitAppTys r of
-            (_, [_, eff', _]) -> mkWanted (InterpreterUse $ must_unify r) loc eff eff'
+            (_, [_, eff', _]) -> mkWanted (InterpreterUse $ mustItUnify wanted_finds r) loc eff eff'
             _                 -> pure Nothing
         Just eff' -> mkWanted FunctionDef loc eff eff'
 
