@@ -188,10 +188,9 @@ mkWanted
     -> CtLoc
     -> Type
     -> Type
-    -> TcPluginM ( Maybe ( (OrdType, OrdType)  -- the types we want to unify
-                         , Ct                  -- the constraint
-                         )
-                 )
+    -> TcPluginM (Maybe ( (OrdType, OrdType)  -- the types we want to unify
+                        , Ct                  -- the constraint
+                        ))
 mkWanted solve_ctx loc wanted given =
   whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $ do
     (ev, _) <- unsafeTcPluginTcM
