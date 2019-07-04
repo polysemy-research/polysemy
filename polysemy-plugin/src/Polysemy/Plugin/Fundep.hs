@@ -61,14 +61,19 @@ fundepPlugin = TcPlugin
   }
 
 
+------------------------------------------------------------------------------
+-- | Corresponds to a 'Polysemy.Internal.Union.Find' constraint. For example,
+-- given @Member (State s) r@, we would get:
 data FindConstraint = FindConstraint
   { fcLoc        :: CtLoc
-  , fcEffectName :: Type
-  , fcEffect     :: Type
-  , fcRow        :: Type
+  , fcEffectName :: Type  -- ^ @State@
+  , fcEffect     :: Type  -- ^ @State s@
+  , fcRow        :: Type  -- ^ @r@
   }
 
 
+------------------------------------------------------------------------------
+-- | Given a list of constraints, filter out the 'FindConstraint's.
 getFindConstraints :: PolysemyStuff 'Things -> [Ct] -> [FindConstraint]
 getFindConstraints (findClass -> cls) cts = do
   cd@CDictCan{cc_class = cls', cc_tyargs = [_, r, eff]} <- cts
@@ -81,6 +86,9 @@ getFindConstraints (findClass -> cls) cts = do
     }
 
 
+------------------------------------------------------------------------------
+-- | If there's only a single @Member@ in the same @r@ whose effect name
+-- matches, return its effect (including tyvars.)
 findMatchingEffectIfSingular
     :: FindConstraint
     -> [FindConstraint]
@@ -93,14 +101,20 @@ findMatchingEffectIfSingular (FindConstraint _ eff_name _ r) ts =
     pure eff'
 
 
+------------------------------------------------------------------------------
+-- | Given an effect, compute its effect name.
 getEffName :: Type -> Type
 getEffName t = fst $ splitAppTys t
 
 
+------------------------------------------------------------------------------
+-- | Generate a wanted unification for the effect described by the
+-- 'FindConstraint' and the given effect --- if they can be unified in this
+-- context.
 mkWanted
     :: FindConstraint
     -> SolveContext
-    -> Type
+    -> Type  -- ^ The given effect.
     -> TcPluginM (Maybe (Unification, Ct))
 mkWanted fc solve_ctx given =
   whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $ do
@@ -151,10 +165,16 @@ solveBogusError stuff wanteds = do
   pure (error "bogus proof for stuck type family", ct)
 
 
-mustItUnify :: [FindConstraint] -> Type -> Bool
-mustItUnify fcs = fromMaybe False
-                . flip M.lookup singular_r
-                . OrdType
+------------------------------------------------------------------------------
+-- | Determine if there is exactly one wanted find for the @r@ in question.
+mustItUnify
+    :: [FindConstraint]  -- ^ Wanted finds
+    -> Type              -- ^ Effect row
+    -> Bool
+mustItUnify wanteds
+    = fromMaybe False
+    . flip M.lookup singular_r
+    . OrdType
   where
     singular_r = M.fromList
                -- TODO(sandy): Nothing fails if this is just @second (const
@@ -162,7 +182,7 @@ mustItUnify fcs = fromMaybe False
                -- work?
                . fmap (second (/= 1))
                . countLength
-               $ fmap (OrdType . fcRow) fcs
+               $ fmap (OrdType . fcRow) wanteds
 
 
 solveFundep
@@ -181,13 +201,21 @@ solveFundep (ref, stuff) given _ wanted = do
   eqs <- forM wanted_finds $ \fc -> do
     let r  = fcRow fc
     case findMatchingEffectIfSingular fc given_finds of
+      -- We found a real given, therefore we are in the context of a function
+      -- with an explicit @Member e r@ constraint.
+      Just eff' -> mkWanted fc FunctionDef eff'
+
+      -- Otherwise, check to see if @r ~ (e ': r')@. If so, pretend we're
+      -- trying to solve a given @Member e r@. But this can only happen in the
+      -- context of an interpreter!
       Nothing ->
         case splitAppTys r of
           (_, [_, eff', _]) ->
             mkWanted fc (InterpreterUse $ mustItUnify wanted_finds r) eff'
           _ -> pure Nothing
-      Just eff' -> mkWanted fc FunctionDef eff'
 
+  -- We only want to emit a unification wanted once, otherwise a type error can
+  -- force the type checker to loop forever.
   already_emitted <- tcPluginIO $ readIORef ref
   let (unifications, new_wanteds) = unzipNewWanteds already_emitted $ catMaybes eqs
   tcPluginIO $ modifyIORef ref $ S.union $ S.fromList unifications
