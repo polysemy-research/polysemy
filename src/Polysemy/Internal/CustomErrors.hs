@@ -19,7 +19,8 @@ import Data.Kind
 import Fcf
 import GHC.TypeLits
 import Polysemy.Internal.Kind
-import Type.Errors
+import Polysemy.Internal.CustomErrors.Redefined
+import Type.Errors hiding (IfStuck, WhenStuck, UnlessStuck)
 
 
 ------------------------------------------------------------------------------

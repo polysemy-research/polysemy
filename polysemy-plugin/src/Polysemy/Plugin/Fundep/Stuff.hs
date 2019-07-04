@@ -23,10 +23,10 @@ data PolysemyStuff (l :: LookupState) = PolysemyStuff
 
 polysemyStuffLocations :: PolysemyStuff 'Locations
 polysemyStuffLocations = PolysemyStuff
-  { findClass    = ("polysemy",    "Polysemy.Internal.Union", "Find")
-  , semTyCon     = ("polysemy",    "Polysemy.Internal",       "Sem")
-  , ifStuckTyCon = ("type-errors", "Type.Errors",             "IfStuck")
-  , indexOfTyCon = ("polysemy",    "Polysemy.Internal.Union", "IndexOf")
+  { findClass    = ("Polysemy.Internal.Union",                  "Find")
+  , semTyCon     = ("Polysemy.Internal",                        "Sem")
+  , ifStuckTyCon = ("Polysemy.Internal.CustomErrors.Redefined", "IfStuck")
+  , indexOfTyCon = ("Polysemy.Internal.Union",                  "IndexOf")
   }
 
 
@@ -60,8 +60,8 @@ instance CanLookup TyCon where
 
 
 doLookup :: CanLookup a => ThingOf 'Locations a -> TcPluginM (ThingOf 'Things a)
-doLookup (package, mdname, name) = do
-  md  <- lookupModule (mkModuleName mdname) $ fsLit package
+doLookup (mdname, name) = do
+  md  <- lookupModule (mkModuleName mdname) $ fsLit "polysemy"
   nm <- lookupName md $ mkTcOcc name
   lookupStrategy nm
 
