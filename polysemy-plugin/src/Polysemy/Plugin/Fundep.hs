@@ -61,19 +61,19 @@ import           Type
 
 data LookupState
   = Locations
-  | Lookups
+  | Things
 
 
-type family LookedUp (l :: LookupState) (a :: K.Type) :: K.Type where
-  LookedUp 'Locations _ = (String, String, String)
-  LookedUp 'Lookups a = a
+type family ThingOf (l :: LookupState) (a :: K.Type) :: K.Type where
+  ThingOf 'Locations _ = (String, String, String)
+  ThingOf 'Things a = a
 
 
 data PolysemyStuff (l :: LookupState) = PolysemyStuff
-  { findClass    :: LookedUp l Class
-  , semTyCon     :: LookedUp l TyCon
-  , ifStuckTyCon :: LookedUp l TyCon
-  , indexOfTyCon :: LookedUp l TyCon
+  { findClass    :: ThingOf l Class
+  , semTyCon     :: ThingOf l TyCon
+  , ifStuckTyCon :: ThingOf l TyCon
+  , indexOfTyCon :: ThingOf l TyCon
   }
 
 
@@ -87,14 +87,14 @@ instance CanLookup TyCon where
   lookupStrategy = tcLookupTyCon
 
 
-doLookup :: CanLookup a => LookedUp 'Locations a -> TcPluginM (LookedUp 'Lookups a)
+doLookup :: CanLookup a => ThingOf 'Locations a -> TcPluginM (ThingOf 'Things a)
 doLookup (package, mdname, name) = do
   md  <- lookupModule (mkModuleName mdname) $ fsLit package
   nm <- lookupName md $ mkTcOcc name
   lookupStrategy nm
 
 
-lookupEverything :: PolysemyStuff 'Locations -> TcPluginM (PolysemyStuff 'Lookups)
+lookupEverything :: PolysemyStuff 'Locations -> TcPluginM (PolysemyStuff 'Things)
 lookupEverything (PolysemyStuff a b c d) =
   PolysemyStuff <$> doLookup a
                 <*> doLookup b
@@ -104,10 +104,10 @@ lookupEverything (PolysemyStuff a b c d) =
 
 polysemyStuffLocations :: PolysemyStuff 'Locations
 polysemyStuffLocations = PolysemyStuff
-  { findClass    = ("polysemy", "Polysemy.Internal.Union", "Find")
-  , semTyCon     = ("polysemy", "Polysemy.Internal", "Sem")
-  , ifStuckTyCon = ("type-errors", "Type.Errors", "IfStuck")
-  , indexOfTyCon = ("polysemy", "Polysemy.Internal.Union", "IndexOf")
+  { findClass    = ("polysemy",    "Polysemy.Internal.Union", "Find")
+  , semTyCon     = ("polysemy",    "Polysemy.Internal",       "Sem")
+  , ifStuckTyCon = ("type-errors", "Type.Errors",             "IfStuck")
+  , indexOfTyCon = ("polysemy",    "Polysemy.Internal.Union", "IndexOf")
   }
 
 
@@ -119,7 +119,7 @@ fundepPlugin = TcPlugin
     , tcPluginSolve = solveFundep
     , tcPluginStop = const (return ()) }
 
-allMonadEffectConstraints :: PolysemyStuff 'Lookups -> [Ct] -> [(CtLoc, (Type, Type, Type))]
+allMonadEffectConstraints :: PolysemyStuff 'Things -> [Ct] -> [(CtLoc, (Type, Type, Type))]
 allMonadEffectConstraints (findClass -> cls) cts =
     [ (ctLoc cd, (effName, eff, r))
     | cd@CDictCan{cc_class = cls', cc_tyargs = [_, r, eff]} <- cts
@@ -240,7 +240,7 @@ mustUnify :: SolveContext -> Bool
 mustUnify FunctionDef = True
 mustUnify (InterpreterUse b) = b
 
-getBogusRs :: PolysemyStuff 'Lookups -> [Ct] -> [Type]
+getBogusRs :: PolysemyStuff 'Things -> [Ct] -> [Type]
 getBogusRs stuff wanteds = do
   CIrredCan ct _ <- wanteds
   case splitAppTys $ ctev_pred ct of
@@ -248,15 +248,15 @@ getBogusRs stuff wanteds = do
       maybeToList (getRIfSem stuff a) ++ maybeToList (getRIfSem stuff b)
     (_, _) -> []
 
-getRIfSem :: PolysemyStuff 'Lookups -> Type -> Maybe Type
+getRIfSem :: PolysemyStuff 'Things -> Type -> Maybe Type
 getRIfSem (semTyCon -> sem) ty =
   case splitTyConApp_maybe ty of
     Just (tycon, [r, _]) | tycon == sem -> pure r
     _                                   -> Nothing
 
 
-solveBogusError :: [Type] -> PolysemyStuff 'Lookups -> [Ct] -> [(EvTerm, Ct)]
-solveBogusError bogus stuff wanteds = do
+solveBogusError :: PolysemyStuff 'Things -> [Type] -> [Ct] -> [(EvTerm, Ct)]
+solveBogusError stuff bogus wanteds = do
   ct@(CIrredCan ce _) <- wanteds
   case splitTyConApp_maybe $ ctev_pred ce of
     Just (stuck, [_, _, expr, _, _]) | stuck == ifStuckTyCon stuff -> do
@@ -270,7 +270,7 @@ solveBogusError bogus stuff wanteds = do
 
 
 solveFundep
-    :: (IORef (S.Set (OrdType, OrdType)), PolysemyStuff 'Lookups)
+    :: (IORef (S.Set (OrdType, OrdType)), PolysemyStuff 'Things)
     -> [Ct]
     -> [Ct]
     -> [Ct]
@@ -278,7 +278,7 @@ solveFundep
 solveFundep _ _ _ [] = pure $ TcPluginOk [] []
 solveFundep (ref, stuff) giv _ want = do
     let bogus = getBogusRs stuff want
-        solved_bogus = solveBogusError bogus stuff want
+        solved_bogus = solveBogusError stuff bogus want
 
     let wantedEffs = allMonadEffectConstraints stuff want
         givenEffs = snd <$> allMonadEffectConstraints stuff giv
