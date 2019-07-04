@@ -239,6 +239,10 @@ mustUnify :: SolveContext -> Bool
 mustUnify FunctionDef = True
 mustUnify (InterpreterUse b) = b
 
+
+------------------------------------------------------------------------------
+-- | Given a list of 'Ct's, find any that are of the form
+-- @[Irred] Sem r a ~ Something@, and return their @r@s.
 getBogusRs :: PolysemyStuff 'Things -> [Ct] -> [Type]
 getBogusRs stuff wanteds = do
   CIrredCan ct _ <- wanteds
@@ -247,6 +251,9 @@ getBogusRs stuff wanteds = do
       maybeToList (getRIfSem stuff a) ++ maybeToList (getRIfSem stuff b)
     (_, _) -> []
 
+
+------------------------------------------------------------------------------
+-- | Take the @r@ out of @Sem r a@.
 getRIfSem :: PolysemyStuff 'Things -> Type -> Maybe Type
 getRIfSem (semTyCon -> sem) ty =
   case splitTyConApp_maybe ty of
@@ -254,6 +261,9 @@ getRIfSem (semTyCon -> sem) ty =
     _                                   -> Nothing
 
 
+------------------------------------------------------------------------------
+-- | Given a list of bogus @r@s, and the wanted constraints, produce bogus
+-- evidence terms that will prevent @IfStuck (IndexOf r _) _ _@ error messsages.
 solveBogusError :: PolysemyStuff 'Things -> [Type] -> [Ct] -> [(EvTerm, Ct)]
 solveBogusError stuff bogus wanteds = do
   ct@(CIrredCan ce _) <- wanteds
