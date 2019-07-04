@@ -50,20 +50,12 @@ runAsync m = withLowerToIO $ \lower _ -> lower $
         Async a -> do
           ma  <- runT a
           ins <- getInspectorT
-          fa  <- sendM $ A.async $ lower $ runAsync_b ma
+          fa  <- sendM $ A.async $ lower $ runAsync ma
           pureT $ fmap (inspect ins) fa
 
         Await a -> pureT =<< sendM (A.wait a)
     )  m
 {-# INLINE runAsync #-}
-
-
-runAsync_b
-    :: LastMember (Lift IO) r
-    => Sem (Async ': r) a
-    -> Sem r a
-runAsync_b = runAsync
-{-# NOINLINE runAsync_b #-}
 
 
 ------------------------------------------------------------------------------
@@ -83,18 +75,10 @@ runAsyncInIO lower m = interpretH
         Async a -> do
           ma  <- runT a
           ins <- getInspectorT
-          fa  <- sendM $ A.async $ lower $ runAsyncInIO_b lower ma
+          fa  <- sendM $ A.async $ lower $ runAsyncInIO lower ma
           pureT $ fmap (inspect ins) fa
 
         Await a -> pureT =<< sendM (A.wait a)
     )  m
 {-# INLINE runAsyncInIO #-}
-
-runAsyncInIO_b
-    :: Member (Lift IO) r
-    => (forall x. Sem r x -> IO x)
-    -> Sem (Async ': r) a
-    -> Sem r a
-runAsyncInIO_b = runAsyncInIO
-{-# NOINLINE runAsyncInIO_b #-}
 
