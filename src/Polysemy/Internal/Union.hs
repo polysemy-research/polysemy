@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances       #-}
 {-# LANGUAGE FunctionalDependencies  #-}
 {-# LANGUAGE MultiParamTypeClasses   #-}
-{-# LANGUAGE PatternSynonyms         #-}
 {-# LANGUAGE StrictData              #-}
 {-# LANGUAGE TypeFamilies            #-}
 {-# LANGUAGE UndecidableInstances    #-}
