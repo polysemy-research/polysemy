@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0e0346f075022fd1cff88b9ea55e939727cb9cff9d0c1f1cbb9741183e3eda5c
+-- hash: 63b03550f0fe1e13941505a11116fac8e6eef8a871dff51b30d2bca2263b2a75
 
 name:           polysemy-plugin
-version:        0.2.1.1
+version:        0.2.2.0
 synopsis:       Disambiguate obvious uses of effects.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy/tree/master/polysemy-plugin#readme>
 category:       Polysemy
@@ -42,7 +42,7 @@ library
     , containers >=0.5 && <0.7
     , ghc >=8.4.4 && <9
     , ghc-tcplugins-extra >=0.3 && <0.4
-    , polysemy >=0.1
+    , polysemy >=0.6
     , syb >=0.7 && <0.8
     , transformers >=0.5.2.0 && <0.6
   default-language: Haskell2010
@@ -73,7 +73,7 @@ test-suite polysemy-plugin-test
     , ghc-tcplugins-extra >=0.3 && <0.4
     , hspec >=2.6.0 && <3
     , inspection-testing >=0.4.2 && <0.5
-    , polysemy >=0.5.0.0
+    , polysemy >=0.6.0.0
     , polysemy-plugin
     , should-not-typecheck >=2.1.0 && <3
     , syb >=0.7 && <0.8
