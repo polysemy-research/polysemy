@@ -107,9 +107,9 @@ weave
     -> Union r n (s a)
 weave s' d v' (Union w (Weaving e s nt f v)) = Union w $
     Weaving e (Compose $ s <$ s')
-         (fmap Compose . d . fmap nt . getCompose)
-         (fmap f . getCompose)
-         (v <=< v' . getCompose)
+              (fmap Compose . d . fmap nt . getCompose)
+              (fmap f . getCompose)
+              (v <=< v' . getCompose)
 {-# INLINE weave #-}
 
 
