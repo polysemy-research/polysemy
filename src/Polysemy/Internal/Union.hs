@@ -90,7 +90,6 @@ data Weaving e m a where
          -- 'Polysemy.Error.Error' might have 'Polysemy.Error.throw'n.)
        }
     -> Weaving e n b
-       -- ^ There is an invariant that @n ~ Sem r@.
 
 instance Functor (Weaving e m) where
   fmap f (Weaving e s d f' v) = Weaving e s d (f . f') v
