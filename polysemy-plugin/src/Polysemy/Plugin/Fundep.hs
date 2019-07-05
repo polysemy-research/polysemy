@@ -4,7 +4,7 @@
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
 --
--- Copyright (c) 2017 Luka Horvat
+-- Copyright (c) 2017 Luka Horvat, 2019 Sandy Maguire
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to
@@ -26,8 +26,8 @@
 --
 ------------------------------------------------------------------------------
 --
--- This module is heavily based on 'Control.Effects.Plugin' from the
--- 'simple-effects' package, originally by Luka Horvat.
+-- This module was originally based on 'Control.Effects.Plugin' from the
+-- 'simple-effects' package, by Luka Horvat.
 --
 -- https://gitlab.com/LukaHorvat/simple-effects/commit/966ce80b8b5777a4bd8f87ffd443f5fa80cc8845#f51c1641c95dfaa4827f641013f8017e8cd02aab
 
