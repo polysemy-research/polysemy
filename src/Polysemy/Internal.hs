@@ -34,7 +34,7 @@ import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Data.Kind
 import Polysemy.Internal.Fixpoint
-import Polysemy.Internal.Lift
+import Polysemy.Lift.Type
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union

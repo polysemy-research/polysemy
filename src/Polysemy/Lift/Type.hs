@@ -2,7 +2,10 @@
 
 {-# OPTIONS_HADDOCK not-home #-}
 
-module Polysemy.Internal.Lift where
+module Polysemy.Lift.Type
+  ( -- * Effect
+    Lift(..)
+  ) where
 
 import Data.Kind
 
@@ -29,4 +32,3 @@ import Data.Kind
 -- a substitute for using 'putStrLn' directly.
 newtype Lift m (z :: Type -> Type) a where
   Lift :: { unLift :: m a } -> Lift m z a
-
