@@ -57,11 +57,13 @@ spec = parallel $ do
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Sem)
       shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Sem)
 
+#if __GLASGOW_HASKELL__ >= 806
     it "who needs Weaving even?" $ do
-      shouldSucceed $(inspectTest $ 'countDown `doesNotUse` 'Weaving)
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Weaving)
+      shouldSucceed $(inspectTest $ 'countDown `doesNotUse` 'Weaving)
 #if __GLASGOW_HASKELL__ >= 810
       shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Weaving)
+#endif
 #endif
 
 
