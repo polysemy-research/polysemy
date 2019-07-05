@@ -17,6 +17,7 @@ module Polysemy.Output
 import Data.Bifunctor (first)
 import Polysemy
 import Polysemy.State
+import Control.Monad (when)
 
 
 ------------------------------------------------------------------------------
@@ -74,27 +75,22 @@ runIgnoringOutput = interpret $ \case
 runBatchOutput
     :: forall o r a
      . Int
+    -> Sem (Output o ': r) a
     -> Sem (Output [o] ': r) a
-    -> Sem (Output [[o]] ': r) a
 runBatchOutput 0 m = raise $ runIgnoringOutput m
 runBatchOutput size m = do
-  ((_, res), a) <-
+  ((c, res), a) <-
     runState (0 :: Int, [] :: [o]) $ reinterpret2 (\case
       Output o -> do
-        (nacc, acc) <- get
-        let no     = length o
-            total  = mappend acc o
-            ntotal = nacc + no
-
-            emitting n ls
-              | n >= size = do
-                  let (emit, acc') = splitAt size ls
-                  output [emit]
-                  emitting (n - size) acc'
-              | otherwise = pure (n, ls)
-        (nacc', acc') <- emitting ntotal total
-        put (nacc', acc')
+        (count, acc) <- get
+        let newCount = 1 + count
+            newAcc = o : acc
+        if newCount < size
+          then put (newCount, newAcc)
+          else do
+            output (reverse newAcc)
+            put (0 :: Int, [] :: [o])
     ) m
-  output [res]
+  when (c > 0) $ output (reverse res)
   pure a
 

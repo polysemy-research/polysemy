@@ -1,5 +1,11 @@
 # Changelog for polysemy-plugin
 
+## 0.2.2.0 (2019-07-04)
+
+- The plugin will now prevent some false-positives in `polysemy`'s error
+    messages
+- Updated the lower bounds to `polysemy-0.6.0.0`
+
 ## 0.2.1.1 (2019-06-26)
 
 - Updated the test suite to test against `polysemy-0.5.0.0`

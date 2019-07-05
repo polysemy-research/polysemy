@@ -1,5 +1,19 @@
 # Changelog for polysemy
 
+## 0.6.0.0 (2019-07-04)
+
+### Breaking Changes
+
+- Changed the type of `runBatchOutput` to be more useful (thanks to @Infinisil)
+
+### Other Changes
+
+- **THE ERROR MESSAGES ARE SO MUCH BETTER** :party: :party: :party:
+- Added `runEmbedded` to `Polysemy.IO`
+- Added `runOutputAsList` to `Polysemy.Output` (thanks to @googleson78)
+- Asymptotically improved the performance of `runTraceAsList` (thanks to
+    @googleson78)
+
 ## 0.5.1.0 (2019-06-28)
 
 - New combinators for `Polysemy.Error`: `fromEither` and `fromEitherM`
