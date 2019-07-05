@@ -2,7 +2,9 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -O2           #-}
+
+{-# OPTIONS_GHC -O2 #-}
+{-# OPTIONS_GHC -dsuppress-idinfo -dsuppress-coercions #-}
 
 
 #if __GLASGOW_HASKELL__ < 804
@@ -50,10 +52,17 @@ spec = parallel $ do
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'reinterpret)
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'hoist)
 
-    it "who needs Semantic even?" $ do
+    it "who needs Sem even?" $ do
       shouldSucceed $(inspectTest $ 'countDown `doesNotUse` 'Sem)
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Sem)
       shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Sem)
+
+    it "who needs Weaving even?" $ do
+      shouldSucceed $(inspectTest $ 'countDown `doesNotUse` 'Weaving)
+      shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Weaving)
+#if __GLASGOW_HASKELL__ >= 810
+      shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Weaving)
+#endif
 
 
 go :: Sem '[State Int] Int

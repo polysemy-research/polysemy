@@ -64,8 +64,8 @@ runNonDet (Sem m) = Sem $ \k -> runNonDetC $ m $ \u ->
                      listToMaybe
                      x
       foldr cons nil z
-    Right (Yo Empty _ _ _ _) -> empty
-    Right (Yo (Choose ek) s _ y _) -> do
+    Right (Weaving Empty _ _ _ _) -> empty
+    Right (Weaving (Choose ek) s _ y _) -> do
       z <- pure (ek False) <|> pure (ek True)
       pure $ y $ z <$ s
 
