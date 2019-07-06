@@ -14,8 +14,8 @@ module Polysemy.Lift
   , sendM
   ) where
 
-import           Polysemy
-import           Polysemy.Lift.Type (Lift(..))
+import Polysemy
+import Polysemy.Lift.Type (Lift(..))
 
 makeSem ''Lift
 
