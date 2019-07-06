@@ -8,6 +8,7 @@ module Polysemy.IO
 
 import Control.Monad.IO.Class
 import Polysemy
+import Polysemy.Lift
 import Polysemy.Internal
 import Polysemy.Internal.Union
 
@@ -41,7 +42,7 @@ runIO
        )
     => Sem (Lift IO ': r) a
     -> Sem r a
-runIO = interpret $ sendM . liftIO @m . unLift
+runIO = runLift $ liftIO @m
 {-# INLINE runIO #-}
 
 
