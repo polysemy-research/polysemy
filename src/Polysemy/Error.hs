@@ -77,8 +77,8 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
             (either (pure . Left) runError)
             hush
             x
-    Right (Yo (Throw e) _ _ _ _) -> E.throwE e
-    Right (Yo (Catch try handle) s d y _) ->
+    Right (Weaving (Throw e) _ _ _ _) -> E.throwE e
+    Right (Weaving (Catch try handle) s d y _) ->
       E.ExceptT $ usingSem k $ do
         ma <- runError $ d $ try <$ s
         case ma of

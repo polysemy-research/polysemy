@@ -192,11 +192,11 @@ runTactics
 runTactics s d v (Sem m) = m $ \u ->
   case decomp u of
     Left x -> liftSem $ hoist (runTactics s d v) x
-    Right (Yo GetInitialState s' _ y _) ->
+    Right (Weaving GetInitialState s' _ y _) ->
       pure $ y $ s <$ s'
-    Right (Yo (HoistInterpretation na) s' _ y _) -> do
+    Right (Weaving (HoistInterpretation na) s' _ y _) -> do
       pure $ y $ (d . fmap na) <$ s'
-    Right (Yo GetInspector s' _ y _) -> do
+    Right (Weaving GetInspector s' _ y _) -> do
       pure $ y $ Inspector v <$ s'
 {-# INLINE runTactics #-}
 

@@ -73,7 +73,7 @@ interpretH
 interpretH f (Sem m) = m $ \u ->
   case decomp u of
     Left  x -> liftSem $ hoist (interpretH f) x
-    Right (Yo e s d y v) -> do
+    Right (Weaving e s d y v) -> do
       a <- runTactics s d v $ f e
       pure $ y a
 {-# INLINE interpretH #-}
@@ -96,7 +96,7 @@ interpretInStateT f s (Sem m) = Sem $ \k ->
                     (uncurry $ interpretInStateT f)
                     (Just . snd)
             $ x
-        Right (Yo e z _ y _) ->
+        Right (Weaving e z _ y _) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInStateT #-}
 
@@ -118,7 +118,7 @@ interpretInLazyStateT f s (Sem m) = Sem $ \k ->
                     (uncurry $ interpretInLazyStateT f)
                     (Just . snd)
             $ x
-        Right (Yo e z _ y _) ->
+        Right (Weaving e z _ y _) ->
           fmap (y . (<$ z)) $ LS.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInLazyStateT #-}
 
@@ -158,7 +158,7 @@ reinterpretH
 reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ hoist (reinterpretH f) $ x
-    Right (Yo e s d y v) -> do
+    Right (Weaving e s d y v) -> do
       a <- usingSem k $ runTactics s (raiseUnder . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
@@ -195,7 +195,7 @@ reinterpret2H
 reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ weaken $ hoist (reinterpret2H f) $ x
-    Right (Yo e s d y v) -> do
+    Right (Weaving e s d y v) -> do
       a <- usingSem k $ runTactics s (raiseUnder2 . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpret2H #-}
@@ -227,7 +227,7 @@ reinterpret3H
 reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k . weaken . weaken . hoist (reinterpret3H f) $ x
-    Right (Yo e s d y v) -> do
+    Right (Weaving e s d y v) -> do
       a <- usingSem k $ runTactics s (raiseUnder3 . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpret3H #-}
@@ -278,7 +278,7 @@ interceptH
     -> Sem r a
 interceptH f (Sem m) = Sem $ \k -> m $ \u ->
   case prj u of
-    Just (Yo e s d y v) ->
+    Just (Weaving e s d y v) ->
       usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
     Nothing -> k $ hoist (interceptH f) u
 {-# INLINE interceptH #-}
