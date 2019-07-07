@@ -43,7 +43,7 @@ data State s m a where
 makeSem ''State
 
 
-gets :: Member (State s) r => (s -> a) -> Sem r a
+gets :: forall s a r. Member (State s) r => (s -> a) -> Sem r a
 gets f = fmap f get
 {-# INLINABLE gets #-}
 
