@@ -35,7 +35,7 @@ shouldSucceed r = r `shouldSatisfy` isSuccess
 spec :: Spec
 spec = parallel $ do
   describe "fusion" $ do
-#if __GLASGOW_HASKELL__ >= 806
+#if __GLASGOW_HASKELL__ >= 807
     -- TODO: Investigate why this test fails mysteriously on GHC < 8.6
     it "Union proofs should simplify" $ do
       shouldSucceed $(inspectTest $ 'countDown `hasNoType` ''SNat)
@@ -57,7 +57,7 @@ spec = parallel $ do
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Sem)
       shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Sem)
 
-#if __GLASGOW_HASKELL__ >= 806
+#if __GLASGOW_HASKELL__ >= 807
     it "who needs Weaving even?" $ do
       shouldSucceed $(inspectTest $ 'jank `doesNotUse` 'Weaving)
       shouldSucceed $(inspectTest $ 'countDown `doesNotUse` 'Weaving)
