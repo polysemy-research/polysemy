@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 63b03550f0fe1e13941505a11116fac8e6eef8a871dff51b30d2bca2263b2a75
+-- hash: b8d6dd19e90295689617adfecbd3bb83127b112840f4f304d956a4d5b33bf821
 
 name:           polysemy-plugin
 version:        0.2.2.0
@@ -31,6 +31,9 @@ library
   exposed-modules:
       Polysemy.Plugin
       Polysemy.Plugin.Fundep
+      Polysemy.Plugin.Fundep.Stuff
+      Polysemy.Plugin.Fundep.Unification
+      Polysemy.Plugin.Fundep.Utils
       Polysemy.Plugin.Phases
   other-modules:
       Paths_polysemy_plugin

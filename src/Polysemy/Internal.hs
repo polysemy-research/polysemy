@@ -327,7 +327,7 @@ run (Sem m) = runIdentity $ m absurdU
 runM :: Monad m => Sem '[Lift m] a -> m a
 runM (Sem m) = m $ \z ->
   case extract z of
-    Yo e s _ f _ -> do
+    Weaving e s _ f _ -> do
       a <- unLift e
       pure $ f $ a <$ s
 {-# INLINE runM #-}
