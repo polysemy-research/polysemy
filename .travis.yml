@@ -20,6 +20,7 @@ script:
  - cabal v2-update
  - cabal v2-build
  - cabal v2-test --enable-test
+   # This weird bash stuff is a workaround for haskell/cabal#5977
  - "! cabal new-haddock 2>&1 >/dev/null | grep 'Failed to build documentation'"
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
