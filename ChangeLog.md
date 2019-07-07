@@ -131,3 +131,6 @@
 
 ## Unreleased changes
 
+- Changed the tyvars of `fromEitherM`, `runErrorAsAnother`, `runEmbedded`,
+  `asks` and `gets`
+
