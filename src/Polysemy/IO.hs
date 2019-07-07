@@ -54,8 +54,8 @@ runIO = interpret $ sendM . liftIO @m . unLift
 --
 -- TODO(sandy): @since
 runEmbedded
-    :: ( LastMember (Lift IO) r
-       , MonadIO m
+    :: ( MonadIO m
+       , LastMember (Lift IO) r
        )
     => (forall x. m x -> IO x)  -- ^ The means of running this monad.
     -> Sem (Lift m ': r) a
