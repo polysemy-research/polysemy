@@ -96,7 +96,7 @@ runResourceInIO finish = interpretH $ \case
     let run_it :: Sem (Resource ': r) x -> IO x
         run_it = finish .@ runResourceInIO
 
-    sendM $ X.bracket (run_it a) (run_it . d) (run_it . u)
+    embed $ X.bracket (run_it a) (run_it . d) (run_it . u)
 
   BracketOnError alloc dealloc use -> do
     a <- runT  alloc
@@ -106,7 +106,7 @@ runResourceInIO finish = interpretH $ \case
     let run_it :: Sem (Resource ': r) x -> IO x
         run_it = finish .@ runResourceInIO
 
-    sendM $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
+    embed $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
 {-# INLINE runResourceInIO #-}
 
 

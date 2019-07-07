@@ -36,7 +36,7 @@ runViaForklift
     -> Sem '[Embed IO] a
 runViaForklift chan (Sem m) = Sem $ \k -> m $ \u -> do
   case decompLast u of
-    Left x -> usingSem k $ join $ sendM $ do
+    Left x -> usingSem k $ join $ embed $ do
       mvar <- newEmptyMVar
       writeChan chan $ Forklift mvar x
       takeMVar mvar
@@ -60,22 +60,22 @@ withLowerToIO
        -- action need not be called.
     -> Sem r a
 withLowerToIO action = do
-  (inchan, outchan) <- sendM newChan
-  signal <- sendM newEmptyMVar
+  (inchan, outchan) <- embed newChan
+  signal <- embed newEmptyMVar
 
-  res <- sendM $ A.async $ do
+  res <- embed $ A.async $ do
     a <- action (runM . runViaForklift inchan)
                 (putMVar signal ())
     putMVar signal ()
     pure a
 
   let me = do
-        raced <- sendM $ A.race (takeMVar signal) $ readChan outchan
+        raced <- embed $ A.race (takeMVar signal) $ readChan outchan
         case raced of
-          Left () -> sendM $ A.wait res
+          Left () -> embed $ A.wait res
           Right (Forklift mvar req) -> do
             resp <- liftSem req
-            sendM $ putMVar mvar $ pure resp
+            embed $ putMVar mvar $ pure resp
             me_b
       {-# INLINE me #-}
 

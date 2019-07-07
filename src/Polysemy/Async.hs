@@ -50,10 +50,10 @@ runAsync m = withLowerToIO $ \lower _ -> lower $
         Async a -> do
           ma  <- runT a
           ins <- getInspectorT
-          fa  <- sendM $ A.async $ lower $ runAsync ma
+          fa  <- embed $ A.async $ lower $ runAsync ma
           pureT $ fmap (inspect ins) fa
 
-        Await a -> pureT =<< sendM (A.wait a)
+        Await a -> pureT =<< embed (A.wait a)
     )  m
 {-# INLINE runAsync #-}
 
@@ -75,10 +75,10 @@ runAsyncInIO lower m = interpretH
         Async a -> do
           ma  <- runT a
           ins <- getInspectorT
-          fa  <- sendM $ A.async $ lower $ runAsyncInIO lower ma
+          fa  <- embed $ A.async $ lower $ runAsyncInIO lower ma
           pureT $ fmap (inspect ins) fa
 
-        Await a -> pureT =<< sendM (A.wait a)
+        Await a -> pureT =<< embed (A.wait a)
     )  m
 {-# INLINE runAsyncInIO #-}
 

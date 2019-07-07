@@ -47,7 +47,7 @@ errState = do
 
 
 lifted :: Monad m => Member (Embed m) r => Sem r ()
-lifted = sendM $ pure ()
+lifted = embed $ pure ()
 
 
 newtype MyString = MyString String

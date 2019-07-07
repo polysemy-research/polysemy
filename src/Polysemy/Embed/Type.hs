@@ -13,17 +13,17 @@ import Data.Kind
 ------------------------------------------------------------------------------
 -- | An effect which allows a regular 'Monad' @m@ into the 'Polysemy.Sem'
 -- ecosystem. Monadic actions in @m@ can be lifted into 'Polysemy.Sem' via
--- 'Polysemy.sendM'.
+-- 'Polysemy.embed'.
 --
 -- For example, you can use this effect to lift 'IO' actions directly into
 -- 'Polysemy.Sem':
 --
 -- @
--- 'Polysemy.sendM' (putStrLn "hello") :: 'Polysemy.Member' ('Polysemy.Embed' IO) r => 'Polysemy.Sem' r ()
+-- 'Polysemy.embed' (putStrLn "hello") :: 'Polysemy.Member' ('Polysemy.Embed' IO) r => 'Polysemy.Sem' r ()
 -- @
 --
 -- That being said, you lose out on a significant amount of the benefits of
--- 'Polysemy.Sem' by using 'Polysemy.sendM' directly in application code; doing
+-- 'Polysemy.Sem' by using 'Polysemy.embed' directly in application code; doing
 -- so will tie your application code directly to the underlying monad, and
 -- prevent you from interpreting it differently. For best results, only use
 -- 'Embed' in your effect interpreters.

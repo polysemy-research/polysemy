@@ -33,7 +33,7 @@ makeSem ''Trace
 -- | Run a 'Trace' effect by printing the messages to stdout.
 runTraceIO :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
 runTraceIO = interpret $ \case
-  Trace m -> sendM $ putStrLn m
+  Trace m -> embed $ putStrLn m
 {-# INLINE runTraceIO #-}
 
 

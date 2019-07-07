@@ -37,5 +37,5 @@ runFixpointM
 runFixpointM lower = interpretH $ \case
   Fixpoint mf -> do
     c <- bindT mf
-    sendM $ mfix $ lower . runFixpointM lower . c
+    embed $ mfix $ lower . runFixpointM lower . c
 

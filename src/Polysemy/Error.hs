@@ -51,7 +51,7 @@ fromEither (Right a) = pure a
 
 
 ------------------------------------------------------------------------------
--- | A combinator doing 'sendM' and 'fromEither' at the same time. Useful for
+-- | A combinator doing 'embed' and 'fromEither' at the same time. Useful for
 -- interoperating with 'IO'.
 --
 -- @since 0.5.1.0
@@ -62,7 +62,7 @@ fromEitherM
        )
     => m (Either e a)
     -> Sem r a
-fromEitherM = fromEither <=< sendM
+fromEitherM = fromEither <=< embed
 
 
 ------------------------------------------------------------------------------
@@ -144,7 +144,7 @@ runErrorInIO
     -> Sem (Error e ': r) a
     -> Sem r (Either e a)
 runErrorInIO lower
-    = sendM
+    = embed
     . fmap (first unwrapExc)
     . X.try
     . (lower .@ runErrorAsExc)
@@ -160,13 +160,13 @@ runErrorAsExc
     -> Sem (Error e ': r) a
     -> Sem r a
 runErrorAsExc lower = interpretH $ \case
-  Throw e -> sendM $ X.throwIO $ WrappedExc e
+  Throw e -> embed $ X.throwIO $ WrappedExc e
   Catch try handle -> do
     is <- getInitialStateT
     t  <- runT try
     h  <- bindT handle
     let runIt = lower . runErrorAsExc lower
-    sendM $ X.catch (runIt t) $ \(se :: WrappedExc e) ->
+    embed $ X.catch (runIt t) $ \(se :: WrappedExc e) ->
       runIt $ h $ unwrapExc se <$ is
 {-# INLINE runErrorAsExc #-}
 

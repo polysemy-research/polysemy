@@ -11,7 +11,7 @@ module Polysemy.Internal
   , Member
   , Members
   , send
-  , sendM
+  , embed
   , run
   , runM
   , raise
@@ -58,7 +58,7 @@ import Polysemy.Internal.Union
 --
 -- The effect stack @r@ can contain arbitrary other monads inside of it. These
 -- monads are lifted into effects via the 'Embed' effect. Monadic values can be
--- lifted into a 'Sem' via 'sendM'.
+-- lifted into a 'Sem' via 'embed'.
 --
 -- A 'Sem' can be interpreted as a pure value (via 'run') or as any
 -- traditional 'Monad' (via 'runM'). Each effect @E@ comes equipped with some
@@ -232,7 +232,7 @@ instance (Member NonDet r) => MonadFail (Sem r) where
 -- other 'MonadIO' type, use this instance, and handle it via the
 -- 'Polysemy.IO.runIO' interpretation.
 instance (Member (Embed IO) r) => MonadIO (Sem r) where
-  liftIO = sendM
+  liftIO = embed
   {-# INLINE liftIO #-}
 
 instance Member Fixpoint r => MonadFix (Sem r) where
@@ -309,9 +309,9 @@ send = liftSem . inj
 
 ------------------------------------------------------------------------------
 -- | Embed a monadic action @m@ in 'Sem'.
-sendM :: Member (Embed m) r => m a -> Sem r a
-sendM = send . Embed
-{-# INLINE sendM #-}
+embed :: Member (Embed m) r => m a -> Sem r a
+embed = send . Embed
+{-# INLINE embed #-}
 
 
 ------------------------------------------------------------------------------

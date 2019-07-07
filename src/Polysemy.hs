@@ -11,7 +11,7 @@ module Polysemy
 
   -- * Interoperating With Other Monads
   , Embed (..)
-  , sendM
+  , embed
 
     -- * Lifting
   , raise

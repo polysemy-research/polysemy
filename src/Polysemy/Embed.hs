@@ -9,15 +9,10 @@ module Polysemy.Embed
 
     -- * Interpretations
   , runEmbed
-
-    -- * Embeding monadic actions into effects
-  , sendM
   ) where
 
 import Polysemy
 import Polysemy.Embed.Type (Embed (..))
-
-makeSem ''Embed
 
 ------------------------------------------------------------------------------
 -- | Given a natural transform from @m1@ to @m2@
@@ -30,5 +25,5 @@ runEmbed
     => (forall x. m1 x -> m2 x)
     -> Sem (Embed m1 ': r) a
     -> Sem r a
-runEmbed f = interpret $ sendM . f . unEmbed
+runEmbed f = interpret $ embed . f . unEmbed
 {-# INLINE runEmbed #-}

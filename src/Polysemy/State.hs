@@ -84,8 +84,8 @@ runStateInIORef
     -> Sem (State s ': r) a
     -> Sem r a
 runStateInIORef ref = interpret $ \case
-  Get   -> sendM $ readIORef ref
-  Put s -> sendM $ writeIORef ref s
+  Get   -> embed $ readIORef ref
+  Put s -> embed $ writeIORef ref s
 {-# INLINE runStateInIORef #-}
 
 
