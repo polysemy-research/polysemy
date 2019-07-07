@@ -47,7 +47,7 @@ spec = parallel $ describe "Inspector" $ do
 
 
 runCallback
-    :: Member (Lift IO) r
+    :: Member (Embed IO) r
     => IORef [String]
     -> (forall x. Sem r x -> IO x)
     -> Sem (Callback ': r) a

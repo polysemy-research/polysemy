@@ -2,9 +2,9 @@
 
 {-# OPTIONS_HADDOCK not-home #-}
 
-module Polysemy.Lift.Type
+module Polysemy.Embed.Type
   ( -- * Effect
-    Lift(..)
+    Embed (..)
   ) where
 
 import Data.Kind
@@ -19,16 +19,16 @@ import Data.Kind
 -- 'Polysemy.Sem':
 --
 -- @
--- 'Polysemy.sendM' (putStrLn "hello") :: 'Polysemy.Member' ('Polysemy.Lift' IO) r => 'Polysemy.Sem' r ()
+-- 'Polysemy.sendM' (putStrLn "hello") :: 'Polysemy.Member' ('Polysemy.Embed' IO) r => 'Polysemy.Sem' r ()
 -- @
 --
 -- That being said, you lose out on a significant amount of the benefits of
 -- 'Polysemy.Sem' by using 'Polysemy.sendM' directly in application code; doing
 -- so will tie your application code directly to the underlying monad, and
 -- prevent you from interpreting it differently. For best results, only use
--- 'Lift' in your effect interpreters.
+-- 'Embed' in your effect interpreters.
 --
 -- Consider using 'Polysemy.Trace.trace' and 'Polysemy.Trace.runTraceIO' as
 -- a substitute for using 'putStrLn' directly.
-newtype Lift m (z :: Type -> Type) a where
-  Lift :: { unLift :: m a } -> Lift m z a
+newtype Embed m (z :: Type -> Type) a where
+  Embed :: { unEmbed :: m a } -> Embed m z a

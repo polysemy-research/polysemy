@@ -81,7 +81,7 @@ onException act end = bracketOnError (pure ()) (const end) (const act)
 -- @since 0.4.0.0
 runResourceInIO
     :: ∀ r a
-     . Member (Lift IO) r
+     . Member (Embed IO) r
     => (∀ x. Sem r x -> IO x)
        -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is likely
        -- some combination of 'runM' and other interpreters composed via '.@'.
@@ -168,7 +168,7 @@ runResource = interpretH $ \case
 -- @since 0.5.0.0
 runResourceBase
     :: forall r a
-     . LastMember (Lift IO) r
+     . LastMember (Embed IO) r
     => Sem (Resource ': r) a
     -> Sem r a
 runResourceBase = interpretH $ \case

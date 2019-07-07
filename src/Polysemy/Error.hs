@@ -58,7 +58,7 @@ fromEither (Right a) = pure a
 fromEitherM
     :: forall e m r a
      . ( Member (Error e) r
-       , Member (Lift m) r
+       , Member (Embed m) r
        )
     => m (Either e a)
     -> Sem r a
@@ -135,7 +135,7 @@ instance (Typeable e) => X.Exception (WrappedExc e)
 -- significantly faster than 'runError', at the cost of being less flexible.
 runErrorInIO
     :: ( Typeable e
-       , Member (Lift IO) r
+       , Member (Embed IO) r
        )
     => (∀ x. Sem r x -> IO x)
        -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is
@@ -154,7 +154,7 @@ runErrorInIO lower
 -- TODO(sandy): Can we use the new withLowerToIO machinery for this?
 runErrorAsExc
     :: forall e r a. ( Typeable e
-       , Member (Lift IO) r
+       , Member (Embed IO) r
        )
     => (∀ x. Sem r x -> IO x)
     -> Sem (Error e ': r) a

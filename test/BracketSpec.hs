@@ -19,7 +19,7 @@ runTest = run
         . runError @()
 
 runTest2
-  :: Sem '[Error (), Resource, State [Char], Trace, Lift IO] a
+  :: Sem '[Error (), Resource, State [Char], Trace, Embed IO] a
   -> IO ([String], ([Char], Either () a))
 runTest2 = runM
          . runTraceAsList

@@ -18,7 +18,7 @@ module Polysemy.Internal
   , raiseUnder
   , raiseUnder2
   , raiseUnder3
-  , Lift (..)
+  , Embed (..)
   , usingSem
   , liftSem
   , hoistSem
@@ -34,7 +34,7 @@ import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Data.Kind
 import Polysemy.Internal.Fixpoint
-import Polysemy.Lift.Type
+import Polysemy.Embed.Type
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
@@ -57,7 +57,7 @@ import Polysemy.Internal.Union
 -- 'Polysemy.Error.runError' to 'Polysemy.Error.runErrorInIO'.
 --
 -- The effect stack @r@ can contain arbitrary other monads inside of it. These
--- monads are lifted into effects via the 'Lift' effect. Monadic values can be
+-- monads are lifted into effects via the 'Embed' effect. Monadic values can be
 -- lifted into a 'Sem' via 'sendM'.
 --
 -- A 'Sem' can be interpreted as a pure value (via 'run') or as any
@@ -73,7 +73,7 @@ import Polysemy.Internal.Union
 -- monomorphic representation of the @r@ parameter.
 --
 -- After all of your effects are handled, you'll be left with either
--- a @'Sem' '[] a@ or a @'Sem' '[ 'Lift' m ] a@ value, which can be
+-- a @'Sem' '[] a@ or a @'Sem' '[ 'Embed' m ] a@ value, which can be
 -- consumed respectively by 'run' and 'runM'.
 --
 -- ==== Examples
@@ -231,7 +231,7 @@ instance (Member NonDet r) => MonadFail (Sem r) where
 -- | This instance will only lift 'IO' actions. If you want to lift into some
 -- other 'MonadIO' type, use this instance, and handle it via the
 -- 'Polysemy.IO.runIO' interpretation.
-instance (Member (Lift IO) r) => MonadIO (Sem r) where
+instance (Member (Embed IO) r) => MonadIO (Sem r) where
   liftIO = sendM
   {-# INLINE liftIO #-}
 
@@ -300,7 +300,7 @@ raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
 
 
 ------------------------------------------------------------------------------
--- | Lift an effect into a 'Sem'. This is used primarily via
+-- | Embed an effect into a 'Sem'. This is used primarily via
 -- 'Polysemy.makeSem' to implement smart constructors.
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
@@ -308,9 +308,9 @@ send = liftSem . inj
 
 
 ------------------------------------------------------------------------------
--- | Lift a monadic action @m@ into 'Sem'.
-sendM :: Member (Lift m) r => m a -> Sem r a
-sendM = send . Lift
+-- | Embed a monadic action @m@ in 'Sem'.
+sendM :: Member (Embed m) r => m a -> Sem r a
+sendM = send . Embed
 {-# INLINE sendM #-}
 
 
@@ -324,11 +324,11 @@ run (Sem m) = runIdentity $ m absurdU
 ------------------------------------------------------------------------------
 -- | Lower a 'Sem' containing only a single lifted 'Monad' into that
 -- monad.
-runM :: Monad m => Sem '[Lift m] a -> m a
+runM :: Monad m => Sem '[Embed m] a -> m a
 runM (Sem m) = m $ \z ->
   case extract z of
     Weaving e s _ f _ -> do
-      a <- unLift e
+      a <- unEmbed e
       pure $ f $ a <$ s
 {-# INLINE runM #-}
 

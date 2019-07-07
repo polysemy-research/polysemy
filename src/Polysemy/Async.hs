@@ -41,7 +41,7 @@ makeSem ''Async
 --
 -- @since 0.5.0.0
 runAsync
-    :: LastMember (Lift IO) r
+    :: LastMember (Embed IO) r
     => Sem (Async ': r) a
     -> Sem r a
 runAsync m = withLowerToIO $ \lower _ -> lower $
@@ -64,7 +64,7 @@ runAsync m = withLowerToIO $ \lower _ -> lower $
 --
 -- @since 0.5.0.0
 runAsyncInIO
-    :: Member (Lift IO) r
+    :: Member (Embed IO) r
     => (forall x. Sem r x -> IO x)
        -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is likely
        -- some combination of 'runM' and other interpreters composed via '.@'.

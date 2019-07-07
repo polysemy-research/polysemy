@@ -41,6 +41,8 @@ library
   exposed-modules:
       Polysemy
       Polysemy.Async
+      Polysemy.Embed
+      Polysemy.Embed.Type
       Polysemy.Error
       Polysemy.Fixpoint
       Polysemy.Input

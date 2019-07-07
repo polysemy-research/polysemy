@@ -19,7 +19,7 @@ import           Polysemy.Internal.Union
 --
 -- @since 0.5.0.0
 data Forklift r = forall a. Forklift
-  { responseMVar :: MVar (Sem '[Lift IO] a)
+  { responseMVar :: MVar (Sem '[Embed IO] a)
   , request      :: Union r (Sem r) a
   }
 
@@ -30,10 +30,10 @@ data Forklift r = forall a. Forklift
 --
 -- @since 0.5.0.0
 runViaForklift
-    :: LastMember (Lift IO) r
+    :: LastMember (Embed IO) r
     => InChan (Forklift r)
     -> Sem r a
-    -> Sem '[Lift IO] a
+    -> Sem '[Embed IO] a
 runViaForklift chan (Sem m) = Sem $ \k -> m $ \u -> do
   case decompLast u of
     Left x -> usingSem k $ join $ sendM $ do
@@ -53,7 +53,7 @@ runViaForklift chan (Sem m) = Sem $ \k -> m $ \u -> do
 --
 -- @since 0.5.0.0
 withLowerToIO
-    :: LastMember (Lift IO) r
+    :: LastMember (Embed IO) r
     => ((forall x. Sem r x -> IO x) -> IO () -> IO a)
        -- ^ A lambda that takes the lowering function, and a finalizing 'IO'
        -- action to mark a the forked thread as being complete. The finalizing

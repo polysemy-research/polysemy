@@ -36,7 +36,7 @@ prog
     :: Sem '[ State Bool
             , Error Bool
             , Resource
-            , Lift IO
+            , Embed IO
             ] Bool
 prog = catch @Bool (throw True) (pure . not)
 

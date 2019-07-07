@@ -8,7 +8,7 @@ module Polysemy.IO
 
 import Control.Monad.IO.Class
 import Polysemy
-import Polysemy.Lift
+import Polysemy.Embed
 import Polysemy.Internal
 import Polysemy.Internal.Union
 
@@ -38,16 +38,16 @@ import Polysemy.Internal.Union
 runIO
     :: forall m r a
      . ( MonadIO m
-       , Member (Lift m) r
+       , Member (Embed m) r
        )
-    => Sem (Lift IO ': r) a
+    => Sem (Embed IO ': r) a
     -> Sem r a
-runIO = runLift $ liftIO @m
+runIO = runEmbed $ liftIO @m
 {-# INLINE runIO #-}
 
 
 ------------------------------------------------------------------------------
--- | Given some @'MonadIO' m@, interpret all @'Lift' m@ actions in that monad
+-- | Given some @'MonadIO' m@, interpret all @'Embed' m@ actions in that monad
 -- at once. This is useful for interpreting effects like databases, which use
 -- their own monad for describing actions.
 --
@@ -56,10 +56,10 @@ runIO = runLift $ liftIO @m
 -- @since 0.6.0.0
 runEmbedded
     :: ( MonadIO m
-       , LastMember (Lift IO) r
+       , LastMember (Embed IO) r
        )
     => (forall x. m x -> IO x)  -- ^ The means of running this monad.
-    -> Sem (Lift m ': r) a
+    -> Sem (Embed m ': r) a
     -> Sem r a
 runEmbedded run_m (Sem m) = withLowerToIO $ \lower _ ->
   run_m $ m $ \u ->
@@ -69,6 +69,6 @@ runEmbedded run_m (Sem m) = withLowerToIO $ \lower _ ->
               . liftSem
               $ hoist (runEmbedded run_m) x
 
-      Right (Weaving (Lift wd) s _ y _) ->
+      Right (Weaving (Embed wd) s _ y _) ->
         fmap y $ fmap (<$ s) wd
 

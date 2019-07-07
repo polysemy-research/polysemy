@@ -79,7 +79,7 @@ runLazyState = lazilyStateful $ \case
 -- @since 0.1.2.0
 runStateInIORef
     :: forall s r a
-     . Member (Lift IO) r
+     . Member (Embed IO) r
     => IORef s
     -> Sem (State s ': r) a
     -> Sem r a
