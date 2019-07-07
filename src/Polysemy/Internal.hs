@@ -309,6 +309,8 @@ send = liftSem . inj
 
 ------------------------------------------------------------------------------
 -- | Embed a monadic action @m@ in 'Sem'.
+--
+-- TODO(sandy): @since
 embed :: Member (Embed m) r => m a -> Sem r a
 embed = send . Embed
 {-# INLINE embed #-}
