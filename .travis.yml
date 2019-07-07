@@ -20,7 +20,7 @@ script:
  - cabal v2-update
  - cabal v2-build
  - cabal v2-test --enable-test
- - cabal new-haddock 2>&1 >/dev/null | ! grep 'Failed to build documentation'
+ - "! cabal new-haddock 2>&1 >/dev/null | grep 'Failed to build documentation'; echo $?"
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
 
