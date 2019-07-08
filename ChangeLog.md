@@ -4,9 +4,9 @@
 
 ### Breaking Changes
 
-- Added a `Pass` constructor to `Writer`
-- Fixed a bug in `runWriter` where the MTL semantics wouldn't be respected
-- Removed the `Censor` constructor of `Writer`
+- Added a `Pass` constructor to `Writer` (thanks to @KingoftheHomeless)
+- Fixed a bug in `runWriter` where the MTL semantics wouldn't be respected (thanks to @KingoftheHomeless)
+- Removed the `Censor` constructor of `Writer` (thanks to @KingoftheHomeless)
 - Renamed `Yo` to `Weaving`
 - Changed the visible type applications for `asks`, `gets`, and `runErrorAsAnother`
 
