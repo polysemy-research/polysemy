@@ -67,7 +67,7 @@ runWriter = runState mempty . reinterpretH
         mm <- runT m
         (o, t) <- raise $ runWriter mm
         ins <- getInspectorT
-        let f = maybe id snd (inspect ins t)
+        let f = maybe id fst (inspect ins t)
         modify (<> f o)
-        pure (fmap fst t)
+        pure (fmap snd t)
   )
