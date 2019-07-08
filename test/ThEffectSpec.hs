@@ -36,12 +36,12 @@ data GADTSyntax m a where
 
 makeSem ''GADTSyntax
 
-data ADTSyntax1 m a = (a ~ Int) => ADTSyntax1C String
+data ADTSyntax1 m a = a ~ Int => ADTSyntax1C String
 
 makeSem ''ADTSyntax1
 
 data ADTSyntax2 m a
-  = a ~ Int => ADTSyntax2C1 Int
+  = a ~ Int    => ADTSyntax2C1 Int
   | a ~ String => ADTSyntax2C2 String
 
 makeSem ''ADTSyntax2
@@ -68,24 +68,25 @@ newtype Newtype2 m a where
 makeSem ''Newtype2
 
 -- Data families -------------------------------------------------------------
+-- NOTE: Not supported currently, but may be reconsidered in the future.
 
-data Instance = ADTI | GADTI | NTI
+-- data Instance = ADTI | GADTI | NTI
 
-data family Family (s :: Instance) (m :: Type -> Type) a
+-- data family Family (s :: Instance) (m :: Type -> Type) a
 
-data instance Family 'ADTI m a = ADTIC1 Int | ADTIC2 String
+-- data instance Family 'ADTI m a = ADTIC1 Int | ADTIC2 String
 
-makeSem 'ADTIC1
+-- makeSem 'ADTIC1
 
-data instance Family 'GADTI m a where
-  GADTIC1 :: Int -> Family 'GADTI m Int
-  GADTIC2 :: String -> Family 'GADTI m String
+-- data instance Family 'GADTI m a where
+--   GADTIC1 :: Int -> Family 'GADTI m Int
+--   GADTIC2 :: String -> Family 'GADTI m String
 
-makeSem 'GADTIC1
+-- makeSem 'GADTIC1
 
-newtype instance Family 'NTI m a = NTIC Int
+-- newtype instance Family 'NTI m a = NTIC Int
 
-makeSem 'NTIC
+-- makeSem 'NTIC
 
 -- Phantom types -------------------------------------------------------------
 

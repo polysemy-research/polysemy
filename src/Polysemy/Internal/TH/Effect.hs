@@ -1,9 +1,6 @@
-{-# OPTIONS_HADDOCK not-home #-}
-
-{-# LANGUAGE NamedFieldPuns  #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections   #-}
+
+{-# OPTIONS_HADDOCK not-home #-}
 
 -- | This module provides Template Haskell functions for automatically generating
 -- effect operation functions (that is, functions that use 'send') from a given
@@ -37,6 +34,7 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Datatype
 import Polysemy.Internal.CustomErrors (DefiningModule)
 import Polysemy.Internal.TH.Common
+
 
 -- TODO: write tests for what should (not) compile
 
@@ -79,7 +77,7 @@ makeSem = genFreer True
 -- * signatures have to specify argument of 'Sem' representing union of
 -- effects as @r@ (e.g. @'Sem' r ()@)
 -- * all arguments in effect's type constructor have to follow naming scheme
--- from effect's declaration:
+-- from data constructor's declaration:
 --
 -- @
 -- data Foo e m a where
@@ -87,11 +85,11 @@ makeSem = genFreer True
 --   FooC2 :: Foo (Maybe x) m ()
 -- @
 --
--- should have @e@ in type signature of @fooC1@:
+-- should have @x@ in type signature of @fooC1@:
 --
--- @fooC1 :: forall e r. Member (Foo e) r => Sem r ()@
+-- @fooC1 :: forall x r. Member (Foo x) r => Sem r ()@
 --
--- but @x@ in signature of @fooC2@:
+-- and @Maybe x@ in signature of @fooC2@:
 --
 -- @fooC2 :: forall x r. Member (Foo (Maybe x)) r => Sem r ()@
 --
@@ -101,16 +99,19 @@ makeSem = genFreer True
 -- These restrictions may be removed in the future, depending on changes to
 -- the compiler.
 --
+-- Change in (TODO(Sandy): version): in case of GADTs, signatures now only use
+-- names from data constructor's type and not from type constructor
+-- declaration.
+--
 -- @since 0.1.2.0
 makeSem_ :: Name -> Q [Dec]
 makeSem_ = genFreer False
 -- NOTE(makeSem_):
--- This function uses an ugly hack to work --- it enables change of names in
--- annotation of applied data constructor to capturable ones, based of names
--- in effect's definition. This allows user to provide them to us from their
--- signature through 'forall' with 'ScopedTypeVariables' enabled, so that we
--- can compile liftings of constructors with ambiguous type arguments (see
--- issue #48).
+-- This function uses an ugly hack to work --- it changes names in data
+-- constructor's type to capturable ones. This allows user to provide them to
+-- us from their signature through 'forall' with 'ScopedTypeVariables'
+-- enabled, so that we can compile liftings of constructors with ambiguous
+-- type arguments (see issue #48).
 --
 -- Please, change this as soon as GHC provides some way of inspecting
 -- signatures, replacing code or generating haddock documentation in TH.
@@ -122,12 +123,12 @@ makeSem_ = genFreer False
 genFreer :: Bool -> Name -> Q [Dec]
 genFreer should_mk_sigs type_name = do
   checkExtensions [ScopedTypeVariables, FlexibleContexts]
-  (dt_info, cl_infos) <- getEffectMetadata type_name
+  (dt_name, cl_infos) <- getEffectMetadata type_name
   tyfams_on  <- isExtEnabled TypeFamilies
   def_mod_fi <- sequence [ tySynInstDCompat
                              ''DefiningModule
                              Nothing
-                             [pure . ConT $ datatypeName dt_info]
+                             [pure $ ConT dt_name]
                              (LitT . StrTyLit . loc_module <$> location)
                          | tyfams_on
                          ]
@@ -146,13 +147,13 @@ genSig cli
   =  maybe [] (pure . flip InfixD (cliFunName cli)) (cliFunFixity cli)
   ++ [ SigD (cliFunName cli) $ quantifyType
        $ ForallT [] (member_cxt : cliFunCxt cli)
-       $ foldArrows sem
+       $ foldArrowTs sem
        $ fmap snd
-       $ cliArgs cli
+       $ cliFunArgs cli
      ]
   where
     member_cxt = makeMemberConstraint (cliUnionName cli) cli
-    sem        = makeSemType (cliUnionName cli) (cliResType cli)
+    sem        = makeSemType (cliUnionName cli) (cliEffRes cli)
 
 
 ------------------------------------------------------------------------------
@@ -160,7 +161,7 @@ genSig cli
 -- @x a b c = send (X a b c :: E m a)@.
 genDec :: Bool -> ConLiftInfo -> Q [Dec]
 genDec should_mk_sigs cli = do
-  let fun_args_names = fmap fst $ cliArgs cli
+  let fun_args_names = fmap fst $ cliFunArgs cli
 
   pure
     [ PragmaD $ InlineP (cliFunName cli) Inlinable ConLike AllPhases
