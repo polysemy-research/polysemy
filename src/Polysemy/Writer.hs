@@ -32,6 +32,8 @@ data Writer o m a where
 
 makeSem ''Writer
 
+------------------------------------------------------------------------------
+-- | @since 0.7.0.0
 censor :: Member (Writer o) r
        => (o -> o)
        -> Sem r a

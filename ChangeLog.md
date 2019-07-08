@@ -1,5 +1,19 @@
 # Changelog for polysemy
 
+## 0.7.0.0 (2019-07-08)
+
+### Breaking Changes
+
+- Added a `Pass` constructor to `Writer`
+- Fixed a bug in `runWriter` where the MTL semantics wouldn't be respected
+- Removed the `Censor` constructor of `Writer`
+- Renamed `Yo` to `Weaving`
+- Changed the visible type applications for `asks`, `gets`, and `runErrorAsAnother`
+
+### Other Changes
+
+- Fixed haddock generation
+
 ## 0.6.0.0 (2019-07-04)
 
 ### Breaking Changes
