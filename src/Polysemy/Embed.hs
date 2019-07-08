@@ -8,7 +8,7 @@ module Polysemy.Embed
   , embed
 
     -- * Interpretations
-  , runEmbed
+  , runEmbedded
   ) where
 
 import Polysemy
@@ -19,11 +19,11 @@ import Polysemy.Embed.Type (Embed (..))
 -- run a @Embed m1@ effect by transforming it into a @Embed m2@ effect.
 --
 -- TODO(sandy): @since
-runEmbed
+runEmbedded
     :: forall m1 m2 r a
      . Member (Embed m2) r
     => (forall x. m1 x -> m2 x)
     -> Sem (Embed m1 ': r) a
     -> Sem r a
-runEmbed f = interpret $ embed . f . unEmbed
-{-# INLINE runEmbed #-}
+runEmbedded f = interpret $ embed . f . unEmbed
+{-# INLINE runEmbedded #-}

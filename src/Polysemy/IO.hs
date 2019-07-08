@@ -3,7 +3,7 @@
 module Polysemy.IO
   ( -- * Interpretations
     runIO
-  , runEmbedded
+  , runEmbeddedInIO
   ) where
 
 import Control.Monad.IO.Class
@@ -42,7 +42,7 @@ runIO
        )
     => Sem (Embed IO ': r) a
     -> Sem r a
-runIO = runEmbed $ liftIO @m
+runIO = runEmbedded $ liftIO @m
 {-# INLINE runIO #-}
 
 
@@ -53,21 +53,21 @@ runIO = runEmbed $ liftIO @m
 --
 -- This function creates a thread, and so should be compiled with @-threaded@.
 --
--- @since 0.6.0.0
-runEmbedded
+-- TODO(sandy): @since
+runEmbeddedInIO
     :: ( MonadIO m
        , LastMember (Embed IO) r
        )
     => (forall x. m x -> IO x)  -- ^ The means of running this monad.
     -> Sem (Embed m ': r) a
     -> Sem r a
-runEmbedded run_m (Sem m) = withLowerToIO $ \lower _ ->
+runEmbeddedInIO run_m (Sem m) = withLowerToIO $ \lower _ ->
   run_m $ m $ \u ->
     case decomp u of
       Left x -> liftIO
               . lower
               . liftSem
-              $ hoist (runEmbedded run_m) x
+              $ hoist (runEmbeddedInIO run_m) x
 
       Right (Weaving (Embed wd) s _ y _) ->
         fmap y $ fmap (<$ s) wd
