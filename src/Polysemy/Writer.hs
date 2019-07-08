@@ -28,7 +28,7 @@ import Polysemy.State
 data Writer o m a where
   Tell   :: o -> Writer o m ()
   Listen :: ∀ o m a. m a -> Writer o m (o, a)
-  Pass   :: m (a, o -> o) -> Writer o m a
+  Pass   :: m (o -> o, a) -> Writer o m a
 
 makeSem ''Writer
 
@@ -36,7 +36,7 @@ censor :: Member (Writer o) r
        => (o -> o)
        -> Sem r a
        -> Sem r a
-censor f m = pass (fmap (\a -> (a, f)) m)
+censor f m = pass (fmap ((,) f) m)
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Output' effect into a 'Writer' effect.
