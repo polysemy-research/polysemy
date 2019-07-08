@@ -36,7 +36,8 @@ censor :: Member (Writer o) r
        => (o -> o)
        -> Sem r a
        -> Sem r a
-censor f m = pass (fmap ((,) f) m)
+censor f m = pass (fmap (f ,) m)
+{-# INLINE censor #-}
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Output' effect into a 'Writer' effect.
@@ -71,3 +72,4 @@ runWriter = runState mempty . reinterpretH
         modify (<> f o)
         pure (fmap snd t)
   )
+{-# INLINE runWriter #-}
