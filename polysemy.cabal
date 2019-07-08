@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e22afd49cd8b82cdc69be962d872539c65eedc43a2978aa7a0652b40dd7db105
+-- hash: 7e0e9242c36e377756ae6ef007d19a16cdaf3f244855b0bfc97e267f4df143ea
 
 name:           polysemy
 version:        0.7.0.0
@@ -53,7 +53,6 @@ library
       Polysemy.Internal.Fixpoint
       Polysemy.Internal.Forklift
       Polysemy.Internal.Kind
-      Polysemy.Internal.Lift
       Polysemy.Internal.NonDet
       Polysemy.Internal.Tactics
       Polysemy.Internal.TH.Common
