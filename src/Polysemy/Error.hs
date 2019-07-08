@@ -56,7 +56,8 @@ fromEither (Right a) = pure a
 --
 -- @since 0.5.1.0
 fromEitherM
-    :: ( Member (Error e) r
+    :: forall e m r a
+     . ( Member (Error e) r
        , Member (Lift m) r
        )
     => m (Either e a)
@@ -97,7 +98,8 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
 --
 -- @since 0.2.2.0
 runErrorAsAnother
-  :: Member (Error e2) r
+  :: forall e1 e2 r a
+   . Member (Error e2) r
   => (e1 -> e2)
   -> Sem (Error e1 ': r) a
   -> Sem r a

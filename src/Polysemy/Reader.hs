@@ -29,7 +29,7 @@ data Reader i m a where
 makeSem ''Reader
 
 
-asks :: Member (Reader i) r => (i -> j) -> Sem r j
+asks :: forall i j r. Member (Reader i) r => (i -> j) -> Sem r j
 asks f = f <$> ask
 {-# INLINABLE asks #-}
 

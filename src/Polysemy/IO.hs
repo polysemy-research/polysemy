@@ -52,10 +52,10 @@ runIO = interpret $ sendM . liftIO @m . unLift
 --
 -- This function creates a thread, and so should be compiled with @-threaded@.
 --
--- TODO(sandy): @since
+-- @since 0.6.0.0
 runEmbedded
-    :: ( LastMember (Lift IO) r
-       , MonadIO m
+    :: ( MonadIO m
+       , LastMember (Lift IO) r
        )
     => (forall x. m x -> IO x)  -- ^ The means of running this monad.
     -> Sem (Lift m ': r) a

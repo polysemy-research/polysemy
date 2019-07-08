@@ -8,6 +8,7 @@ module Polysemy.Writer
     -- * Actions
   , tell
   , listen
+  , pass
   , censor
 
     -- * Interpretations
@@ -27,10 +28,18 @@ import Polysemy.State
 data Writer o m a where
   Tell   :: o -> Writer o m ()
   Listen :: ∀ o m a. m a -> Writer o m (o, a)
-  Censor :: (o -> o) -> m a -> Writer o m a
+  Pass   :: m (o -> o, a) -> Writer o m a
 
 makeSem ''Writer
 
+------------------------------------------------------------------------------
+-- | @since 0.7.0.0
+censor :: Member (Writer o) r
+       => (o -> o)
+       -> Sem r a
+       -> Sem r a
+censor f m = pass (fmap (f ,) m)
+{-# INLINE censor #-}
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Output' effect into a 'Writer' effect.
@@ -50,15 +59,19 @@ runWriter
 runWriter = runState mempty . reinterpretH
   (\case
       Tell o -> do
-        modify (`mappend` o) >>= pureT
+        modify (<> o) >>= pureT
       Listen m -> do
         mm <- runT m
         -- TODO(sandy): this is stupid
         (o, fa) <- raise $ runWriter mm
+        modify (<> o)
         pure $ fmap (o, ) fa
-      Censor f m -> do
+      Pass m -> do
         mm <- runT m
-        ~(o, a) <- raise $ runWriter mm
-        modify (`mappend` f o)
-        pure a
+        (o, t) <- raise $ runWriter mm
+        ins <- getInspectorT
+        let f = maybe id fst (inspect ins t)
+        modify (<> f o)
+        pure (fmap snd t)
   )
+{-# INLINE runWriter #-}
