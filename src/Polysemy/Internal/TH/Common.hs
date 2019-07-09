@@ -201,11 +201,6 @@ checkExtensions exts = do
             <+> text "extension needs to be enabled for Polysemy's Template Haskell to work")
         (find (not . snd) states)
 
-dataFamsNotSupported :: Q a
-dataFamsNotSupported = fail $ show
-  $   text "‘makesSem’ and ‘makesSem_’ do not support data families"
-  $+$ nest 4 (text "(see polysemy-research/polysemy#157)")
-
 missingEffArgs :: Name -> Q a
 missingEffArgs name = fail $ show
   $   text "Effect ‘" <> ppr name
