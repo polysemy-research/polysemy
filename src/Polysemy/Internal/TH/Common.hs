@@ -97,11 +97,6 @@ makeCLInfo cliConName = do
     DataConI _ t p -> pure (t, p)
     _              -> notDataCon cliConName
 
-  -- We do not support type families (polysemy-research/polysemy#157).
-  reify cliEffName >>= \case
-    FamilyI{} -> dataFamsNotSupported
-    _         -> pure ()
-
   let (con_args, [con_return_type]) = splitAtEnd 1
                                     $ splitArrowTs con_type
 

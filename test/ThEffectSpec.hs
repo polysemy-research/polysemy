@@ -67,6 +67,32 @@ newtype Newtype2 m a where
 
 makeSem ''Newtype2
 
+-- Data families -------------------------------------------------------------
+
+data Instance = ADTI | GADTI | NTI | MMI
+
+data family Family (s :: Instance) (m :: Type -> Type) a
+
+data instance Family 'ADTI m a = ADTIC1 Int | ADTIC2 String
+
+makeSem 'ADTIC1
+
+data instance Family 'GADTI m a where
+  GADTIC1 :: Int -> Family 'GADTI m Int
+  GADTIC2 :: String -> Family 'GADTI m String
+
+makeSem 'GADTIC1
+
+newtype instance Family 'NTI m a = NTIC Int
+
+makeSem 'NTIC
+
+data instance Family 'MMI m (f m) where
+  MMIC1 :: f m -> Family 'MMI m (f m)
+  MMIC2 :: (forall x. m x -> m (f m)) -> Family 'MMI m (f m)
+
+makeSem 'MMIC1
+
 -- Phantom types -------------------------------------------------------------
 
 data Phantom m a
