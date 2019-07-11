@@ -117,10 +117,12 @@ module Polysemy
   , bindT
   , getInspectorT
   , Inspector (..)
+  , Effunctor (..)
   ) where
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
+import Polysemy.Internal.Effunctor
 import Polysemy.Internal.Forklift
 import Polysemy.Internal.Kind
 import Polysemy.Internal.TH.Effect
