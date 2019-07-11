@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Polysemy.Output
   ( -- * Effect
@@ -28,6 +29,14 @@ data Output o m a where
 
 makeSem ''Output
 
+instance Effunctor Output where
+  effmap :: Member (Output o2) r
+         => (o1 -> o2)
+         -> Sem (Output o1 ': r) a
+         -> Sem r a
+  effmap f = interpret $ \case
+    Output o -> output $ f o
+  {-# INLINE effmap #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into a list of its values.
