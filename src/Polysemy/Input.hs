@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Polysemy.Input
   ( -- * Effect
@@ -26,6 +27,14 @@ data Input i m a where
 
 makeSem ''Input
 
+instance Effecontra Input where
+  effcontra :: Member (Input i1) r
+            => (i1 -> i2)
+            -> Sem (Input i2 ': r) a
+            -> Sem r a
+  effcontra f = interpret $ \case
+    Input -> f <$> input
+  {-# INLINE effcontra #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Input' effect by always giving back the same value.
