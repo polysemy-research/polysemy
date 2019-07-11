@@ -46,8 +46,8 @@ errState = do
   err
 
 
-lifted :: Monad m => Member (Lift m) r => Sem r ()
-lifted = sendM $ pure ()
+lifted :: Monad m => Member (Embed m) r => Sem r ()
+lifted = embed $ pure ()
 
 
 newtype MyString = MyString String
@@ -136,7 +136,7 @@ spec = do
         output $ replicate 2 5
 
 
-  describe "Lift effect" $ do
+  describe "Embed effect" $ do
     it "should interpret against IO" $ do
       res <- runM lifted
       res `shouldBe` ()

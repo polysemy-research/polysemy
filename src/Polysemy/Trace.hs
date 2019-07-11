@@ -31,15 +31,15 @@ makeSem ''Trace
 
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by printing the messages to stdout.
-runTraceIO :: Member (Lift IO) r => Sem (Trace ': r) a -> Sem r a
+runTraceIO :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
 runTraceIO = interpret $ \case
-  Trace m -> sendM $ putStrLn m
+  Trace m -> embed $ putStrLn m
 {-# INLINE runTraceIO #-}
 
 
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by ignoring all of its messages.
-runIgnoringTrace :: Member (Lift IO) r => Sem (Trace ': r) a -> Sem r a
+runIgnoringTrace :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
 runIgnoringTrace = interpret $ \case
   Trace _ -> pure ()
 {-# INLINE runIgnoringTrace #-}

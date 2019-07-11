@@ -91,10 +91,10 @@ data Teletype m a where
 
 makeSem ''Teletype
 
-runTeletypeIO :: Member (Lift IO) r => Sem (Teletype ': r) a -> Sem r a
+runTeletypeIO :: Member (Embed IO) r => Sem (Teletype ': r) a -> Sem r a
 runTeletypeIO = interpret $ \case
-  ReadTTY      -> sendM getLine
-  WriteTTY msg -> sendM $ putStrLn msg
+  ReadTTY      -> embed getLine
+  WriteTTY msg -> embed $ putStrLn msg
 
 runTeletypePure :: [String] -> Sem (Teletype ': r) a -> Sem r ([String], a)
 runTeletypePure i
@@ -121,7 +121,7 @@ pureOutput :: [String] -> [String]
 pureOutput = fst . run . echoPure
 
 -- Now let's do things
-echoIO :: Sem '[Lift IO] ()
+echoIO :: Sem '[Embed IO] ()
 echoIO = runTeletypeIO echo
 
 -- echo forever

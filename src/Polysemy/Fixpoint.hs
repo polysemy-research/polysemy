@@ -29,7 +29,7 @@ runFixpoint lower = interpretH $ \case
 -- | Run a 'Fixpoint' effect in terms of an underlying 'MonadFix' instance.
 runFixpointM
     :: ( MonadFix m
-       , Member (Lift m) r
+       , Member (Embed m) r
        )
     => (∀ x. Sem r x -> m x)
     -> Sem (Fixpoint ': r) a
@@ -37,5 +37,5 @@ runFixpointM
 runFixpointM lower = interpretH $ \case
   Fixpoint mf -> do
     c <- bindT mf
-    sendM $ mfix $ lower . runFixpointM lower . c
+    embed $ mfix $ lower . runFixpointM lower . c
 

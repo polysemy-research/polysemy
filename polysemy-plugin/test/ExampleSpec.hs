@@ -16,10 +16,10 @@ data Teletype m a where
 
 makeSem ''Teletype
 
-runTeletypeIO :: Member (Lift IO) r => Sem (Teletype ': r) a -> Sem r a
+runTeletypeIO :: Member (Embed IO) r => Sem (Teletype ': r) a -> Sem r a
 runTeletypeIO = interpret $ \case
-  ReadTTY      -> sendM getLine
-  WriteTTY msg -> sendM $ putStrLn msg
+  ReadTTY      -> embed getLine
+  WriteTTY msg -> embed $ putStrLn msg
 
 data CustomException = ThisException | ThatException deriving Show
 

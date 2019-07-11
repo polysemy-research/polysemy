@@ -27,14 +27,14 @@ spec = describe "async" $ do
           message 1 v
           put $ reverse v
 
-          sendM $ threadDelay 1e5
+          embed $ threadDelay 1e5
           get >>= message 1
 
-          sendM $ threadDelay 1e5
+          embed $ threadDelay 1e5
           get @String
 
       void $ async $ do
-          sendM $ threadDelay 5e4
+          embed $ threadDelay 5e4
           get >>= message 2
           put "pong"
 

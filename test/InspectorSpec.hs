@@ -25,7 +25,7 @@ spec = parallel $ describe "Inspector" $ do
       void . (runM .@ runCallback ref)
            . runState False
            $ do
-        sendM $ pretendPrint ref "hello world"
+        embed $ pretendPrint ref "hello world"
         callback $ show <$> get @Bool
         modify not
         callback $ show <$> get @Bool
@@ -47,7 +47,7 @@ spec = parallel $ describe "Inspector" $ do
 
 
 runCallback
-    :: Member (Lift IO) r
+    :: Member (Embed IO) r
     => IORef [String]
     -> (forall x. Sem r x -> IO x)
     -> Sem (Callback ': r) a
@@ -56,7 +56,7 @@ runCallback ref lower = interpretH $ \case
   Callback cb -> do
     cb' <- runT cb
     ins <- getInspectorT
-    sendM $ doCB ref $ do
+    embed $ doCB ref $ do
       v <- lower .@ runCallback ref $ cb'
       pure $ maybe ":(" id $ inspect ins v
     getInitialStateT

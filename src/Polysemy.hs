@@ -10,8 +10,8 @@ module Polysemy
   , runM
 
   -- * Interoperating With Other Monads
-  , Lift (..)
-  , sendM
+  , Embed (..)
+  , embed
 
     -- * Lifting
   , raise
