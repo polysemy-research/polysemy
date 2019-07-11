@@ -118,6 +118,7 @@ module Polysemy
   , getInspectorT
   , Inspector (..)
   , Effunctor (..)
+  , Effecontra (..)
   ) where
 
 import Polysemy.Internal

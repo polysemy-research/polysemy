@@ -14,3 +14,14 @@ class Effunctor (e1 :: Type -> Effect) where
     => (a -> b)
     -> Sem (e1 a ': r) c
     -> Sem r c
+
+-- | Effects that are \"contravariant functors\" over their argument.
+--
+-- TODO: add better docs
+class Effecontra (e1 :: Type -> Effect) where
+  effcontra
+    :: forall r a b c
+     . Member (e1 a) r
+    => (a -> b)
+    -> Sem (e1 b ': r) c
+    -> Sem r c
