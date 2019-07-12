@@ -9,8 +9,8 @@ module Polysemy.Async
   , await
 
     -- * Interpretations
-  , runAsync
-  , runAsyncInIO
+  , asyncToIO
+  , lowerAsync
   ) where
 
 import qualified Control.Concurrent.Async as A
@@ -32,7 +32,7 @@ data Async m a where
 makeSem ''Async
 
 ------------------------------------------------------------------------------
--- | A more flexible --- though less performant ---  version of 'runAsyncInIO'.
+-- | A more flexible --- though less performant ---  version of 'lowerAsync'.
 --
 -- This function is capable of running 'Async' effects anywhere within an
 -- effect stack, without relying on an explicit function to lower it into 'IO'.
@@ -40,22 +40,22 @@ makeSem ''Async
 -- in the presence of 'Async'.
 --
 -- @since 0.5.0.0
-runAsync
+asyncToIO
     :: LastMember (Lift IO) r
     => Sem (Async ': r) a
     -> Sem r a
-runAsync m = withLowerToIO $ \lower _ -> lower $
+asyncToIO m = withLowerToIO $ \lower _ -> lower $
   interpretH
     ( \case
         Async a -> do
           ma  <- runT a
           ins <- getInspectorT
-          fa  <- sendM $ A.async $ lower $ runAsync ma
+          fa  <- sendM $ A.async $ lower $ asyncToIO ma
           pureT $ fmap (inspect ins) fa
 
         Await a -> pureT =<< sendM (A.wait a)
     )  m
-{-# INLINE runAsync #-}
+{-# INLINE asyncToIO #-}
 
 
 ------------------------------------------------------------------------------
@@ -63,22 +63,22 @@ runAsync m = withLowerToIO $ \lower _ -> lower $
 --
 --
 -- @since 0.5.0.0
-runAsyncInIO
+lowerAsync
     :: Member (Lift IO) r
     => (forall x. Sem r x -> IO x)
        -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is likely
        -- some combination of 'runM' and other interpreters composed via '.@'.
     -> Sem (Async ': r) a
     -> Sem r a
-runAsyncInIO lower m = interpretH
+lowerAsync lower m = interpretH
     ( \case
         Async a -> do
           ma  <- runT a
           ins <- getInspectorT
-          fa  <- sendM $ A.async $ lower $ runAsyncInIO lower ma
+          fa  <- sendM $ A.async $ lower $ lowerAsync lower ma
           pureT $ fmap (inspect ins) fa
 
         Await a -> pureT =<< sendM (A.wait a)
     )  m
-{-# INLINE runAsyncInIO #-}
+{-# INLINE lowerAsync #-}
 

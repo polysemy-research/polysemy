@@ -16,7 +16,7 @@ spec :: Spec
 spec = describe "intercept" $ do
   it "should weave through embedded computations" $ do
     let (msgs, ()) = run
-                   . runTraceAsList
+                   . runTraceList
                    . runResource
                    . withTraceLogging $ do
           trace "outside"

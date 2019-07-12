@@ -12,8 +12,8 @@ module Polysemy.Error
 
     -- * Interpretations
   , runError
-  , runErrorAsAnother
-  , runErrorInIO
+  , mapError
+  , lowerError
   ) where
 
 import qualified Control.Exception as X
@@ -97,13 +97,13 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
 -- multiple errors into a single type.
 --
 -- @since 0.2.2.0
-runErrorAsAnother
+mapError
   :: forall e1 e2 r a
    . Member (Error e2) r
   => (e1 -> e2)
   -> Sem (Error e1 ': r) a
   -> Sem r a
-runErrorAsAnother f = interpretH $ \case
+mapError f = interpretH $ \case
   Throw e -> throw $ f e
   Catch action handler -> do
     a  <- runT action
@@ -118,7 +118,7 @@ runErrorAsAnother f = interpretH $ \case
         case mx' of
           Right x -> pure x
           Left e' -> throw $ f e'
-{-# INLINE runErrorAsAnother #-}
+{-# INLINE mapError #-}
 
 
 newtype WrappedExc e = WrappedExc { unwrapExc :: e }
@@ -133,7 +133,7 @@ instance (Typeable e) => X.Exception (WrappedExc e)
 ------------------------------------------------------------------------------
 -- | Run an 'Error' effect as an 'IO' 'X.Exception'. This interpretation is
 -- significantly faster than 'runError', at the cost of being less flexible.
-runErrorInIO
+lowerError
     :: ( Typeable e
        , Member (Lift IO) r
        )
@@ -143,12 +143,12 @@ runErrorInIO
        -- '.@'.
     -> Sem (Error e ': r) a
     -> Sem r (Either e a)
-runErrorInIO lower
+lowerError lower
     = sendM
     . fmap (first unwrapExc)
     . X.try
     . (lower .@ runErrorAsExc)
-{-# INLINE runErrorInIO #-}
+{-# INLINE lowerError #-}
 
 
 -- TODO(sandy): Can we use the new withLowerToIO machinery for this?

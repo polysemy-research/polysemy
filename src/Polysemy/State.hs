@@ -12,8 +12,10 @@ module Polysemy.State
 
     -- * Interpretations
   , runState
+  , evalState
   , runLazyState
-  , runStateInIORef
+  , evalLazyState
+  , runStateIORef
 
     -- * Interoperation with MTL
   , hoistStateIntoStateT
@@ -65,6 +67,13 @@ runState = stateful $ \case
 
 
 ------------------------------------------------------------------------------
+-- | Run a 'State' effect with local state.
+evalState :: s -> Sem (State s ': r) a -> Sem r a
+evalState s = fmap snd . runState s
+{-# INLINE evalState #-}
+
+
+------------------------------------------------------------------------------
 -- | Run a 'State' effect with local state, lazily.
 runLazyState :: s -> Sem (State s ': r) a -> Sem r (s, a)
 runLazyState = lazilyStateful $ \case
@@ -72,21 +81,27 @@ runLazyState = lazilyStateful $ \case
   Put s -> const $ pure (s, ())
 {-# INLINE[3] runLazyState #-}
 
+------------------------------------------------------------------------------
+-- | Run a 'State' effect with local state, lazily.
+evalLazyState :: s -> Sem (State s ': r) a -> Sem r a
+evalLazyState s = fmap snd . runLazyState s
+{-# INLINE evalLazyState #-}
+
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect by transforming it into operations over an 'IORef'.
 --
 -- @since 0.1.2.0
-runStateInIORef
+runStateIORef
     :: forall s r a
      . Member (Lift IO) r
     => IORef s
     -> Sem (State s ': r) a
     -> Sem r a
-runStateInIORef ref = interpret $ \case
+runStateIORef ref = interpret $ \case
   Get   -> sendM $ readIORef ref
   Put s -> sendM $ writeIORef ref s
-{-# INLINE runStateInIORef #-}
+{-# INLINE runStateIORef #-}
 
 
 ------------------------------------------------------------------------------

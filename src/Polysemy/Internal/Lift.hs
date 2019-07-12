@@ -25,7 +25,7 @@ import Data.Kind
 -- prevent you from interpreting it differently. For best results, only use
 -- 'Lift' in your effect interpreters.
 --
--- Consider using 'Polysemy.Trace.trace' and 'Polysemy.Trace.runTraceIO' as
+-- Consider using 'Polysemy.Trace.trace' and 'Polysemy.Trace.traceToIO' as
 -- a substitute for using 'putStrLn' directly.
 newtype Lift m (z :: Type -> Type) a where
   Lift :: { unLift :: m a } -> Lift m z a

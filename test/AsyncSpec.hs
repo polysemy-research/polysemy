@@ -15,9 +15,9 @@ spec :: Spec
 spec = describe "async" $ do
   it "should thread state and not lock" $ do
     (ts, (s, r)) <- runM
-                  . runTraceAsList
+                  . runTraceList
                   . runState "hello"
-                  . runAsync $ do
+                  . asyncToIO $ do
       let message :: Member Trace r => Int -> String -> Sem r ()
           message n msg = trace $ mconcat
             [ show n, "> ", msg ]

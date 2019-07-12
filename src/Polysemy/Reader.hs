@@ -13,7 +13,7 @@ module Polysemy.Reader
   , runReader
 
     -- * Interpretations for Other Effects
-  , runInputAsReader
+  , inputToReader
   ) where
 
 import Polysemy
@@ -47,8 +47,8 @@ runReader i = interpretH $ \case
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Input' effect into a 'Reader' effect.
-runInputAsReader :: Member (Reader i) r => Sem (Input i ': r) a -> Sem r a
-runInputAsReader = interpret $ \case
+inputToReader :: Member (Reader i) r => Sem (Input i ': r) a -> Sem r a
+inputToReader = interpret $ \case
   Input -> ask
-{-# INLINE runInputAsReader #-}
+{-# INLINE inputToReader #-}
 

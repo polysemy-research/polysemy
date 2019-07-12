@@ -12,8 +12,8 @@ module Polysemy.Resource
 
     -- * Interpretations
   , runResource
-  , runResourceInIO
-  , runResourceBase
+  , lowerResource
+  , resourceToIO
   ) where
 
 import qualified Control.Exception as X
@@ -79,7 +79,7 @@ onException act end = bracketOnError (pure ()) (const end) (const act)
 -- __Note:__ This function used to be called @runResource@ prior to 0.4.0.0.
 --
 -- @since 0.4.0.0
-runResourceInIO
+lowerResource
     :: ∀ r a
      . Member (Lift IO) r
     => (∀ x. Sem r x -> IO x)
@@ -87,14 +87,14 @@ runResourceInIO
        -- some combination of 'runM' and other interpreters composed via '.@'.
     -> Sem (Resource ': r) a
     -> Sem r a
-runResourceInIO finish = interpretH $ \case
+lowerResource finish = interpretH $ \case
   Bracket alloc dealloc use -> do
     a <- runT  alloc
     d <- bindT dealloc
     u <- bindT use
 
     let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ runResourceInIO
+        run_it = finish .@ lowerResource
 
     sendM $ X.bracket (run_it a) (run_it . d) (run_it . u)
 
@@ -104,10 +104,10 @@ runResourceInIO finish = interpretH $ \case
     u <- bindT use
 
     let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ runResourceInIO
+        run_it = finish .@ lowerResource
 
     sendM $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
-{-# INLINE runResourceInIO #-}
+{-# INLINE lowerResource #-}
 
 
 ------------------------------------------------------------------------------
@@ -150,28 +150,28 @@ runResource = interpretH $ \case
 
 
 ------------------------------------------------------------------------------
--- | A more flexible --- though less safe ---  version of 'runResourceInIO'.
+-- | A more flexible --- though less safe ---  version of 'lowerResource'.
 --
 -- This function is capable of running 'Resource' effects anywhere within an
 -- effect stack, without relying on an explicit function to lower it into 'IO'.
 -- Notably, this means that 'Polysemy.State.State' effects will be consistent
 -- in the presence of 'Resource'.
 --
--- 'runResourceBase' is safe whenever you're concerned about exceptions thrown
+-- ResourceToIO' is safe whenever you're concerned about exceptions thrown
 -- by effects _already handled_ in your effect stack, or in 'IO' code run
 -- directly inside of 'bracket'. It is not safe against exceptions thrown
 -- explicitly at the main thread. If this is not safe enough for your use-case,
--- use 'runResourceInIO' instead.
+-- use 'lowerResource' instead.
 --
 -- This function creates a thread, and so should be compiled with @-threaded@.
 --
 -- @since 0.5.0.0
-runResourceBase
+resourceToIO
     :: forall r a
      . LastMember (Lift IO) r
     => Sem (Resource ': r) a
     -> Sem r a
-runResourceBase = interpretH $ \case
+resourceToIO = interpretH $ \case
   Bracket a b c -> do
     ma <- runT a
     mb <- bindT b
@@ -179,7 +179,7 @@ runResourceBase = interpretH $ \case
 
     withLowerToIO $ \lower finish -> do
       let done :: Sem (Resource ': r) x -> IO x
-          done = lower . raise . runResourceBase
+          done = lower . raise . resourceToIO
       X.bracket
           (done ma)
           (\x -> done (mb x) >> finish)
@@ -192,9 +192,9 @@ runResourceBase = interpretH $ \case
 
     withLowerToIO $ \lower finish -> do
       let done :: Sem (Resource ': r) x -> IO x
-          done = lower . raise . runResourceBase
+          done = lower . raise . resourceToIO
       X.bracketOnError
           (done ma)
           (\x -> done (mb x) >> finish)
           (done . mc)
-{-# INLINE runResourceBase #-}
+{-# INLINE resourceToIO #-}

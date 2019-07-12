@@ -8,9 +8,9 @@ module Polysemy.Input
   , input
 
     -- * Interpretations
-  , runConstInput
-  , runListInput
-  , runMonadicInput
+  , runInputConst
+  , runInputList
+  , runInputSem
   ) where
 
 import Data.Foldable (for_)
@@ -29,33 +29,33 @@ makeSem ''Input
 
 ------------------------------------------------------------------------------
 -- | Run an 'Input' effect by always giving back the same value.
-runConstInput :: i -> Sem (Input i ': r) a -> Sem r a
-runConstInput c = interpret $ \case
+runInputConst :: i -> Sem (Input i ': r) a -> Sem r a
+runInputConst c = interpret $ \case
   Input -> pure c
-{-# INLINE runConstInput #-}
+{-# INLINE runInputConst #-}
 
 
 ------------------------------------------------------------------------------
 -- | Run an 'Input' effect by providing a different element of a list each
 -- time. Returns 'Nothing' after the list is exhausted.
-runListInput
+runInputList
     :: [i]
     -> Sem (Input (Maybe i) ': r) a
     -> Sem r a
-runListInput is = fmap snd . runState is . reinterpret
+runInputList is = fmap snd . runState is . reinterpret
   (\case
       Input -> do
         s <- gets uncons
         for_ s $ put . snd
         pure $ fmap fst s
   )
-{-# INLINE runListInput #-}
+{-# INLINE runInputList #-}
 
 
 ------------------------------------------------------------------------------
 -- | Runs an 'Input' effect by evaluating a monadic action for each request.
-runMonadicInput :: forall i r a. Sem r i -> Sem (Input i ': r) a -> Sem r a
-runMonadicInput m = interpret $ \case
+runInputSem :: forall i r a. Sem r i -> Sem (Input i ': r) a -> Sem r a
+runInputSem m = interpret $ \case
   Input -> m
-{-# INLINE runMonadicInput #-}
+{-# INLINE runInputSem #-}
 

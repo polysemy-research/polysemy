@@ -91,15 +91,15 @@ data Teletype m a where
 
 makeSem ''Teletype
 
-runTeletypeIO :: Member (Lift IO) r => Sem (Teletype ': r) a -> Sem r a
-runTeletypeIO = interpret $ \case
+teletypeToIO :: Member (Lift IO) r => Sem (Teletype ': r) a -> Sem r a
+teletypeToIO = interpret $ \case
   ReadTTY      -> sendM getLine
   WriteTTY msg -> sendM $ putStrLn msg
 
 runTeletypePure :: [String] -> Sem (Teletype ': r) a -> Sem r ([String], a)
 runTeletypePure i
-  = runFoldMapOutput pure  -- For each WriteTTY in our program, consume an output by appending it to the list in a ([String], a)
-  . runListInput i         -- Treat each element of our list of strings as a line of input
+  = runOutputMonoid pure  -- For each WriteTTY in our program, consume an output by appending it to the list in a ([String], a)
+  . runInputList i         -- Treat each element of our list of strings as a line of input
   . reinterpret2 \case     -- Reinterpret our effect in terms of Input and Output
       ReadTTY -> maybe "" id <$> input
       WriteTTY msg -> output msg
@@ -120,13 +120,9 @@ echoPure = flip runTeletypePure echo
 pureOutput :: [String] -> [String]
 pureOutput = fst . run . echoPure
 
--- Now let's do things
-echoIO :: Sem '[Lift IO] ()
-echoIO = runTeletypeIO echo
-
 -- echo forever
 main :: IO ()
-main = runM echoIO
+main = runM . teletypeToIO $ echo
 ```
 
 
@@ -157,7 +153,7 @@ program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
             _             -> writeTTY input >> writeTTY "no exceptions"
 
 main :: IO (Either CustomException ())
-main = (runM .@ runResourceInIO .@@ runErrorInIO @CustomException) . runTeletypeIO $ program
+main = (runM .@ lowerResource .@@ lowerError @CustomException) . teletypeToIO $ program
 ```
 
 Easy.

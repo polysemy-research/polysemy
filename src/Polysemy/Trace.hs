@@ -8,13 +8,13 @@ module Polysemy.Trace
   , trace
 
     -- * Interpretations
-  , runTraceIO
-  , runTraceAsList
-  , runIgnoringTrace
-  , runTraceAsOutput
+  , traceToIO
+  , runTraceList
+  , ignoreTrace
+  , traceToOutput
 
     -- * Interpretations for Other Effects
-  , runOutputAsTrace
+  , outputToTrace
   ) where
 
 import Polysemy
@@ -31,56 +31,56 @@ makeSem ''Trace
 
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by printing the messages to stdout.
-runTraceIO :: Member (Lift IO) r => Sem (Trace ': r) a -> Sem r a
-runTraceIO = interpret $ \case
+traceToIO :: Member (Lift IO) r => Sem (Trace ': r) a -> Sem r a
+traceToIO = interpret $ \case
   Trace m -> sendM $ putStrLn m
-{-# INLINE runTraceIO #-}
+{-# INLINE traceToIO #-}
 
 
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by ignoring all of its messages.
-runIgnoringTrace :: Member (Lift IO) r => Sem (Trace ': r) a -> Sem r a
-runIgnoringTrace = interpret $ \case
+ignoreTrace :: Member (Lift IO) r => Sem (Trace ': r) a -> Sem r a
+ignoreTrace = interpret $ \case
   Trace _ -> pure ()
-{-# INLINE runIgnoringTrace #-}
+{-# INLINE ignoreTrace #-}
 
 
 ------------------------------------------------------------------------------
 -- | Transform a 'Trace' effect into a 'Output' 'String' effect.
-runTraceAsOutput
+traceToOutput
     :: Member (Output String) r
     => Sem (Trace ': r) a
     -> Sem r a
-runTraceAsOutput = interpret $ \case
+traceToOutput = interpret $ \case
   Trace m -> output m
-{-# INLINE runTraceAsOutput #-}
+{-# INLINE traceToOutput #-}
 
 
 ------------------------------------------------------------------------------
 -- | Get the result of a 'Trace' effect as a list of 'String's.
 --
 -- @since 0.5.0.0
-runTraceAsList
+runTraceList
     :: Sem (Trace ': r) a
     -> Sem r ([String], a)
-runTraceAsList = runOutputAsList . reinterpret (
+runTraceList = runOutputList . reinterpret (
   \case
     Trace m -> output m
   )
-{-# INLINE runTraceAsList #-}
+{-# INLINE runTraceList #-}
 
 
 ------------------------------------------------------------------------------
 -- | Transform a 'Trace' effect into a 'Output' 'String' effect.
 --
 -- @since 0.1.2.0
-runOutputAsTrace
+outputToTrace
     :: ( Show w
        , Member Trace r
        )
     => Sem (Output w ': r) a
     -> Sem r a
-runOutputAsTrace = interpret $ \case
+outputToTrace = interpret $ \case
   Output m -> trace $ show m
-{-# INLINE runOutputAsTrace #-}
+{-# INLINE outputToTrace #-}
 
