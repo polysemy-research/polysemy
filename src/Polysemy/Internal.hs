@@ -211,10 +211,7 @@ instance Monad (Sem f) where
 instance (Member NonDet r) => Alternative (Sem r) where
   empty = send Empty
   {-# INLINE empty #-}
-  a <|> b = do
-    send (Choose id) >>= \case
-      False -> a
-      True  -> b
+  a <|> b = send (Choose a b)
   {-# INLINE (<|>) #-}
 
 -- | @since 0.2.1.0
