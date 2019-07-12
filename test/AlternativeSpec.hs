@@ -40,7 +40,7 @@ spec = parallel $ do
       runAlt (semFail $ Just False) `shouldBe` [False]
 
   describe "runNonDetMaybe" $ do
-    it "should skip (only) local effects if the second branch succeeds" $ do
+    it "should skip (only) local effects if the first branch succeeds" $ do
       (run . runNonDet . runTraceAsList) failtrace
         `shouldBe` Just ([], ())
       (run . runTraceAsList . runNonDet) failtrace
