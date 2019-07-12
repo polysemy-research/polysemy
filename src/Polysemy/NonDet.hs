@@ -80,7 +80,7 @@ runNonDetInC = usingSem $ \u ->
 --
 -- Unlike 'runNonDet', uses of '<|>' will not execute any "local" effects of the
 -- second branch at all if the first option succeeds.
-
+--
 -- I.e. any effects whose interpreters are run before 'runNonDetMaybe' will
 -- be skipped. Effects whose interpreters are run after 'runNonDetMaybe'
 -- will /not/ be skipped.
