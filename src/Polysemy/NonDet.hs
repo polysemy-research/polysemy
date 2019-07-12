@@ -78,12 +78,8 @@ runNonDetInC = usingSem $ \u ->
 ------------------------------------------------------------------------------
 -- | Run a 'NonDet' effect in terms of an underlying 'Maybe'
 --
--- Unlike 'runNonDet', uses of '<|>' will not execute any "local" effects of the
+-- Unlike 'runNonDet', uses of '<|>' will not execute the
 -- second branch at all if the first option succeeds.
---
--- I.e. any effects whose interpreters are run before 'runNonDetMaybe' will
--- be skipped. Effects whose interpreters are run after 'runNonDetMaybe'
--- will /not/ be skipped.
 runNonDetMaybe :: Sem (NonDet ': r) a -> Sem r (Maybe a)
 runNonDetMaybe (Sem sem) = Sem $ \k -> runMaybeT $ sem $ \u ->
   case decomp u of
