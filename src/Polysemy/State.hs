@@ -94,13 +94,13 @@ evalLazyState s = fmap snd . runLazyState s
 -- @since 0.1.2.0
 runStateIORef
     :: forall s r a
-     . Member (Lift IO) r
+     . Member (Embed IO) r
     => IORef s
     -> Sem (State s ': r) a
     -> Sem r a
 runStateIORef ref = interpret $ \case
-  Get   -> sendM $ readIORef ref
-  Put s -> sendM $ writeIORef ref s
+  Get   -> embed $ readIORef ref
+  Put s -> embed $ writeIORef ref s
 {-# INLINE runStateIORef #-}
 
 

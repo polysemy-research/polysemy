@@ -93,8 +93,8 @@ makeSem ''Teletype
 
 teletypeToIO :: Member (Lift IO) r => Sem (Teletype ': r) a -> Sem r a
 teletypeToIO = interpret $ \case
-  ReadTTY      -> sendM getLine
-  WriteTTY msg -> sendM $ putStrLn msg
+  ReadTTY      -> embed getLine
+  WriteTTY msg -> embed $ putStrLn msg
 
 runTeletypePure :: [String] -> Sem (Teletype ': r) a -> Sem r ([String], a)
 runTeletypePure i

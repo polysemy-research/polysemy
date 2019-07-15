@@ -41,7 +41,7 @@ makeSem ''Async
 --
 -- @since 0.5.0.0
 asyncToIO
-    :: LastMember (Lift IO) r
+    :: LastMember (Embed IO) r
     => Sem (Async ': r) a
     -> Sem r a
 asyncToIO m = withLowerToIO $ \lower _ -> lower $
@@ -50,10 +50,10 @@ asyncToIO m = withLowerToIO $ \lower _ -> lower $
         Async a -> do
           ma  <- runT a
           ins <- getInspectorT
-          fa  <- sendM $ A.async $ lower $ asyncToIO ma
+          fa  <- embed $ A.async $ lower $ asyncToIO ma
           pureT $ fmap (inspect ins) fa
 
-        Await a -> pureT =<< sendM (A.wait a)
+        Await a -> pureT =<< embed (A.wait a)
     )  m
 {-# INLINE asyncToIO #-}
 
@@ -64,7 +64,7 @@ asyncToIO m = withLowerToIO $ \lower _ -> lower $
 --
 -- @since 0.5.0.0
 lowerAsync
-    :: Member (Lift IO) r
+    :: Member (Embed IO) r
     => (forall x. Sem r x -> IO x)
        -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is likely
        -- some combination of 'runM' and other interpreters composed via '.@'.
@@ -75,10 +75,10 @@ lowerAsync lower m = interpretH
         Async a -> do
           ma  <- runT a
           ins <- getInspectorT
-          fa  <- sendM $ A.async $ lower $ lowerAsync lower ma
+          fa  <- embed $ A.async $ lower $ lowerAsync lower ma
           pureT $ fmap (inspect ins) fa
 
-        Await a -> pureT =<< sendM (A.wait a)
+        Await a -> pureT =<< embed (A.wait a)
     )  m
 {-# INLINE lowerAsync #-}
 

@@ -6,12 +6,10 @@
 
 module Polysemy.Internal.NonDet where
 
-import Data.Kind
-
 
 ------------------------------------------------------------------------------
 -- | An effect corresponding to the 'Control.Applicative.Alternative' typeclass.
-data NonDet (m :: Type -> Type) a
+data NonDet m a
   = Empty
-  | Choose (Bool -> a)
+  | Choose (m a) (m a)
 

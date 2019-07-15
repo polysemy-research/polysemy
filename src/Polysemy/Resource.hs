@@ -81,7 +81,7 @@ onException act end = bracketOnError (pure ()) (const end) (const act)
 -- @since 0.4.0.0
 lowerResource
     :: ∀ r a
-     . Member (Lift IO) r
+     . Member (Embed IO) r
     => (∀ x. Sem r x -> IO x)
        -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is likely
        -- some combination of 'runM' and other interpreters composed via '.@'.
@@ -96,7 +96,7 @@ lowerResource finish = interpretH $ \case
     let run_it :: Sem (Resource ': r) x -> IO x
         run_it = finish .@ lowerResource
 
-    sendM $ X.bracket (run_it a) (run_it . d) (run_it . u)
+    embed $ X.bracket (run_it a) (run_it . d) (run_it . u)
 
   BracketOnError alloc dealloc use -> do
     a <- runT  alloc
@@ -106,7 +106,7 @@ lowerResource finish = interpretH $ \case
     let run_it :: Sem (Resource ': r) x -> IO x
         run_it = finish .@ lowerResource
 
-    sendM $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
+    embed $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
 {-# INLINE lowerResource #-}
 
 
@@ -168,7 +168,7 @@ runResource = interpretH $ \case
 -- @since 0.5.0.0
 resourceToIO
     :: forall r a
-     . LastMember (Lift IO) r
+     . LastMember (Embed IO) r
     => Sem (Resource ': r) a
     -> Sem r a
 resourceToIO = interpretH $ \case

@@ -89,9 +89,9 @@ tooFewArgumentsReinterpret = ()
 --  in runM foo'''
 -- :}
 -- ...
--- ... Unhandled effect 'Lift IO'
+-- ... Unhandled effect 'Embed IO'
 -- ...
--- ... Expected type: Sem '[Lift m] (Bool, ())
+-- ... Expected type: Sem '[Embed m] (Bool, ())
 -- ... Actual type: Sem '[] (Bool, ())
 -- ...
 runningTooManyEffects = ()
@@ -142,7 +142,7 @@ missingFmap'PLUGIN = ()
 --------------------------------------------------------------------------------
 -- |
 -- >>> :{
--- foo :: Sem '[State Int, Lift IO] ()
+-- foo :: Sem '[State Int, Embed IO] ()
 -- foo = output ()
 -- :}
 -- ...
