@@ -54,7 +54,7 @@ import Polysemy.Internal.Union
 -- interpretations (and others that you might add) may be used interchangably
 -- without needing to write any newtypes or 'Monad' instances. The only
 -- change needed to swap interpretations is to change a call from
--- 'Polysemy.Error.runError' to 'Polysemy.Error.runErrorInIO'.
+-- 'Polysemy.Error.runError' to 'Polysemy.Error.lowerError'.
 --
 -- The effect stack @r@ can contain arbitrary other monads inside of it. These
 -- monads are lifted into effects via the 'Embed' effect. Monadic values can be
@@ -335,13 +335,13 @@ runM (Sem m) = m $ \z ->
 ------------------------------------------------------------------------------
 -- | Some interpreters need to be able to lower down to the base monad (often
 -- 'IO') in order to function properly --- some good examples of this are
--- 'Polysemy.Error.runErrorInIO' and 'Polysemy.Resource.runResourceInIO'.
+-- 'Polysemy.Error.lowerError' and 'Polysemy.Resource.lowerResource'.
 --
 -- However, these interpreters don't compose particularly nicely; for example,
--- to run 'Polysemy.Resource.runResourceInIO', you must write:
+-- to run 'Polysemy.Resource.lowerResource', you must write:
 --
 -- @
--- runM . runErrorInIO runM
+-- runM . lowerError runM
 -- @
 --
 -- Notice that 'runM' is duplicated in two places here. The situation gets
@@ -351,7 +351,7 @@ runM (Sem m) = m $ \z ->
 -- Instead, '.@' performs the composition we'd like. The above can be written as
 --
 -- @
--- (runM .@ runErrorInIO)
+-- (runM .@ lowerError)
 -- @
 --
 -- The parentheses here are important; without them you'll run into operator
@@ -376,7 +376,7 @@ infixl 8 .@
 
 ------------------------------------------------------------------------------
 -- | Like '.@', but for interpreters which change the resulting type --- eg.
--- 'Polysemy.Error.runErrorInIO'.
+-- 'Polysemy.Error.lowerError'.
 (.@@)
     :: Monad m
     => (∀ x. Sem r x -> m x)

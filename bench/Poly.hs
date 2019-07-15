@@ -42,7 +42,7 @@ prog = catch @Bool (throw True) (pure . not)
 
 zoinks :: IO (Either Bool Bool)
 zoinks = fmap (fmap snd)
-       . (runM .@ runResourceInIO .@@ runErrorInIO)
+       . (runM .@ lowerResource .@@ lowerError)
        . runState False
        $ prog
 
@@ -54,8 +54,8 @@ makeSem ''Console
 
 runConsoleBoring :: [String] -> Sem (Console ': r) a -> Sem r ([String], a)
 runConsoleBoring inputs
-  = runFoldMapOutput (:[])
-  . runListInput inputs
+  = runOutputMonoid (:[])
+  . runInputList inputs
   . reinterpret2
   (\case
       ReadLine -> maybe "" id <$> input

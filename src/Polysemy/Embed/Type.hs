@@ -28,7 +28,7 @@ import Data.Kind
 -- prevent you from interpreting it differently. For best results, only use
 -- 'Embed' in your effect interpreters.
 --
--- Consider using 'Polysemy.Trace.trace' and 'Polysemy.Trace.runTraceIO' as
+-- Consider using 'Polysemy.Trace.trace' and 'Polysemy.Trace.traceToIO' as
 -- a substitute for using 'putStrLn' directly.
 newtype Embed m (z :: Type -> Type) a where
   Embed :: { unEmbed :: m a } -> Embed m z a

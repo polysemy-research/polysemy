@@ -8,7 +8,7 @@ import Test.Hspec
 
 spec :: Spec
 spec = parallel $ do
-  describe "runBatchOutput" $ do
+  describe "runOutputBatched" $ do
     it "should return nothing at batch size 0" $ do
       let (ms, _) = runOutput 0 $ traverse (output @Int) [0..99]
       length ms `shouldBe` 0
@@ -23,14 +23,14 @@ spec = parallel $ do
         it "returns all original elements in the correct order" $
           concat ms `shouldBe` [0..99]
 
-  describe "runOutputAsList" $
+  describe "runOutputList" $
     it "should return elements in the order they were output" $
-      let (xs, ()) = runOutputAsList' $ traverse_ (output @Int) [0..100]
+      let (xs, ()) = runOutputList' $ traverse_ (output @Int) [0..100]
        in xs `shouldBe` [0..100]
 
 
-runOutput :: Int -> Sem '[Output Int] a -> ([[Int]], a)
-runOutput size = run . runFoldMapOutput (:[]) . runBatchOutput size
+runOutput :: Int -> Sem '[Output Int, Output [Int]] a -> ([[Int]], a)
+runOutput size = run . runOutputMonoid (:[]) . runOutputBatched size
 
-runOutputAsList' :: Sem '[Output Int] a -> ([Int], a)
-runOutputAsList' = run . runOutputAsList
+runOutputList' :: Sem '[Output Int] a -> ([Int], a)
+runOutputList' = run . runOutputList

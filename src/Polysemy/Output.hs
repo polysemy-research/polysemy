@@ -8,10 +8,10 @@ module Polysemy.Output
   , output
 
     -- * Interpretations
-  , runOutputAsList
-  , runFoldMapOutput
-  , runIgnoringOutput
-  , runBatchOutput
+  , runOutputList
+  , runOutputMonoid
+  , ignoreOutput
+  , runOutputBatched
   ) where
 
 import Data.Bifunctor (first)
@@ -31,37 +31,37 @@ makeSem ''Output
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into a list of its values.
-runOutputAsList
+runOutputList
     :: forall o r a
      . Sem (Output o ': r) a
     -> Sem r ([o], a)
-runOutputAsList = fmap (first reverse) . runState [] . reinterpret
+runOutputList = fmap (first reverse) . runState [] . reinterpret
   (\case
       Output o -> modify (o :)
   )
-{-# INLINE runOutputAsList #-}
+{-# INLINE runOutputList #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into a monoid.
-runFoldMapOutput
+runOutputMonoid
     :: forall o m r a
      . Monoid m
     => (o -> m)
     -> Sem (Output o ': r) a
     -> Sem r (m, a)
-runFoldMapOutput f = runState mempty . reinterpret
+runOutputMonoid f = runState mempty . reinterpret
   (\case
       Output o -> modify (`mappend` f o)
   )
-{-# INLINE runFoldMapOutput #-}
+{-# INLINE runOutputMonoid #-}
 
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by ignoring it.
-runIgnoringOutput :: Sem (Output o ': r) a -> Sem r a
-runIgnoringOutput = interpret $ \case
+ignoreOutput :: Sem (Output o ': r) a -> Sem r a
+ignoreOutput = interpret $ \case
   Output _ -> pure ()
-{-# INLINE runIgnoringOutput #-}
+{-# INLINE ignoreOutput #-}
 
 
 ------------------------------------------------------------------------------
@@ -72,15 +72,16 @@ runIgnoringOutput = interpret $ \case
 -- 'Output' effect.
 --
 -- @since 0.1.2.0
-runBatchOutput
+runOutputBatched
     :: forall o r a
-     . Int
+     . Member (Output [o]) r
+    => Int
     -> Sem (Output o ': r) a
-    -> Sem (Output [o] ': r) a
-runBatchOutput 0 m = raise $ runIgnoringOutput m
-runBatchOutput size m = do
+    -> Sem r a
+runOutputBatched 0 m = ignoreOutput m
+runOutputBatched size m = do
   ((c, res), a) <-
-    runState (0 :: Int, [] :: [o]) $ reinterpret2 (\case
+    runState (0 :: Int, [] :: [o]) $ reinterpret (\case
       Output o -> do
         (count, acc) <- get
         let newCount = 1 + count
@@ -91,6 +92,6 @@ runBatchOutput size m = do
             output (reverse newAcc)
             put (0 :: Int, [] :: [o])
     ) m
-  when (c > 0) $ output (reverse res)
+  when (c > 0) $ output @[o] (reverse res)
   pure a
 

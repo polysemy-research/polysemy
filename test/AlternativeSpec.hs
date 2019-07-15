@@ -41,13 +41,13 @@ spec = parallel $ do
 
   describe "runNonDetMaybe" $ do
     it "should skip second branch if the first branch succeeds" $ do
-      (run . runNonDetMaybe . runTraceAsList) failtrace
+      (run . runNonDetMaybe . runTraceList) failtrace
         `shouldBe` Just ([], ())
-      (run . runTraceAsList . runNonDetMaybe) failtrace
+      (run . runTraceList . runNonDetMaybe) failtrace
         `shouldBe` ([], Just ())
 
     it "should respect local/global state semantics" $ do
-      (run . runNonDetMaybe . runTraceAsList) failtrace'
+      (run . runNonDetMaybe . runTraceList) failtrace'
         `shouldBe` Just (["salabim"], ())
-      (run . runTraceAsList . runNonDetMaybe) failtrace'
+      (run . runTraceList . runNonDetMaybe) failtrace'
         `shouldBe` (["sim", "salabim"], Just ())
