@@ -39,7 +39,7 @@ traceToIO = interpret $ \case
 
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by ignoring all of its messages.
-ignoreTrace :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
+ignoreTrace :: Sem (Trace ': r) a -> Sem r a
 ignoreTrace = interpret $ \case
   Trace _ -> pure ()
 {-# INLINE ignoreTrace #-}
