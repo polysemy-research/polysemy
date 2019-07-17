@@ -23,6 +23,8 @@ spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doc
   , "-XTypeOperators"
   , "-XUnicodeSyntax"
 
+  , "-package type-errors"
+
 #if __GLASGOW_HASKELL__ < 806
   , "-XMonadFailDesugaring"
   , "-XTypeInType"
@@ -32,6 +34,7 @@ spec = parallel $ describe "Error messages" $ it "should pass the doctest" $ doc
 
   -- Modules that are explicitly imported for this test must be listed here
   , "src/Polysemy.hs"
+  , "src/Polysemy/Error.hs"
   , "src/Polysemy/Output.hs"
   , "src/Polysemy/Reader.hs"
   , "src/Polysemy/Resource.hs"

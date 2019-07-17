@@ -40,6 +40,11 @@ import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
 
 
+-- $setup
+-- >>> import Data.Function
+-- >>> import Polysemy.State
+-- >>> import Polysemy.Error
+
 ------------------------------------------------------------------------------
 -- | The 'Sem' monad handles computations of arbitrary extensible effects.
 -- A value of type @Sem r@ describes a program with the capabilities of
@@ -72,55 +77,48 @@ import Polysemy.Internal.Union
 -- is the order in which you call the interpreters that determines the
 -- monomorphic representation of the @r@ parameter.
 --
--- While order of effects in effect stack by itself is not important, order of
--- interpreters can be - it determines behaviour of effects that manipulate
--- state or change control flow. For example, when interpreting this action:
+-- Order of interpreters can be important - it determines behaviour of effects
+-- that manipulate state or change control flow. For example, when
+-- interpreting this action:
 --
--- @
--- example :: 'Members' '['Polysemy.State.State' String, 'Polysemy.Error.Error' String] r => 'Sem' r String
--- example = do
---   'Polysemy.State.put' "start"
---
---   let throwing = do
---         'Polysemy.State.modify' (++"-throw")
---         'Polysemy.State.throw' "error"
---         'Polysemy.State.get'
---       catching = do
---         'Polysemy.State.modify' (++"-catch")
---         'Polysemy.State.get'
---
---   'Polysemy.Error.catch' throwing (\\_ -> catching)
--- @
+-- >>> :{
+--   example :: Members '[State String, Error String] r => Sem r String
+--   example = do
+--     put "start"
+--     let throwing, catching :: Members '[State String, Error String] r => Sem r String
+--         throwing = do
+--           modify (++"-throw")
+--           throw "error"
+--           get
+--         catching = do
+--           modify (++"-catch")
+--           get
+--     catch @String throwing (\ _ -> catching)
+-- :}
 --
 -- when handling 'Polysemy.Error.Error' first, state is preserved after error
 -- occurs:
 --
--- @
--- main :: IO ()
--- main = example
---     'Data.Function.&' 'Polysemy.Error.runError'
---     'Data.Function.&' fmap (either id id)
---     'Data.Function.&' 'Polysemy.State.evalState' ""
---     'Data.Function.&' 'runM'
---     'Data.Function.&' (print =<<)
--- @
---
--- >>> main
+-- >>> :{
+--   example
+--     & runError
+--     & fmap (either id id)
+--     & evalState ""
+--     & runM
+--     & (print =<<)
+-- :}
 -- "start-throw-catch"
 --
 -- while handling 'Polysemy.State.State' first discards state in such cases:
 --
--- @
--- main :: IO ()
--- main = example
---     'Data.Function.&' 'Polysemy.State.evalState' ""
---     'Data.Function.&' 'Polysemy.Error.runError'
---     'Data.Function.&' fmap (either id id)
---     'Data.Function.&' 'runM'
---     'Data.Function.&' (print =<<)
--- @
---
--- >>> main
+-- >>> :{
+--   example
+--     & evalState ""
+--     & runError
+--     & fmap (either id id)
+--     & runM
+--     & (print =<<)
+-- :}
 -- "start-catch"
 --
 -- Good rule of thumb is to handle effect which should have "global" behaviour
