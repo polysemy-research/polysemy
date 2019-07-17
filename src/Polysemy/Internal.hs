@@ -121,8 +121,8 @@ import Polysemy.Internal.Union
 -- :}
 -- "start-catch"
 --
--- Good rule of thumb is to handle effect which should have "global" behaviour
--- over other effect later in chain.
+-- A good rule of thumb is to handle effects which should have \"global\"
+-- behaviour over other effects later in the chain.
 --
 -- After all of your effects are handled, you'll be left with either
 -- a @'Sem' '[] a@ or a @'Sem' '[ 'Embed' m ] a@ value, which can be
