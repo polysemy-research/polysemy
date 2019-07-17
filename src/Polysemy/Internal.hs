@@ -100,8 +100,7 @@ import Polysemy.Internal.Union
 -- main = example
 --     'Data.Function.&' 'Polysemy.Error.runError'
 --     'Data.Function.&' fmap (either id id)
---     'Data.Function.&' 'Polysemy.State.runState' ""
---     'Data.Function.&' fmap snd
+--     'Data.Function.&' 'Polysemy.State.evalState' ""
 --     'Data.Function.&' 'runM'
 --     'Data.Function.&' (print =<<)
 -- @
@@ -114,8 +113,7 @@ import Polysemy.Internal.Union
 -- @
 -- main :: IO ()
 -- main = example
---     'Data.Function.&' 'Polysemy.State.runState' ""
---     'Data.Function.&' fmap snd
+--     'Data.Function.&' 'Polysemy.State.evalState' ""
 --     'Data.Function.&' 'Polysemy.Error.runError'
 --     'Data.Function.&' fmap (either id id)
 --     'Data.Function.&' 'runM'
