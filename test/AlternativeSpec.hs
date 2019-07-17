@@ -4,16 +4,23 @@ import Polysemy
 import Polysemy.NonDet
 import Test.Hspec
 import Control.Applicative
+import Polysemy.Trace
 
 semFail :: Member NonDet r => Maybe Bool -> Sem r Bool
 semFail mb = do
   Just b <- pure mb
   pure b
 
-
 runAlt :: Alternative f => Sem '[NonDet] a -> f a
 runAlt = run . runNonDet
 
+failtrace :: (Member NonDet r, Member Trace r)
+          => Sem r ()
+failtrace = pure () <|> trace "trace"
+
+failtrace' :: (Member NonDet r, Member Trace r)
+           => Sem r ()
+failtrace' = trace "sim" *> empty <|> trace "salabim"
 
 spec :: Spec
 spec = parallel $ do
@@ -32,3 +39,15 @@ spec = parallel $ do
       runAlt (semFail $ Just True) `shouldBe` Just True
       runAlt (semFail $ Just False) `shouldBe` [False]
 
+  describe "runNonDetMaybe" $ do
+    it "should skip second branch if the first branch succeeds" $ do
+      (run . runNonDetMaybe . runTraceList) failtrace
+        `shouldBe` Just ([], ())
+      (run . runTraceList . runNonDetMaybe) failtrace
+        `shouldBe` ([], Just ())
+
+    it "should respect local/global state semantics" $ do
+      (run . runNonDetMaybe . runTraceList) failtrace'
+        `shouldBe` Just (["salabim"], ())
+      (run . runTraceList . runNonDetMaybe) failtrace'
+        `shouldBe` (["sim", "salabim"], Just ())

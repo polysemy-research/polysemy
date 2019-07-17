@@ -61,13 +61,13 @@ interpretBadFirstOrder = ()
 --------------------------------------------------------------------------------
 -- |
 -- >>> :{
--- runFoldMapOutput
+-- runOutputMonoid
 --     :: forall o m r a
 --      . Monoid m
 --     => (o -> m)
 --     -> Sem (Output o ': r) a
 --     -> Sem r (m, a)
--- runFoldMapOutput f = runState mempty . reinterpret $ \case
+-- runOutputMonoid f = runState mempty . reinterpret $ \case
 --   Output o -> modify (`mappend` f o)
 -- :}
 -- ...
@@ -85,7 +85,7 @@ tooFewArgumentsReinterpret = ()
 --     foo = pure ()
 --     foo' = reinterpretScrub foo
 --     foo'' = runState True foo'
---     foo''' = runTraceIO foo''
+--     foo''' = traceToIO foo''
 --  in runM foo'''
 -- :}
 -- ...
@@ -116,7 +116,7 @@ ambiguousSendInConcreteR = ()
 -- >>> :{
 -- let foo :: Member Resource r => Sem r ()
 --     foo = undefined
---  in runM $ runResourceInIO foo
+--  in runM $ lowerResource foo
 -- :}
 -- ...
 -- ... Couldn't match expected type ...

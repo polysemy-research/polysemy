@@ -16,8 +16,8 @@ data Teletype m a where
 
 makeSem ''Teletype
 
-runTeletypeIO :: Member (Embed IO) r => Sem (Teletype ': r) a -> Sem r a
-runTeletypeIO = interpret $ \case
+teletypeToIO :: Member (Embed IO) r => Sem (Teletype ': r) a -> Sem r a
+teletypeToIO = interpret $ \case
   ReadTTY      -> embed getLine
   WriteTTY msg -> embed $ putStrLn msg
 
@@ -33,7 +33,7 @@ program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
             _             -> writeTTY i >> writeTTY "no exceptions"
 
 foo :: IO (Either CustomException ())
-foo = (runM .@ runResourceInIO .@@ runErrorInIO @CustomException) $ runTeletypeIO program
+foo = (runM .@ lowerResource .@@ lowerError @CustomException) $ teletypeToIO program
 
 spec :: Spec
 spec = describe "example" $ do

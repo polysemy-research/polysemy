@@ -13,7 +13,7 @@ runTest
   :: Sem '[Error (), Resource, State [Char], Trace] a
   -> ([String], ([Char], Either () a))
 runTest = run
-        . runTraceAsList
+        . runTraceList
         . runState ""
         . runResource
         . runError @()
@@ -22,9 +22,9 @@ runTest2
   :: Sem '[Error (), Resource, State [Char], Trace, Embed IO] a
   -> IO ([String], ([Char], Either () a))
 runTest2 = runM
-         . runTraceAsList
+         . runTraceList
          . runState ""
-         . runResourceBase
+         . resourceToIO
          . runError @()
 
 

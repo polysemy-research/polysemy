@@ -15,7 +15,7 @@ module Polysemy.Writer
   , runWriter
 
     -- * Interpretations for Other Effects
-  , runOutputAsWriter
+  , outputToWriter
   ) where
 
 import Polysemy
@@ -43,10 +43,10 @@ censor f m = pass (fmap (f ,) m)
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Output' effect into a 'Writer' effect.
-runOutputAsWriter :: Member (Writer o) r => Sem (Output o ': r) a -> Sem r a
-runOutputAsWriter = interpret $ \case
+outputToWriter :: Member (Writer o) r => Sem (Output o ': r) a -> Sem r a
+outputToWriter = interpret $ \case
   Output o -> tell o
-{-# INLINE runOutputAsWriter #-}
+{-# INLINE outputToWriter #-}
 
 
 ------------------------------------------------------------------------------
@@ -75,3 +75,4 @@ runWriter = runState mempty . reinterpretH
         pure (fmap snd t)
   )
 {-# INLINE runWriter #-}
+

@@ -50,5 +50,5 @@
 
 ## Unreleased changes
 
-- Added `runErrorAsAnother`
+- Added `mapError`
 
