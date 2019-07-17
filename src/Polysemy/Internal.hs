@@ -72,6 +72,62 @@ import Polysemy.Internal.Union
 -- is the order in which you call the interpreters that determines the
 -- monomorphic representation of the @r@ parameter.
 --
+-- While order of effects in effect stack by itself is not important, order of
+-- interpreters can be - it determines behaviour of effects that manipulate
+-- state or change control flow. For example, when interpreting this action:
+--
+-- @
+-- example :: 'Members' '['Polysemy.State.State' String, 'Polysemy.Error.Error' String] r => 'Sem' r String
+-- example = do
+--   'Polysemy.State.put' "start"
+--
+--   let throwing = do
+--         'Polysemy.State.modify' (++"-throw")
+--         'Polysemy.State.throw' "error"
+--         'Polysemy.State.get'
+--       catching = do
+--         'Polysemy.State.modify' (++"-catch")
+--         'Polysemy.State.get'
+--
+--   'Polysemy.Error.catch' throwing (\\_ -> catching)
+-- @
+--
+-- when handling 'Polysemy.Error.Error' first, state is preserved after error
+-- occurs:
+--
+-- @
+-- main :: IO ()
+-- main = example
+--     'Data.Function.&' 'Polysemy.Error.runError'
+--     'Data.Function.&' fmap (either id id)
+--     'Data.Function.&' 'Polysemy.State.runState' ""
+--     'Data.Function.&' fmap snd
+--     'Data.Function.&' 'runM'
+--     'Data.Function.&' (print =<<)
+-- @
+--
+-- >>> main
+-- "start-throw-catch"
+--
+-- while handling 'Polysemy.State.State' first discards state in such cases:
+--
+-- @
+-- main :: IO ()
+-- main = example
+--     'Data.Function.&' 'Polysemy.State.runState' ""
+--     'Data.Function.&' fmap snd
+--     'Data.Function.&' 'Polysemy.Error.runError'
+--     'Data.Function.&' fmap (either id id)
+--     'Data.Function.&' 'runM'
+--     'Data.Function.&' (print =<<)
+-- @
+--
+-- >>> main
+-- "start-catch"
+--
+-- Good rule of thumb is to handle effect which should have "global" behaviour
+-- over other effect later in chain.
+--
 -- After all of your effects are handled, you'll be left with either
 -- a @'Sem' '[] a@ or a @'Sem' '[ 'Embed' m ] a@ value, which can be
 -- consumed respectively by 'run' and 'runM'.
