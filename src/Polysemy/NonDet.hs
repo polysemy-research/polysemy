@@ -8,11 +8,14 @@ module Polysemy.NonDet
     -- * Interpretations
   , runNonDet
   , runNonDetMaybe
+  , nonDetToError
   ) where
 
 import Control.Applicative
 import Control.Monad.Trans.Maybe
 import Data.Maybe
+import Polysemy
+import Polysemy.Error
 import Polysemy.Internal
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.Union
@@ -96,3 +99,20 @@ runNonDetMaybe (Sem sem) = Sem $ \k -> runMaybeT $ sem $ \u ->
           id
           x
 {-# INLINE runNonDetMaybe #-}
+
+------------------------------------------------------------------------------
+-- | Transform a 'NonDet' effect into an @'Error' e@ effect,
+-- through providing an exception that 'empty' may be mapped to.
+--
+-- This allows '<|>' to handle 'throw's of the @'Error' e@ effect.
+nonDetToError :: Member (Error e) r
+              => e
+              -> Sem (NonDet ': r) a
+              -> Sem r a
+nonDetToError (e :: e) = interpretH $ \case
+  Empty -> throw e
+  Choose left right -> do
+    left'  <- nonDetToError e <$> runT left
+    right' <- nonDetToError e <$> runT right
+    raise (left' `catch` \(_ :: e) -> right')
+{-# INLINE nonDetToError #-}
