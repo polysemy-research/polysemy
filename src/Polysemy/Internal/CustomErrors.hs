@@ -17,10 +17,11 @@ module Polysemy.Internal.CustomErrors
 
 import Data.Kind
 import Fcf
-import GHC.TypeLits
+import GHC.TypeLits (Symbol)
 import Polysemy.Internal.Kind
 import Polysemy.Internal.CustomErrors.Redefined
 import Type.Errors hiding (IfStuck, WhenStuck, UnlessStuck)
+import Type.Errors.Pretty (type (<>), type (%))
 
 
 ------------------------------------------------------------------------------
@@ -37,9 +38,7 @@ type family DefiningModuleForEffect (e :: k) :: Symbol where
 
 
 -- TODO(sandy): Put in type-errors
-type ShowTypeBracketed t = 'Text "("
-                     ':<>: 'ShowType t
-                     ':<>: 'Text ")"
+type ShowTypeBracketed t = "(" <> t <> ")"
 
 
 ------------------------------------------------------------------------------
@@ -67,24 +66,15 @@ type AmbigousEffectMessage (rstate :: EffectRowCtor)
                            (r :: EffectRow)
                            (e :: k)
                            (t :: Effect)
-                           (vs :: [Type]) =
-        ( 'Text "Ambiguous use of effect '"
-    ':<>: 'ShowType e
-    ':<>: 'Text "'"
-    ':$$: 'Text "Possible fix:"
-    ':$$: 'Text "  add (Member ("
-    ':<>: 'ShowType t
-    ':<>: 'Text ") "
-    ':<>: ShowRQuoted rstate r
-    ':<>: 'Text ") to the context of "
-    ':$$: 'Text "    the type signature"
-    ':$$: 'Text "If you already have the constraint you want, instead"
-    ':$$: 'Text "  add a type application to specify"
-    ':$$: 'Text "    "
-    ':<>: PrettyPrintList vs
-    ':<>: 'Text " directly, or activate polysemy-plugin which"
-    ':$$: 'Text "      can usually infer the type correctly."
-        )
+                           (vs :: [Type])
+  = "Ambiguous use of effect '" <> e <> "'"
+  % "Possible fix:"
+  % "  add (Member (" <> t <> ") " <> ShowRQuoted rstate r <> ") to the context of "
+  % "    the type signature"
+  % "If you already have the constraint you want, instead"
+  % "  add a type application to specify"
+  % "    " <> PrettyPrintList vs <> " directly, or activate polysemy-plugin which"
+  % "      can usually infer the type correctly."
 
 type AmbiguousSend r e =
       (IfStuck r
@@ -110,18 +100,10 @@ type family AmbiguousSendError rstate r e where
 
   AmbiguousSendError rstate r e =
     TypeError
-        ( 'Text "Could not deduce: (Member "
-    ':<>: 'ShowType e
-    ':<>: 'Text " "
-    ':<>: ShowRQuoted rstate r
-    ':<>: 'Text ") "
-    ':$$: 'Text "Fix:"
-    ':$$: 'Text "  add (Member "
-    ':<>: 'ShowType e
-    ':<>: 'Text " "
-    ':<>: 'ShowType r
-    ':<>: 'Text ") to the context of"
-    ':$$: 'Text "    the type signature"
+        ( "Could not deduce: (Member " <>  e <> " " <> ShowRQuoted rstate r <> ") "
+        % "Fix:"
+        % "  add (Member " <>  e <> " " <> r <> ") to the context of"
+        % "    the type signature"
         )
 
 
@@ -129,16 +111,10 @@ data FirstOrderErrorFcf :: k -> Symbol -> Exp Constraint
 type instance Eval (FirstOrderErrorFcf e fn) = $(te[t|
     UnlessPhantom
         (e PHANTOM)
-        ( 'Text "'"
-    ':<>: 'ShowType e
-    ':<>: 'Text "' is higher-order, but '"
-    ':<>: 'Text fn
-    ':<>: 'Text "' can help only"
-    ':$$: 'Text "with first-order effects."
-    ':$$: 'Text "Fix:"
-    ':$$: 'Text "  use '"
-    ':<>: 'Text fn
-    ':<>: 'Text "H' instead."
+        ( "'" <> e <> "' is higher-order, but '" <> fn <> "' can help only"
+        % "with first-order effects."
+        % "Fix:"
+        % "  use '" <> fn <> "H' instead."
         ) |])
 
 ------------------------------------------------------------------------------
@@ -150,19 +126,13 @@ type FirstOrder (e :: Effect) fn = UnlessStuck e (FirstOrderErrorFcf e fn)
 ------------------------------------------------------------------------------
 -- | Unhandled effects
 type UnhandledEffectMsg e
-      = 'Text "Unhandled effect '"
-  ':<>: 'ShowType e
-  ':<>: 'Text "'"
-  ':$$: 'Text "Probable fix:"
-  ':$$: 'Text "  add an interpretation for '"
-  ':<>: 'ShowType e
-  ':<>: 'Text "'"
+  = "Unhandled effect '" <> e <> "'"
+  % "Probable fix:"
+  % "  add an interpretation for '" <> e <> "'"
 
 type CheckDocumentation e
-      = 'Text "  If you are looking for inspiration, try consulting"
-  ':$$: 'Text "    the documentation for module '"
-  ':<>: 'Text (DefiningModuleForEffect e)
-  ':<>: 'Text "'"
+  = "  If you are looking for inspiration, try consulting"
+  % "    the documentation for module '" <> DefiningModuleForEffect e <> "'"
 
 type family UnhandledEffect e where
   UnhandledEffect e =
@@ -173,4 +143,3 @@ type family UnhandledEffect e where
 
 data DoError :: ErrorMessage -> Exp k
 type instance Eval (DoError a) = TypeError a
-
