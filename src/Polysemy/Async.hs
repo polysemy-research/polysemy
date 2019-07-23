@@ -41,7 +41,7 @@ makeSem ''Async
 --
 -- @since 1.0.0.0
 asyncToIO
-    :: LastMember (Embed IO) r
+    :: Member (Embed IO) r
     => Sem (Async ': r) a
     -> Sem r a
 asyncToIO m = withLowerToIO $ \lower _ -> lower $

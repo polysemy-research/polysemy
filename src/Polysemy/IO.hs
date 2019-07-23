@@ -55,7 +55,7 @@ embedToMonadIO = runEmbedded $ liftIO @m
 -- @since 1.0.0.0
 lowerEmbedded
     :: ( MonadIO m
-       , LastMember (Embed IO) r
+       , Member (Embed IO) r
        )
     => (forall x. m x -> IO x)  -- ^ The means of running this monad.
     -> Sem (Embed m ': r) a

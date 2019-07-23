@@ -9,7 +9,6 @@ module Polysemy.Internal.Forklift where
 import qualified Control.Concurrent.Async as A
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
-import           Control.Monad
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
 
@@ -19,7 +18,7 @@ import           Polysemy.Internal.Union
 --
 -- @since 0.5.0.0
 data Forklift r = forall a. Forklift
-  { responseMVar :: MVar (Sem '[Embed IO] a)
+  { responseMVar :: MVar a
   , request      :: Union r (Sem r) a
   }
 
@@ -30,17 +29,18 @@ data Forklift r = forall a. Forklift
 --
 -- @since 0.5.0.0
 runViaForklift
-    :: LastMember (Embed IO) r
+    :: Member (Embed IO) r
     => InChan (Forklift r)
     -> Sem r a
-    -> Sem '[Embed IO] a
-runViaForklift chan (Sem m) = Sem $ \k -> m $ \u -> do
-  case decompLast u of
-    Left x -> usingSem k $ join $ embed $ do
+    -> IO a
+runViaForklift chan = usingSem $ \u -> do
+  case prj u of
+    Just (Weaving (Embed m) s _ ex _) ->
+      ex . (<$ s) <$> m
+    _ -> do
       mvar <- newEmptyMVar
-      writeChan chan $ Forklift mvar x
+      writeChan chan $ Forklift mvar u
       takeMVar mvar
-    Right y -> k $ hoist (runViaForklift chan) y
 {-# INLINE runViaForklift #-}
 
 
@@ -53,7 +53,7 @@ runViaForklift chan (Sem m) = Sem $ \k -> m $ \u -> do
 --
 -- @since 0.5.0.0
 withLowerToIO
-    :: LastMember (Embed IO) r
+    :: Member (Embed IO) r
     => ((forall x. Sem r x -> IO x) -> IO () -> IO a)
        -- ^ A lambda that takes the lowering function, and a finalizing 'IO'
        -- action to mark a the forked thread as being complete. The finalizing
@@ -64,7 +64,7 @@ withLowerToIO action = do
   signal <- embed newEmptyMVar
 
   res <- embed $ A.async $ do
-    a <- action (runM . runViaForklift inchan)
+    a <- action (runViaForklift inchan)
                 (putMVar signal ())
     putMVar signal ()
     pure a
@@ -75,7 +75,7 @@ withLowerToIO action = do
           Left () -> embed $ A.wait res
           Right (Forklift mvar req) -> do
             resp <- liftSem req
-            embed $ putMVar mvar $ pure resp
+            embed $ putMVar mvar $ resp
             me_b
       {-# INLINE me #-}
 
