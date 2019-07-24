@@ -40,6 +40,11 @@ import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
 
 
+-- $setup
+-- >>> import Data.Function
+-- >>> import Polysemy.State
+-- >>> import Polysemy.Error
+
 ------------------------------------------------------------------------------
 -- | The 'Sem' monad handles computations of arbitrary extensible effects.
 -- A value of type @Sem r@ describes a program with the capabilities of
@@ -71,6 +76,53 @@ import Polysemy.Internal.Union
 -- which is responsible for removing the effect @E@ from the effect stack. It
 -- is the order in which you call the interpreters that determines the
 -- monomorphic representation of the @r@ parameter.
+--
+-- Order of interpreters can be important - it determines behaviour of effects
+-- that manipulate state or change control flow. For example, when
+-- interpreting this action:
+--
+-- >>> :{
+--   example :: Members '[State String, Error String] r => Sem r String
+--   example = do
+--     put "start"
+--     let throwing, catching :: Members '[State String, Error String] r => Sem r String
+--         throwing = do
+--           modify (++"-throw")
+--           throw "error"
+--           get
+--         catching = do
+--           modify (++"-catch")
+--           get
+--     catch @String throwing (\ _ -> catching)
+-- :}
+--
+-- when handling 'Polysemy.Error.Error' first, state is preserved after error
+-- occurs:
+--
+-- >>> :{
+--   example
+--     & runError
+--     & fmap (either id id)
+--     & evalState ""
+--     & runM
+--     & (print =<<)
+-- :}
+-- "start-throw-catch"
+--
+-- while handling 'Polysemy.State.State' first discards state in such cases:
+--
+-- >>> :{
+--   example
+--     & evalState ""
+--     & runError
+--     & fmap (either id id)
+--     & runM
+--     & (print =<<)
+-- :}
+-- "start-catch"
+--
+-- A good rule of thumb is to handle effects which should have \"global\"
+-- behaviour over other effects later in the chain.
 --
 -- After all of your effects are handled, you'll be left with either
 -- a @'Sem' '[] a@ or a @'Sem' '[ 'Embed' m ] a@ value, which can be
