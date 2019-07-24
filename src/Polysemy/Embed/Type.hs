@@ -30,5 +30,7 @@ import Data.Kind
 --
 -- Consider using 'Polysemy.Trace.trace' and 'Polysemy.Trace.traceToIO' as
 -- a substitute for using 'putStrLn' directly.
+--
+-- @since 1.0.0.0
 newtype Embed m (z :: Type -> Type) a where
   Embed :: { unEmbed :: m a } -> Embed m z a

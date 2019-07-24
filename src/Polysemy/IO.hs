@@ -2,8 +2,8 @@
 
 module Polysemy.IO
   ( -- * Interpretations
-    runIO
-  , runEmbeddedInIO
+    embedToMonadIO
+  , lowerEmbedded
   ) where
 
 import Control.Monad.IO.Class
@@ -14,8 +14,6 @@ import Polysemy.Internal.Union
 
 
 ------------------------------------------------------------------------------
--- | __If you trying to run 'Sem' in 'IO', the function you want is 'runM'.__
---
 -- The 'MonadIO' class is conceptually an interpretation of 'IO' to some
 -- other monad. This function reifies that intuition, by transforming an 'IO'
 -- effect into some other 'MonadIO'.
@@ -23,27 +21,28 @@ import Polysemy.Internal.Union
 -- This function is especially useful when using the 'MonadIO' instance for
 -- 'Sem' instance.
 --
--- Make sure to type-apply the desired 'MonadIO' instance when using 'runIO'.
+-- Make sure to type-apply the desired 'MonadIO' instance when using
+-- 'embedToMonadIO'.
 --
--- @since 0.1.1.0
+-- @since 1.0.0.0
 --
 -- ==== Example
 --
 -- @
 -- foo :: PandocIO ()
--- foo = 'runM' . 'runIO' @PandocIO $ do
+-- foo = 'runM' . 'embedToMonadIO' @PandocIO $ do
 --   'liftIO' $ putStrLn "hello from polysemy"
 -- @
 --
-runIO
+embedToMonadIO
     :: forall m r a
      . ( MonadIO m
        , Member (Embed m) r
        )
     => Sem (Embed IO ': r) a
     -> Sem r a
-runIO = runEmbedded $ liftIO @m
-{-# INLINE runIO #-}
+embedToMonadIO = runEmbedded $ liftIO @m
+{-# INLINE embedToMonadIO #-}
 
 
 ------------------------------------------------------------------------------
@@ -53,21 +52,21 @@ runIO = runEmbedded $ liftIO @m
 --
 -- This function creates a thread, and so should be compiled with @-threaded@.
 --
--- TODO(sandy): @since
-runEmbeddedInIO
+-- @since 1.0.0.0
+lowerEmbedded
     :: ( MonadIO m
        , LastMember (Embed IO) r
        )
     => (forall x. m x -> IO x)  -- ^ The means of running this monad.
     -> Sem (Embed m ': r) a
     -> Sem r a
-runEmbeddedInIO run_m (Sem m) = withLowerToIO $ \lower _ ->
+lowerEmbedded run_m (Sem m) = withLowerToIO $ \lower _ ->
   run_m $ m $ \u ->
     case decomp u of
       Left x -> liftIO
               . lower
               . liftSem
-              $ hoist (runEmbeddedInIO run_m) x
+              $ hoist (lowerEmbedded run_m) x
 
       Right (Weaving (Embed wd) s _ y _) ->
         fmap y $ fmap (<$ s) wd

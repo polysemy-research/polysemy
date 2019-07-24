@@ -43,6 +43,8 @@ censor f m = pass (fmap (f ,) m)
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Output' effect into a 'Writer' effect.
+--
+-- @since 1.0.0.0
 outputToWriter :: Member (Writer o) r => Sem (Output o ': r) a -> Sem r a
 outputToWriter = interpret $ \case
   Output o -> tell o

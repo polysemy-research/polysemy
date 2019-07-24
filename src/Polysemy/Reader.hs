@@ -47,6 +47,8 @@ runReader i = interpretH $ \case
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Input' effect into a 'Reader' effect.
+--
+-- @since 1.0.0.0
 inputToReader :: Member (Reader i) r => Sem (Input i ': r) a -> Sem r a
 inputToReader = interpret $ \case
   Input -> ask

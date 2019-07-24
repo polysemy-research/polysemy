@@ -31,6 +31,8 @@ makeSem ''Trace
 
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by printing the messages to stdout.
+--
+-- @since 1.0.0.0
 traceToIO :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
 traceToIO = interpret $ \case
   Trace m -> embed $ putStrLn m
@@ -39,6 +41,8 @@ traceToIO = interpret $ \case
 
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by ignoring all of its messages.
+--
+-- @since 1.0.0.0
 ignoreTrace :: Sem (Trace ': r) a -> Sem r a
 ignoreTrace = interpret $ \case
   Trace _ -> pure ()
@@ -47,6 +51,8 @@ ignoreTrace = interpret $ \case
 
 ------------------------------------------------------------------------------
 -- | Transform a 'Trace' effect into a 'Output' 'String' effect.
+--
+-- @since 1.0.0.0
 traceToOutput
     :: Member (Output String) r
     => Sem (Trace ': r) a
@@ -59,7 +65,7 @@ traceToOutput = interpret $ \case
 ------------------------------------------------------------------------------
 -- | Get the result of a 'Trace' effect as a list of 'String's.
 --
--- @since 0.5.0.0
+-- @since 1.0.0.0
 runTraceList
     :: Sem (Trace ': r) a
     -> Sem r ([String], a)
@@ -73,7 +79,7 @@ runTraceList = runOutputList . reinterpret (
 ------------------------------------------------------------------------------
 -- | Transform a 'Trace' effect into a 'Output' 'String' effect.
 --
--- @since 0.1.2.0
+-- @since 1.0.0.0
 outputToTrace
     :: ( Show w
        , Member Trace r

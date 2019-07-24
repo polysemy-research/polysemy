@@ -96,7 +96,7 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
 -- | Transform one 'Error' into another. This function can be used to aggregate
 -- multiple errors into a single type.
 --
--- @since 0.2.2.0
+-- @since 1.0.0.0
 mapError
   :: forall e1 e2 r a
    . Member (Error e2) r
@@ -133,6 +133,8 @@ instance (Typeable e) => X.Exception (WrappedExc e)
 ------------------------------------------------------------------------------
 -- | Run an 'Error' effect as an 'IO' 'X.Exception'. This interpretation is
 -- significantly faster than 'runError', at the cost of being less flexible.
+--
+-- @since 1.0.0.0
 lowerError
     :: ( Typeable e
        , Member (Embed IO) r

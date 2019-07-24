@@ -279,7 +279,7 @@ instance (Member NonDet r) => MonadFail (Sem r) where
 ------------------------------------------------------------------------------
 -- | This instance will only lift 'IO' actions. If you want to lift into some
 -- other 'MonadIO' type, use this instance, and handle it via the
--- 'Polysemy.IO.runIO' interpretation.
+-- 'Polysemy.IO.embedToMonadIO' interpretation.
 instance (Member (Embed IO) r) => MonadIO (Sem r) where
   liftIO = embed
   {-# INLINE liftIO #-}
@@ -359,7 +359,7 @@ send = liftSem . inj
 ------------------------------------------------------------------------------
 -- | Embed a monadic action @m@ in 'Sem'.
 --
--- TODO(sandy): @since
+-- @since 1.0.0.0
 embed :: Member (Embed m) r => m a -> Sem r a
 embed = send . Embed
 {-# INLINE embed #-}

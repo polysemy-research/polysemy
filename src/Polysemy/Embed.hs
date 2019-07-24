@@ -18,7 +18,7 @@ import Polysemy.Embed.Type (Embed (..))
 -- | Given a natural transform from @m1@ to @m2@
 -- run a @Embed m1@ effect by transforming it into a @Embed m2@ effect.
 --
--- TODO(sandy): @since
+-- @since 1.0.0.0
 runEmbedded
     :: forall m1 m2 r a
      . Member (Embed m2) r

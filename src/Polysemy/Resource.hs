@@ -76,9 +76,7 @@ onException act end = bracketOnError (pure ()) (const end) (const act)
 ------------------------------------------------------------------------------
 -- | Run a 'Resource' effect via in terms of 'X.bracket'.
 --
--- __Note:__ This function used to be called @runResource@ prior to 0.4.0.0.
---
--- @since 0.4.0.0
+-- @since 1.0.0.0
 lowerResource
     :: ∀ r a
      . Member (Embed IO) r
@@ -113,7 +111,7 @@ lowerResource finish = interpretH $ \case
 ------------------------------------------------------------------------------
 -- | Run a 'Resource' effect purely.
 --
--- @since 0.4.0.0
+-- @since 1.0.0.0
 runResource
     :: ∀ r a
      . Sem (Resource ': r) a
@@ -165,7 +163,7 @@ runResource = interpretH $ \case
 --
 -- This function creates a thread, and so should be compiled with @-threaded@.
 --
--- @since 0.5.0.0
+-- @since 1.0.0.0
 resourceToIO
     :: forall r a
      . LastMember (Embed IO) r
@@ -198,3 +196,4 @@ resourceToIO = interpretH $ \case
           (\x -> done (mb x) >> finish)
           (done . mc)
 {-# INLINE resourceToIO #-}
+

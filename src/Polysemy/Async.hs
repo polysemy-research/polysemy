@@ -39,7 +39,7 @@ makeSem ''Async
 -- Notably, this means that 'Polysemy.State.State' effects will be consistent
 -- in the presence of 'Async'.
 --
--- @since 0.5.0.0
+-- @since 1.0.0.0
 asyncToIO
     :: LastMember (Embed IO) r
     => Sem (Async ': r) a
@@ -61,8 +61,7 @@ asyncToIO m = withLowerToIO $ \lower _ -> lower $
 ------------------------------------------------------------------------------
 -- | Run an 'Async' effect via in terms of 'A.async'.
 --
---
--- @since 0.5.0.0
+-- @since 1.0.0.0
 lowerAsync
     :: Member (Embed IO) r
     => (forall x. Sem r x -> IO x)

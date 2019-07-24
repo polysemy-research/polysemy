@@ -1,5 +1,46 @@
 # Changelog for polysemy
 
+## 1.0.0.0 (2019-07-24)
+
+### Breaking Changes
+
+- Renamed `Lift`  to `Embed` (thanks to @googleson78)
+- Renamed `runAsyncInIO` to `lowerAsync`
+- Renamed `runAsync` to `asyncToIO`
+- Renamed `runBatchOutput` to `runOutputBatched`
+- Renamed `runConstInput` to `runInputConst`
+- Renamed `runEmbed` to `runEmbedded` (thanks to @googleson78)
+- Renamed `runEmbedded` to `lowerEmbedded`
+- Renamed `runErrorAsAnother` to `mapError`
+- Renamed `runErrorInIO` to `lowerError`
+- Renamed `runFoldMapOutput` to `runOutputMonoid`
+- Renamed `runIO` to `embedToMonadIO`
+- Renamed `runIgnoringOutput` to `ignoreOutput`
+- Renamed `runIgnoringTrace` to `ignoreTrace`
+- Renamed `runInputAsReader` to `inputToReader`
+- Renamed `runListInput` to `runInputList`
+- Renamed `runMonadicInput` to `runInputSem`
+- Renamed `runOutputAsList` to `runOutputList`
+- Renamed `runOutputAsTrace` to `outputToTrace`
+- Renamed `runOutputAsWriter` to `outputToWriter`
+- Renamed `runResourceBase` to `resourceToIO`
+- Renamed `runResourceInIO` to `lowerResource`
+- Renamed `runStateInIORef` to `runStateIORef`
+- Renamed `runTraceAsList` to `runTraceList`
+- Renamed `runTraceAsOutput` to `traceToOutput`
+- Renamed `runTraceIO` to `traceToIO`
+- Renamed `sendM` to `embed` (thanks to @googleson78)
+- The `NonDet` effect will no longer perform effects in untaken branches (thanks to @KingoftheHomeless)
+
+### Other Changes
+
+- Added `evalState` and `evalLazyState`
+- Added `runNonDetMaybe` (thanks to @KingoftheHomeless)
+- Added `nonDetToMaybe` (thanks to @KingoftheHomeless)
+- Haddock documentation for smart constructors generated via `makeSem` will no
+    longer have weird variable names (thanks to @TheMatten)
+
+
 ## 0.7.0.0 (2019-07-08)
 
 ### Breaking Changes

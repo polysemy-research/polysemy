@@ -31,6 +31,8 @@ makeSem ''Output
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into a list of its values.
+--
+-- @since 1.0.0.0
 runOutputList
     :: forall o r a
      . Sem (Output o ': r) a
@@ -43,6 +45,8 @@ runOutputList = fmap (first reverse) . runState [] . reinterpret
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into a monoid.
+--
+-- @since 1.0.0.0
 runOutputMonoid
     :: forall o m r a
      . Monoid m
@@ -58,6 +62,8 @@ runOutputMonoid f = runState mempty . reinterpret
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by ignoring it.
+--
+-- @since 1.0.0.0
 ignoreOutput :: Sem (Output o ': r) a -> Sem r a
 ignoreOutput = interpret $ \case
   Output _ -> pure ()
@@ -71,7 +77,7 @@ ignoreOutput = interpret $ \case
 -- If @size@ is 0, this interpretation will not emit anything in the resulting
 -- 'Output' effect.
 --
--- @since 0.1.2.0
+-- @since 1.0.0.0
 runOutputBatched
     :: forall o r a
      . Member (Output [o]) r

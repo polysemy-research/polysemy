@@ -68,6 +68,8 @@ runState = stateful $ \case
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect with local state.
+--
+-- @since 1.0.0.0
 evalState :: s -> Sem (State s ': r) a -> Sem r a
 evalState s = fmap snd . runState s
 {-# INLINE evalState #-}
@@ -83,6 +85,8 @@ runLazyState = lazilyStateful $ \case
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect with local state, lazily.
+--
+-- @since 1.0.0.0
 evalLazyState :: s -> Sem (State s ': r) a -> Sem r a
 evalLazyState s = fmap snd . runLazyState s
 {-# INLINE evalLazyState #-}
@@ -91,7 +95,7 @@ evalLazyState s = fmap snd . runLazyState s
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect by transforming it into operations over an 'IORef'.
 --
--- @since 0.1.2.0
+-- @since 1.0.0.0
 runStateIORef
     :: forall s r a
      . Member (Embed IO) r
