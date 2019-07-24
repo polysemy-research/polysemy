@@ -166,7 +166,7 @@ runResource = interpretH $ \case
 -- @since 1.0.0.0
 resourceToIO
     :: forall r a
-     . LastMember (Embed IO) r
+     . Member (Embed IO) r
     => Sem (Resource ': r) a
     -> Sem r a
 resourceToIO = interpretH $ \case

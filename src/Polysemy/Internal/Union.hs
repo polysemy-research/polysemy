@@ -30,10 +30,8 @@ module Polysemy.Internal.Union
   -- * Witnesses
   , SNat (..)
   , Nat (..)
-  , LastMember (..)
   ) where
 
-import Data.Bifunctor
 import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
@@ -263,22 +261,3 @@ decompCoerce (Union p a) =
     SZ -> Right a
     SS n -> Left (Union (SS n) a)
 {-# INLINE decompCoerce #-}
-
-
-------------------------------------------------------------------------------
--- | A proof that @end@ is the last effect in the row.
---
--- @since 0.5.0.0
-class MemberNoError end r => LastMember end r | r -> end where
-  decompLast
-      :: Union r m a
-      -> Either (Union r m a) (Union '[end] m a)
-
-instance {-# OVERLAPPABLE #-} (LastMember end r, MemberNoError end (eff ': r))
-      => LastMember end (eff ': r) where
-  decompLast (Union SZ u)     = Left $ Union SZ u
-  decompLast (Union (SS n) u) = first weaken $ decompLast $ Union n u
-
-instance LastMember end '[end] where
-  decompLast = Right
-
