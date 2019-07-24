@@ -214,3 +214,20 @@ You're going to want to stick all of this into your `package.yaml` file.
     - TypeOperators
     - TypeFamilies
 ```
+
+## Stellar Engineering - Aligning the stars to optimize `polysemy` away
+
+Several things need to be in place to fully realize our performance goals: 
+
+- GHC Version
+  - GHC 8.9+
+- Your code
+  - The module you want to be optimized needs to import `Polysemy.Internal` somewhere in its dependency tree (sufficient to `import Polysemy`)
+- GHC Flags
+  - `-O` or `-O2`
+  - `-flate-specialise` (this should be automatically turned on by the plugin, but it's worth mentioning)
+- Plugin
+  - `-fplugin=Polysemy.Plugin`
+- Additional concerns:
+  - additional core passes (turned on by the plugin)
+
