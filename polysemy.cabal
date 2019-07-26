@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f543f8ca2c4f661f0b6702fb6ec6d7db075660d19bf550e50a04e64c56826913
+-- hash: 8270550ff4f07c1da7b354658c67baeb52909c17c4627b20cc55779789133beb
 
 name:           polysemy
 version:        1.0.0.0
@@ -113,6 +113,7 @@ test-suite polysemy-test
       AsyncSpec
       BracketSpec
       DoctestSpec
+      FixpointSpec
       FusionSpec
       HigherOrderSpec
       InspectorSpec
