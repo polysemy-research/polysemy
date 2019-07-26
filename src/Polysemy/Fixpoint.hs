@@ -27,13 +27,13 @@ import Polysemy.Internal.Fixpoint
 -- @
 -- bad :: (Int, Either () Int)
 -- bad =
---    run
---  . runFixpoint run
---  . runLazyState @Int 1
---  . runError
+--    'run'
+--  . 'runFixpoint' 'run'
+--  . 'Polysemy.State.runLazyState' @Int 1
+--  . 'Polysemy.Error.runError'
 --  $ mdo
---   put a
---   a <- throw ()
+--   'Polysemy.State.put' a
+--   a <- 'Polysemy.Error.throw' ()
 --   return a
 -- @
 --
