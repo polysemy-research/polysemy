@@ -46,7 +46,7 @@ test2 =
   . runFixpoint run
   . runError
   $ mdo
-  a <- throw (1 : a) `catch` (\e -> return e)
+  a <- throw (2 : a) `catch` (\e -> return (1 : e))
   return a
 
 test3 :: Either () (Int, Int)
@@ -78,7 +78,7 @@ spec = parallel $ describe "runFixpoint" $ do
     test1 `shouldBe` ("12",  (2, ()))
   it "should work with runError" $ do
     let res = fmap (take 10) test2
-    res `shouldBe` Right (replicate 10 1)
+    res `shouldBe` Right (take 10 $ cycle [1,2])
   it "should not trigger the bomb" $ do
     test3 `shouldBe` Left ()
   it "should trigger the bomb" $ do
