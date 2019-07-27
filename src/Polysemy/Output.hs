@@ -12,6 +12,7 @@ module Polysemy.Output
   , runOutputMonoid
   , ignoreOutput
   , runOutputBatched
+  , runOutputSem
   ) where
 
 import Data.Bifunctor (first)
@@ -101,3 +102,10 @@ runOutputBatched size m = do
   when (c > 0) $ output @[o] (reverse res)
   pure a
 
+------------------------------------------------------------------------------
+-- | Runs an 'Output' effect by running a monadic action for each of its
+-- values.
+runOutputSem :: (o -> Sem r ()) -> Sem (Output o ': r) a -> Sem r a
+runOutputSem act = interpret $ \case
+    Output o -> act o
+{-# INLINE runOutputSem #-}
