@@ -91,7 +91,7 @@ data Teletype m a where
 
 makeSem ''Teletype
 
-teletypeToIO :: Member (Lift IO) r => Sem (Teletype ': r) a -> Sem r a
+teletypeToIO :: Member (Embed IO) r => Sem (Teletype ': r) a -> Sem r a
 teletypeToIO = interpret $ \case
   ReadTTY      -> embed getLine
   WriteTTY msg -> embed $ putStrLn msg
