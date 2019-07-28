@@ -5,6 +5,8 @@ import Polysemy.Output
 import Data.Foldable
 import Test.Hspec
 
+import Control.Exception
+
 
 spec :: Spec
 spec = parallel $ do
@@ -28,6 +30,12 @@ spec = parallel $ do
       let (xs, ()) = runOutputList' $ traverse_ (output @Int) [0..100]
        in xs `shouldBe` [0..100]
 
+  describe "runOutputMonoid" $
+    it "should be strict in the output" $
+      let t = run . runOutputMonoid (id @String) $ do
+            output @String (error "strict")
+            return ()
+      in evaluate t `shouldThrow` errorCall "strict"
 
 runOutput :: Int -> Sem '[Output Int, Output [Int]] a -> ([[Int]], a)
 runOutput size = run . runOutputMonoid (:[]) . runOutputBatched size

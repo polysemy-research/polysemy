@@ -61,19 +61,19 @@ runWriter
 runWriter = runState mempty . reinterpretH
   (\case
       Tell o -> do
-        modify (<> o) >>= pureT
+        modify' (<> o) >>= pureT
       Listen m -> do
         mm <- runT m
         -- TODO(sandy): this is stupid
         (o, fa) <- raise $ runWriter mm
-        modify (<> o)
+        modify' (<> o)
         pure $ fmap (o, ) fa
       Pass m -> do
         mm <- runT m
         (o, t) <- raise $ runWriter mm
         ins <- getInspectorT
         let f = maybe id fst (inspect ins t)
-        modify (<> f o)
+        modify' (<> f o)
         pure (fmap snd t)
   )
 {-# INLINE runWriter #-}

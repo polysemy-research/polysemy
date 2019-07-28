@@ -24,6 +24,7 @@ module Polysemy.Internal.Combinators
 
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
+import qualified Data.Tuple as S (swap)
 import           Polysemy.Internal
 import           Polysemy.Internal.CustomErrors
 import           Polysemy.Internal.Tactics
@@ -88,10 +89,10 @@ interpretInStateT
     -> Sem (e ': r) a
     -> Sem r (s, a)
 interpretInStateT f s (Sem m) = Sem $ \k ->
-  fmap swap $ flip S.runStateT s $ m $ \u ->
+  fmap S.swap $ flip S.runStateT s $ m $ \u ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
-          k . fmap swap
+          k . fmap S.swap
             . weave (s', ())
                     (uncurry $ interpretInStateT f)
                     (Just . snd)
@@ -130,7 +131,7 @@ stateful
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
-stateful f = interpretInStateT $ \e -> S.StateT $ fmap swap . f e
+stateful f = interpretInStateT $ \e -> S.StateT $ fmap S.swap . f e
 {-# INLINE[3] stateful #-}
 
 

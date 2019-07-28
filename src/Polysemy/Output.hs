@@ -40,7 +40,7 @@ runOutputList
     -> Sem r ([o], a)
 runOutputList = fmap (first reverse) . runState [] . reinterpret
   (\case
-      Output o -> modify (o :)
+      Output o -> modify' (o :)
   )
 {-# INLINE runOutputList #-}
 
@@ -56,7 +56,7 @@ runOutputMonoid
     -> Sem r (m, a)
 runOutputMonoid f = runState mempty . reinterpret
   (\case
-      Output o -> modify (`mappend` f o)
+      Output o -> modify' (`mappend` f o)
   )
 {-# INLINE runOutputMonoid #-}
 
