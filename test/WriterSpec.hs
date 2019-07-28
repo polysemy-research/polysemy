@@ -3,8 +3,6 @@ module WriterSpec where
 
 import Test.Hspec
 
-import Control.Exception (evaluate)
-
 import Polysemy
 import Polysemy.Error
 import Polysemy.Writer
@@ -62,15 +60,15 @@ spec = describe "writer" $ do
 
   it "should be strict in the output" $
     let
-      t1 = run . runWriter @String $ do
+      t1 = runM . runWriter @String $ do
         tell @String (error "strict")
 
-      t2 = run . runWriter @String $ do
+      t2 = runM . runWriter @String $ do
         listen @String (tell @String (error "strict"))
 
-      t3 = run . runWriter @String $
+      t3 = runM . runWriter @String $
         pass @String $ pure (\_ -> error "strict", ())
     in do
-      evaluate t1 `shouldThrow` errorCall "strict"
-      evaluate t2 `shouldThrow` errorCall "strict"
-      evaluate t3 `shouldThrow` errorCall "strict"
+      t1 `shouldThrow` errorCall "strict"
+      t2 `shouldThrow` errorCall "strict"
+      t3 `shouldThrow` errorCall "strict"
