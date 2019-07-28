@@ -62,12 +62,15 @@ spec = describe "writer" $ do
     let
       t1 = runM . runWriter @String $ do
         tell @String (error "strict")
+        return ()
 
       t2 = runM . runWriter @String $ do
-        listen @String (tell @String (error "strict"))
+        _ <- listen @String (tell @String (error "strict"))
+        return ()
 
-      t3 = runM . runWriter @String $
+      t3 = runM . runWriter @String $ do
         pass @String $ pure (\_ -> error "strict", ())
+        return ()
     in do
       t1 `shouldThrow` errorCall "strict"
       t2 `shouldThrow` errorCall "strict"
