@@ -22,6 +22,7 @@ module Polysemy.Internal.Combinators
   , lazilyStateful
   ) where
 
+import           Control.Monad
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
 import qualified Data.Tuple as S (swap)
@@ -89,10 +90,11 @@ interpretInStateT
     -> Sem (e ': r) a
     -> Sem r (s, a)
 interpretInStateT f s (Sem m) = Sem $ \k ->
-  fmap S.swap $ flip S.runStateT s $ m $ \u ->
+  (S.swap <$!>) $ flip S.runStateT s $ m $ \u ->
     case decomp u of
         Left x -> S.StateT $ \s' ->
-          k . fmap S.swap
+              (S.swap <$!>)
+            . k
             . weave (s', ())
                     (uncurry $ interpretInStateT f)
                     (Just . snd)
@@ -131,7 +133,7 @@ stateful
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
-stateful f = interpretInStateT $ \e -> S.StateT $ fmap S.swap . f e
+stateful f = interpretInStateT $ \e -> S.StateT $ (S.swap <$!>) . f e
 {-# INLINE[3] stateful #-}
 
 
