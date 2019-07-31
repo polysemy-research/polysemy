@@ -9,6 +9,7 @@ module Polysemy.State
   , gets
   , put
   , modify
+  , modify'
 
     -- * Interpretations
   , runState
@@ -55,6 +56,15 @@ modify f = do
   s <- get
   put $ f s
 {-# INLINABLE modify #-}
+
+------------------------------------------------------------------------------
+-- | A variant of 'modify' in which the computation is strict in the
+-- new state.
+modify' :: Member (State s) r => (s -> s) -> Sem r ()
+modify' f = do
+  s <- get
+  put $! f s
+{-# INLINABLE modify' #-}
 
 
 ------------------------------------------------------------------------------
