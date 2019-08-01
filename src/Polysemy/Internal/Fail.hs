@@ -1,3 +1,3 @@
 module Polysemy.Internal.Fail where
 
-data Fail m a = Fail String
+newtype Fail m a = Fail String

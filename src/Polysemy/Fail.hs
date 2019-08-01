@@ -23,6 +23,7 @@ import Control.Monad.Fail as Fail
 runFail :: Sem (Fail ': r) a
         -> Sem r (Either String a)
 runFail = runError . reinterpret (\(Fail s) -> throw s)
+{-# INLINE runFail #-}
 
 ------------------------------------------------------------------------------
 -- | Transform a 'Fail' effect into an @'Error' e@ effect,
@@ -33,6 +34,7 @@ failToError :: Member (Error e) r
             -> Sem (Fail ': r) a
             -> Sem r a
 failToError f = interpret $ \(Fail s) -> throw (f s)
+{-# INLINE failToError #-}
 
 ------------------------------------------------------------------------------
 -- | Transform a 'Fail' effect into a 'NonDet' effect,
@@ -41,6 +43,7 @@ failToNonDet :: Member NonDet r
              => Sem (Fail ': r) a
              -> Sem r a
 failToNonDet = interpret $ \(Fail _) -> empty
+{-# INLINE failToNonDet #-}
 
 ------------------------------------------------------------------------------
 -- | Run a 'Fail' effect through an 'Embed'ded 'MonadFail'.
@@ -49,3 +52,4 @@ failToEmbed :: forall m a r
             => Sem (Fail ': r) a
             -> Sem r a
 failToEmbed = interpret $ \(Fail s) -> embed @m (Fail.fail s)
+{-# INLINE failToEmbed #-}
