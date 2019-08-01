@@ -77,7 +77,7 @@ runTraceList = runOutputList . reinterpret (
 
 
 ------------------------------------------------------------------------------
--- | Transform a 'Trace' effect into a 'Output' 'String' effect.
+-- | Transform an 'Output' 'String' effect into a 'Trace' effect.
 --
 -- @since 1.0.0.0
 outputToTrace
