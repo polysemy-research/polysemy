@@ -8,6 +8,7 @@ module Polysemy.State
   , get
   , gets
   , put
+  , state
   , modify
   , modify'
 
@@ -40,8 +41,9 @@ import           Polysemy.Internal.Union
 -- Interpreters which require statefulness can 'Polysemy.reinterpret'
 -- themselves in terms of 'State', and subsequently call 'runState'.
 data State s m a where
-  Get :: State s m s
-  Put :: s -> State s m ()
+  Get   :: State s m s
+  Put   :: s -> State s m ()
+  State :: (s -> (s, a)) -> State s m a
 
 makeSem ''State
 
@@ -57,6 +59,7 @@ modify f = do
   put $ f s
 {-# INLINABLE modify #-}
 
+
 ------------------------------------------------------------------------------
 -- | A variant of 'modify' in which the computation is strict in the
 -- new state.
@@ -71,8 +74,9 @@ modify' f = do
 -- | Run a 'State' effect with local state.
 runState :: s -> Sem (State s ': r) a -> Sem r (s, a)
 runState = stateful $ \case
-  Get   -> \s -> pure (s, s)
-  Put s -> const $ pure (s, ())
+  Get     -> \s -> pure (s, s)
+  Put s   -> const $ pure (s, ())
+  State f -> \s -> pure $ f s
 {-# INLINE[3] runState #-}
 
 
@@ -89,9 +93,11 @@ evalState s = fmap snd . runState s
 -- | Run a 'State' effect with local state, lazily.
 runLazyState :: s -> Sem (State s ': r) a -> Sem r (s, a)
 runLazyState = lazilyStateful $ \case
-  Get   -> \s -> pure (s, s)
-  Put s -> const $ pure (s, ())
+  Get     -> \s -> pure (s, s)
+  Put s   -> const $ pure (s, ())
+  State f -> \s -> pure $ f s
 {-# INLINE[3] runLazyState #-}
+
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect with local state, lazily.
@@ -113,8 +119,9 @@ runStateIORef
     -> Sem (State s ': r) a
     -> Sem r a
 runStateIORef ref = interpret $ \case
-  Get   -> embed $ readIORef ref
-  Put s -> embed $ writeIORef ref s
+  Get     -> embed $ readIORef ref
+  Put s   -> embed $ writeIORef ref s
+  State f -> embed $ atomicModifyIORef ref f
 {-# INLINE runStateIORef #-}
 
 
@@ -135,8 +142,10 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
                                   $ S.runStateT m' s')
                       (Just . snd)
               $ hoist hoistStateIntoStateT x
-    Right (Weaving Get z _ y _)     -> fmap (y . (<$ z)) $ S.get
-    Right (Weaving (Put s) z _ y _) -> fmap (y . (<$ z)) $ S.put s
+    Right (Weaving Get       z _ y _) -> fmap (y . (<$ z)) $ S.get
+    Right (Weaving (Put s)   z _ y _) -> fmap (y . (<$ z)) $ S.put s
+    Right (Weaving (State f) z _ y _) -> fmap (y . (<$ z)) $ S.state
+                                                           $ \s -> swap $ f s
 {-# INLINE hoistStateIntoStateT #-}
 
 
