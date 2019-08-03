@@ -3,6 +3,7 @@
 module AsyncSpec where
 
 import Control.Concurrent
+import Control.Concurrent.MVar
 import Control.Monad
 import Polysemy
 import Polysemy.Async
@@ -21,22 +22,24 @@ spec = describe "async" $ do
       let message :: Member Trace r => Int -> String -> Sem r ()
           message n msg = trace $ mconcat
             [ show n, "> ", msg ]
-
+      ~[lock1, lock2] <- embed $
+        replicateM 2 newEmptyMVar
       a1 <- async $ do
           v <- get @String
           message 1 v
           put $ reverse v
 
-          embed $ threadDelay 1e5
+          embed $ putMVar lock1 ()
+          embed $ takeMVar lock2
           get >>= message 1
 
-          embed $ threadDelay 1e5
           get @String
 
       void $ async $ do
-          embed $ threadDelay 5e4
+          embed $ takeMVar lock1
           get >>= message 2
           put "pong"
+          embed $ putMVar lock2 ()
 
       await a1 <* put "final"
 
