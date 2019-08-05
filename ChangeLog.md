@@ -30,13 +30,13 @@
 - Renamed `runTraceAsOutput` to `traceToOutput`
 - Renamed `runTraceIO` to `traceToIO`
 - Renamed `sendM` to `embed` (thanks to @googleson78)
-- The `NonDet` effect will no longer perform effects in untaken branches (thanks to @KingoftheHomeless)
+- The `NonDet` effect is now higher-order (thanks to @KingoftheHomeless)
 
 ### Other Changes
 
 - Added `evalState` and `evalLazyState`
 - Added `runNonDetMaybe` (thanks to @KingoftheHomeless)
-- Added `nonDetToMaybe` (thanks to @KingoftheHomeless)
+- Added `nonDetToError` (thanks to @KingoftheHomeless)
 - Haddock documentation for smart constructors generated via `makeSem` will no
     longer have weird variable names (thanks to @TheMatten)
 
