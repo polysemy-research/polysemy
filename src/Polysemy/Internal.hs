@@ -33,9 +33,9 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Data.Kind
-import Polysemy.Internal.Fail
-import Polysemy.Internal.Fixpoint
 import Polysemy.Embed.Type
+import Polysemy.Fail.Type
+import Polysemy.Internal.Fixpoint
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union

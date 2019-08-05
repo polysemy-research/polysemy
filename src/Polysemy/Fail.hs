@@ -13,7 +13,7 @@ module Polysemy.Fail
 
 import Control.Applicative
 import Polysemy
-import Polysemy.Internal.Fail
+import Polysemy.Fail.Type
 import Polysemy.Error
 import Polysemy.NonDet
 import Control.Monad.Fail as Fail
@@ -46,7 +46,7 @@ failToNonDet = interpret $ \(Fail _) -> empty
 {-# INLINE failToNonDet #-}
 
 ------------------------------------------------------------------------------
--- | Run a 'Fail' effect through an 'Embed'ded 'MonadFail'.
+-- | Run a 'Fail' effect in terms of an underlying 'MonadFail' instance.
 failToEmbed :: forall m a r
              . (Member (Embed m) r, MonadFail m)
             => Sem (Fail ': r) a
