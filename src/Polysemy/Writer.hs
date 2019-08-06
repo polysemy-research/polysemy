@@ -100,7 +100,7 @@ runWriterAssocR =
        => Sem (Writer o ': r) a
        -> Sem r (o -> o, a)
     go =
-        runState mempty
+        runState id
       . reinterpretH
       (\case
           Tell o -> do
