@@ -13,10 +13,13 @@ module Polysemy.Writer
 
     -- * Interpretations
   , runWriter
+  , runWriterAssocR
 
     -- * Interpretations for Other Effects
   , outputToWriter
   ) where
+
+import Data.Bifunctor (first)
 
 import Polysemy
 import Polysemy.Output
@@ -78,3 +81,44 @@ runWriter = runState mempty . reinterpretH
   )
 {-# INLINE runWriter #-}
 
+------------------------------------------------------------------------------
+-- | Like 'runWriter', but right-associates uses of '<>'.
+--
+-- This asymptotically improves performance if the time complexity of '<>' for
+-- the 'Monoid' depends only on the size of the first argument.
+--
+-- You should always use this instead of 'runWriter' if the monoid
+-- is a list, such as 'String'.
+runWriterAssocR
+    :: Monoid o
+    => Sem (Writer o ': r) a
+    -> Sem r (o, a)
+runWriterAssocR =
+  let
+    go :: forall o r a
+        . Monoid o
+       => Sem (Writer o ': r) a
+       -> Sem r (o -> o, a)
+    go =
+        runState mempty
+      . reinterpretH
+      (\case
+          Tell o -> do
+            modify' @(o -> o) (. (o <>)) >>= pureT
+          Listen m -> do
+            mm <- runT m
+            -- TODO(sandy): this is stupid
+            (oo, fa) <- raise $ go mm
+            modify' @(o -> o) (. oo)
+            pure $ fmap (oo mempty, ) fa
+          Pass m -> do
+            mm <- runT m
+            (o, t) <- raise $ runWriterAssocR mm
+            ins <- getInspectorT
+            let f = maybe id fst (inspect ins t)
+            modify' @(o -> o) (. (f o <>))
+            pure (fmap snd t)
+      )
+    {-# INLINE go #-}
+  in fmap (first ($ mempty)) . go
+{-# INLINE runWriterAssocR #-}

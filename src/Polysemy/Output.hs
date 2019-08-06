@@ -10,11 +10,13 @@ module Polysemy.Output
     -- * Interpretations
   , runOutputList
   , runOutputMonoid
+  , runOutputMonoidAssocR
   , ignoreOutput
   , runOutputBatched
   , runOutputSem
   ) where
 
+import Data.Semigroup (Endo(..))
 import Data.Bifunctor (first)
 import Polysemy
 import Polysemy.State
@@ -60,6 +62,24 @@ runOutputMonoid f = runState mempty . reinterpret
   )
 {-# INLINE runOutputMonoid #-}
 
+------------------------------------------------------------------------------
+-- | Like 'runOutputMonoid', but right-associates uses of '<>'.
+--
+-- This asymptotically improves performance if the time complexity of '<>' for
+-- the 'Monoid' depends only on the size of the first argument.
+--
+-- You should always use this instead of 'runOutputMonoid' if the monoid
+-- is a list, such as 'String'.
+runOutputMonoidAssocR
+    :: forall o m r a
+     . Monoid m
+    => (o -> m)
+    -> Sem (Output o ': r) a
+    -> Sem r (m, a)
+runOutputMonoidAssocR f =
+    fmap (first (`appEndo` mempty))
+  . runOutputMonoid (\a -> Endo (f a <>))
+{-# INLINE runOutputMonoidAssocR #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by ignoring it.
