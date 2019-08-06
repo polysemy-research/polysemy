@@ -171,3 +171,4 @@ genDec should_mk_sigs cli = do
                  []
         ]
     ]
+
