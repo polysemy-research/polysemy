@@ -33,8 +33,9 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Data.Kind
-import Polysemy.Internal.Fixpoint
 import Polysemy.Embed.Type
+import Polysemy.Fail.Type
+import Polysemy.Internal.Fixpoint
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
@@ -271,9 +272,10 @@ instance (Member NonDet r) => MonadPlus (Sem r) where
   mzero = empty
   mplus = (<|>)
 
--- | @since 0.2.1.0
-instance (Member NonDet r) => MonadFail (Sem r) where
-  fail = const empty
+-- | TODO: @since _
+instance (Member Fail r) => MonadFail (Sem r) where
+  fail = send . Fail
+  {-# INLINE fail #-}
 
 
 ------------------------------------------------------------------------------
