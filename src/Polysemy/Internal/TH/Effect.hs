@@ -122,7 +122,7 @@ makeSem_ = genFreer False
 -- constructors into 'Sem' actions.
 genFreer :: Bool -> Name -> Q [Dec]
 genFreer should_mk_sigs type_name = do
-  checkExtensions [ScopedTypeVariables, FlexibleContexts]
+  checkExtensions [ScopedTypeVariables, FlexibleContexts, DataKinds]
   (dt_name, cl_infos) <- getEffectMetadata type_name
   tyfams_on  <- isExtEnabled TypeFamilies
   def_mod_fi <- sequence [ tySynInstDCompat
