@@ -177,7 +177,7 @@ runWriterIORef ref = interpretH $ \case
 -- be stored seperately from the provided 'TVar' until the 'listen'\/'pass'
 -- completes.
 -- Therefore, such 'tell's will be lost if the argument to the 'listen'\/'pass'
--- fails due to any effect interpreted after 'runWriterIORef',
+-- fails due to any effect interpreted after 'runWriterTVar',
 -- or due to an 'IO' exception.
 runWriterTVar :: (Monoid o, Member (Embed IO) r)
               => TVar o

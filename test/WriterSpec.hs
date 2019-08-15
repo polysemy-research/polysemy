@@ -55,6 +55,52 @@ test2 =
 test3 :: (String, (String, ()))
 test3 = run . runWriter $ listen (tell "and hear")
 
+test4 :: IO (String, String)
+test4 = do
+  ref <- newIORef ""
+  (listened, _) <- (runM .@ lowerAsync) . runWriterIORef ref $ do
+    tell "abra"
+    listen $ do
+      tell "had"
+      a <- async $ tell "abra"
+      await a
+  end <- readIORef ref
+  return (end, listened)
+
+test5 :: IO (String, String)
+test5 = do
+  ref  <- newIORef ""
+  lock <- newEmptyMVar
+  (listened, a) <- (runM .@ lowerAsync) . runWriterIORef ref $ do
+    tell "abra"
+    listen $ do
+      tell "had"
+      a <- async $ do
+        embed $ takeMVar lock
+        tell "abra"
+      return a
+  putMVar lock ()
+  _ <- A.wait a
+  end <- readIORef ref
+  return (end, listened)
+
+test6 :: IO (String, String)
+test6 = do
+  ref  <- newTVarIO ""
+  lock <- newEmptyMVar
+  (listened, a) <- (runM .@ lowerAsync) . runWriterTVar ref $ do
+    tell "abra"
+    listen $ do
+      tell "had"
+      a <- async $ do
+        embed $ takeMVar lock
+        tell "abra"
+      return a
+  putMVar lock ()
+  _   <- A.wait a
+  end <- readTVarIO ref
+  return (end, listened)
+
 spec :: Spec
 spec = do
   describe "writer" $ do
@@ -103,50 +149,3 @@ spec = do
       (end, listened) <- test6
       end `shouldBe` "abrahadabra"
       listened `shouldBe` "had"
-
-
-test4 :: IO (String, String)
-test4 = do
-  ref <- newIORef ""
-  (listened, _) <- (runM .@ lowerAsync) . runWriterIORef ref $ do
-    tell "abra"
-    listen $ do
-      tell "had"
-      a <- async $ tell "abra"
-      await a
-  end <- readIORef ref
-  return (end, listened)
-
-test5 :: IO (String, String)
-test5 = do
-  ref  <- newIORef ""
-  lock <- newEmptyMVar
-  (listened, a) <- (runM .@ lowerAsync) . runWriterIORef ref $ do
-    tell "abra"
-    listen $ do
-      tell "had"
-      a <- async $ do
-        embed $ takeMVar lock
-        tell "abra"
-      return a
-  putMVar lock ()
-  _ <- A.wait a
-  end <- readIORef ref
-  return (end, listened)
-
-test6 :: IO (String, String)
-test6 = do
-  ref  <- newTVarIO ""
-  lock <- newEmptyMVar
-  (listened, a) <- (runM .@ lowerAsync) . runWriterTVar ref $ do
-    tell "abra"
-    listen $ do
-      tell "had"
-      a <- async $ do
-        embed $ takeMVar lock
-        tell "abra"
-      return a
-  putMVar lock ()
-  _   <- A.wait a
-  end <- readTVarIO ref
-  return (end, listened)
