@@ -105,6 +105,11 @@ evalLazyState s = fmap snd . runLazyState s
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect by transforming it into operations over an 'IORef'.
 --
+-- /Note/: This is not safe in a concurrent setting, as 'modify' isn't atomic.
+-- If you need operations over the state to be atomic,
+-- use 'Polysemy.AtomicState.runAtomicStateIORef' or
+-- 'Polysemy.AtomicState.runAtomicStateTVar' instead.
+--
 -- @since 1.0.0.0
 runStateIORef
     :: forall s r a

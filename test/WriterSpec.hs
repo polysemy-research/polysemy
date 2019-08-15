@@ -3,9 +3,15 @@ module WriterSpec where
 
 import Test.Hspec
 
+import qualified Control.Concurrent.Async as A
+import Control.Concurrent.MVar
+import Control.Concurrent.STM
 import Control.Exception (evaluate)
 
+import Data.IORef
+
 import Polysemy
+import Polysemy.Async
 import Polysemy.Error
 import Polysemy.Writer
 
@@ -50,33 +56,34 @@ test3 :: (String, (String, ()))
 test3 = run . runWriter $ listen (tell "and hear")
 
 spec :: Spec
-spec = describe "writer" $ do
-  it "should not censor" $ do
-    test1 `shouldBe` ("censoring not applied", Right ())
+spec = do
+  describe "writer" $ do
+    it "should not censor" $ do
+      test1 `shouldBe` ("censoring not applied", Right ())
 
-  it "should censor" $ do
-    test2 `shouldBe` ("censoring applied", Right ())
+    it "should censor" $ do
+      test2 `shouldBe` ("censoring applied", Right ())
 
-  it "should have a proper listen" $ do
-    test3 `shouldBe` ("and hear", ("and hear", ()))
+    it "should have a proper listen" $ do
+      test3 `shouldBe` ("and hear", ("and hear", ()))
 
-  it "should be strict in the output" $
-    let
-      t1 = runWriter @String $ do
-        tell @String (error "strict")
-        return ()
+    it "should be strict in the output" $
+      let
+        t1 = runWriter @String $ do
+          tell @String (error "strict")
+          return ()
 
-      t2 = runWriter @String $ do
-        _ <- listen @String (tell @String (error "strict"))
-        return ()
+        t2 = runWriter @String $ do
+          _ <- listen @String (tell @String (error "strict"))
+          return ()
 
-      t3 = runWriter @String $ do
-        pass @String $ pure (\_ -> error "strict", ())
-        return ()
-    in do
-      runM t1           `shouldThrow` errorCall "strict"
-      evaluate (run t1) `shouldThrow` errorCall "strict"
-      runM t2           `shouldThrow` errorCall "strict"
-      evaluate (run t2) `shouldThrow` errorCall "strict"
-      runM t3           `shouldThrow` errorCall "strict"
-      evaluate (run t3) `shouldThrow` errorCall "strict"
+        t3 = runWriter @String $ do
+          pass @String $ pure (\_ -> error "strict", ())
+          return ()
+      in do
+        runM t1           `shouldThrow` errorCall "strict"
+        evaluate (run t1) `shouldThrow` errorCall "strict"
+        runM t2           `shouldThrow` errorCall "strict"
+        evaluate (run t2) `shouldThrow` errorCall "strict"
+        runM t3           `shouldThrow` errorCall "strict"
+        evaluate (run t3) `shouldThrow` errorCall "strict"

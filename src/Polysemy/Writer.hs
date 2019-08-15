@@ -81,11 +81,11 @@ runWriter = runState mempty . reinterpretH
   )
 {-# INLINE runWriter #-}
 
-------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 -- | Like 'runWriter', but right-associates uses of '<>'.
 --
--- This asymptotically improves performance if the time complexity of '<>' for
--- the 'Monoid' depends only on the size of the first argument.
+-- This asymptotically improves performance if the time complexity of '<>'
+-- for the 'Monoid' depends only on the size of the first argument.
 --
 -- You should always use this instead of 'runWriter' if the monoid
 -- is a list, such as 'String'.

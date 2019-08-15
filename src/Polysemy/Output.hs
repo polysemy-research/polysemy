@@ -11,10 +11,15 @@ module Polysemy.Output
   , runOutputList
   , runOutputMonoid
   , runOutputMonoidAssocR
+  , runOutputMonoidIORef
+  , runOutputMonoidTVar
   , ignoreOutput
   , runOutputBatched
   , runOutputSem
   ) where
+
+import Data.IORef
+import Control.Concurrent.STM
 
 import Data.Semigroup (Endo(..))
 import Data.Bifunctor (first)
@@ -80,6 +85,36 @@ runOutputMonoidAssocR f =
     fmap (first (`appEndo` mempty))
   . runOutputMonoid (\a -> Endo (f a <>))
 {-# INLINE runOutputMonoidAssocR #-}
+
+------------------------------------------------------------------------------
+-- | Run an 'Output' effect by transforming it into atomic operations
+-- over an 'IORef'.
+runOutputMonoidIORef
+    :: forall o m r a
+     . (Monoid m, Member (Embed IO) r)
+    => IORef m
+    -> (o -> m)
+    -> Sem (Output o ': r) a
+    -> Sem r a
+runOutputMonoidIORef ref f = interpret $ \case
+  Output o -> embed $ atomicModifyIORef' ref (\s -> (s <> f o, ()))
+{-# INLINE runOutputMonoidIORef #-}
+
+------------------------------------------------------------------------------
+-- | Run an 'Output' effect by transforming it into atomic operations
+-- over a 'TVar'.
+runOutputMonoidTVar
+    :: forall o m r a
+     . (Monoid m, Member (Embed IO) r)
+    => TVar m
+    -> (o -> m)
+    -> Sem (Output o ': r) a
+    -> Sem r a
+runOutputMonoidTVar tvar f = interpret $ \case
+  Output o -> embed $ atomically $ do
+    s <- readTVar tvar
+    writeTVar tvar $! s <> f o
+{-# INLINE runOutputMonoidTVar #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by ignoring it.
