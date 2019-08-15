@@ -1,11 +1,16 @@
 module OutputSpec where
 
-import Polysemy
-import Polysemy.Output
-import Data.Foldable
-import Test.Hspec
-
+import Control.Concurrent.STM
 import Control.Exception (evaluate)
+
+import Data.IORef
+import Data.Foldable
+
+import Polysemy
+import Polysemy.Async
+import Polysemy.Output
+
+import Test.Hspec
 
 spec :: Spec
 spec = parallel $ do
@@ -38,8 +43,39 @@ spec = parallel $ do
         runM t           `shouldThrow` errorCall "strict"
         evaluate (run t) `shouldThrow` errorCall "strict"
 
+  describe "runOutputMonoidIORef" $ do
+    it "should commit writes of asynced computations" $
+      let io = do
+            ref <- newIORef ""
+            (runM .@ lowerAsync) . runOutputMonoidIORef ref (show @Int) $
+              test1
+            readIORef ref
+      in do
+        res <- io
+        res `shouldBe` "12"
+
+  describe "runOutputMonoidTVar" $ do
+    it "should commit writes of asynced computations" $
+      let io = do
+            ref <- newTVarIO ""
+            (runM .@ lowerAsync) . runOutputMonoidTVar ref (show @Int) $
+              test1
+            readTVarIO ref
+      in do
+        res <- io
+        res `shouldBe` "12"
+
 runOutput :: Int -> Sem '[Output Int, Output [Int]] a -> ([[Int]], a)
 runOutput size = run . runOutputMonoid (:[]) . runOutputBatched size
 
 runOutputList' :: Sem '[Output Int] a -> ([Int], a)
 runOutputList' = run . runOutputList
+
+test1 :: Members '[Async, Output Int] r
+     => Sem r ()
+test1 = do
+  output @Int 1
+  a <- async $ do
+    output @Int 2
+  _ <- await a
+  return ()
