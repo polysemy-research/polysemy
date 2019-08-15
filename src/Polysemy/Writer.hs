@@ -14,17 +14,12 @@ module Polysemy.Writer
     -- * Interpretations
   , runWriter
   , runWriterAssocR
-  , runWriterIORef
-  , runWriterTVar
 
     -- * Interpretations for Other Effects
   , outputToWriter
   ) where
 
-import Control.Concurrent.STM
-
 import Data.Bifunctor (first)
-import Data.IORef
 
 import Polysemy
 import Polysemy.Output
@@ -127,122 +122,3 @@ runWriterAssocR =
     {-# INLINE go #-}
   in fmap (first ($ mempty)) . go
 {-# INLINE runWriterAssocR #-}
-
-------------------------------------------------------------------------------
--- | Run a 'Writer' effect by transforming it into atomic
--- operations over an 'IORef'.
---
--- /Note/: All 'tell's in the argument of a 'listen' or 'pass' will temporarily
--- be stored seperately from the provided 'IORef' until the 'listen'\/'pass'
--- completes.
--- Therefore, such 'tell's will be lost if the argument to the 'listen'\/'pass'
--- fails due to any effect interpreted after 'runWriterIORef', or due to an
--- 'IO' exception.
---
--- In addition, any 'tell's of any asynchronous computation spawned inside a
--- 'listen'\/'pass' will be lost once the 'listen'\/'pass' completes.
--- 'runWriterTVar' avoids this particular issue.
-runWriterIORef
-  :: (Monoid o, Member (Embed IO) r)
-  => IORef o
-  -> Sem (Writer o ': r) a
-  -> Sem r a
-runWriterIORef ref = interpretH $ \case
-  Tell o -> do
-    t <- embed $ atomicModifyIORef' ref (\s -> (s <> o, ()))
-    pureT t
-  Listen m -> do
-    mm   <- runT m
-    -- TODO(KingoftheHomeless): this is REALLY stupid
-    ref' <- embed $ newIORef mempty
-    fa   <- raise $ runWriterIORef ref' mm
-    o    <- embed $ readIORef ref'
-    embed $ atomicModifyIORef' ref (\s -> (s <> o, ()))
-    return $ fmap (o, ) fa
-  Pass m -> do
-    mm   <- runT m
-    ins  <- getInspectorT
-    ref' <- embed $ newIORef mempty
-    t    <- raise $ runWriterIORef ref' mm
-    let f = maybe id fst $ inspect ins t
-    o    <- embed $ readIORef ref'
-    embed $ atomicModifyIORef' ref (\s -> (s <> f o, ()))
-    return (fmap snd t)
-
-------------------------------------------------------------------------------
--- | Run a 'Writer' effect by transforming it into atomic operations over a
--- 'TVar'.
---
--- /Note/: All 'tell's in the argument of a 'listen' or 'pass' will temporarily
--- be stored seperately from the provided 'TVar' until the 'listen'\/'pass'
--- completes.
--- Therefore, such 'tell's will be lost if the argument to the 'listen'\/'pass'
--- fails due to any effect interpreted after 'runWriterTVar',
--- or due to an 'IO' exception.
-runWriterTVar :: (Monoid o, Member (Embed IO) r)
-              => TVar o
-              -> Sem (Writer o ': r) a
-              -> Sem r a
-runWriterTVar tvar = runWriterTVarAction $ \o -> do
-  s <- readTVar tvar
-  writeTVar tvar $! s <> o
-{-# INLINE runWriterTVar #-}
-
-runWriterTVarAction :: forall o a r
-                     . (Monoid o, Member (Embed IO) r)
-                    => (o -> STM ())
-                    -> Sem (Writer o ': r) a
-                    -> Sem r a
-runWriterTVarAction act = interpretH $ \case
-  Tell o -> do
-    t <- embed $ atomically (act o)
-    pureT t
-  Listen m -> do
-    mm     <- runT m
-    {-
-       KingoftheHomeless: this switch controls how 'tell's of
-       'mm' are committed. As long as 'mm' is running,
-       it and any async computations spawned by it will write to
-       the local tvar. Once the 'listen' has
-       completed, the switch will flip, and any async computations
-       spawned by 'mm' will write to the
-       global tvar (which is represented by 'act').
-
-       Since the switch flip is part of the same 'atomically' that
-       moves the writes of the local tvar to the global tvar,
-       no writes of 'mm' are lost (unless 'mm' fails).
-    -}
-    switch <- embed $ newTVarIO False
-    tvar   <- embed $ newTVarIO mempty
-    fa     <- raise $ runWriterTVarAction (act' tvar switch) mm
-    embed $ atomically $ do
-      o <- readTVar tvar
-      act o
-      writeTVar switch True
-      return (fmap (o, ) fa)
-  Pass m -> do
-    mm     <- runT m
-    ins    <- getInspectorT
-    switch <- embed $ newTVarIO False
-    tvar   <- embed $ newTVarIO mempty
-    t      <- raise $ runWriterTVarAction (act' tvar switch) mm
-    embed $ atomically $ do
-      let f = maybe id fst (inspect ins t)
-      o <- readTVar tvar
-      act $! f o
-      writeTVar switch True
-      return (fmap snd t)
-
-  where
-    act' :: TVar o
-         -> TVar Bool
-         -> o
-         -> STM ()
-    act' tvar switch = \o -> do
-      useGlobal <- readTVar switch
-      if useGlobal then
-        act o
-      else do
-        r <- readTVar tvar
-        writeTVar tvar $! r <> o
-{-# INLINE runWriterTVarAction #-}
