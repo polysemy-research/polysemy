@@ -1,5 +1,22 @@
 # Changelog for polysemy
 
+## 1.1.0.0 (2019-08-15)
+
+### Breaking Changes
+
+- `MonadFail` is now implemented in terms of `Fail`, instead of `NonDet`(thanks to @KingoftheHomeless)
+- `State` and `Writer` now have better strictness semantics
+
+### Other Changes
+
+- Added `AtomicState` effect (thanks to @KingoftheHomeless)
+- Added `Fail` effect (thanks to @KingoftheHomeless)
+- Added `runOutputSem` (thanks to @cnr)
+- Added right-associative variants of `runOutputMonoid` and `runWriter` (thanks to @KingoftheHomeless)
+- Improved `Fixpoint` so it won't always diverge (thanks to @KingoftheHomeless)
+- `makeSem` will now complain if `DataKinds` isn't enabled (thanks to @pepegar)
+
+
 ## 1.0.0.0 (2019-07-24)
 
 ### Breaking Changes
