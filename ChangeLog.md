@@ -14,6 +14,7 @@
 - Added `AtomicState` effect (thanks to @KingoftheHomeless)
 - Added `Fail` effect (thanks to @KingoftheHomeless)
 - Added `runOutputSem` (thanks to @cnr)
+- Added `modify'`, a strict variant of `modify` (thanks to @KingoftheHomeless)
 - Added right-associative variants of `runOutputMonoid` and `runWriter` (thanks to @KingoftheHomeless)
 - Added `runOutputMonoidIORef` and `runOutputMonoidTVar` (thanks to @KingoftheHomeless)
 - Improved `Fixpoint` so it won't always diverge (thanks to @KingoftheHomeless)
