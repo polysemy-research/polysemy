@@ -4,7 +4,9 @@
 
 ### Breaking Changes
 
-- `MonadFail` is now implemented in terms of `Fail`, instead of `NonDet`(thanks to @KingoftheHomeless)
+- `MonadFail` is now implemented in terms of `Fail`, instead of `NonDet` (thanks to @KingoftheHomeless)
+- `LastMember` has been removed. `withLowerToIO` and all interpreters that make use of it
+    now only requires `Member (Embed IO) r` (thanks to @KingoftheHomeless)
 - `State` and `Writer` now have better strictness semantics
 
 ### Other Changes
@@ -13,6 +15,7 @@
 - Added `Fail` effect (thanks to @KingoftheHomeless)
 - Added `runOutputSem` (thanks to @cnr)
 - Added right-associative variants of `runOutputMonoid` and `runWriter` (thanks to @KingoftheHomeless)
+- Added `runOutputMonoidIORef` and `runOutputMonoidTVar` (thanks to @KingoftheHomeless)
 - Improved `Fixpoint` so it won't always diverge (thanks to @KingoftheHomeless)
 - `makeSem` will now complain if `DataKinds` isn't enabled (thanks to @pepegar)
 
