@@ -23,12 +23,12 @@ module Polysemy
     --
     -- @
     -- data Console m a where
-    --   WriteLine :: String -> Console m ()
-    --   ReadLine  :: Console m String
+    --   WriteLine :: 'String' -> Console m ()
+    --   ReadLine  :: Console m 'String'
     -- @
     --
-    -- Notice that the @a@ parameter gets instataniated at the /desired return
-    -- type/ of the actions. Writing a line returns a '()', but reading one
+    -- Notice that the @a@ parameter gets instantiated at the /desired return/
+    -- /type/ of the actions. Writing a line returns a @()@, but reading one
     -- returns 'String'.
     --
     -- By enabling @-XTemplateHaskell@, we can use the 'makeSem' function
@@ -41,7 +41,7 @@ module Polysemy
     --
     -- @
     -- writeLine :: 'Member' Console r => String -> 'Sem' r ()
-    -- readLine  :: 'Member' Console r => 'Sem' r String
+    -- readLine  :: 'Member' Console r => 'Sem' r 'String'
     -- @
     --
     -- Effects which don't make use of the @m@ parameter are known as
