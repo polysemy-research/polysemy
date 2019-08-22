@@ -24,6 +24,7 @@ import Polysemy.Internal.Fixpoint
 --
 -- For example, the following program will throw an exception upon evaluating the
 -- final state:
+--
 -- @
 -- bad :: (Int, Either () Int)
 -- bad =

@@ -272,7 +272,7 @@ instance (Member NonDet r) => MonadPlus (Sem r) where
   mzero = empty
   mplus = (<|>)
 
--- | TODO: @since _
+-- | @since 1.1.0.0
 instance (Member Fail r) => MonadFail (Sem r) where
   fail = send . Fail
   {-# INLINE fail #-}
