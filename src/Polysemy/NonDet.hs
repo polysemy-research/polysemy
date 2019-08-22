@@ -125,17 +125,9 @@ newtype NonDetState r a = NonDetState {
   getNonDetState :: Maybe (a, NonDetC (Sem r) a)
   } deriving (Functor)
 
--- KingoftheHomeless: The performance of this is terrible
--- since unconsC is O(n), but this really only matters if
---
---   1. You have higher-order effects interpreted after 'NonDet'
---
---   2. You use '<|>' a /lot/ inside higher-order actions of those effects.
---
--- You can fix this by instead creating a NonDet carrier based upon
--- reflection without remorse, but that would require a lot of work, and will
--- slightly degrade performance when this ISN'T a problem.
--- Question is if it's worth it.
+-- KingoftheHomeless: The performance of this could be improved
+-- if we weren't forced to use unconsC, which causes this to have
+-- potentially O(n^2) behaviour.
 distribNonDetC :: NonDetState r (Sem (NonDet ': r) a) -> Sem r (NonDetState r a)
 distribNonDetC = \case
   NonDetState (Just (a, r)) ->
