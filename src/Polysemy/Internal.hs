@@ -325,8 +325,8 @@ raise = hoistSem $ hoist raise . weaken
 -- For example, given:
 --
 -- @
--- fooToBar :: 'Member' Bar r => 'Sem' (Foo ': r) a
--- runBar   :: 'Sem' (Bar ': r) a
+-- fooToBar :: 'Member' Bar r => 'Sem' (Foo ': r) a -> 'Sem' r a
+-- runBar   :: 'Sem' (Bar ': r) a -> 'Sem' r a
 -- @
 --
 -- You can write:

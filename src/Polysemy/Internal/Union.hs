@@ -244,7 +244,7 @@ injWeaving = Union (finder @_ @r @e)
 
 ------------------------------------------------------------------------------
 -- | Attempt to take an @e@ effect out of a 'Union'.
-prj :: forall e r a m
+prj :: forall e r m a
      . ( Member e r
        )
     => Union r m a
