@@ -14,6 +14,12 @@ module Polysemy
 
     -- * Lifting
   , raise
+  , raiseUnder
+  , raiseUnder2
+  , raiseUnder3
+
+    -- * Trivial Interpretation
+  , subsume
 
     -- * Creating New Effects
     -- | Effects should be defined as a GADT (enable @-XGADTs@), with kind @(*
