@@ -18,6 +18,7 @@ module Polysemy.Internal
   , raiseUnder
   , raiseUnder2
   , raiseUnder3
+  , subsume
   , Embed (..)
   , usingSem
   , liftSem
@@ -303,6 +304,7 @@ hoistSem
 hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSem #-}
 
+
 ------------------------------------------------------------------------------
 -- | Introduce an effect into 'Sem'. Analogous to
 -- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem
@@ -314,6 +316,29 @@ raise = hoistSem $ hoist raise . weaken
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces a new effect underneath the head of the
 -- list.
+--
+-- 'raiseUnder' can be used in order to turn transformative interpreters
+-- into reinterpreters. This is especially useful if you're writing an interpreter
+-- which introduces an intermediary effect, and then want to use an existing
+-- interpreter on that effect.
+--
+-- For example, given:
+--
+-- @
+-- fooToBar :: 'Member' Bar r => 'Sem' (Foo ': r) a -> 'Sem' r a
+-- runBar   :: 'Sem' (Bar ': r) a -> 'Sem' r a
+-- @
+--
+-- You can write:
+--
+-- @
+-- runFoo :: 'Sem' (Foo ': r) a -> 'Sem' r a
+-- runFoo =
+--     runBar     -- Consume Bar
+--   . fooToBar   -- Interpret Foo in terms of the new Bar
+--   . 'raiseUnder' -- Introduces Bar under Foo
+-- @
+--
 raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
   where
@@ -349,6 +374,18 @@ raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
     {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
 
+------------------------------------------------------------------------------
+-- | Interprets an effect in terms of another identical effect.
+--
+-- This is useful for defining interpreters that use 'Polysemy.reinterpretH'
+-- without immediately consuming the newly introduced effect.
+-- Using such an interpreter recursively may result in duplicate effects,
+-- which may then be eliminated using 'subsume'.
+subsume :: Member e r => Sem (e ': r) a -> Sem r a
+subsume = hoistSem $ \u -> hoist subsume $ case decomp u of
+  Right w -> injWeaving w
+  Left  g -> g
+{-# INLINE subsume #-}
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem'. This is used primarily via
