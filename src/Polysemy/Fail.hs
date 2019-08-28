@@ -47,7 +47,7 @@ failToNonDet = interpret $ \(Fail _) -> empty
 
 ------------------------------------------------------------------------------
 -- | Run a 'Fail' effect in terms of an underlying 'MonadFail' instance.
-failToEmbed :: forall m a r
+failToEmbed :: forall m r a
              . (Member (Embed m) r, MonadFail m)
             => Sem (Fail ': r) a
             -> Sem r a

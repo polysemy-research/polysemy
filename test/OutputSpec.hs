@@ -9,6 +9,7 @@ import Data.Foldable
 import Polysemy
 import Polysemy.Async
 import Polysemy.Output
+import Polysemy.Final
 
 import Test.Hspec
 
@@ -47,8 +48,11 @@ spec = parallel $ do
     it "should commit writes of asynced computations" $
       let io = do
             ref <- newIORef ""
-            (runM .@ lowerAsync) . runOutputMonoidIORef ref (show @Int) $
-              test1
+            runFinal
+              . embedToFinal @IO
+              . asyncToIOFinal
+              . runOutputMonoidIORef ref (show @Int)
+              $ test1
             readIORef ref
       in do
         res <- io
@@ -58,8 +62,11 @@ spec = parallel $ do
     it "should commit writes of asynced computations" $
       let io = do
             ref <- newTVarIO ""
-            (runM .@ lowerAsync) . runOutputMonoidTVar ref (show @Int) $
-              test1
+            runFinal
+              . embedToFinal @IO
+              . asyncToIOFinal
+              . runOutputMonoidTVar ref (show @Int)
+              $ test1
             readTVarIO ref
       in do
         res <- io

@@ -8,6 +8,7 @@ import Polysemy.Error
 import Polysemy.Input
 import Polysemy.Output
 import Polysemy.Resource
+import Polysemy.Final
 import Test.Hspec
 
 data Teletype m a where
@@ -33,7 +34,13 @@ program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
             _             -> writeTTY i >> writeTTY "no exceptions"
 
 foo :: IO (Either CustomException ())
-foo = (runM .@ lowerResource .@@ lowerError @CustomException) $ teletypeToIO program
+foo =
+    runFinal
+  . embedToFinal @IO
+  . resourceToIOFinal
+  . errorToIOFinal @CustomException
+  . teletypeToIO
+  $ program
 
 spec :: Spec
 spec = describe "example" $ do

@@ -12,12 +12,14 @@ module Polysemy.Resource
 
     -- * Interpretations
   , runResource
-  , lowerResource
+  , resourceToIOFinal
   , resourceToIO
+  , lowerResource
   ) where
 
 import qualified Control.Exception as X
 import           Polysemy
+import           Polysemy.Final
 
 
 ------------------------------------------------------------------------------
@@ -72,9 +74,42 @@ onException
     -> Sem r a
 onException act end = bracketOnError (pure ()) (const end) (const act)
 
+------------------------------------------------------------------------------
+-- | Run a 'Resource' effect in terms of 'X.bracket' through final 'IO'
+--
+-- /Beware/: Effects that aren't interpreted in terms of 'IO'
+-- will have local state semantics in regards to 'Resource' effects
+-- interpreted this way. See 'Final'.
+--
+-- Notably, unlike 'resourceToIO', this is not consistent with
+-- 'Polysemy.State.State' unless 'Polysemy.State.runStateInIORef' is used.
+-- State that seems like it should be threaded globally throughout 'bracket's
+-- /will not be./
+--
+-- Use 'resourceToIO' instead if you need to interpret some stateful effect
+-- after 'Resource' in other terms than 'IO'.
+--
+-- @since 1.2.0.0
+resourceToIOFinal :: Member (Final IO) r
+                  => Sem (Resource ': r) a
+                  -> Sem r a
+resourceToIOFinal = interpretFinal $ \case
+  Bracket alloc dealloc use -> do
+    a <- runS  alloc
+    d <- bindS dealloc
+    u <- bindS use
+    pure $ X.bracket a d u
+
+  BracketOnError alloc dealloc use -> do
+    a <- runS  alloc
+    d <- bindS dealloc
+    u <- bindS use
+    pure $ X.bracketOnError a d u
+{-# INLINE resourceToIOFinal #-}
+
 
 ------------------------------------------------------------------------------
--- | Run a 'Resource' effect via in terms of 'X.bracket'.
+-- | Run a 'Resource' effect in terms of 'X.bracket'.
 --
 -- @since 1.0.0.0
 lowerResource
@@ -106,6 +141,7 @@ lowerResource finish = interpretH $ \case
 
     embed $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
 {-# INLINE lowerResource #-}
+{-# DEPRECATED lowerResource "Use 'resourceToIOFinal' instead" #-}
 
 
 ------------------------------------------------------------------------------
@@ -148,7 +184,7 @@ runResource = interpretH $ \case
 
 
 ------------------------------------------------------------------------------
--- | A more flexible --- though less safe ---  version of 'lowerResource'.
+-- | A more flexible --- though less safe ---  version of 'resourceToIOFinal'
 --
 -- This function is capable of running 'Resource' effects anywhere within an
 -- effect stack, without relying on an explicit function to lower it into 'IO'.
@@ -159,7 +195,7 @@ runResource = interpretH $ \case
 -- by effects _already handled_ in your effect stack, or in 'IO' code run
 -- directly inside of 'bracket'. It is not safe against exceptions thrown
 -- explicitly at the main thread. If this is not safe enough for your use-case,
--- use 'lowerResource' instead.
+-- use 'resourceToIOFinal' instead.
 --
 -- This function creates a thread, and so should be compiled with @-threaded@.
 --

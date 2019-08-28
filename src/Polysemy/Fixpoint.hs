@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE AllowAmbiguousTypes, TemplateHaskell #-}
 
 module Polysemy.Fixpoint
   ( -- * Effect
@@ -12,10 +12,15 @@ import Control.Monad.Fix
 import Data.Maybe
 
 import Polysemy
+import Polysemy.Final
 import Polysemy.Internal.Fixpoint
 
 ------------------------------------------------------------------------------
 -- | Run a 'Fixpoint' effect purely.
+--
+-- Consider using 'fixpointToFinal' together with
+-- @'Final' 'Data.Functor.Identity'@ instead, which doesn't need to be
+-- provided a function.
 --
 -- __Note__: This is subject to the same traps as 'MonadFix' instances for
 -- monads with failure: this will throw an exception if you try to recursively use
@@ -62,6 +67,23 @@ runFixpoint lower = interpretH $ \case
         fromMaybe (bomb "runFixpoint") (inspect ins fa) <$ s
 {-# INLINE runFixpoint #-}
 
+-----------------------------------------------------------------------------
+-- | Run a 'Fixpoint' effect in terms of a final 'MonadFix' instance
+--
+-- __Note__: 'fixpointToFinal' is subject to the same caveats as 'runFixpoint'.
+fixpointToFinal :: forall m r a
+                 . (Member (Final m) r, MonadFix m)
+                => Sem (Fixpoint ': r) a
+                -> Sem r a
+fixpointToFinal = interpretFinal @m $
+  \(Fixpoint f) -> do
+    f'  <- bindS f
+    s   <- getInitialStateS
+    ins <- getInspectorS
+    pure $ mfix $ \fa -> f' $
+      fromMaybe (bomb "fixpointToFinal") (inspect ins fa) <$ s
+{-# INLINE fixpointToFinal #-}
+
 ------------------------------------------------------------------------------
 -- | Run a 'Fixpoint' effect in terms of an underlying 'MonadFix' instance.
 --
@@ -82,3 +104,4 @@ runFixpointM lower = interpretH $ \case
       lower . runFixpointM lower . c $
         fromMaybe (bomb "runFixpointM") (inspect ins fa) <$ s
 {-# INLINE runFixpointM #-}
+{-# DEPRECATED runFixpointM "Use 'fixpointToFinal' instead" #-}

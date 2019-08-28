@@ -452,6 +452,11 @@ runM (Sem m) = m $ \z ->
 -- just for initialization. This can result in rather surprising behavior. For
 -- a version of '.@' that won't duplicate work, see the @.\@!@ operator in
 -- <http://hackage.haskell.org/package/polysemy-zoo/docs/Polysemy-IdempotentLowering.html polysemy-zoo>.
+--
+-- Interpreters using 'Polysemy.Final' may be composed normally, and
+-- avoid the work duplication issue. For that reason, you're encouraged to use
+-- @-'Polysemy.Final'@ interpreters instead of @lower-@ interpreters whenever
+-- possible.
 (.@)
     :: Monad m
     => (∀ x. Sem r x -> m x)
