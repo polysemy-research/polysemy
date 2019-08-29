@@ -34,8 +34,8 @@ import Polysemy.Internal.Fixpoint
 -- bad =
 --    'Data.Functor.Identity.runIdentity'
 --  . 'runFinal'
---  . 'fixpointToFinal' @'Data.Functor.Identity.Identity'
---  . 'Polysemy.State.runLazyState' @Int 1
+--  . 'fixpointToFinal' \@'Data.Functor.Identity.Identity'
+--  . 'Polysemy.State.runLazyState' \@Int 1
 --  . 'Polysemy.Error.runError'
 --  $ mdo
 --   'Polysemy.State.put' a
@@ -45,7 +45,12 @@ import Polysemy.Internal.Fixpoint
 --
 -- 'fixpointToFinal' also operates under the assumption that any effectful
 -- state which can't be inspected using 'Polysemy.Inspector' can't contain any
--- values. This is true for all interpreters featured in this package,
+-- values. For example, the effectful state for 'Polysemy.Error.runError' is
+-- @'Either' e a@. The inspector for this effectful state only fails if the
+-- effectful state is a @'Left'@ value, which therefore doesn't contain any
+-- values of @a@.
+--
+-- This assumption holds true for all interpreters featured in this package,
 -- and is presumably always true for any properly implemented interpreter.
 -- 'fixpointToFinal' may throw an exception if it is used together with an
 -- interpreter that uses 'Polysemy.Internal.Union.weave' improperly.
