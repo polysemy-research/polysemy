@@ -86,8 +86,10 @@ onException act end = bracketOnError (pure ()) (const end) (const act)
 -- State that seems like it should be threaded globally throughout 'bracket's
 -- /will not be./
 --
--- Use 'resourceToIO' instead if you need to interpret some stateful effect
--- after 'Resource' in other terms than 'IO'.
+-- Use 'resourceToIO' instead if you need to run
+-- pure, stateful interpreters after the interpreter for 'Resource'.
+-- (Pure interpreters are interpreters that aren't expressed in terms of
+-- another effect or monad; for example, 'Polysemy.State.runState'.)
 --
 -- @since 1.2.0.0
 resourceToIOFinal :: Member (Final IO) r

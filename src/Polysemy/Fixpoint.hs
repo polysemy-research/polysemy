@@ -15,12 +15,11 @@ import Polysemy
 import Polysemy.Final
 import Polysemy.Internal.Fixpoint
 
-------------------------------------------------------------------------------
--- | Run a 'Fixpoint' effect purely.
+-----------------------------------------------------------------------------
+-- | Run a 'Fixpoint' effect in terms of a final 'MonadFix' instance.
 --
--- Consider using 'fixpointToFinal' together with
--- @'Final' 'Data.Functor.Identity'@ instead, which doesn't need to be
--- provided a function.
+-- If you need to run a 'Fixpoint' effect purely, use this together with
+-- @'Final' 'Data.Functor.Identity.Identity'@.
 --
 -- __Note__: This is subject to the same traps as 'MonadFix' instances for
 -- monads with failure: this will throw an exception if you try to recursively use
@@ -33,8 +32,9 @@ import Polysemy.Internal.Fixpoint
 -- @
 -- bad :: (Int, Either () Int)
 -- bad =
---    'run'
---  . 'runFixpoint' 'run'
+--    'Data.Functor.Identity.runIdentity'
+--  . 'runFinal'
+--  . 'fixpointToFinal' @'Data.Functor.Identity.Identity'
 --  . 'Polysemy.State.runLazyState' @Int 1
 --  . 'Polysemy.Error.runError'
 --  $ mdo
@@ -43,34 +43,16 @@ import Polysemy.Internal.Fixpoint
 --   return a
 -- @
 --
--- 'runFixpoint' also operates under the assumption that any effectful
+-- 'fixpointToFinal' also operates under the assumption that any effectful
 -- state which can't be inspected using 'Polysemy.Inspector' can't contain any
 -- values. This is true for all interpreters featured in this package,
 -- and is presumably always true for any properly implemented interpreter.
--- 'runFixpoint' may throw an exception if it is used together with an
+-- 'fixpointToFinal' may throw an exception if it is used together with an
 -- interpreter that uses 'Polysemy.Internal.Union.weave' improperly.
 --
--- If 'runFixpoint' throws an exception for you, and it can't
+-- If 'fixpointToFinal' throws an exception for you, and it can't
 -- be due to any of the above, then open an issue over at the
 -- GitHub repository for polysemy.
-runFixpoint
-    :: (∀ x. Sem r x -> x)
-    -> Sem (Fixpoint ': r) a
-    -> Sem r a
-runFixpoint lower = interpretH $ \case
-  Fixpoint mf -> do
-    c   <- bindT mf
-    s   <- getInitialStateT
-    ins <- getInspectorT
-    pure $ fix $ \fa ->
-      lower . runFixpoint lower . c $
-        fromMaybe (bomb "runFixpoint") (inspect ins fa) <$ s
-{-# INLINE runFixpoint #-}
-
------------------------------------------------------------------------------
--- | Run a 'Fixpoint' effect in terms of a final 'MonadFix' instance
---
--- __Note__: 'fixpointToFinal' is subject to the same caveats as 'runFixpoint'.
 fixpointToFinal :: forall m r a
                  . (Member (Final m) r, MonadFix m)
                 => Sem (Fixpoint ': r) a
@@ -85,9 +67,30 @@ fixpointToFinal = interpretFinal @m $
 {-# INLINE fixpointToFinal #-}
 
 ------------------------------------------------------------------------------
+-- | Run a 'Fixpoint' effect purely.
+--
+-- __Note__: 'runFixpoint' is subject to the same caveats as 'fixpointToFinal'.
+runFixpoint
+    :: (∀ x. Sem r x -> x)
+    -> Sem (Fixpoint ': r) a
+    -> Sem r a
+runFixpoint lower = interpretH $ \case
+  Fixpoint mf -> do
+    c   <- bindT mf
+    s   <- getInitialStateT
+    ins <- getInspectorT
+    pure $ fix $ \fa ->
+      lower . runFixpoint lower . c $
+        fromMaybe (bomb "runFixpoint") (inspect ins fa) <$ s
+{-# INLINE runFixpoint #-}
+{-# DEPRECATED runFixpoint "Use 'fixpointToFinal' together with \
+                           \'Data.Functor.Identity.Identity' instead" #-}
+
+
+------------------------------------------------------------------------------
 -- | Run a 'Fixpoint' effect in terms of an underlying 'MonadFix' instance.
 --
--- __Note__: 'runFixpointM' is subject to the same caveats as 'runFixpoint'.
+-- __Note__: 'runFixpointM' is subject to the same caveats as 'fixpointToFinal'.
 runFixpointM
     :: ( MonadFix m
        , Member (Embed m) r

@@ -39,7 +39,7 @@ tests:
     build-tools:
     - hspec-discover
     dependencies:
-    - polysemy >= 0.6.0.0
+    - polysemy >= 1.2.0.0
     - polysemy-plugin
     - hspec >= 2.6.0 && < 3
     - should-not-typecheck >= 2.1.0 && < 3

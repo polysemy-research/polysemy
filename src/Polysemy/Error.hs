@@ -133,7 +133,7 @@ instance (Typeable e) => X.Exception (WrappedExc e)
 
 
 ------------------------------------------------------------------------------
--- | Run an 'Error' effect as an 'IO' 'Exception' through final 'IO'. This
+-- | Run an 'Error' effect as an 'IO' 'X.Exception' through final 'IO'. This
 -- interpretation is significantly faster than 'runError'.
 --
 -- /Beware/: Effects that aren't interpreted in terms of 'IO'

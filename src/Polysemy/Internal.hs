@@ -61,15 +61,19 @@ import Polysemy.Internal.Union
 -- interpretations (and others that you might add) may be used interchangably
 -- without needing to write any newtypes or 'Monad' instances. The only
 -- change needed to swap interpretations is to change a call from
--- 'Polysemy.Error.runError' to 'Polysemy.Error.lowerError'.
+-- 'Polysemy.Error.runError' to 'Polysemy.Error.errorToIOFinal'.
 --
 -- The effect stack @r@ can contain arbitrary other monads inside of it. These
 -- monads are lifted into effects via the 'Embed' effect. Monadic values can be
 -- lifted into a 'Sem' via 'embed'.
 --
+-- Higher-order actions of another monad can be lifted into higher-order actions
+-- of 'Sem' via the 'Polysemy.Final' effect, which is more powerful
+-- than 'Embed', but also less flexible to interpret.
+--
 -- A 'Sem' can be interpreted as a pure value (via 'run') or as any
--- traditional 'Monad' (via 'runM'). Each effect @E@ comes equipped with some
--- interpreters of the form:
+-- traditional 'Monad' (via 'runM' or 'Polysemy.runFinal').
+-- Each effect @E@ comes equipped with some interpreters of the form:
 --
 -- @
 -- runE :: 'Sem' (E ': r) a -> 'Sem' r a
@@ -127,8 +131,9 @@ import Polysemy.Internal.Union
 -- behaviour over other effects later in the chain.
 --
 -- After all of your effects are handled, you'll be left with either
--- a @'Sem' '[] a@ or a @'Sem' '[ 'Embed' m ] a@ value, which can be
--- consumed respectively by 'run' and 'runM'.
+-- a @'Sem' '[] a@, a @'Sem' '[ 'Embed' m ] a@, or a @'Sem' '[ 'Polysemy.Final' m ] a@
+-- value, which can be consumed respectively by 'run', 'runM', and
+-- 'Polysemy.runFinal'.
 --
 -- ==== Examples
 --

@@ -16,6 +16,7 @@ module Polysemy.Writer
   , runWriterTVar
   , writerToIOFinal
   , writerToIOAssocRFinal
+  , writerToEndoWriter
 
     -- * Interpretations for Other Effects
   , outputToWriter
@@ -27,7 +28,6 @@ import Data.Bifunctor (first)
 import Data.Semigroup
 
 import Polysemy
-import Polysemy.Final
 import Polysemy.Output
 import Polysemy.State
 

@@ -46,8 +46,10 @@ makeSem ''Async
 -- of other effects interpreted after 'Async'.
 -- See <https://github.com/polysemy-research/polysemy/issues/205 Issue #205>.
 --
--- Prefer 'asyncToIOFinal' unless you need to interpret some stateful effect
--- after 'Async' in other terms than 'IO'.
+-- Prefer 'asyncToIOFinal' unless you need to run pure, stateful interpreters
+-- after the interpreter for 'Async'.
+-- (Pure interpreters are interpreters that aren't expressed in terms of
+-- another effect or monad; for example, 'Polysemy.State.runState'.)
 --
 -- @since 1.0.0.0
 asyncToIO
@@ -79,8 +81,10 @@ asyncToIO m = withLowerToIO $ \lower _ -> lower $
 -- State that seems like it should be threaded globally throughout 'Async'
 -- /will not be./
 --
--- Use 'asyncToIO' instead if you need to interpret some stateful effect
--- after 'Async' in other terms than 'IO'.
+-- Use 'asyncToIO' instead if you need to run
+-- pure, stateful interpreters after the interpreter for 'Async'.
+-- (Pure interpreters are interpreters that aren't expressed in terms of
+-- another effect or monad; for example, 'Polysemy.State.runState'.)
 --
 -- @since 1.2.0.0
 asyncToIOFinal :: Member (Final IO) r
