@@ -1,4 +1,4 @@
-resolver: lts-13.29
+resolver: lts-13.0
 
 packages:
 - .
@@ -17,9 +17,3 @@ extra-deps:
 - unagi-chan-0.4.1.0
 - type-errors-0.2.0.0
 - type-errors-pretty-0.0.0.0
-
-# compiler: ghc-git-c0956c14f49b85326d81d2c2fa2afb2c40165721-perf
-# compiler-build:
-#    git: https://gitlab.haskell.org/ghc/ghc
-#    commit: c0956c14f49b85326d81d2c2fa2afb2c40165721
-#    flavour: perf
