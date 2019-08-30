@@ -24,15 +24,17 @@ type WithStrategy m f n = '[Strategy m f n]
 -- | Internal function to process Strategies in terms of
 -- 'Polysemy.Final.withWeavingToFinal'.
 runStrategy :: Functor f
-            => f ()
+            => Sem '[Strategy m f n] a
+            -> f ()
             -> (forall x. f (n x) -> m (f x))
             -> (forall x. f x -> Maybe x)
-            -> Sem '[Strategy m f n] a
             -> a
-runStrategy s wv ins = (run .) $ interpret $ \case
-  GetInitialState       -> pure s
-  HoistInterpretation f -> pure $ \fa -> wv (f <$> fa)
-  GetInspector          -> pure (Inspector ins)
+runStrategy sem = \s wv ins -> run $ interpret
+  (\case
+    GetInitialState       -> pure s
+    HoistInterpretation f -> pure $ \fa -> wv (f <$> fa)
+    GetInspector          -> pure (Inspector ins)
+  ) sem
 {-# INLINE runStrategy #-}
 
 ------------------------------------------------------------------------------
@@ -50,7 +52,8 @@ getInspectorS = send (GetInspector @m @f @n)
 
 ------------------------------------------------------------------------------
 -- | Get the stateful environment of the world at the moment the
--- target monad is to be run.
+-- @Strategy@ is to be run.
+--
 -- Prefer 'pureS', 'liftS', 'runS', or 'bindS' instead of using this function
 -- directly.
 getInitialStateS :: forall m f n. Sem (WithStrategy m f n) (f ())
@@ -66,8 +69,8 @@ pureS a = pure . (a <$) <$> getInitialStateS
 ------------------------------------------------------------------------------
 -- | Lifts an action of the final monad into 'Strategic'.
 --
--- Note: you don't need to use this function if you already have a monadic
--- action with the functorial state woven into it, by the use of
+-- /Note/: you don't need to use this function if you already have a monadic
+-- action with the functorial state threaded into it, by the use of
 -- 'runS' or 'bindS'.
 -- In these cases, you need only use 'pure' to embed the action into the
 -- 'Strategic' environment.
@@ -80,8 +83,9 @@ liftS m = do
 ------------------------------------------------------------------------------
 -- | Lifts a monadic action into the stateful environment, in terms
 -- of the final monad.
--- The stateful environment will be the same as the one that the target monad
+-- The stateful environment will be the same as the one that the @Strategy@
 -- is initially run in.
+--
 -- Use 'bindS'  if you'd prefer to explicitly manage your stateful environment.
 runS :: n a -> Sem (WithStrategy m f n) (m (f a))
 runS na = bindS (const na) <*> getInitialStateS

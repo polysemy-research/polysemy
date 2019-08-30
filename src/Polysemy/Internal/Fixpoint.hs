@@ -4,13 +4,14 @@ module Polysemy.Internal.Fixpoint where
 
 ------------------------------------------------------------------------------
 -- | An effect for providing 'Control.Monad.Fix.mfix'.
-data Fixpoint m a where
+newtype Fixpoint m a where
   Fixpoint :: (a -> m a) -> Fixpoint m a
 
 
 ------------------------------------------------------------------------------
--- | The error used in 'Polysemy.Fixpoint.runFixpoint' and
--- 'Polysemy.Fixpoint.runFixpointM' when the result of a failed computation
+-- | The error used in 'Polysemy.Fixpoint.fixpointToFinal',
+-- 'Polysemy.Fixpoint.runFixpoint' and 'Polysemy.Fixpoint.runFixpointM'
+-- when the result of a failed computation
 -- is recursively used and somehow visible. You may use this for your own
 -- 'Fixpoint' interpreters. The argument should be the name of the interpreter.
 bomb :: String -> a

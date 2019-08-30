@@ -8,7 +8,6 @@ import Polysemy.Error
 import Polysemy.Input
 import Polysemy.Output
 import Polysemy.Resource
-import Polysemy.Final
 import Test.Hspec
 
 data Teletype m a where

@@ -2,7 +2,6 @@
 
 module AsyncSpec where
 
-import Control.Concurrent
 import Control.Concurrent.MVar
 import Control.Monad
 import Polysemy

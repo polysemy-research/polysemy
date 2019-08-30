@@ -15,8 +15,8 @@ module Polysemy.Final
 
     -- * Strategy
     -- | Strategy is a domain-specific language very similar to @Tactics@
-    -- (see 'Tactical'), and is used to describe how higher-order effects
-    -- are threaded down to the final monad.
+    -- (see 'Polysemy.Tactical'), and is used to describe how higher-order
+    -- effects are threaded down to the final monad.
     --
     -- Much like @Tactics@, computations can be run and threaded
     -- through the use of 'runS' and 'bindS', and first-order constructors
@@ -42,10 +42,6 @@ module Polysemy.Final
   -- * Interpretations for Other Effects
   , embedToFinal
   ) where
-
-import Control.Monad
-
-import Data.Functor.Compose
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
@@ -82,6 +78,10 @@ type ThroughWeavingToFinal m z a =
 --
 -- This is very useful for writing interpreters that interpret higher-order
 -- effects in terms of the final monad.
+--
+-- 'Final' is more powerful than 'Embed', but is also less flexible
+-- to interpret (compare 'Polysemy.Embed.runEmbedded' with 'finalToFinal').
+-- If you only need the power of 'embed', then you should use 'Embed' instead.
 --
 -- /Beware/: 'Final' actions are interpreted as actions of the final monad,
 -- and the effectful state visible to
@@ -145,12 +145,7 @@ embedFinal m = withWeavingToFinal $ \s _ _ -> (<$ s) <$> m
 withStrategicToFinal :: Member (Final m) r
                      => Strategic m (Sem r) a
                      -> Sem r a
-withStrategicToFinal strat = withWeavingToFinal $ \s wv ins ->
-  runStrategy
-    s
-    wv
-    ins
-    strat
+withStrategicToFinal strat = withWeavingToFinal (runStrategy strat)
 {-# INLINE withStrategicToFinal #-}
 
 ------------------------------------------------------------------------------
@@ -174,7 +169,7 @@ withStrategicToFinal strat = withWeavingToFinal $ \s wv ins ->
 -- interpreted using 'interpretFinal'. See 'Final'.
 interpretFinal
     :: forall m e r a
-     . (Member (Final m) r, Functor m)
+     . Member (Final m) r
     => (forall x n. e n x -> Strategic m n x)
        -- ^ A natural transformation from the handled effect to the final monad.
     -> Sem (e ': r) a
@@ -182,16 +177,16 @@ interpretFinal
 interpretFinal n =
   let
     go :: Sem (e ': r) x -> Sem r x
-    go = usingSem $ \u -> case decomp u of
+    go = hoistSem $ \u -> case decomp u of
       Right (Weaving e s wv ex ins) ->
-        fmap ex $ withWeavingToFinal $ \s' wv' ins'
-          -> fmap getCompose $
-                runStrategy
-                  (Compose (s <$ s'))
-                  (fmap Compose . wv' . fmap (go . wv) . getCompose)
-                  (ins' . getCompose >=> ins)
-                  (n e)
-      Left g -> liftSem (hoist go g)
+        injWeaving $
+          Weaving
+            (WithWeavingToFinal (runStrategy (n e)))
+            s
+            (go . wv)
+            ex
+            ins
+      Left g -> hoist go g
     {-# INLINE go #-}
   in
     go
@@ -221,15 +216,18 @@ finalToFinal :: forall m1 m2 a r
 finalToFinal to from =
   let
     go :: Sem (Final m1 ': r) x -> Sem r x
-    go = usingSem $ \u -> case decomp u of
+    go = hoistSem $ \u -> case decomp u of
       Right (Weaving (WithWeavingToFinal wav) s wv ex ins) ->
-        fmap ex $ withWeavingToFinal $ \s' wv' ins'
-          -> fmap getCompose $ to $
-                wav
-                  (Compose (s <$ s'))
-                  (from . fmap Compose . wv' . fmap (go . wv) . getCompose)
-                  (ins' . getCompose >=> ins)
-      Left g -> liftSem (hoist go g)
+        injWeaving $
+          Weaving
+            (WithWeavingToFinal $ \s' wv' ins' ->
+              to $ wav s' (from . wv') ins'
+            )
+            s
+            (go . wv)
+            ex
+            ins
+      Left g -> hoist go g
     {-# INLINE go #-}
   in
     go

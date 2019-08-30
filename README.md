@@ -134,7 +134,6 @@ Resource effect:
 {-# LANGUAGE GADTs, FlexibleContexts, TypeOperators, DataKinds, PolyKinds, TypeApplications #-}
 
 import Polysemy
-import Polysemy.Final
 import Polysemy.Input
 import Polysemy.Output
 import Polysemy.Error

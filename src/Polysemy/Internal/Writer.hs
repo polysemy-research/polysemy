@@ -1,5 +1,5 @@
 {-# LANGUAGE BangPatterns, TemplateHaskell, TupleSections #-}
-
+{-# OPTIONS_HADDOCK not-home #-}
 module Polysemy.Internal.Writer where
 
 import Control.Concurrent.STM
