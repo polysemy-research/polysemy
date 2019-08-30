@@ -13,6 +13,7 @@ module Polysemy.Error
     -- * Interpretations
   , runError
   , mapError
+  , errorToIOFinal
   , lowerError
   ) where
 
@@ -22,6 +23,7 @@ import qualified Control.Monad.Trans.Except as E
 import           Data.Bifunctor (first)
 import           Data.Typeable
 import           Polysemy
+import           Polysemy.Final
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
 
@@ -131,6 +133,48 @@ instance (Typeable e) => X.Exception (WrappedExc e)
 
 
 ------------------------------------------------------------------------------
+-- | Run an 'Error' effect as an 'IO' 'X.Exception' through final 'IO'. This
+-- interpretation is significantly faster than 'runError'.
+--
+-- /Beware/: Effects that aren't interpreted in terms of 'IO'
+-- will have local state semantics in regards to 'Error' effects
+-- interpreted this way. See 'Final'.
+--
+-- @since 1.2.0.0
+errorToIOFinal
+    :: ( Typeable e
+       , Member (Final IO) r
+       )
+    => Sem (Error e ': r) a
+    -> Sem r (Either e a)
+errorToIOFinal sem = withStrategicToFinal @IO $ do
+  m' <- runS (runErrorAsExcFinal sem)
+  s  <- getInitialStateS
+  pure $
+    either
+      ((<$ s) . Left . unwrapExc)
+      (fmap Right)
+    <$> X.try m'
+{-# INLINE errorToIOFinal #-}
+
+runErrorAsExcFinal
+    :: forall e r a
+    .  ( Typeable e
+       , Member (Final IO) r
+       )
+    => Sem (Error e ': r) a
+    -> Sem r a
+runErrorAsExcFinal = interpretFinal $ \case
+  Throw e   -> pure $ X.throwIO $ WrappedExc e
+  Catch m h -> do
+    m' <- runS m
+    h' <- bindS h
+    s  <- getInitialStateS
+    pure $ X.catch m' $ \(se :: WrappedExc e) ->
+      h' (unwrapExc se <$ s)
+{-# INLINE runErrorAsExcFinal #-}
+
+------------------------------------------------------------------------------
 -- | Run an 'Error' effect as an 'IO' 'X.Exception'. This interpretation is
 -- significantly faster than 'runError', at the cost of being less flexible.
 --
@@ -151,6 +195,7 @@ lowerError lower
     . X.try
     . (lower .@ runErrorAsExc)
 {-# INLINE lowerError #-}
+{-# DEPRECATED lowerError "Use 'errorToIOFinal' instead" #-}
 
 
 -- TODO(sandy): Can we use the new withLowerToIO machinery for this?
@@ -171,4 +216,3 @@ runErrorAsExc lower = interpretH $ \case
     embed $ X.catch (runIt t) $ \(se :: WrappedExc e) ->
       runIt $ h $ unwrapExc se <$ is
 {-# INLINE runErrorAsExc #-}
-

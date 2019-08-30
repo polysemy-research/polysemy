@@ -237,7 +237,7 @@ inj e = injWeaving $
 {-# INLINE inj #-}
 
 ------------------------------------------------------------------------------
--- | Lift a @Weaving e@ into a 'Union' capable of holding it.
+-- | Lift a @'Weaving' e@ into a 'Union' capable of holding it.
 injWeaving :: forall e r m a. Member e r => Weaving e m a -> Union r m a
 injWeaving = Union (finder @_ @r @e)
 {-# INLINE injWeaving #-}

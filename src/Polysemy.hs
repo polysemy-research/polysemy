@@ -7,10 +7,18 @@ module Polysemy
   -- * Running Sem
   , run
   , runM
+  , runFinal
 
   -- * Interoperating With Other Monads
+  -- ** Embed
   , Embed (..)
   , embed
+  , embedToFinal
+  -- ** Final
+  -- | For advanced uses of 'Final', including creating your own interpreters
+  -- that make use of it, see "Polysemy.Final"
+  , Final
+  , embedFinal
 
     -- * Lifting
   , raise
@@ -130,4 +138,5 @@ import Polysemy.Internal.Forklift
 import Polysemy.Internal.Kind
 import Polysemy.Internal.TH.Effect
 import Polysemy.Internal.Tactics
+import Polysemy.Final
 

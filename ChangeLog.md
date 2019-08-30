@@ -1,5 +1,34 @@
 # Changelog for polysemy
 
+
+## 1.2.0.0 (TODO)
+
+### Breaking Changes
+
+- All `lower-` interpreters have been deprecated, in favor of corresponding
+    `-Final` interpreters.
+- `runFixpoint` and `runFixpointM` have been deprecated in favor of `fixpointToFinal`.
+- The semantics for `runNonDet` when `<|>` is used inside a higher-order action of
+    another effect has been changed.
+- Type variables for certain internal functions and `failToEmbed` have been rearranged.
+
+## Other changes
+
+- Added `Final` effect, an effect for embedding higher-order actions in the
+    final monad of the effect stack. Any interpreter should use this instead of
+    requiring to be provided an explicit lowering function to the final monad.
+- Added `Strategy` environment for use together with `Final`
+- Added `asyncToIOFinal`, a better alternative of `lowerAsync`
+- Added `errorToIOFinal`, a better alternative of `lowerError`
+- Added `fixpointToFinal`, a better alternative of `runFixpoint` and `runFixpointM`
+- Added `resourceToIOFinal`, a better alternative of `lowerResource`
+- Added `outputToIOMonoid` and `outputToIOMonoidAssocR`
+- Added `runWriterTVar`, `writerToIOFinal`, and `writerToIOAssocRFinal`
+- Added `writerToEndoWriter`
+- Added `subsume` operation
+- Exposed `raiseUnder`/`2`/`3` in `Polysemy`
+
+
 ## 1.1.0.0 (2019-08-15)
 
 ### Breaking Changes

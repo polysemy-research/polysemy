@@ -9,6 +9,7 @@ module Polysemy.Internal.Forklift where
 import qualified Control.Concurrent.Async as A
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
+import           Control.Exception
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
 
@@ -66,7 +67,7 @@ withLowerToIO action = do
   res <- embed $ A.async $ do
     a <- action (runViaForklift inchan)
                 (putMVar signal ())
-    putMVar signal ()
+          `finally` (putMVar signal ())
     pure a
 
   let me = do

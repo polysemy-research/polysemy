@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE BangPatterns, TemplateHaskell #-}
 
 module Polysemy.Output
   ( -- * Effect
@@ -13,6 +13,8 @@ module Polysemy.Output
   , runOutputMonoidAssocR
   , runOutputMonoidIORef
   , runOutputMonoidTVar
+  , outputToIOMonoid
+  , outputToIOMonoidAssocR
   , ignoreOutput
   , runOutputBatched
   , runOutputSem
@@ -83,7 +85,7 @@ runOutputMonoidAssocR
     -> Sem r (m, a)
 runOutputMonoidAssocR f =
     fmap (first (`appEndo` mempty))
-  . runOutputMonoid (\a -> Endo (f a <>))
+  . runOutputMonoid (\o -> let !o' = f o in Endo (o' <>))
 {-# INLINE runOutputMonoidAssocR #-}
 
 ------------------------------------------------------------------------------
@@ -97,7 +99,7 @@ runOutputMonoidIORef
     -> Sem (Output o ': r) a
     -> Sem r a
 runOutputMonoidIORef ref f = interpret $ \case
-  Output o -> embed $ atomicModifyIORef' ref (\s -> (s <> f o, ()))
+  Output o -> embed $ atomicModifyIORef' ref (\s -> let !o' = f o in (s <> o', ()))
 {-# INLINE runOutputMonoidIORef #-}
 
 ------------------------------------------------------------------------------
@@ -115,6 +117,60 @@ runOutputMonoidTVar tvar f = interpret $ \case
     s <- readTVar tvar
     writeTVar tvar $! s <> f o
 {-# INLINE runOutputMonoidTVar #-}
+
+
+--------------------------------------------------------------------
+-- | Run an 'Output' effect in terms of atomic operations
+-- in 'IO'.
+--
+-- Internally, this simply creates a new 'IORef', passes it to
+-- 'runOutputMonoidIORef', and then returns the result and the final value
+-- of the 'IORef'.
+--
+-- /Beware/: As this uses an 'IORef' internally,
+-- all other effects will have local
+-- state semantics in regards to 'Output' effects
+-- interpreted this way.
+-- For example, 'Polysemy.Error.throw' and 'Polysemy.Error.catch' will
+-- never revert 'output's, even if 'Polysemy.Error.runError' is used
+-- after 'outputToIOMonoid'.
+outputToIOMonoid
+  :: forall o m r a
+   . (Monoid m, Member (Embed IO) r)
+  => (o -> m)
+  -> Sem (Output o ': r) a
+  -> Sem r (m, a)
+outputToIOMonoid f sem = do
+  ref <- embed $ newIORef mempty
+  res <- runOutputMonoidIORef ref f sem
+  end <- embed $ readIORef ref
+  return (end, res)
+
+------------------------------------------------------------------------------
+-- | Like 'outputToIOMonoid', but right-associates uses of '<>'.
+--
+-- This asymptotically improves performance if the time complexity of '<>' for
+-- the 'Monoid' depends only on the size of the first argument.
+--
+-- You should always use this instead of 'outputToIOMonoid' if the monoid
+-- is a list, such as 'String'.
+--
+-- /Beware/: As this uses an 'IORef' internally,
+-- all other effects will have local
+-- state semantics in regards to 'Output' effects
+-- interpreted this way.
+-- For example, 'Polysemy.Error.throw' and 'Polysemy.Error.catch' will
+-- never revert 'output's, even if 'Polysemy.Error.runError' is used
+-- after 'outputToIOMonoidAssocR'.
+outputToIOMonoidAssocR
+  :: forall o m r a
+   . (Monoid m, Member (Embed IO) r)
+  => (o -> m)
+  -> Sem (Output o ': r) a
+  -> Sem r (m, a)
+outputToIOMonoidAssocR f =
+    (fmap . first) (`appEndo` mempty)
+  . outputToIOMonoid (\o -> let !o' = f o in Endo (o' <>))
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by ignoring it.

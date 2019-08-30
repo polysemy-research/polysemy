@@ -2,7 +2,8 @@
 {-# LANGUAGE RecursiveDo #-}
 module FixpointSpec where
 
-import Control.Exception (try, evaluate)
+import Data.Functor.Identity
+import Control.Exception (evaluate)
 import Control.Monad.Fix
 
 import Polysemy
@@ -29,8 +30,9 @@ runFinalState s sm = mfix $ \ ~(s', _) ->
 
 test1 :: (String, (Int, ()))
 test1 =
-    run
-  . runFixpoint run
+    runIdentity
+  . runFinal
+  . fixpointToFinal @Identity
   . runOutputMonoid (show @Int)
   . runFinalState 1
   $ do
@@ -42,8 +44,9 @@ test1 =
 
 test2 :: Either [Int] [Int]
 test2 =
-    run
-  . runFixpoint run
+    runIdentity
+  . runFinal
+  . fixpointToFinal @Identity
   . runError
   $ mdo
   a <- throw (2 : a) `catch` (\e -> return (1 : e))
@@ -51,8 +54,9 @@ test2 =
 
 test3 :: Either () (Int, Int)
 test3 =
-    run
-  . runFixpoint run
+    runIdentity
+  . runFinal
+  . fixpointToFinal @Identity
   . runError
   . runLazyState @Int 1
   $ mdo
@@ -62,8 +66,9 @@ test3 =
 
 test4 :: (Int, Either () Int)
 test4 =
-    run
-  . runFixpoint run
+    runIdentity
+  . runFinal
+  . fixpointToFinal @Identity
   . runLazyState @Int 1
   . runError
   $ mdo
@@ -73,7 +78,7 @@ test4 =
 
 
 spec :: Spec
-spec = parallel $ describe "runFixpoint" $ do
+spec = parallel $ describe "fixpointToFinal on Identity" $ do
   it "should work with runState" $ do
     test1 `shouldBe` ("12",  (2, ()))
   it "should work with runError" $ do
@@ -88,10 +93,10 @@ spec = parallel $ describe "runFixpoint" $ do
 
 bombMessage :: String
 bombMessage =
-  "runFixpoint: Internal computation failed.\
-              \ This is likely because you have tried to recursively use\
-              \ the result of a failed computation in an action\
-              \ whose effect may be observed even though the computation failed.\
-              \ It's also possible that you're using an interpreter\
-              \ that uses 'weave' improperly.\
-              \ See documentation for more information."
+  "fixpointToFinal: Internal computation failed.\
+                  \ This is likely because you have tried to recursively use\
+                  \ the result of a failed computation in an action\
+                  \ whose effect may be observed even though the computation failed.\
+                  \ It's also possible that you're using an interpreter\
+                  \ that uses 'weave' improperly.\
+                  \ See documentation for more information."

@@ -33,7 +33,13 @@ program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
             _             -> writeTTY i >> writeTTY "no exceptions"
 
 foo :: IO (Either CustomException ())
-foo = (runM .@ lowerResource .@@ lowerError @CustomException) $ teletypeToIO program
+foo =
+    runFinal
+  . embedToFinal @IO
+  . resourceToIOFinal
+  . errorToIOFinal @CustomException
+  . teletypeToIO
+  $ program
 
 spec :: Spec
 spec = describe "example" $ do
