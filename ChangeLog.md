@@ -10,7 +10,8 @@
 - `runFixpoint` and `runFixpointM` have been deprecated in favor of `fixpointToFinal`.
 - The semantics for `runNonDet` when `<|>` is used inside a higher-order action of
     another effect has been changed.
-- Type variables for certain internal functions and `failToEmbed` have been rearranged.
+- Type variables for certain internal functions, `failToEmbed`,
+    and `atomicState'` have been rearranged.
 
 ## Other changes
 
@@ -23,6 +24,8 @@
 - Added `fixpointToFinal`, a better alternative of `runFixpoint` and `runFixpointM`
 - Added `resourceToIOFinal`, a better alternative of `lowerResource`
 - Added `outputToIOMonoid` and `outputToIOMonoidAssocR`
+- Added `stateToIO`
+- Added `atomicStateToIO`
 - Added `runWriterTVar`, `writerToIOFinal`, and `writerToIOAssocRFinal`
 - Added `writerToEndoWriter`
 - Added `subsume` operation
