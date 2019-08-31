@@ -77,6 +77,8 @@ runOutputMonoid f = runState mempty . reinterpret
 --
 -- You should always use this instead of 'runOutputMonoid' if the monoid
 -- is a list, such as 'String'.
+--
+-- @since 1.1.0.0
 runOutputMonoidAssocR
     :: forall o m r a
      . Monoid m
@@ -91,6 +93,8 @@ runOutputMonoidAssocR f =
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into atomic operations
 -- over an 'IORef'.
+--
+-- @since 1.1.0.0
 runOutputMonoidIORef
     :: forall o m r a
      . (Monoid m, Member (Embed IO) r)
@@ -105,6 +109,8 @@ runOutputMonoidIORef ref f = interpret $ \case
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into atomic operations
 -- over a 'TVar'.
+--
+-- @since 1.1.0.0
 runOutputMonoidTVar
     :: forall o m r a
      . (Monoid m, Member (Embed IO) r)
@@ -134,6 +140,8 @@ runOutputMonoidTVar tvar f = interpret $ \case
 -- For example, 'Polysemy.Error.throw' and 'Polysemy.Error.catch' will
 -- never revert 'output's, even if 'Polysemy.Error.runError' is used
 -- after 'outputToIOMonoid'.
+--
+-- @since 1.2.0.0
 outputToIOMonoid
   :: forall o m r a
    . (Monoid m, Member (Embed IO) r)
@@ -162,6 +170,8 @@ outputToIOMonoid f sem = do
 -- For example, 'Polysemy.Error.throw' and 'Polysemy.Error.catch' will
 -- never revert 'output's, even if 'Polysemy.Error.runError' is used
 -- after 'outputToIOMonoidAssocR'.
+--
+-- @since 1.2.0.0
 outputToIOMonoidAssocR
   :: forall o m r a
    . (Monoid m, Member (Embed IO) r)

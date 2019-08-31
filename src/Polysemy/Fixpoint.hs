@@ -58,6 +58,8 @@ import Polysemy.Internal.Fixpoint
 -- If 'fixpointToFinal' throws an exception for you, and it can't
 -- be due to any of the above, then open an issue over at the
 -- GitHub repository for polysemy.
+--
+-- @since 1.2.0.0
 fixpointToFinal :: forall m r a
                  . (Member (Final m) r, MonadFix m)
                 => Sem (Fixpoint ': r) a

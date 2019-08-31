@@ -89,6 +89,8 @@ runWriter = runState mempty . reinterpretH
 --
 -- You should always use this instead of 'runWriter' if the monoid
 -- is a list, such as 'String'.
+--
+-- @since 1.1.0.0
 runWriterAssocR
     :: Monoid o
     => Sem (Writer o ': r) a
@@ -103,6 +105,8 @@ runWriterAssocR =
 --------------------------------------------------------------------
 -- | Transform a 'Writer' effect into atomic operations
 -- over a 'TVar' through final 'IO'.
+--
+-- @since 1.2.0.0
 runWriterTVar :: (Monoid o, Member (Final IO) r)
               => TVar o
               -> Sem (Writer o ': r) a
@@ -124,6 +128,8 @@ runWriterTVar tvar = runWriterSTMAction $ \o -> do
 -- /Beware/: Effects that aren't interpreted in terms of 'IO'
 -- will have local state semantics in regards to 'Writer' effects
 -- interpreted this way. See 'Final'.
+--
+-- @since 1.2.0.0
 writerToIOFinal :: (Monoid o, Member (Final IO) r)
                 => Sem (Writer o ': r) a
                 -> Sem r (o, a)
@@ -146,6 +152,8 @@ writerToIOFinal sem = do
 -- /Beware/: Effects that aren't interpreted in terms of 'IO'
 -- will have local state semantics in regards to 'Writer' effects
 -- interpreted this way. See 'Final'.
+--
+-- @since 1.2.0.0
 writerToIOAssocRFinal :: (Monoid o, Member (Final IO) r)
                       => Sem (Writer o ': r) a
                       -> Sem r (o, a)

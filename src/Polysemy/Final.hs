@@ -101,6 +101,8 @@ type ThroughWeavingToFinal m z a =
 -- State semantics between effects that are interpreted in terms of the final monad
 -- depend on the final monad. For example, if the final monad is a monad transformer
 -- stack, then state semantics will depend on the order monad transformers are stacked.
+--
+-- @since 1.2.0.0
 newtype Final m z a where
   WithWeavingToFinal
     :: ThroughWeavingToFinal m z a
