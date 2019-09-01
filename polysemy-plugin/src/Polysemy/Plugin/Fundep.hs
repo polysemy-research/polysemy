@@ -88,16 +88,17 @@ getFindConstraints (findClass -> cls) cts = do
 
 ------------------------------------------------------------------------------
 -- | If there's only a single @Member@ in the same @r@ whose effect name
--- matches, return its effect (including tyvars.)
+-- matches and could possibly unify, return its effect (including tyvars.)
 findMatchingEffectIfSingular
     :: FindConstraint
     -> [FindConstraint]
     -> Maybe Type
-findMatchingEffectIfSingular (FindConstraint _ eff_name _ r) ts =
+findMatchingEffectIfSingular (FindConstraint _ eff_name wanted r) ts =
   singleListToJust $ do
     FindConstraint _ eff_name' eff' r' <- ts
     guard $ eqType eff_name eff_name'
     guard $ eqType r r'
+    guard $ canUnifyRecursive FunctionDef wanted eff'
     pure eff'
 
 
@@ -109,6 +110,23 @@ getEffName t = fst $ splitAppTys t
 
 ------------------------------------------------------------------------------
 -- | Generate a wanted unification for the effect described by the
+-- 'FindConstraint' and the given effect.
+mkWantedForce
+  :: FindConstraint
+  -> Type
+  -> TcPluginM (Unification, Ct)
+mkWantedForce fc given = do
+    (ev, _) <- unsafeTcPluginTcM
+             . runTcSDeriveds
+             $ newWantedEq (fcLoc fc) Nominal wanted given
+    pure ( Unification (OrdType wanted) (OrdType given)
+         , CNonCanonical ev
+         )
+  where
+    wanted = fcEffect fc
+
+------------------------------------------------------------------------------
+-- | Generate a wanted unification for the effect described by the
 -- 'FindConstraint' and the given effect --- if they can be unified in this
 -- context.
 mkWanted
@@ -117,13 +135,8 @@ mkWanted
     -> Type  -- ^ The given effect.
     -> TcPluginM (Maybe (Unification, Ct))
 mkWanted fc solve_ctx given =
-  whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $ do
-    (ev, _) <- unsafeTcPluginTcM
-             . runTcSDeriveds
-             $ newWantedEq (fcLoc fc) Nominal wanted given
-    pure ( Unification (OrdType wanted) (OrdType given)
-         , CNonCanonical ev
-         )
+  whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $
+    mkWantedForce fc given
   where
     wanted = fcEffect fc
 
@@ -202,8 +215,9 @@ solveFundep (ref, stuff) given _ wanted = do
     let r  = fcRow fc
     case findMatchingEffectIfSingular fc given_finds of
       -- We found a real given, therefore we are in the context of a function
-      -- with an explicit @Member e r@ constraint.
-      Just eff' -> mkWanted fc FunctionDef eff'
+      -- with an explicit @Member e r@ constraint. We also know it can
+      -- be unified (although it may generate unsatisfiable constraints).
+      Just eff' -> Just <$> mkWantedForce fc eff'
 
       -- Otherwise, check to see if @r ~ (e ': r')@. If so, pretend we're
       -- trying to solve a given @Member e r@. But this can only happen in the
