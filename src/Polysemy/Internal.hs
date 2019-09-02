@@ -344,6 +344,7 @@ raise = hoistSem $ hoist raise . weaken
 --   . 'raiseUnder' -- Introduces Bar under Foo
 -- @
 --
+-- @since 1.2.0.0
 raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
   where
@@ -357,6 +358,8 @@ raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces two new effects underneath the head of the
 -- list.
+--
+-- @since 1.2.0.0
 raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
 raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
   where
@@ -370,6 +373,8 @@ raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces two new effects underneath the head of the
 -- list.
+--
+-- @since 1.2.0.0
 raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
 raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
   where
@@ -386,6 +391,8 @@ raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
 -- without immediately consuming the newly introduced effect.
 -- Using such an interpreter recursively may result in duplicate effects,
 -- which may then be eliminated using 'subsume'.
+--
+-- @since 1.2.0.0
 subsume :: Member e r => Sem (e ': r) a -> Sem r a
 subsume = hoistSem $ \u -> hoist subsume $ case decomp u of
   Right w -> injWeaving w

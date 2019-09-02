@@ -101,6 +101,8 @@ type ThroughWeavingToFinal m z a =
 -- State semantics between effects that are interpreted in terms of the final monad
 -- depend on the final monad. For example, if the final monad is a monad transformer
 -- stack, then state semantics will depend on the order monad transformers are stacked.
+--
+-- @since 1.2.0.0
 newtype Final m z a where
   WithWeavingToFinal
     :: ThroughWeavingToFinal m z a
@@ -120,7 +122,7 @@ makeSem_ ''Final
 -- in application code, as it ties your application code directly to
 -- the final monad.
 withWeavingToFinal
-  :: forall m a r
+  :: forall m r a
    . Member (Final m) r
   => ThroughWeavingToFinal m (Sem r) a
   -> Sem r a
@@ -207,8 +209,8 @@ runFinal = usingSem $ \u -> case extract u of
 ------------------------------------------------------------------------------
 -- | Given natural transformations between @m1@ and @m2@, run a @'Final' m1@
 -- effect by transforming it into a @'Final' m2@ effect.
-finalToFinal :: forall m1 m2 a r
-              . (Member (Final m2) r, Functor m2)
+finalToFinal :: forall m1 m2 r a
+              . Member (Final m2) r
              => (forall x. m1 x -> m2 x)
              -> (forall x. m2 x -> m1 x)
              -> Sem (Final m1 ': r) a

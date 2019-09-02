@@ -17,6 +17,7 @@ module Polysemy.State
   , runLazyState
   , evalLazyState
   , runStateIORef
+  , stateToIO
 
     -- * Interoperation with MTL
   , hoistStateIntoStateT
@@ -122,6 +123,39 @@ runStateIORef ref = interpret $ \case
   Put s -> embed $ writeIORef ref s
 {-# INLINE runStateIORef #-}
 
+--------------------------------------------------------------------
+-- | Run an 'State' effect in terms of operations
+-- in 'IO'.
+--
+-- Internally, this simply creates a new 'IORef', passes it to
+-- 'runStateIORef', and then returns the result and the final value
+-- of the 'IORef'.
+--
+-- /Note/: This is not safe in a concurrent setting, as 'modify' isn't atomic.
+-- If you need operations over the state to be atomic,
+-- use 'Polysemy.AtomicState.atomicStateToIO' instead.
+--
+-- /Beware/: As this uses an 'IORef' internally,
+-- all other effects will have local
+-- state semantics in regards to 'State' effects
+-- interpreted this way.
+-- For example, 'Polysemy.Error.throw' and 'Polysemy.Error.catch' will
+-- never revert 'put's, even if 'Polysemy.Error.runError' is used
+-- after 'stateToIO'.
+--
+-- @since 1.2.0.0
+stateToIO
+    :: forall s r a
+     . Member (Embed IO) r
+    => s
+    -> Sem (State s ': r) a
+    -> Sem r (s, a)
+stateToIO s sem = do
+  ref <- embed $ newIORef s
+  res <- runStateIORef ref sem
+  end <- embed $ readIORef ref
+  return (end, res)
+{-# INLINE stateToIO #-}
 
 ------------------------------------------------------------------------------
 -- | Hoist a 'State' effect into a 'S.StateT' monad transformer. This can be

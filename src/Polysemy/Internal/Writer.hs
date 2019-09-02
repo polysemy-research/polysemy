@@ -30,6 +30,8 @@ makeSem ''Writer
 --
 -- This can be used together with 'raiseUnder' in order to create
 -- @-AssocR@ variants out of regular 'Writer' interpreters.
+--
+-- @since 1.2.0.0
 writerToEndoWriter
     :: (Monoid o, Member (Writer (Endo o)) r)
     => Sem (Writer o ': r) a

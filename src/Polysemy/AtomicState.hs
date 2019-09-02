@@ -15,6 +15,7 @@ module Polysemy.AtomicState
     -- * Interpretations
   , runAtomicStateIORef
   , runAtomicStateTVar
+  , atomicStateToIO
   , atomicStateToState
   ) where
 
@@ -26,6 +27,10 @@ import Polysemy.State
 
 import Data.IORef
 
+------------------------------------------------------------------------------
+-- | A variant of 'State' that supports atomic operations.
+--
+-- @since 1.1.0.0
 data AtomicState s m a where
   AtomicState :: (s -> (s, a)) -> AtomicState s m a
   AtomicGet   :: AtomicState s m s
@@ -46,9 +51,10 @@ atomicGet :: forall s r
 -----------------------------------------------------------------------------
 -- | A variant of 'atomicState' in which the computation is strict in the new
 -- state and return value.
-atomicState' :: Member (AtomicState s) r
-              => (s -> (s, a))
-              -> Sem r a
+atomicState' :: forall s a r
+              . Member (AtomicState s) r
+             => (s -> (s, a))
+             -> Sem r a
 atomicState' f = do
   -- KingoftheHomeless: return value needs to be forced due to how
   -- 'atomicModifyIORef' is implemented: the computation
@@ -87,7 +93,8 @@ atomicModify' f = do
 ------------------------------------------------------------------------------
 -- | Run an 'AtomicState' effect by transforming it into atomic operations
 -- over an 'IORef'.
-runAtomicStateIORef :: Member (Embed IO) r
+runAtomicStateIORef :: forall s r a
+                     . Member (Embed IO) r
                     => IORef s
                     -> Sem (AtomicState s ': r) a
                     -> Sem r a
@@ -110,6 +117,35 @@ runAtomicStateTVar tvar = interpret $ \case
     return a
   AtomicGet -> embed $ readTVarIO tvar
 {-# INLINE runAtomicStateTVar #-}
+
+--------------------------------------------------------------------
+-- | Run an 'AtomicState' effect in terms of atomic operations
+-- in 'IO'.
+--
+-- Internally, this simply creates a new 'IORef', passes it to
+-- 'runAtomicStateIORef', and then returns the result and the final value
+-- of the 'IORef'.
+--
+-- /Beware/: As this uses an 'IORef' internally,
+-- all other effects will have local
+-- state semantics in regards to 'AtomicState' effects
+-- interpreted this way.
+-- For example, 'Polysemy.Error.throw' and 'Polysemy.Error.catch' will
+-- never revert 'atomicModify's, even if 'Polysemy.Error.runError' is used
+-- after 'atomicStateToIO'.
+--
+-- @since 1.2.0.0
+atomicStateToIO :: forall s r a
+                 . Member (Embed IO) r
+                => s
+                -> Sem (AtomicState s ': r) a
+                -> Sem r (s, a)
+atomicStateToIO s sem = do
+  ref <- embed $ newIORef s
+  res <- runAtomicStateIORef ref sem
+  end <- embed $ readIORef ref
+  return (end, res)
+{-# INLINE atomicStateToIO #-}
 
 ------------------------------------------------------------------------------
 -- | Transform an 'AtomicState' effect to a 'State' effect, discarding
