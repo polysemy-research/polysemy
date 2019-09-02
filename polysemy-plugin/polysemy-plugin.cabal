@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9e8afb18feb1e62c82854e11adcc4998c4d92ca41c69fe57da93dbec4b7cd490
+-- hash: 01634ce3c7ac101e60c1a02f8ccad7ec499c02a04b66e5d9dd5993f314318097
 
 name:           polysemy-plugin
-version:        0.2.2.0
+version:        0.2.3.0
 synopsis:       Disambiguate obvious uses of effects.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy/tree/master/polysemy-plugin#readme>
 category:       Polysemy

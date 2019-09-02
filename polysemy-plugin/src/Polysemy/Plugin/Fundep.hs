@@ -116,12 +116,12 @@ mkWantedForce
   -> Type
   -> TcPluginM (Unification, Ct)
 mkWantedForce fc given = do
-    (ev, _) <- unsafeTcPluginTcM
-             . runTcSDeriveds
-             $ newWantedEq (fcLoc fc) Nominal wanted given
-    pure ( Unification (OrdType wanted) (OrdType given)
-         , CNonCanonical ev
-         )
+  (ev, _) <- unsafeTcPluginTcM
+           . runTcSDeriveds
+           $ newWantedEq (fcLoc fc) Nominal wanted given
+  pure ( Unification (OrdType wanted) (OrdType given)
+       , CNonCanonical ev
+       )
   where
     wanted = fcEffect fc
 
