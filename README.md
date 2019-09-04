@@ -67,6 +67,9 @@ Or by adding `-fplugin=Polysemy.Plugin` to your package.yaml/.cabal file `ghc-op
 <sup><a name="fn1">1</a></sup>: Unfortunately this is not true in GHC 8.6.3, but
 will be true in GHC 8.10.1.
 
+## Tutorial
+
+Raghu Kaippully wrote a beginner friendly [tutorial](https://haskell-explained.gitlab.io/blog/posts/2019/07/28/polysemy-is-cool-part-1/index.html).
 
 ## Examples
 
