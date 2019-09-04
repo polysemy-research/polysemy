@@ -64,6 +64,8 @@ import Polysemy.Internal.TH.Effect
 --
 -- A @'Polysemy.Internal.Union.Weaving'@ provides these components,
 -- hence the name 'ThroughWeavingToFinal'.
+--
+-- @since 1.2.0.0
 type ThroughWeavingToFinal m z a =
      forall f
    . Functor f
@@ -121,6 +123,8 @@ makeSem_ ''Final
 -- You are discouraged from using 'withWeavingToFinal' directly
 -- in application code, as it ties your application code directly to
 -- the final monad.
+--
+-- @since 1.2.0.0
 withWeavingToFinal
   :: forall m r a
    . Member (Final m) r
@@ -132,6 +136,8 @@ withWeavingToFinal
 -- | 'withWeavingToFinal' admits an implementation of 'embed'.
 --
 -- Just like 'embed', you are discouraged from using this in application code.
+--
+-- @since 1.2.0.0
 embedFinal :: (Member (Final m) r, Functor m) => m a -> Sem r a
 embedFinal m = withWeavingToFinal $ \s _ _ -> (<$ s) <$> m
 {-# INLINE embedFinal #-}
@@ -144,6 +150,8 @@ embedFinal m = withWeavingToFinal $ \s _ _ -> (<$ s) <$> m
 --
 -- You are discouraged from using 'withStrategicToFinal' in application code,
 -- as it ties your application code directly to the final monad.
+--
+-- @since 1.2.0.0
 withStrategicToFinal :: Member (Final m) r
                      => Strategic m (Sem r) a
                      -> Sem r a
@@ -169,6 +177,8 @@ withStrategicToFinal strat = withWeavingToFinal (runStrategy strat)
 -- /Beware/: Effects that aren't interpreted in terms of the final
 -- monad will have local state semantics in regards to effects
 -- interpreted using 'interpretFinal'. See 'Final'.
+--
+-- @since 1.2.0.0
 interpretFinal
     :: forall m e r a
      . Member (Final m) r
@@ -200,6 +210,8 @@ interpretFinal n =
 --
 -- If you also need to process an @'Embed' m@ effect, use this together with
 -- 'embedToFinal'.
+--
+-- @since 1.2.0.0
 runFinal :: Monad m => Sem '[Final m] a -> m a
 runFinal = usingSem $ \u -> case extract u of
   Weaving (WithWeavingToFinal wav) s wv ex ins ->
@@ -209,6 +221,8 @@ runFinal = usingSem $ \u -> case extract u of
 ------------------------------------------------------------------------------
 -- | Given natural transformations between @m1@ and @m2@, run a @'Final' m1@
 -- effect by transforming it into a @'Final' m2@ effect.
+--
+-- @since 1.2.0.0
 finalToFinal :: forall m1 m2 r a
               . Member (Final m2) r
              => (forall x. m1 x -> m2 x)
@@ -237,6 +251,8 @@ finalToFinal to from =
 
 ------------------------------------------------------------------------------
 -- | Transform an @'Embed' m@ effect into a @'Final' m@ effect
+--
+-- @since 1.2.0.0
 embedToFinal :: (Member (Final m) r, Functor m)
              => Sem (Embed m ': r) a
              -> Sem r a

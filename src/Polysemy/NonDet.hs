@@ -31,6 +31,8 @@ runNonDet = runNonDetC . runNonDetInC
 --
 -- Unlike 'runNonDet', uses of '<|>' will not execute the
 -- second branch at all if the first option succeeds.
+--
+-- @since 1.1.0.0
 runNonDetMaybe :: Sem (NonDet ': r) a -> Sem r (Maybe a)
 runNonDetMaybe (Sem sem) = Sem $ \k -> runMaybeT $ sem $ \u ->
   case decomp u of
@@ -53,6 +55,8 @@ runNonDetMaybe (Sem sem) = Sem $ \k -> runMaybeT $ sem $ \u ->
 -- through providing an exception that 'empty' may be mapped to.
 --
 -- This allows '<|>' to handle 'throw's of the @'Error' e@ effect.
+--
+-- @since 1.1.0.0
 nonDetToError :: Member (Error e) r
               => e
               -> Sem (NonDet ': r) a
@@ -146,3 +150,4 @@ consC m = NonDetC $ \cons nil -> m >>= \case
   Just (a, r) -> cons a (unNonDetC r cons nil)
   _           -> nil
 {-# INLINE consC #-}
+
