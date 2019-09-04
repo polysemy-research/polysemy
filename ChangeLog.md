@@ -1,17 +1,18 @@
 # Changelog for polysemy
 
 
-## 1.2.0.0 (TODO)
+## 1.2.0.0 (2019-09-04)
 
 ### Breaking Changes
 
 - All `lower-` interpreters have been deprecated, in favor of corresponding
     `-Final` interpreters.
-- `runFixpoint` and `runFixpointM` have been deprecated in favor of `fixpointToFinal`.
-- The semantics for `runNonDet` when `<|>` is used inside a higher-order action of
-    another effect has been changed.
-- Type variables for certain internal functions, `failToEmbed`,
-    and `atomicState'` have been rearranged.
+- `runFixpoint` and `runFixpointM` have been deprecated in favor of
+    `fixpointToFinal`.
+- The semantics for `runNonDet` when `<|>` is used inside a higher-order action
+    of another effect has been changed.
+- Type variables for certain internal functions, `failToEmbed`, and
+    `atomicState'` have been rearranged.
 
 ## Other changes
 
