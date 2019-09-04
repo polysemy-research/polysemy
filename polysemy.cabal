@@ -4,7 +4,7 @@ cabal-version: 1.24
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8a6be6da10631778dfdd107f8abaf266ea185e5b22d4a9ba78283ec5eff648b2
+-- hash: af80ef97010d8515f54169fee101d0318605090b94852c517de70e06ff033330
 
 name:           polysemy
 version:        1.2.3.0
@@ -76,6 +76,7 @@ library
       Polysemy.Reader
       Polysemy.Resource
       Polysemy.State
+      Polysemy.Tagged
       Polysemy.Trace
       Polysemy.Writer
   other-modules:
