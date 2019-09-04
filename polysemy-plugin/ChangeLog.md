@@ -1,7 +1,7 @@
 # Changelog for polysemy-plugin
 
 
-## 0.2.3.0 (TODO)
+## 0.2.3.0 (2019-09-04)
 - The plugin will now choose between given effects based on the ability to unify them.
     This makes it possible for disambiguation to kick in even when using multiple
     instances of the same effect with different type variables,
