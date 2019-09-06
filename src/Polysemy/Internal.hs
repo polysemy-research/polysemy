@@ -439,12 +439,11 @@ runM (Sem m) = m $ \z ->
 -- | Type synonym for interpreters that consume an effect without changing the 
 -- return value. Offered for user convenience. 
 --
--- 'r' Is kept polymorphic so it's possible to place constraints upon it:
+-- @r@ Is kept polymorphic so it's possible to place constraints upon it:
 --
 -- @
--- teletypeToIO
--- :: 'Member' (Embed IO) r
--- => 'InterpreterFor' Teletype r
+-- teletypeToIO :: 'Member' (Embed IO) r
+--              => 'InterpreterFor' Teletype r
 -- @
 type InterpreterFor e r = forall a. Sem (e ': r) a -> Sem r a
 

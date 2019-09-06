@@ -9,15 +9,15 @@ module Polysemy
   , runM
   , runFinal
 
+  -- * Type synonyms for user convenience
+  , InterpreterFor
+
   -- * Interoperating With Other Monads
   -- ** Embed
   , Embed (..)
   , embed
   , embedToFinal
 
-  -- * Type synonyms for user convenience
-  -- ** InterpreterFor
-  , InterpreterFor
   -- ** Final
   -- | For advanced uses of 'Final', including creating your own interpreters
   -- that make use of it, see "Polysemy.Final"
