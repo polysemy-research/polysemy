@@ -136,11 +136,11 @@ module Polysemy
   , Inspector (..)
   ) where
 
-import           Polysemy.Final
-import           Polysemy.Internal
-import           Polysemy.Internal.Combinators
-import           Polysemy.Internal.Forklift
-import           Polysemy.Internal.Kind
-import           Polysemy.Internal.Tactics
-import           Polysemy.Internal.TH.Effect
+import Polysemy.Final
+import Polysemy.Internal
+import Polysemy.Internal.Combinators
+import Polysemy.Internal.Forklift
+import Polysemy.Internal.Kind
+import Polysemy.Internal.Tactics
+import Polysemy.Internal.TH.Effect
 
