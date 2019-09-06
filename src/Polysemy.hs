@@ -14,6 +14,10 @@ module Polysemy
   , Embed (..)
   , embed
   , embedToFinal
+
+  -- * Type synonyms for user convenience
+  -- ** InterpreterFor
+  , InterpreterFor
   -- ** Final
   -- | For advanced uses of 'Final', including creating your own interpreters
   -- that make use of it, see "Polysemy.Final"
@@ -132,11 +136,11 @@ module Polysemy
   , Inspector (..)
   ) where
 
-import Polysemy.Internal
-import Polysemy.Internal.Combinators
-import Polysemy.Internal.Forklift
-import Polysemy.Internal.Kind
-import Polysemy.Internal.TH.Effect
-import Polysemy.Internal.Tactics
-import Polysemy.Final
+import           Polysemy.Final
+import           Polysemy.Internal
+import           Polysemy.Internal.Combinators
+import           Polysemy.Internal.Forklift
+import           Polysemy.Internal.Kind
+import           Polysemy.Internal.Tactics
+import           Polysemy.Internal.TH.Effect
 
