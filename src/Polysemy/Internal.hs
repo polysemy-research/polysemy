@@ -23,6 +23,7 @@ module Polysemy.Internal
   , usingSem
   , liftSem
   , hoistSem
+  , InterpreterFor
   , (.@)
   , (.@@)
   ) where
@@ -434,6 +435,17 @@ runM (Sem m) = m $ \z ->
       pure $ f $ a <$ s
 {-# INLINE runM #-}
 
+------------------------------------------------------------------------------
+-- | Type synonym for interpreters that consume an effect without changing the 
+-- return value. Offered for user convenience. 
+--
+-- @r@ Is kept polymorphic so it's possible to place constraints upon it:
+--
+-- @
+-- teletypeToIO :: 'Member' (Embed IO) r
+--              => 'InterpreterFor' Teletype r
+-- @
+type InterpreterFor e r = forall a. Sem (e ': r) a -> Sem r a
 
 ------------------------------------------------------------------------------
 -- | Some interpreters need to be able to lower down to the base monad (often
