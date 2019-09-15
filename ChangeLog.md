@@ -1,7 +1,8 @@
 # Changelog for polysemy
 
-## 1.2.0.1 (2019-09-15)
+## 1.2.1.0 (2019-09-15)
 
+- Added `InterpreterFor` (thanks to @bolt12)
 - Bumped bounds for first-class-families
 
 ## 1.2.0.0 (2019-09-04)
