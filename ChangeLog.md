@@ -1,5 +1,8 @@
 # Changelog for polysemy
 
+## 1.2.0.1 (2019-09-15)
+
+- Bumped bounds for first-class-families
 
 ## 1.2.0.0 (2019-09-04)
 
