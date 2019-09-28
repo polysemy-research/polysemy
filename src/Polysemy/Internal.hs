@@ -351,8 +351,8 @@ raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
   where
     weakenUnder :: ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': r) m x
-    weakenUnder (Union SZ a) = Union SZ a
-    weakenUnder (Union (SS n) a) = Union (SS (SS n)) a
+    weakenUnder (Union Choice a) = Union Choice a
+    weakenUnder (Union (Other n) a) = Union (Other (Other n)) a
     {-# INLINE weakenUnder #-}
 {-# INLINE raiseUnder #-}
 
@@ -366,8 +366,8 @@ raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
 raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
   where
     weakenUnder2 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': r) m x
-    weakenUnder2 (Union SZ a) = Union SZ a
-    weakenUnder2 (Union (SS n) a) = Union (SS (SS (SS n))) a
+    weakenUnder2 (Union Choice a) = Union Choice a
+    weakenUnder2 (Union (Other n) a) = Union (Other (Other (Other n))) a
     {-# INLINE weakenUnder2 #-}
 {-# INLINE raiseUnder2 #-}
 
@@ -381,8 +381,8 @@ raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4
 raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
   where
     weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
-    weakenUnder3 (Union SZ a) = Union SZ a
-    weakenUnder3 (Union (SS n) a) = Union (SS (SS (SS (SS n)))) a
+    weakenUnder3 (Union Choice a) = Union Choice a
+    weakenUnder3 (Union (Other n) a) = Union (Other (Other (Other (Other n)))) a
     {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
 

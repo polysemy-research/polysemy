@@ -48,6 +48,7 @@ library
       Polysemy
       Polysemy.Async
       Polysemy.AtomicState
+      Polysemy.Comp
       Polysemy.Embed
       Polysemy.Embed.Type
       Polysemy.Error
@@ -71,9 +72,14 @@ library
       Polysemy.Internal.Union
       Polysemy.Internal.Writer
       Polysemy.IO
+<<<<<<< HEAD
       Polysemy.Law
+=======
+      Polysemy.Newtype
+>>>>>>> trash
       Polysemy.NonDet
       Polysemy.Output
+      Polysemy.Profiling
       Polysemy.Reader
       Polysemy.Resource
       Polysemy.State
