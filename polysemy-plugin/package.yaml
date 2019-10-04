@@ -23,14 +23,6 @@ dependencies:
 - transformers >= 0.5.2.0 && < 0.6
 - containers >= 0.5 && < 0.7
 
-# What the heck is going on here? We want to document the fact that the plugin
-# only works on polysemy >= 0.6, but don't actually want that dependency, since
-# it's not _actually_ a dependency of polysmey-plugin.
-when:
-  - condition: false
-    dependencies:
-      - polysemy >= 0.6
-
 
 library:
   source-dirs: src
