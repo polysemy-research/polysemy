@@ -4,7 +4,7 @@ module Polysemy.Internal.Strategy where
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
-import Polysemy.Internal.Tactics (Inspector(..), Tactics (..))
+import Polysemy.Internal.Tactics
 
 
 
@@ -56,7 +56,7 @@ runStrategy sem = \s wv ins -> run $ interpret
 --
 -- @since 1.2.0.0
 getInspectorS :: forall m f n. Sem (WithStrategy m f n) (Inspector f)
-getInspectorS = send (GetInspector @m @f @n)
+getInspectorS = getInspectorT @m @n
 {-# INLINE getInspectorS #-}
 
 
@@ -69,7 +69,7 @@ getInspectorS = send (GetInspector @m @f @n)
 --
 -- @since 1.2.0.0
 getInitialStateS :: forall m f n. Sem (WithStrategy m f n) (f ())
-getInitialStateS = send (GetInitialState @m @f @n)
+getInitialStateS = getInitialStateT @m @n
 {-# INLINE getInitialStateS #-}
 
 
@@ -109,7 +109,7 @@ liftS m = do
 --
 -- @since 1.2.0.0
 runS :: n a -> Sem (WithStrategy m f n) (m (f a))
-runS na = bindS (const na) <*> getInitialStateS
+runS = runT
 {-# INLINE runS #-}
 
 
@@ -121,6 +121,6 @@ runS na = bindS (const na) <*> getInitialStateS
 --
 -- @since 1.2.0.0
 bindS :: (a -> n b) -> Sem (WithStrategy m f n) (f a -> m (f b))
-bindS = send . HoistInterpretation
+bindS = bindT
 {-# INLINE bindS #-}
 

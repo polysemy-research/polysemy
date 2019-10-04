@@ -86,8 +86,8 @@ data Tactics m f n z a where
 -- | Get the stateful environment of the world at the moment the effect @e@ is
 -- to be run. Prefer 'pureT', 'runT' or 'bindT' instead of using this function
 -- directly.
-getInitialStateT :: forall f m r e. Sem (WithTactics e f m r) (f ())
-getInitialStateT = send @(Tactics (Sem (e ': r)) _ m) GetInitialState
+getInitialStateT :: forall m n r f. Member (Tactics m f n) r => Sem r (f ())
+getInitialStateT = send @(Tactics m _ n) GetInitialState
 
 
 ------------------------------------------------------------------------------
@@ -112,8 +112,8 @@ getInitialStateT = send @(Tactics (Sem (e ': r)) _ m) GetInitialState
 -- @
 --
 -- We
-getInspectorT :: forall e f m r. Sem (WithTactics e f m r) (Inspector f)
-getInspectorT = send @(Tactics (Sem (e ': r)) _ m) GetInspector
+getInspectorT :: forall m n f r. Member (Tactics m f n) r => Sem r (Inspector f)
+getInspectorT = send @(Tactics m _ n) GetInspector
 
 
 ------------------------------------------------------------------------------
@@ -126,9 +126,9 @@ newtype Inspector f = Inspector
 
 ------------------------------------------------------------------------------
 -- | Lift a value into 'Tactical'.
-pureT :: a -> Tactical e m r a
+pureT :: forall e m r a. a -> Tactical e m r a
 pureT a = do
-  istate <- getInitialStateT
+  istate <- getInitialStateT @(Sem (e ': r)) @m
   pure $ a <$ istate
 
 
@@ -137,13 +137,14 @@ pureT a = do
 -- used will be the same one that the effect is initally run in. Use 'bindT' if
 -- you'd prefer to explicitly manage your stateful environment.
 runT
-    :: m a
+    :: forall m f r a n
+     . Member (Tactics n f m) r
+    => m a
       -- ^ The monadic action to lift. This is usually a parameter in your
       -- effect.
-    -> Sem (WithTactics e f m r)
-                (Sem (e ': r) (f a))
+    -> Sem r (n (f a))
 runT na = do
-  istate <- getInitialStateT
+  istate <- getInitialStateT @n @m
   na'    <- bindT (const na)
   pure $ na' istate
 {-# INLINE runT #-}
@@ -154,15 +155,16 @@ runT na = do
 -- 'bindT' to get an effect parameter of the form @a -> m b@ into something
 -- that can be used after calling 'runT' on an effect parameter @m a@.
 bindT
-    :: forall a m b e f r. (a -> m b)
+    :: forall a m b f r n
+     . Member (Tactics n f m) r
+    => (a -> m b)
        -- ^ The monadic continuation to lift. This is usually a parameter in
        -- your effect.
        --
        -- Continuations lifted via 'bindT' will run in the same environment
        -- which produced the @a@.
-    -> Sem (WithTactics e f m r)
-                (f a -> Sem (e ': r) (f b))
-bindT f = send @(Tactics (Sem (e ': r)) _ _) $ HoistInterpretation f
+    -> Sem r (f a -> n (f b))
+bindT f = send @(Tactics n _ m) $ HoistInterpretation f
 {-# INLINE bindT #-}
 
 
