@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7ce7e4fdc1a3ebff15b38a550ed247a4ad04bb4c383ad4440212926b3eeea93c
+-- hash: 8b1a7a539b7611166cce4fb786896e4e459c6c1c2e9016634851419312ddb15d
 
 name:           polysemy
 version:        1.2.1.0
@@ -84,6 +84,7 @@ library
     , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.7
     , mtl >=2.2.2 && <3
+    , polysemy-plugin >=0.2.3.0
     , stm >=2 && <3
     , syb >=0.7 && <0.8
     , template-haskell >=2.12.0.0 && <3
@@ -148,6 +149,7 @@ test-suite polysemy-test
     , inspection-testing >=0.4.2 && <0.5
     , mtl >=2.2.2 && <3
     , polysemy
+    , polysemy-plugin >=0.2.3.0
     , stm >=2 && <3
     , syb >=0.7 && <0.8
     , template-haskell >=2.12.0.0 && <3
@@ -182,6 +184,7 @@ benchmark polysemy-bench
     , freer-simple
     , mtl
     , polysemy
+    , polysemy-plugin >=0.2.3.0
     , stm >=2 && <3
     , syb >=0.7 && <0.8
     , template-haskell >=2.12.0.0 && <3

@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 module Polysemy.IO
   ( -- * Interpretations
     embedToMonadIO
@@ -35,13 +37,12 @@ import Polysemy.Internal.Union
 -- @
 --
 embedToMonadIO
-    :: forall m r a
-     . ( MonadIO m
+    :: ( MonadIO m
        , Member (Embed m) r
        )
     => Sem (Embed IO ': r) a
     -> Sem r a
-embedToMonadIO = runEmbedded $ liftIO @m
+embedToMonadIO = runEmbedded liftIO
 {-# INLINE embedToMonadIO #-}
 
 

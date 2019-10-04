@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
 module Polysemy.Internal.Tactics
@@ -86,8 +87,8 @@ data Tactics f n r m a where
 -- | Get the stateful environment of the world at the moment the effect @e@ is
 -- to be run. Prefer 'pureT', 'runT' or 'bindT' instead of using this function
 -- directly.
-getInitialStateT :: forall f m r e. Sem (WithTactics e f m r) (f ())
-getInitialStateT = send @(Tactics _ m (e ': r)) GetInitialState
+getInitialStateT :: Sem (WithTactics e f m r) (f ())
+getInitialStateT = send GetInitialState
 
 
 ------------------------------------------------------------------------------
@@ -112,8 +113,8 @@ getInitialStateT = send @(Tactics _ m (e ': r)) GetInitialState
 -- @
 --
 -- We
-getInspectorT :: forall e f m r. Sem (WithTactics e f m r) (Inspector f)
-getInspectorT = send @(Tactics _ m (e ': r)) GetInspector
+getInspectorT :: Sem (WithTactics e f m r) (Inspector f)
+getInspectorT = send GetInspector
 
 
 ------------------------------------------------------------------------------

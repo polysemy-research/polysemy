@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns, TemplateHaskell #-}
 
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 module Polysemy.Output
   ( -- * Effect
     Output (..)
@@ -201,15 +203,14 @@ ignoreOutput = interpret $ \case
 --
 -- @since 1.0.0.0
 runOutputBatched
-    :: forall o r a
-     . Member (Output [o]) r
+    :: Member (Output [o]) r
     => Int
     -> Sem (Output o ': r) a
     -> Sem r a
 runOutputBatched 0 m = ignoreOutput m
 runOutputBatched size m = do
   ((c, res), a) <-
-    runState (0 :: Int, [] :: [o]) $ reinterpret (\case
+    runState (0 :: Int, []) $ reinterpret (\case
       Output o -> do
         (count, acc) <- get
         let newCount = 1 + count
@@ -218,9 +219,9 @@ runOutputBatched size m = do
           then put (newCount, newAcc)
           else do
             output (reverse newAcc)
-            put (0 :: Int, [] :: [o])
+            put (0, [])
     ) m
-  when (c > 0) $ output @[o] (reverse res)
+  when (c > 0) $ output $ reverse res
   pure a
 
 ------------------------------------------------------------------------------

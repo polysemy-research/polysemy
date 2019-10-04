@@ -1,4 +1,5 @@
 {-# OPTIONS_HADDOCK not-home #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module Polysemy.Internal.Strategy where
 
@@ -60,8 +61,8 @@ runStrategy sem = \s wv ins -> run $ interpret
 -- See also 'Polysemy.getInspectorT'
 --
 -- @since 1.2.0.0
-getInspectorS :: forall m f n. Sem (WithStrategy m f n) (Inspector f)
-getInspectorS = send (GetInspector @m @f @n)
+getInspectorS :: Sem (WithStrategy m f n) (Inspector f)
+getInspectorS = send GetInspector
 {-# INLINE getInspectorS #-}
 
 
@@ -73,8 +74,8 @@ getInspectorS = send (GetInspector @m @f @n)
 -- directly.
 --
 -- @since 1.2.0.0
-getInitialStateS :: forall m f n. Sem (WithStrategy m f n) (f ())
-getInitialStateS = send (GetInitialState @m @f @n)
+getInitialStateS :: Sem (WithStrategy m f n) (f ())
+getInitialStateS = send GetInitialState
 {-# INLINE getInitialStateS #-}
 
 
