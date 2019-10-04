@@ -30,10 +30,10 @@ module Polysemy.Final
   , WithStrategy
   , pureS
   , liftS
-  , runT
-  , bindT
+  , runS
+  , bindS
   , getInspectorS
-  , getInitialStateT
+  , getInitialStateS
 
     -- * Interpretations
   , runFinal
