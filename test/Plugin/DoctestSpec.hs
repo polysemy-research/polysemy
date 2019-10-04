@@ -1,16 +1,15 @@
 {-# LANGUAGE CPP #-}
 
-module DoctestSpec where
+module Plugin.DoctestSpec where
 
 import Test.Hspec
 import Test.DocTest
 
 spec :: Spec
 spec = describe "yo" $ it "ok" $ True `shouldBe` True
-
---   describe "Error messages" $ it "should pass the doctest" $ doctest
---   [ "-isrc/"
---   , "--fast"
+-- spec = describe "Error222 messages" $ it "should pass the doctest" $ doctest
+--   [ "--fast"
+--   , "-fobject-code"
 --   , "-XDataKinds"
 --   , "-XDeriveFunctor"
 --   , "-XFlexibleContexts"
@@ -25,21 +24,10 @@ spec = describe "yo" $ it "ok" $ True `shouldBe` True
 --   , "-XTypeOperators"
 --   , "-XUnicodeSyntax"
 
---   , "-package type-errors"
-
 -- #if __GLASGOW_HASKELL__ < 806
 --   , "-XMonadFailDesugaring"
 --   , "-XTypeInType"
 -- #endif
 
---   , "test/TypeErrors.hs"
-
---   -- Modules that are explicitly imported for this test must be listed here
---   , "src/Polysemy.hs"
---   , "src/Polysemy/Error.hs"
---   , "src/Polysemy/Output.hs"
---   , "src/Polysemy/Reader.hs"
---   , "src/Polysemy/Resource.hs"
---   , "src/Polysemy/State.hs"
---   , "src/Polysemy/Trace.hs"
+--   , "test/Plugin/TypeErrors.hs"
 --   ]

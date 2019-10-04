@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fdefer-type-errors -fno-warn-deferred-type-errors #-}
 
-module LegitimateTypeErrorSpec where
+module Plugin.LegitimateTypeErrorSpec where
 
 import Polysemy
 import Test.Hspec

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a62973f46a4e7442a95affe8431d2ab9e49ccc84c71947c6c52cdb5f2d7b59d1
+-- hash: 40bcdc39ae4c51f9579589c0fbb38bb5773c918d6f5a8b9dcccabd7b9b136230
 
 name:           polysemy-plugin
 version:        0.2.3.0
@@ -45,40 +45,6 @@ library
     , containers >=0.5 && <0.7
     , ghc >=8.4.4 && <9
     , ghc-tcplugins-extra >=0.3 && <0.4
-    , syb >=0.7 && <0.8
-    , transformers >=0.5.2.0 && <0.6
-  default-language: Haskell2010
-
-test-suite polysemy-plugin-test
-  type: exitcode-stdio-1.0
-  main-is: Main.hs
-  other-modules:
-      BadSpec
-      DoctestSpec
-      ExampleSpec
-      LegitimateTypeErrorSpec
-      MultipleVarsSpec
-      PluginSpec
-      TypeErrors
-      VDQSpec
-      Paths_polysemy_plugin
-  hs-source-dirs:
-      test
-  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -fplugin=Polysemy.Plugin
-  build-tool-depends:
-      hspec-discover:hspec-discover
-  build-depends:
-      base >=4.9 && <5
-    , containers >=0.5 && <0.7
-    , doctest >=0.16.0.1 && <0.17
-    , ghc >=8.4.4 && <9
-    , ghc-tcplugins-extra >=0.3 && <0.4
-    , hspec >=2.6.0 && <3
-    , inspection-testing >=0.4.2 && <0.5
-    , polysemy >=1.2.0.0
-    , polysemy-plugin
-    , should-not-typecheck >=2.1.0 && <3
     , syb >=0.7 && <0.8
     , transformers >=0.5.2.0 && <0.6
   default-language: Haskell2010

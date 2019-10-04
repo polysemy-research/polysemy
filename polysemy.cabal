@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8b1a7a539b7611166cce4fb786896e4e459c6c1c2e9016634851419312ddb15d
+-- hash: f721d7330405d7fbf95c1c031a2bf26a4b1246390a65be0aa35060363168374f
 
 name:           polysemy
 version:        1.2.1.0
@@ -129,6 +129,14 @@ test-suite polysemy-test
       InspectorSpec
       InterceptSpec
       OutputSpec
+      Plugin.BadSpec
+      Plugin.DoctestSpec
+      Plugin.ExampleSpec
+      Plugin.LegitimateTypeErrorSpec
+      Plugin.MultipleVarsSpec
+      Plugin.PluginSpec
+      Plugin.TypeErrors
+      Plugin.VDQSpec
       ThEffectSpec
       TypeErrors
       WriterSpec
@@ -136,7 +144,7 @@ test-suite polysemy-test
   hs-source-dirs:
       test
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -fplugin=Polysemy.Plugin
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
   build-depends:
@@ -150,6 +158,7 @@ test-suite polysemy-test
     , mtl >=2.2.2 && <3
     , polysemy
     , polysemy-plugin >=0.2.3.0
+    , should-not-typecheck >=2.1.0 && <3
     , stm >=2 && <3
     , syb >=0.7 && <0.8
     , template-haskell >=2.12.0.0 && <3

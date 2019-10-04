@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
-module ExampleSpec where
+module Plugin.ExampleSpec where
 
 import Polysemy
 import Polysemy.Error

@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
-module PluginSpec where
+module Plugin.PluginSpec where
 
 import Data.Functor.Identity
 import GHC.Exts

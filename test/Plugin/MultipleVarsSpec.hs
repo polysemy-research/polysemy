@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
-module MultipleVarsSpec where
+module Plugin.MultipleVarsSpec where
 
 import Polysemy
 import Polysemy.State

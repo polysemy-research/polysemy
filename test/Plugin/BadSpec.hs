@@ -2,7 +2,7 @@
 
 {-# OPTIONS_GHC -fdefer-type-errors -fno-warn-deferred-type-errors #-}
 
-module BadSpec where
+module Plugin.BadSpec where
 
 import Polysemy
 import Polysemy.State

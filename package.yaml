@@ -105,6 +105,7 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -fplugin=Polysemy.Plugin
     build-tools:
     - hspec-discover >= 2.0
     dependencies:
@@ -112,6 +113,7 @@ tests:
     - inspection-testing >= 0.4.2 && < 0.5
     - hspec >= 2.6.0 && < 3
     - doctest >= 0.16.0.1 && < 0.17
+    - should-not-typecheck >= 2.1.0 && < 3
 
 benchmarks:
   polysemy-bench:

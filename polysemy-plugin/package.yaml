@@ -27,24 +27,24 @@ dependencies:
 library:
   source-dirs: src
 
-tests:
-  polysemy-plugin-test:
-    main:                Main.hs
-    source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    - -fplugin=Polysemy.Plugin
-    build-tools:
-    - hspec-discover
-    dependencies:
-    - polysemy >= 1.2.0.0
-    - polysemy-plugin
-    - hspec >= 2.6.0 && < 3
-    - should-not-typecheck >= 2.1.0 && < 3
-    - inspection-testing >= 0.4.2 && < 0.5
-    - doctest >= 0.16.0.1 && < 0.17
+# tests:
+#   polysemy-plugin-test:
+#     main:                Main.hs
+#     source-dirs:         test
+#     ghc-options:
+#     - -threaded
+#     - -rtsopts
+#     - -with-rtsopts=-N
+#     - -fplugin=Polysemy.Plugin
+#     build-tools:
+#     - hspec-discover
+#     dependencies:
+#     - polysemy >= 1.2.0.0
+#     - polysemy-plugin
+#     - hspec >= 2.6.0 && < 3
+#     - should-not-typecheck >= 2.1.0 && < 3
+#     - inspection-testing >= 0.4.2 && < 0.5
+#     - doctest >= 0.16.0.1 && < 0.17
 
 default-extensions:
   - DataKinds

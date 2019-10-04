@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
-module TypeErrors where
+module Plugin.TypeErrors where
 
 -- $setup
 -- >>> default ()
