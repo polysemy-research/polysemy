@@ -74,12 +74,12 @@ import Polysemy.Internal.Union
 type Tactical e m r x = ∀ f. Functor f
                           => Sem (WithTactics e f m r) (f x)
 
-type WithTactics e f m r = Tactics f m (e ': r) ': r
+type WithTactics e f m r = Tactics (Sem (e ': r)) f m  ': r
 
-data Tactics f n r m a where
-  GetInitialState     :: Tactics f n r m (f ())
-  HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Sem r (f b))
-  GetInspector        :: Tactics f n r m (Inspector f)
+data Tactics m f n z a where
+  GetInitialState     :: Tactics m f n z (f ())
+  HoistInterpretation :: (a -> n b) -> Tactics m f n z (f a -> m (f b))
+  GetInspector        :: Tactics m f n z (Inspector f)
 
 
 ------------------------------------------------------------------------------
@@ -87,7 +87,7 @@ data Tactics f n r m a where
 -- to be run. Prefer 'pureT', 'runT' or 'bindT' instead of using this function
 -- directly.
 getInitialStateT :: forall f m r e. Sem (WithTactics e f m r) (f ())
-getInitialStateT = send @(Tactics _ m (e ': r)) GetInitialState
+getInitialStateT = send @(Tactics (Sem (e ': r)) _ m) GetInitialState
 
 
 ------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ getInitialStateT = send @(Tactics _ m (e ': r)) GetInitialState
 --
 -- We
 getInspectorT :: forall e f m r. Sem (WithTactics e f m r) (Inspector f)
-getInspectorT = send @(Tactics _ m (e ': r)) GetInspector
+getInspectorT = send @(Tactics (Sem (e ': r)) _ m) GetInspector
 
 
 ------------------------------------------------------------------------------
@@ -154,7 +154,7 @@ runT na = do
 -- 'bindT' to get an effect parameter of the form @a -> m b@ into something
 -- that can be used after calling 'runT' on an effect parameter @m a@.
 bindT
-    :: (a -> m b)
+    :: forall a m b e f r. (a -> m b)
        -- ^ The monadic continuation to lift. This is usually a parameter in
        -- your effect.
        --
@@ -162,7 +162,7 @@ bindT
        -- which produced the @a@.
     -> Sem (WithTactics e f m r)
                 (f a -> Sem (e ': r) (f b))
-bindT f = send $ HoistInterpretation f
+bindT f = send @(Tactics (Sem (e ': r)) _ _) $ HoistInterpretation f
 {-# INLINE bindT #-}
 
 
@@ -187,7 +187,7 @@ runTactics
    => f ()
    -> (∀ x. f (m x) -> Sem r2 (f x))
    -> (∀ x. f x -> Maybe x)
-   -> Sem (Tactics f m r2 ': r) a
+   -> Sem (Tactics (Sem r2) f m ': r) a
    -> Sem r a
 runTactics s d v (Sem m) = m $ \u ->
   case decomp u of

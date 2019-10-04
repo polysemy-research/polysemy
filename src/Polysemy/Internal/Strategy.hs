@@ -4,14 +4,9 @@ module Polysemy.Internal.Strategy where
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
-import Polysemy.Internal.Tactics (Inspector(..))
+import Polysemy.Internal.Tactics (Inspector(..), Tactics (..))
 
 
-
-data Strategy m f n z a where
-  GetInitialState     :: Strategy m f n z (f ())
-  HoistInterpretation :: (a -> n b) -> Strategy m f n z (f a -> m (f b))
-  GetInspector        :: Strategy m f n z (Inspector f)
 
 
 ------------------------------------------------------------------------------
@@ -26,7 +21,7 @@ type Strategic m n a = forall f. Functor f => Sem (WithStrategy m f n) (m (f a))
 
 ------------------------------------------------------------------------------
 -- | @since 1.2.0.0
-type WithStrategy m f n = '[Strategy m f n]
+type WithStrategy m f n = '[Tactics m f n]
 
 
 ------------------------------------------------------------------------------
@@ -35,7 +30,7 @@ type WithStrategy m f n = '[Strategy m f n]
 --
 -- @since 1.2.0.0
 runStrategy :: Functor f
-            => Sem '[Strategy m f n] a
+            => Sem '[Tactics m f n] a
             -> f ()
             -> (forall x. f (n x) -> m (f x))
             -> (forall x. f x -> Maybe x)
