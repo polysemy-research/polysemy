@@ -19,7 +19,7 @@ module Polysemy.Final
     -- effects are threaded down to the final monad.
     --
     -- Much like @Tactics@, computations can be run and threaded
-    -- through the use of 'runS' and 'bindS', and first-order constructors
+    -- through the use of 'runT' and 'bindT', and first-order constructors
     -- may use 'pureS'. In addition, 'liftS' may be used to
     -- lift actions of the final monad.
     --
@@ -30,10 +30,10 @@ module Polysemy.Final
   , WithStrategy
   , pureS
   , liftS
-  , runS
-  , bindS
+  , runT
+  , bindT
   , getInspectorS
-  , getInitialStateS
+  , getInitialStateT
 
     -- * Interpretations
   , runFinal
@@ -146,7 +146,7 @@ embedFinal m = withWeavingToFinal $ \s _ _ -> (<$ s) <$> m
 -- | Allows for embedding higher-order actions of the final monad
 -- by providing the means of explicitly threading effects through @'Sem' r@
 -- to the final monad. This is done through the use of the 'Strategic'
--- environment, which provides 'runS' and 'bindS'.
+-- environment, which provides 'runT' and 'bindT'.
 --
 -- You are discouraged from using 'withStrategicToFinal' in application code,
 -- as it ties your application code directly to the final monad.

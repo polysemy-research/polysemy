@@ -148,8 +148,8 @@ errorToIOFinal
     => Sem (Error e ': r) a
     -> Sem r (Either e a)
 errorToIOFinal sem = withStrategicToFinal @IO $ do
-  m' <- runS (runErrorAsExcFinal sem)
-  s  <- getInitialStateS
+  m' <- runT (runErrorAsExcFinal sem)
+  s  <- getInitialStateT
   pure $
     either
       ((<$ s) . Left . unwrapExc)
@@ -167,9 +167,9 @@ runErrorAsExcFinal
 runErrorAsExcFinal = interpretFinal $ \case
   Throw e   -> pure $ X.throwIO $ WrappedExc e
   Catch m h -> do
-    m' <- runS m
-    h' <- bindS h
-    s  <- getInitialStateS
+    m' <- runT m
+    h' <- bindT h
+    s  <- getInitialStateT
     pure $ X.catch m' $ \(se :: WrappedExc e) ->
       h' (unwrapExc se <$ s)
 {-# INLINE runErrorAsExcFinal #-}

@@ -93,7 +93,7 @@ asyncToIOFinal :: Member (Final IO) r
 asyncToIOFinal = interpretFinal $ \case
   Async m -> do
     ins <- getInspectorS
-    m'  <- runS m
+    m'  <- runT m
     liftS $ A.async (inspect ins <$> m')
   Await a -> liftS (A.wait a)
 {-# INLINE asyncToIOFinal #-}
