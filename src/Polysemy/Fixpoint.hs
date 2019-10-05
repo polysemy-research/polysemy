@@ -66,9 +66,9 @@ fixpointToFinal :: forall m r a
                 -> Sem r a
 fixpointToFinal = interpretFinal @m $
   \(Fixpoint f) -> do
-    f'  <- bindS f
-    s   <- getInitialStateS
-    ins <- getInspectorS
+    f'  <- bindT f
+    s   <- getInitialStateT
+    ins <- getInspectorT
     embed $ mfix $ \fa -> f' $
       fromMaybe (bomb "fixpointToFinal") (inspect ins fa) <$ s
 {-# INLINE fixpointToFinal #-}

@@ -92,8 +92,8 @@ asyncToIOFinal :: Member (Final IO) r
                -> Sem r a
 asyncToIOFinal = interpretFinal $ \case
   Async m -> do
-    ins <- getInspectorS
-    m'  <- runS m
+    ins <- getInspectorT
+    m'  <- runT m
     liftS $ A.async (inspect ins <$> m')
   Await a -> liftS (A.wait a)
 {-# INLINE asyncToIOFinal #-}

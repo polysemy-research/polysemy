@@ -97,15 +97,15 @@ resourceToIOFinal :: Member (Final IO) r
                   -> Sem r a
 resourceToIOFinal = interpretFinal $ \case
   Bracket alloc dealloc use -> do
-    a <- runS  alloc
-    d <- bindS dealloc
-    u <- bindS use
+    a <- runT  alloc
+    d <- bindT dealloc
+    u <- bindT use
     embed $ X.bracket a d u
 
   BracketOnError alloc dealloc use -> do
-    a <- runS  alloc
-    d <- bindS dealloc
-    u <- bindS use
+    a <- runT  alloc
+    d <- bindT dealloc
+    u <- bindT use
     embed $ X.bracketOnError a d u
 {-# INLINE resourceToIOFinal #-}
 
