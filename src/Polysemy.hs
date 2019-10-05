@@ -113,10 +113,6 @@ module Polysemy
   , Effect
   , EffectRow
 
-    -- * Composing IO-based Interpreters
-  , (.@)
-  , (.@@)
-
     -- * Tactics
     -- | Higher-order effects need to explicitly thread /other effects'/ state
     -- through themselves. Tactics are a domain-specific language for describing

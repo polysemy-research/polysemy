@@ -24,8 +24,6 @@ module Polysemy.Internal
   , liftSem
   , hoistSem
   , InterpreterFor
-  , (.@)
-  , (.@@)
   ) where
 
 import Control.Applicative
@@ -436,8 +434,8 @@ runM (Sem m) = m $ \z ->
 {-# INLINE runM #-}
 
 ------------------------------------------------------------------------------
--- | Type synonym for interpreters that consume an effect without changing the 
--- return value. Offered for user convenience. 
+-- | Type synonym for interpreters that consume an effect without changing the
+-- return value. Offered for user convenience.
 --
 -- @r@ Is kept polymorphic so it's possible to place constraints upon it:
 --
@@ -446,66 +444,4 @@ runM (Sem m) = m $ \z ->
 --              => 'InterpreterFor' Teletype r
 -- @
 type InterpreterFor e r = forall a. Sem (e ': r) a -> Sem r a
-
-------------------------------------------------------------------------------
--- | Some interpreters need to be able to lower down to the base monad (often
--- 'IO') in order to function properly --- some good examples of this are
--- 'Polysemy.Error.lowerError' and 'Polysemy.Resource.lowerResource'.
---
--- However, these interpreters don't compose particularly nicely; for example,
--- to run 'Polysemy.Resource.lowerResource', you must write:
---
--- @
--- runM . lowerError runM
--- @
---
--- Notice that 'runM' is duplicated in two places here. The situation gets
--- exponentially worse the more intepreters you have that need to run in this
--- pattern.
---
--- Instead, '.@' performs the composition we'd like. The above can be written as
---
--- @
--- (runM .@ lowerError)
--- @
---
--- The parentheses here are important; without them you'll run into operator
--- precedence errors.
---
--- __Warning:__ This combinator will __duplicate work__ that is intended to be
--- just for initialization. This can result in rather surprising behavior. For
--- a version of '.@' that won't duplicate work, see the @.\@!@ operator in
--- <http://hackage.haskell.org/package/polysemy-zoo/docs/Polysemy-IdempotentLowering.html polysemy-zoo>.
---
--- Interpreters using 'Polysemy.Final' may be composed normally, and
--- avoid the work duplication issue. For that reason, you're encouraged to use
--- @-'Polysemy.Final'@ interpreters instead of @lower-@ interpreters whenever
--- possible.
-(.@)
-    :: Monad m
-    => (∀ x. Sem r x -> m x)
-       -- ^ The lowering function, likely 'runM'.
-    -> (∀ y. (∀ x. Sem r x -> m x)
-          -> Sem (e ': r) y
-          -> Sem r y)
-    -> Sem (e ': r) z
-    -> m z
-f .@ g = f . g f
-infixl 8 .@
-
-
-------------------------------------------------------------------------------
--- | Like '.@', but for interpreters which change the resulting type --- eg.
--- 'Polysemy.Error.lowerError'.
-(.@@)
-    :: Monad m
-    => (∀ x. Sem r x -> m x)
-       -- ^ The lowering function, likely 'runM'.
-    -> (∀ y. (∀ x. Sem r x -> m x)
-          -> Sem (e ': r) y
-          -> Sem r (f y))
-    -> Sem (e ': r) z
-    -> m (f z)
-f .@@ g = f . g f
-infixl 8 .@@
 

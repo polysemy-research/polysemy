@@ -93,25 +93,3 @@ runFixpoint lower = interpretH $ \case
 {-# DEPRECATED runFixpoint "Use 'fixpointToFinal' together with \
                            \'Data.Functor.Identity.Identity' instead" #-}
 
-
-------------------------------------------------------------------------------
--- | Run a 'Fixpoint' effect in terms of an underlying 'MonadFix' instance.
---
--- __Note__: 'runFixpointM' is subject to the same caveats as 'fixpointToFinal'.
-runFixpointM
-    :: ( MonadFix m
-       , Member (Embed m) r
-       )
-    => (∀ x. Sem r x -> m x)
-    -> Sem (Fixpoint ': r) a
-    -> Sem r a
-runFixpointM lower = interpretH $ \case
-  Fixpoint mf -> do
-    c   <- bindT mf
-    s   <- getInitialStateT
-    ins <- getInspectorT
-    embed $ mfix $ \fa ->
-      lower . runFixpointM lower . c $
-        fromMaybe (bomb "runFixpointM") (inspect ins fa) <$ s
-{-# INLINE runFixpointM #-}
-{-# DEPRECATED runFixpointM "Use 'fixpointToFinal' instead" #-}
