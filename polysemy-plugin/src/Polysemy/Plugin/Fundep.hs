@@ -40,7 +40,7 @@ import           Data.Bifunctor
 import           Data.Coerce
 import           Data.Generics
 import           Data.IORef
-import           Data.List (sortBy)
+import           Data.List (sortBy, find)
 import qualified Data.Map as M
 import           Data.Maybe
 import           Data.Ord (Down (..), comparing)
@@ -55,6 +55,7 @@ import           TcRnTypes
 import           TcSMonad hiding (tcLookupClass)
 import           Type
 import CoreSyn
+import GhcPlugins
 
 import Outputable
 
@@ -257,12 +258,11 @@ solveFundep (ref, stuff) given _ wanted = do
       new_wanteds = fmap _unifyCt good_unifications
   tcPluginIO $ modifyIORef ref $ S.union $ S.fromList good_unifications
 
-  pprTraceM "wanted" $ ppr $ fmap fcEffect wanted_finds
-  pprTraceM "solved" $ ppr unifications
-  pprTraceM "kept" $ ppr good_unifications
-  pprTraceM "produced" $ ppr new_wanteds
+--   pprTraceM "wanted" $ ppr $ wanted
+--   pprTraceM "kept" $ ppr good_unifications
 
-  pure $ TcPluginOk (solveBogusError stuff wanted) new_wanteds
+
+  pure $ TcPluginOk (solveBogusError stuff wanted ++ getIndexOfFounds stuff wanted ++ getFounds stuff wanted) new_wanteds
 
 
 unfoldR :: Type -> [Type]
@@ -270,4 +270,39 @@ unfoldR r =
   case splitAppTys r of
     (_, [_, eff', r']) -> eff' : unfoldR r'
     _                  -> []
+
+
+getIndexOfFounds :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
+getIndexOfFounds stuff cts = do
+  ct@(CNonCanonical ev) <- cts
+  let pred = ctev_pred ev
+  Just (_, t1, e) <- pure $ getEqPredTys_maybe pred
+  Just (indexOfTc, [_, r, n]) <- pure $ splitTyConApp_maybe t1
+  guard $ indexOfTc == indexOfTyCon stuff
+  Just (foundTc, [_, r', e']) <- pure $ splitTyConApp_maybe n
+  guard $ foundTc == foundTyCon stuff
+  guard $ eqType r r'
+  guard $ eqType e e'
+  -- Just index <- pure $ fmap fst $ find (eqType e . snd) $ zip [0..] $ unfoldR r
+  -- guard $ mkNat stuff index `eqType` nat
+  pure (EvExpr $ Coercion $ mkTcNomReflCo e, ct)
+
+getFounds :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
+getFounds stuff cts = do
+  ct@(CNonCanonical ev) <- cts
+  let pred = ctev_pred ev
+  Just (_, t1, nat) <- pure $ getEqPredTys_maybe pred
+  Just (foundTc, [_, r, e]) <- pure $ splitTyConApp_maybe t1
+  guard $ foundTc == foundTyCon stuff
+  Just index <- pure $ fmap fst $ find (eqType e . snd) $ zip [0..] $ unfoldR r
+  guard $ mkNat stuff index `eqType` nat
+  pure (EvExpr $ Coercion $ mkTcNomReflCo nat, ct)
+
+
+mkNat :: PolysemyStuff 'Things -> Int -> Type
+mkNat stuff = go
+  where
+    go 0 = mkTyConTy $ promotedZDataCon stuff
+    go n = mkTyConApp (promotedSDataCon stuff) [go $ n - 1]
+
 
