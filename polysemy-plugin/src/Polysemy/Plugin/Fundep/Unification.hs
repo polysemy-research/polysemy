@@ -1,10 +1,17 @@
 module Polysemy.Plugin.Fundep.Unification where
 
+import           Control.Arrow ((&&&))
 import           Data.Bool
 import           Data.Function (on)
 import qualified Data.Set as S
 import           TcRnTypes
 import           Type
+import Data.List
+import Data.Ord
+import DataCon (DataCon)
+import Data.Generics
+
+import Outputable hiding ((<>))
 
 
 ------------------------------------------------------------------------------
@@ -105,8 +112,34 @@ canUnify poly_given_ok wt gt =
 data Unification = Unification
   { _unifyLHS :: OrdType
   , _unifyRHS :: OrdType
+  , _unifyCt :: Ct
   }
-  deriving (Eq, Ord)
+
+instance Eq Unification where
+  Unification a b _ == Unification a' b' _ = a == a' && b == b'
+
+instance Ord Unification where
+  Unification a b _ `compare` Unification a' b' _ = compare a a' <> compare b b'
+
+instance Outputable Unification where
+  ppr (Unification (OrdType a) (OrdType b) _) = ppr a <+> text " --> " <+> ppr b
+
+
+getGoodUnifications :: [Unification] -> [Unification]
+getGoodUnifications = fmap mostSpecificUnification . groupUnifications
+
+
+groupUnifications :: [Unification] -> [[Unification]]
+groupUnifications =
+  fmap (fmap snd) . groupBy ((==) `on` fst) . sortBy (comparing fst) . fmap (_unifyRHS &&& id)
+
+specificityMetric :: Type -> Int
+specificityMetric = everything (+) $ mkQ 0 $ \case
+  (dc :: Type) -> 1
+
+mostSpecificUnification :: [Unification] -> Unification
+mostSpecificUnification
+  = head . sortBy (comparing $ Down . specificityMetric . getOrdType . _unifyLHS)
 
 
 ------------------------------------------------------------------------------
@@ -130,7 +163,7 @@ instance Ord OrdType where
 -- we should emit.
 unzipNewWanteds
     :: S.Set Unification
-    -> [(Unification, Ct)]
-    -> ([Unification], [Ct])
-unzipNewWanteds old = unzip . filter (not . flip S.member old . fst)
+    -> [Unification]
+    -> [Unification]
+unzipNewWanteds old = filter (not . flip S.member old)
 

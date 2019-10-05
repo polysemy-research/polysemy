@@ -33,21 +33,30 @@
 
 module Polysemy.Plugin.Fundep (fundepPlugin) where
 
+import           Control.Applicative (liftA2)
+import           Control.Arrow ((&&&))
 import           Control.Monad
 import           Data.Bifunctor
 import           Data.Coerce
+import           Data.Generics
 import           Data.IORef
+import           Data.List (sortBy)
 import qualified Data.Map as M
 import           Data.Maybe
+import           Data.Ord (Down (..), comparing)
 import qualified Data.Set as S
+import           DataCon
 import           Polysemy.Plugin.Fundep.Stuff
 import           Polysemy.Plugin.Fundep.Unification
 import           Polysemy.Plugin.Fundep.Utils
 import           TcEvidence
-import           TcPluginM (TcPluginM, tcPluginIO)
+import           TcPluginM (TcPluginM, tcPluginIO, newGiven)
 import           TcRnTypes
 import           TcSMonad hiding (tcLookupClass)
 import           Type
+import CoreSyn
+
+import Outputable
 
 
 
@@ -102,6 +111,15 @@ findMatchingEffectIfSingular (FindConstraint _ eff_name wanted r) ts =
     pure eff'
 
 
+oneMostSpecific :: [Type] -> Maybe Type
+oneMostSpecific tys =
+  let sorted = sortBy (comparing $ Down . fst) $ fmap (specificityMetric &&& id) tys
+   in case pprTrace "sorted" (ppr sorted) sorted of
+        ((p1, t1) : (p2, t2) : _) | p1 /= p2 -> Just t1
+        [(_, t1)] ->  Just t1
+        _ -> Nothing
+
+
 ------------------------------------------------------------------------------
 -- | Given an effect, compute its effect name.
 getEffName :: Type -> Type
@@ -114,13 +132,11 @@ getEffName t = fst $ splitAppTys t
 mkWantedForce
   :: FindConstraint
   -> Type
-  -> TcPluginM (Unification, Ct)
+  -> TcPluginM Unification
 mkWantedForce fc given = do
-  (ev, _) <- unsafeTcPluginTcM
-           . runTcSDeriveds
-           $ newWantedEq (fcLoc fc) Nominal wanted given
-  pure ( Unification (OrdType wanted) (OrdType given)
-       , CNonCanonical ev
+  ev <- newGiven (fcLoc fc) (mkPrimEqPred wanted given) (Coercion $ mkTcNomReflCo $ given)
+           -- $ newWantedEq (fcLoc fc) Nominal wanted given
+  pure ( Unification (OrdType wanted) (OrdType given) $ CNonCanonical ev
        )
   where
     wanted = fcEffect fc
@@ -133,7 +149,7 @@ mkWanted
     :: FindConstraint
     -> SolveContext
     -> Type  -- ^ The given effect.
-    -> TcPluginM (Maybe (Unification, Ct))
+    -> TcPluginM (Maybe Unification)
 mkWanted fc solve_ctx given =
   whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $
     mkWantedForce fc given
@@ -217,6 +233,8 @@ solveFundep (ref, stuff) given _ wanted = do
       -- We found a real given, therefore we are in the context of a function
       -- with an explicit @Member e r@ constraint. We also know it can
       -- be unified (although it may generate unsatisfiable constraints).
+      --
+      -- TODO(sandy): probably a bug here
       Just eff' -> Just <$> mkWantedForce fc eff'
 
       -- Otherwise, check to see if @r ~ (e ': r')@. If so, pretend we're
@@ -224,7 +242,8 @@ solveFundep (ref, stuff) given _ wanted = do
       -- context of an interpreter!
       Nothing ->
         case splitAppTys r of
-          (_, [_, eff', _]) ->
+          (_, [_, eff', _]) -> do
+            -- pprPanic "here's what i found" $ ppr (unfoldR r) <+> ppr (fcEffect fc)
             mkWanted fc
                      (InterpreterUse $ exactlyOneWantedForR wanted_finds r)
                      eff'
@@ -233,8 +252,22 @@ solveFundep (ref, stuff) given _ wanted = do
   -- We only want to emit a unification wanted once, otherwise a type error can
   -- force the type checker to loop forever.
   already_emitted <- tcPluginIO $ readIORef ref
-  let (unifications, new_wanteds) = unzipNewWanteds already_emitted $ catMaybes eqs
-  tcPluginIO $ modifyIORef ref $ S.union $ S.fromList unifications
+  let unifications = unzipNewWanteds already_emitted $ catMaybes eqs
+      good_unifications = getGoodUnifications unifications
+      new_wanteds = fmap _unifyCt good_unifications
+  tcPluginIO $ modifyIORef ref $ S.union $ S.fromList good_unifications
+
+  pprTraceM "wanted" $ ppr $ fmap fcEffect wanted_finds
+  pprTraceM "solved" $ ppr unifications
+  pprTraceM "kept" $ ppr good_unifications
+  pprTraceM "produced" $ ppr new_wanteds
 
   pure $ TcPluginOk (solveBogusError stuff wanted) new_wanteds
+
+
+unfoldR :: Type -> [Type]
+unfoldR r =
+  case splitAppTys r of
+    (_, [_, eff', r']) -> eff' : unfoldR r'
+    _                  -> []
 

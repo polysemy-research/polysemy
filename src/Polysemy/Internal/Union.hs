@@ -134,7 +134,7 @@ type MemberWithError e r =
     -- `WhenStuck (IndexOf r _) _`, so if you change this, make sure to change
     -- the corresponding implementation in
     -- Polysemy.Plugin.Fundep.solveBogusError
-  , WhenStuck (IndexOf r (Found r e)) (AmbiguousSend r e)
+  -- , WhenStuck (IndexOf r (Found r e)) (AmbiguousSend r e)
 #endif
   )
 
