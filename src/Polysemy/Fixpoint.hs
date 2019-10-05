@@ -69,7 +69,7 @@ fixpointToFinal = interpretFinal @m $
     f'  <- bindS f
     s   <- getInitialStateS
     ins <- getInspectorS
-    pure $ mfix $ \fa -> f' $
+    embed $ mfix $ \fa -> f' $
       fromMaybe (bomb "fixpointToFinal") (inspect ins fa) <$ s
 {-# INLINE fixpointToFinal #-}
 
@@ -99,7 +99,8 @@ runFixpoint lower = interpretH $ \case
 --
 -- __Note__: 'runFixpointM' is subject to the same caveats as 'fixpointToFinal'.
 runFixpointM
-    :: ( MonadFix m
+    :: forall m r a
+     . ( MonadFix m
        , Member (Embed m) r
        )
     => (∀ x. Sem r x -> m x)

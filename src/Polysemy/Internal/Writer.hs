@@ -61,7 +61,7 @@ writerToEndoWriter = interpretH $ \case
 -- TODO(KingoftheHomeless): Make this mess more palatable
 --
 -- 'interpretFinal' is too weak for our purposes, so we
--- use 'interpretH' + 'withWeavingToFinal'.
+-- use 'interpretH' + 'withStrategicToFinal'.
 
 ------------------------------------------------------------------------------
 -- | A variant of 'Polysemy.Writer.runWriterTVar' where an 'STM' action is
@@ -77,30 +77,27 @@ runWriterSTMAction write = interpretH $ \case
     pureT t
   Listen m -> do
     m' <- runT m
-    -- Using 'withWeavingToFinal' instead of 'withStrategicToFinal'
-    -- here allows us to avoid using two additional 'embedFinal's in
-    -- order to create the TVars.
-    raise $ withWeavingToFinal $ \s wv _ -> mask $ \restore -> do
+    raise $ withStrategicToFinal $ do
       -- See below to understand how this works
-      tvar   <- newTVarIO mempty
-      switch <- newTVarIO False
-      fa     <-
-        restore (wv (runWriterSTMAction (write' tvar switch) m' <$ s))
-          `onException` commit tvar switch id
-      o      <- commit tvar switch id
-      return $ (fmap . fmap) (o, ) fa
+      tvar   <- embed $ newTVarIO mempty
+      switch <- embed $ newTVarIO False
+      m''    <- runS (runWriterSTMAction (write' tvar switch) m')
+      embed $ mask $ \restore -> do
+        fa <- restore m'' `onException` commit tvar switch id
+        o  <- commit tvar switch id
+        return $ (fmap . fmap) (o, ) fa
   Pass m -> do
     m'  <- runT m
     ins <- getInspectorT
-    raise $ withWeavingToFinal $ \s wv ins' -> mask $ \restore -> do
-      tvar   <- newTVarIO mempty
-      switch <- newTVarIO False
-      t      <-
-        restore (wv (runWriterSTMAction (write' tvar switch) m' <$ s))
-          `onException` commit tvar switch id
-      _      <- commit tvar switch
-        (maybe id fst $ ins' t >>= inspect ins)
-      return $ (fmap . fmap) snd t
+    raise $ withStrategicToFinal $ do
+      tvar   <- embed $ newTVarIO mempty
+      switch <- embed $ newTVarIO False
+      m''    <- runS (runWriterSTMAction (write' tvar switch) m')
+      ins'   <- getInspectorS
+      embed $ mask $ \restore -> do
+        t <- restore m'' `onException` commit tvar switch id
+        _ <- commit tvar switch (maybe id fst $ inspect ins' t >>= inspect ins)
+        return $ (fmap . fmap) snd t
 
   where
     {- KingoftheHomeless:
@@ -112,7 +109,7 @@ runWriterSTMAction write = interpretH $ \case
       changes done to the local tvar globally through 'write'.
 
       'commit' is protected by 'mask'+'onException'. Combine this
-      with the fact that the 'withWeavingToFinal' can't be interrupted
+      with the fact that the 'withStrategicToFinal' can't be interrupted
       by pure errors emitted by effects (since these will be
       represented as part of the functorial state), and we
       guarantee that no writes will be lost if the argument computation

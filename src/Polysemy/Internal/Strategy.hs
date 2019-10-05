@@ -2,11 +2,10 @@
 
 module Polysemy.Internal.Strategy where
 
+import Polysemy.Final.Type
 import Polysemy.Internal
-import Polysemy.Internal.Combinators
+import Polysemy.Internal.Union
 import Polysemy.Internal.Tactics
-
-
 
 
 ------------------------------------------------------------------------------
@@ -16,12 +15,12 @@ import Polysemy.Internal.Tactics
 -- is extremely similar.
 --
 -- @since 1.2.0.0
-type Strategic m n a = forall f. Functor f => Sem (WithStrategy m f n) (m (f a))
+type Strategic m n a = forall f. Functor f => Sem (WithStrategy m f n) (f a)
 
 
 ------------------------------------------------------------------------------
 -- | @since 1.2.0.0
-type WithStrategy m f n = '[Tactics m f n]
+type WithStrategy m f n = '[Tactics m f n, Embed m, Final m]
 
 
 ------------------------------------------------------------------------------
@@ -29,18 +28,37 @@ type WithStrategy m f n = '[Tactics m f n]
 -- 'Polysemy.Final.withWeavingToFinal'.
 --
 -- @since 1.2.0.0
-runStrategy :: Functor f
-            => Sem '[Tactics m f n] a
+runStrategy :: forall m f n a
+             . (Functor f, Monad m)
+            => Sem '[Tactics m f n, Embed m, Final m] a
             -> f ()
             -> (forall x. f (n x) -> m (f x))
             -> (forall x. f x -> Maybe x)
-            -> a
-runStrategy sem = \s wv ins -> run $ interpret
-  (\case
-    GetInitialState       -> pure s
-    HoistInterpretation f -> pure $ \fa -> wv (f <$> fa)
-    GetInspector          -> pure (Inspector ins)
-  ) sem
+            -> m a
+runStrategy sem = \s wv ins ->
+  let
+    go :: forall x. Sem '[Tactics m f n, Embed m, Final m] x -> m x
+    go = usingSem $ \u ->
+     case decomp u of
+       Right (Weaving e s' _ ex _) ->
+         let pure' a = pure @m (ex (a <$ s'))
+         in case e of
+          GetInitialState -> pure' s
+          HoistInterpretation f -> pure' (\fa -> wv (f <$> fa))
+          GetInspector -> pure' (Inspector ins)
+       Left g -> case decomp g of
+        Right (Weaving (Embed m') s' _ ex _) ->
+          (ex . (<$ s')) <$> m'
+        Left g' -> case extract g' of
+          Weaving (WithWeavingToFinal wav) s' wv' ex ins' ->
+            ex <$> wav s' (go . wv') ins'
+  in
+    go sem
+  -- (\case
+  --   GetInitialState       -> pure s
+  --   HoistInterpretation f -> pure $ \fa -> wv (f <$> fa)
+  --   GetInspector          -> pure (Inspector ins)
+  -- ) $ sem
 {-# INLINE runStrategy #-}
 
 
@@ -78,7 +96,7 @@ getInitialStateS = getInitialStateT @m @n
 --
 -- @since 1.2.0.0
 pureS :: Applicative m => a -> Strategic m n a
-pureS a = pure . (a <$) <$> getInitialStateS
+pureS a = (a <$) <$> getInitialStateS
 {-# INLINE pureS #-}
 
 
@@ -95,7 +113,7 @@ pureS a = pure . (a <$) <$> getInitialStateS
 liftS :: Functor m => m a -> Strategic m n a
 liftS m = do
   s <- getInitialStateS
-  pure $ fmap (<$ s) m
+  embed $ fmap (<$ s) m
 {-# INLINE liftS #-}
 
 
