@@ -11,8 +11,9 @@ import Polysemy.Internal.Tactics
 ------------------------------------------------------------------------------
 -- | 'Strategic' is an environment in which you're capable of explicitly
 -- threading higher-order effect states to the final monad.
--- This is a variant of @Tactics@ (see 'Polysemy.Tactical'), and usage
--- is extremely similar.
+-- 'Strategic' makes use of @Tactics@ (see 'Polysemy.Tactical'),
+-- and you can use the same methods as @Tactics@ (such as 'Polysemy.runT'
+-- and 'Polysemy.bindT') in order to convert actions of @m@ to the final monad.
 --
 -- @since 1.2.0.0
 type Strategic m n a = forall f. Functor f => Sem (WithStrategy m f n) (f a)
@@ -60,17 +61,6 @@ runStrategy sem = \s wv ins ->
   --   GetInspector          -> pure (Inspector ins)
   -- ) $ sem
 {-# INLINE runStrategy #-}
-
-
-
-------------------------------------------------------------------------------
--- | Embed a value into 'Strategic'.
---
--- @since 1.2.0.0
-pureS :: a -> Strategic m n a
-pureS = pureT
-{-# INLINE pureS #-}
-
 
 ------------------------------------------------------------------------------
 -- | Lifts an action of the final monad into 'Strategic'.

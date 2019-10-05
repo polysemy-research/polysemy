@@ -28,12 +28,7 @@ module Polysemy.Final
     -- with the functorial state wrapped inside of it.
   , Strategic
   , WithStrategy
-  , pureS
   , liftS
-  , runT
-  , bindT
-  , getInspectorT
-  , getInitialStateT
 
     -- * Interpretations
   , runFinal
@@ -49,7 +44,6 @@ import Polysemy.Internal
 import Polysemy.Internal.Combinators
 import Polysemy.Internal.Union
 import Polysemy.Internal.Strategy
-import Polysemy.Internal.Tactics
 import Polysemy.Internal.TH.Effect
 
 

@@ -81,7 +81,7 @@ runWriterSTMAction write = interpretH $ \case
       -- See below to understand how this works
       tvar   <- embed $ newTVarIO mempty
       switch <- embed $ newTVarIO False
-      m''    <- runS (runWriterSTMAction (write' tvar switch) m')
+      m''    <- runT (runWriterSTMAction (write' tvar switch) m')
       embed $ mask $ \restore -> do
         fa <- restore m'' `onException` commit tvar switch id
         o  <- commit tvar switch id
@@ -92,8 +92,8 @@ runWriterSTMAction write = interpretH $ \case
     raise $ withStrategicToFinal $ do
       tvar   <- embed $ newTVarIO mempty
       switch <- embed $ newTVarIO False
-      m''    <- runS (runWriterSTMAction (write' tvar switch) m')
-      ins'   <- getInspectorS
+      m''    <- runT (runWriterSTMAction (write' tvar switch) m')
+      ins'   <- getInspectorT
       embed $ mask $ \restore -> do
         t <- restore m'' `onException` commit tvar switch id
         _ <- commit tvar switch (maybe id fst $ inspect ins' t >>= inspect ins)
