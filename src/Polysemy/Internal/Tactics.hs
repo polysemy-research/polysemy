@@ -86,7 +86,7 @@ data Tactics m f n z a where
 -- | Get the stateful environment of the world at the moment the effect @e@ is
 -- to be run. Prefer 'pureT', 'runT' or 'bindT' instead of using this function
 -- directly.
-getInitialStateT :: forall m n r f. Member (Tactics m f n) r => Sem r (f ())
+getInitialStateT :: forall m n r f. Sem (Tactics m f n ': r) (f ())
 getInitialStateT = send @(Tactics m _ n) GetInitialState
 
 
@@ -112,7 +112,7 @@ getInitialStateT = send @(Tactics m _ n) GetInitialState
 -- @
 --
 -- We
-getInspectorT :: forall m n f r. Member (Tactics m f n) r => Sem r (Inspector f)
+getInspectorT :: forall m n f r. Sem (Tactics m f n ': r) (Inspector f)
 getInspectorT = send @(Tactics m _ n) GetInspector
 
 
@@ -138,11 +138,10 @@ pureT a = do
 -- you'd prefer to explicitly manage your stateful environment.
 runT
     :: forall m f r a n
-     . Member (Tactics n f m) r
-    => m a
+     . m a
       -- ^ The monadic action to lift. This is usually a parameter in your
       -- effect.
-    -> Sem r (n (f a))
+    -> Sem (Tactics n f m ': r) (n (f a))
 runT na = do
   istate <- getInitialStateT @n @m
   na'    <- bindT (const na)
@@ -156,14 +155,13 @@ runT na = do
 -- that can be used after calling 'runT' on an effect parameter @m a@.
 bindT
     :: forall a m b f r n
-     . Member (Tactics n f m) r
-    => (a -> m b)
+     . (a -> m b)
        -- ^ The monadic continuation to lift. This is usually a parameter in
        -- your effect.
        --
        -- Continuations lifted via 'bindT' will run in the same environment
        -- which produced the @a@.
-    -> Sem r (f a -> n (f b))
+    -> Sem (Tactics n f m ': r) (f a -> n (f b))
 bindT f = send @(Tactics n _ m) $ HoistInterpretation f
 {-# INLINE bindT #-}
 

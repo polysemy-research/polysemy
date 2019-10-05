@@ -30,10 +30,10 @@ module Polysemy.Final
   , WithStrategy
   , pureS
   , liftS
-  , runS
-  , bindS
-  , getInspectorS
-  , getInitialStateS
+  , runT
+  , bindT
+  , getInspectorT
+  , getInitialStateT
 
     -- * Interpretations
   , runFinal
@@ -47,6 +47,7 @@ import Polysemy.Internal
 import Polysemy.Internal.Combinators
 import Polysemy.Internal.Union
 import Polysemy.Internal.Strategy
+import Polysemy.Internal.Tactics
 import Polysemy.Internal.TH.Effect
 
 -----------------------------------------------------------------------------
