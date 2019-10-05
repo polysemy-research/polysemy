@@ -67,8 +67,8 @@ runStrategy sem = \s wv ins ->
 -- | Embed a value into 'Strategic'.
 --
 -- @since 1.2.0.0
-pureS :: forall m n a. Applicative m => a -> Strategic m n a
-pureS a = (a <$) <$> getInitialStateS
+pureS :: a -> Strategic m n a
+pureS = pureT
 {-# INLINE pureS #-}
 
 
