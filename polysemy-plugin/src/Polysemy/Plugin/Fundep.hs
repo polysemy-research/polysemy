@@ -33,12 +33,14 @@
 
 module Polysemy.Plugin.Fundep (fundepPlugin) where
 
+import           Control.Applicative (empty)
 import           Control.Applicative (liftA2)
 import           Control.Arrow ((&&&))
 import           Control.Monad
+import           CoreSyn
 import           Data.Bifunctor
 import           Data.Coerce
-import           Data.Generics
+import           Data.Generics hiding (empty)
 import           Data.IORef
 import           Data.List (sortBy, find)
 import qualified Data.Map as M
@@ -46,6 +48,9 @@ import           Data.Maybe
 import           Data.Ord (Down (..), comparing)
 import qualified Data.Set as S
 import           DataCon
+import           GHC.TcPluginM.Extra (evByFiat)
+import           GhcPlugins hiding (empty)
+import           Outputable hiding (empty)
 import           Polysemy.Plugin.Fundep.Stuff
 import           Polysemy.Plugin.Fundep.Unification
 import           Polysemy.Plugin.Fundep.Utils
@@ -54,11 +59,6 @@ import           TcPluginM (TcPluginM, tcPluginIO, newGiven)
 import           TcRnTypes
 import           TcSMonad hiding (tcLookupClass)
 import           Type
-import CoreSyn
-import GhcPlugins
-import GHC.TcPluginM.Extra (evByFiat)
-
-import Outputable
 
 
 
@@ -270,7 +270,7 @@ unfoldR :: Type -> [Type]
 unfoldR r =
   case splitAppTys r of
     (_, [_, eff', r']) -> eff' : unfoldR r'
-    _                  -> []
+    _                  -> [r]
 
 
 getIndexOfFounds :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
@@ -284,9 +284,8 @@ getIndexOfFounds stuff cts = do
   guard $ foundTc == foundTyCon stuff
   guard $ eqType r r'
   guard $ eqType e e'
-  -- Just index <- pure $ fmap fst $ find (eqType e . snd) $ zip [0..] $ unfoldR r
-  -- guard $ mkNat stuff index `eqType` nat
   pure (evByFiat "polysemy-plugin" t1 e, ct)
+
 
 getFounds :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
 getFounds stuff cts = do
@@ -295,9 +294,19 @@ getFounds stuff cts = do
   Just (_, t1, nat) <- pure $ getEqPredTys_maybe pred
   Just (foundTc, [_, r, e]) <- pure $ splitTyConApp_maybe t1
   guard $ foundTc == foundTyCon stuff
-  Just index <- pure $ fmap fst $ find (eqType e . snd) $ zip [0..] $ unfoldR r
-  guard $ mkNat stuff index `eqType` nat
-  pure (evByFiat "polysemy-plugin" t1 nat, ct)
+  let unfolded = unfoldR r
+      proof = (evByFiat "polysemy-plugin" t1 nat, ct)
+
+  case fmap fst $ find (eqType e . snd) $ zip [0..] unfolded of
+    Just index -> do
+      guard $ mkNat stuff index `eqType` nat
+      pure proof
+    Nothing -> do
+      let n = stripS stuff nat
+      case drop n unfolded of
+        [t] | isTyVarTy t -> pure proof
+        _ -> empty
+      -- pprPanic "shit" $ ppr (unfoldR r, e, nat, stripS stuff nat, ct)
 
 
 mkNat :: PolysemyStuff 'Things -> Int -> Type
@@ -305,5 +314,13 @@ mkNat stuff = go
   where
     go 0 = mkTyConTy $ promotedZDataCon stuff
     go n = mkTyConApp (promotedSDataCon stuff) [go $ n - 1]
+
+stripS :: PolysemyStuff 'Things -> Type -> Int
+stripS stuff = go
+  where
+    go (splitTyConApp_maybe -> Just (tc, [a]))
+      | tc == promotedSDataCon stuff
+      = 1 + go a
+    go _ = 0
 
 
