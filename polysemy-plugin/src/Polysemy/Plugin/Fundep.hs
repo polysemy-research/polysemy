@@ -56,6 +56,7 @@ import           TcSMonad hiding (tcLookupClass)
 import           Type
 import CoreSyn
 import GhcPlugins
+import GHC.TcPluginM.Extra (evByFiat)
 
 import Outputable
 
@@ -285,7 +286,7 @@ getIndexOfFounds stuff cts = do
   guard $ eqType e e'
   -- Just index <- pure $ fmap fst $ find (eqType e . snd) $ zip [0..] $ unfoldR r
   -- guard $ mkNat stuff index `eqType` nat
-  pure (EvExpr $ Coercion $ mkTcNomReflCo e, ct)
+  pure (evByFiat "polysemy-plugin" t1 e, ct)
 
 getFounds :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
 getFounds stuff cts = do
@@ -296,7 +297,7 @@ getFounds stuff cts = do
   guard $ foundTc == foundTyCon stuff
   Just index <- pure $ fmap fst $ find (eqType e . snd) $ zip [0..] $ unfoldR r
   guard $ mkNat stuff index `eqType` nat
-  pure (EvExpr $ Coercion $ mkTcNomReflCo nat, ct)
+  pure (evByFiat "polysemy-plugin" t1 nat, ct)
 
 
 mkNat :: PolysemyStuff 'Things -> Int -> Type

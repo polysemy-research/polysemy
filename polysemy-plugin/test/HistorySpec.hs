@@ -23,11 +23,11 @@ import Polysemy.State
 import Polysemy.Internal
 import Polysemy.Internal.Union
 import Data.Functor.Identity
--- import Test.Hspec
+import Test.Hspec
 
 
--- spec :: Spec
--- spec = describe "HistorySpec" $ it "should compile" $ True `shouldBe` True
+spec :: Spec
+spec = describe "HistorySpec" $ it "should compile" $ True `shouldBe` True
 
 
 runHistory :: Sem (State (Identity s) ': State s ': r) ()
