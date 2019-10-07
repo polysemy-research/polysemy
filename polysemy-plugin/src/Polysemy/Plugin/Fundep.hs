@@ -136,10 +136,11 @@ mkWantedForce
   -> Type
   -> TcPluginM Unification
 mkWantedForce fc given = do
-  ev <- newGiven (fcLoc fc) (mkPrimEqPred wanted given) (Coercion $ mkTcNomReflCo $ given)
-           -- $ newWantedEq (fcLoc fc) Nominal wanted given
-  pure ( Unification (OrdType wanted) (OrdType given) $ CNonCanonical ev
-       )
+  ev <- newGiven (fcLoc fc) (mkPrimEqPred wanted given)
+      . Coercion
+      $ mkTcNomReflCo given
+  pure . Unification (OrdType wanted) (OrdType given)
+       $ CNonCanonical ev
   where
     wanted = fcEffect fc
 
@@ -235,8 +236,6 @@ solveFundep (ref, stuff) given _ wanted = do
       -- We found a real given, therefore we are in the context of a function
       -- with an explicit @Member e r@ constraint. We also know it can
       -- be unified (although it may generate unsatisfiable constraints).
-      --
-      -- TODO(sandy): probably a bug here
       Just eff' -> Just <$> mkWantedForce fc eff'
 
       -- Otherwise, check to see if @r ~ (e ': r')@. If so, pretend we're
@@ -245,7 +244,6 @@ solveFundep (ref, stuff) given _ wanted = do
       Nothing ->
         case splitAppTys r of
           (_, [_, eff', _]) -> do
-            -- pprPanic "here's what i found" $ ppr (unfoldR r) <+> ppr (fcEffect fc)
             mkWanted fc
                      (InterpreterUse $ exactlyOneWantedForR wanted_finds r)
                      eff'
@@ -259,20 +257,27 @@ solveFundep (ref, stuff) given _ wanted = do
       new_wanteds = fmap _unifyCt good_unifications
   tcPluginIO $ modifyIORef ref $ S.union $ S.fromList good_unifications
 
---   pprTraceM "wanted" $ ppr $ wanted
---   pprTraceM "kept" $ ppr good_unifications
+  pure $ flip TcPluginOk new_wanteds $
+    mconcat
+      [ solveBogusError stuff wanted
+      , getIndexOfFounds stuff wanted
+      , getFounds stuff wanted
+      ]
 
 
-  pure $ TcPluginOk (solveBogusError stuff wanted ++ getIndexOfFounds stuff wanted ++ getFounds stuff wanted) new_wanteds
-
-
-unfoldR :: Type -> [Type]
-unfoldR r =
+------------------------------------------------------------------------------
+-- | Unroll a row into all the types that are consed together in it.
+unrollR :: Type -> [Type]
+unrollR r =
   case splitAppTys r of
-    (_, [_, eff', r']) -> eff' : unfoldR r'
+    (_, [_, eff', r']) -> eff' : unrollR r'
     _                  -> [r]
 
 
+------------------------------------------------------------------------------
+-- | Solves stuck type families of the form @IndexOf row (Found row e) ~ e@.
+-- This can happen when we're in interpreter mode, searching for effects in the
+-- row that have type variables that should /stay/ type variables.
 getIndexOfFounds :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
 getIndexOfFounds stuff cts = do
   ct@(CNonCanonical ev) <- cts
@@ -287,6 +292,11 @@ getIndexOfFounds stuff cts = do
   pure (evByFiat "polysemy-plugin" t1 e, ct)
 
 
+------------------------------------------------------------------------------
+-- | Solves stuck type families of the form @Found row e ~ nat@, by determining
+-- whether or not @e@ is actually at @nat@ in @row@. GHC should actually do
+-- this on its own, but doesn't due to
+-- https://gitlab.haskell.org/ghc/ghc/issues/17311
 getFounds :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
 getFounds stuff cts = do
   ct@(CNonCanonical ev) <- cts
@@ -294,27 +304,31 @@ getFounds stuff cts = do
   Just (_, t1, nat) <- pure $ getEqPredTys_maybe pred
   Just (foundTc, [_, r, e]) <- pure $ splitTyConApp_maybe t1
   guard $ foundTc == foundTyCon stuff
-  let unfolded = unfoldR r
+  let unrolled = unrollR r
       proof = (evByFiat "polysemy-plugin" t1 nat, ct)
 
-  case fmap fst $ find (eqType e . snd) $ zip [0..] unfolded of
+  case fmap fst $ find (eqType e . snd) $ zip [0..] unrolled of
     Just index -> do
       guard $ mkNat stuff index `eqType` nat
       pure proof
     Nothing -> do
       let n = stripS stuff nat
-      case drop n unfolded of
+      case drop n unrolled of
         [t] | isTyVarTy t -> pure proof
         _ -> empty
-      -- pprPanic "shit" $ ppr (unfoldR r, e, nat, stripS stuff nat, ct)
 
 
+------------------------------------------------------------------------------
+-- | Turn an 'Int' into a 'Polysemy.Internal.Union.Nat'.
 mkNat :: PolysemyStuff 'Things -> Int -> Type
 mkNat stuff = go
   where
     go 0 = mkTyConTy $ promotedZDataCon stuff
     go n = mkTyConApp (promotedSDataCon stuff) [go $ n - 1]
 
+
+------------------------------------------------------------------------------
+-- | Counts the number of 'Polysemy.Internal.Union.S' constructors in a type.
 stripS :: PolysemyStuff 'Things -> Type -> Int
 stripS stuff = go
   where
@@ -322,5 +336,4 @@ stripS stuff = go
       | tc == promotedSDataCon stuff
       = 1 + go a
     go _ = 0
-
 
