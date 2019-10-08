@@ -126,9 +126,9 @@ newtype Inspector f = Inspector
 
 ------------------------------------------------------------------------------
 -- | Lift a value into 'Tactical'.
-pureT :: forall e m r a. a -> Tactical e m r a
+pureT :: forall m n f r a. Functor f => a -> Sem (Tactics m f n ': r) (f a)
 pureT a = do
-  istate <- getInitialStateT @(Sem (e ': r)) @m
+  istate <- getInitialStateT
   pure $ a <$ istate
 
 

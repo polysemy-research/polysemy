@@ -100,13 +100,13 @@ resourceToIOFinal = interpretFinal $ \case
     a <- runT  alloc
     d <- bindT dealloc
     u <- bindT use
-    pure $ X.bracket a d u
+    embed $ X.bracket a d u
 
   BracketOnError alloc dealloc use -> do
     a <- runT  alloc
     d <- bindT dealloc
     u <- bindT use
-    pure $ X.bracketOnError a d u
+    embed $ X.bracketOnError a d u
 {-# INLINE resourceToIOFinal #-}
 
 
