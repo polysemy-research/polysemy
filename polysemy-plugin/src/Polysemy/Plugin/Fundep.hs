@@ -1,5 +1,14 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ViewPatterns               #-}
+
+#if MIN_VERSION_ghc(8,5,0)
+#else
+#define EvExpr EvCoercion
+-- #if __GLASGOW_HASKELL__ < 711
+--                     $ TcCoercion
+-- #endif
+#endif
 
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
