@@ -3,15 +3,14 @@ module Polysemy.Plugin.Fundep.Unification where
 import           Control.Arrow ((&&&))
 import           Data.Bool
 import           Data.Function (on)
+import           Data.Generics
+import           Data.List
+import           Data.Ord
 import qualified Data.Set as S
+import           DataCon (DataCon)
+import           Outputable hiding ((<>))
 import           TcRnTypes
 import           Type
-import Data.List
-import Data.Ord
-import DataCon (DataCon)
-import Data.Generics
-
-import Outputable hiding ((<>))
 
 
 ------------------------------------------------------------------------------
