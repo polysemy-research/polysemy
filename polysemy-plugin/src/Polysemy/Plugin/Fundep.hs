@@ -303,8 +303,8 @@ getFounds stuff cts = sequenceA $ do
   Just (foundTc, [_, r, e]) <- pure $ splitTyConApp_maybe t1
   guard $ foundTc == foundTyCon stuff
 
+  let EvExpr evidence = evByFiat "polysemy-plugin" t1 nat
   let unrolled = unrollR r
-      EvExpr evidence = evByFiat "polysemy-plugin" t1 nat
       proof = CNonCanonical <$> newGiven (ctLoc ct) (mkPrimEqPred t1 nat) evidence
 
   case fmap fst $ find (eqType e . snd) $ zip [0..] unrolled of
