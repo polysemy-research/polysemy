@@ -257,11 +257,14 @@ solveFundep (ref, stuff) given _ wanted = do
       new_wanteds = fmap _unifyCt good_unifications
   tcPluginIO $ modifyIORef ref $ S.union $ S.fromList good_unifications
 
-  pure $ flip TcPluginOk new_wanteds $
+  solvedFounds <- getFounds stuff wanted
+  solvedIndexOfs <- getIndexOfFounds stuff wanted
+
+  pure $ TcPluginOk (solveBogusError stuff wanted) $
     mconcat
-      [ solveBogusError stuff wanted
-      , getIndexOfFounds stuff wanted
-      , getFounds stuff wanted
+      [ new_wanteds
+      , solvedFounds
+      , solvedIndexOfs
       ]
 
 
@@ -278,8 +281,8 @@ unrollR r =
 -- | Solves stuck type families of the form @IndexOf row (Found row e) ~ e@.
 -- This can happen when we're in interpreter mode, searching for effects in the
 -- row that have type variables that should /stay/ type variables.
-getIndexOfFounds :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
-getIndexOfFounds stuff cts = do
+getIndexOfFounds :: PolysemyStuff 'Things -> [Ct] -> TcPluginM [Ct]
+getIndexOfFounds stuff cts = sequenceA $ do
   ct@(CNonCanonical ev) <- cts
   let pred = ctev_pred ev
   Just (_, t1, e) <- pure $ getEqPredTys_maybe pred
@@ -289,7 +292,9 @@ getIndexOfFounds stuff cts = do
   guard $ foundTc == foundTyCon stuff
   guard $ eqType r r'
   guard $ eqType e e'
-  pure (evByFiat "polysemy-plugin" t1 e, ct)
+
+  let EvExpr ev = evByFiat "polysemy-plugin" t1 e
+  pure $ CNonCanonical <$> newGiven (ctLoc ct) (mkPrimEqPred t1 e) ev
 
 
 ------------------------------------------------------------------------------
@@ -297,15 +302,16 @@ getIndexOfFounds stuff cts = do
 -- whether or not @e@ is actually at @nat@ in @row@. GHC should actually do
 -- this on its own, but doesn't due to
 -- https://gitlab.haskell.org/ghc/ghc/issues/17311
-getFounds :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
-getFounds stuff cts = do
+getFounds :: PolysemyStuff 'Things -> [Ct] -> TcPluginM [Ct]
+getFounds stuff cts = sequenceA $ do
   ct@(CNonCanonical ev) <- cts
   let pred = ctev_pred ev
   Just (_, t1, nat) <- pure $ getEqPredTys_maybe pred
   Just (foundTc, [_, r, e]) <- pure $ splitTyConApp_maybe t1
   guard $ foundTc == foundTyCon stuff
   let unrolled = unrollR r
-      proof = (evByFiat "polysemy-plugin" t1 nat, ct)
+      EvExpr ev = evByFiat "polysemy-plugin" t1 nat
+      proof = CNonCanonical <$> newGiven (ctLoc ct) (mkPrimEqPred t1 nat) ev
 
   case fmap fst $ find (eqType e . snd) $ zip [0..] unrolled of
     Just index -> do
