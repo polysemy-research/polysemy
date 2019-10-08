@@ -156,14 +156,3 @@ instance Eq OrdType where
 instance Ord OrdType where
   compare = nonDetCmpType `on` getOrdType
 
-
-------------------------------------------------------------------------------
--- | Filter out the unifications we've already emitted, and then give back the
--- things we should put into the @S.Set Unification@, and the new constraints
--- we should emit.
-unzipNewWanteds
-    :: S.Set Unification
-    -> [Unification]
-    -> [Unification]
-unzipNewWanteds old = filter (not . flip S.member old)
-
