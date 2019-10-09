@@ -36,6 +36,8 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -fplugin=Polysemy.Plugin
+    - -dcore-lint
+    - -dsuppress-all
     build-tools:
     - hspec-discover
     dependencies:
