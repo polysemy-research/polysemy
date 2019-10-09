@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments      #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
@@ -66,7 +65,7 @@ runHistory
 runHistory m = do
   s <- get
   evalState (Zipper [] s [])
-    . interpret \case
+    . interpret (\case
         Undo -> do
           s' <- modify goBack >> gets focusZ
           put s'
@@ -74,12 +73,12 @@ runHistory m = do
           s' <- modify goForward >> gets focusZ
           put s'
         PutAndForget s' ->
-          put s'
-    . intercept @(State s) \case
+          put s')
+    . intercept @(State s) (\case
         Get -> get
         Put s' -> do
           modify $ modifyZ $ const s'
-          put s'
+          put s')
     . raiseUnder @(State (Zipper s))
     $ m
 
