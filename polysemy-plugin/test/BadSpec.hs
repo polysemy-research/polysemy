@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -fdefer-type-errors -fno-warn-deferred-type-errors #-}
 
@@ -13,6 +14,10 @@ data KVStore k v m a where
   GetKV :: k -> KVStore k v m (Maybe v)
 
 makeSem ''KVStore
+
+runKVStore :: [(k, v)] -> InterpreterFor (KVStore k v) r
+runKVStore = interpret $ \case
+  GetKV _ -> pure Nothing
 
 positivePos :: Member (KVStore k v) r => Sem r (Maybe v)
 positivePos = do
@@ -30,9 +35,12 @@ spec :: Spec
 spec = do
   describe "incorrectly polymorphic constraint" $ do
     it "should not typecheck in positive position" $ do
-      shouldNotTypecheck positivePos
+      shouldNotTypecheck (run . runKVStore [("hello", True)]
+        $ positivePos @String @Bool @'[KVStore String Bool])
     it "should not typecheck in negative position" $ do
-      shouldNotTypecheck negativePos
+      shouldNotTypecheck (run . runKVStore [("hello", True)]
+        $ negativePos @Bool @'[KVStore String Bool])
     it "should not typecheck badly polymorphic State" $ do
-      shouldNotTypecheck badState
+      shouldNotTypecheck (run . runState ()
+        $ badState @() @'[State ()])
 
