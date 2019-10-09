@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments      #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
@@ -11,9 +10,7 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 
-{-# OPTIONS_GHC
-     -fplugin=Polysemy.Plugin
-     #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module SpecificitySpec where
 
