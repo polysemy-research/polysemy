@@ -129,8 +129,11 @@ getGoodUnifications = fmap mostSpecificUnification . groupUnifications
 
 
 groupUnifications :: [Unification] -> [[Unification]]
-groupUnifications =
-  fmap (fmap snd) . groupBy ((==) `on` fst) . sortBy (comparing fst) . fmap (_unifyRHS &&& id)
+groupUnifications = fmap (fmap snd)
+                  . groupBy ((==) `on` fst)
+                  . sortBy (comparing fst)
+                  . fmap (_unifyRHS &&& id)
+
 
 specificityMetric :: Type -> Int
 specificityMetric = everything (+) $ mkQ 0 $ \case
