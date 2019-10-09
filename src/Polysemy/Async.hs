@@ -7,6 +7,9 @@ module Polysemy.Async
     -- * Actions
   , async
   , await
+  
+    -- * Helpers
+  , sequenceConcurrently
 
     -- * Interpretations
   , asyncToIO
