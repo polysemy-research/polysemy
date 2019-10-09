@@ -5,7 +5,7 @@
 #if MIN_VERSION_ghc(8,5,0)
 #else
 #define EvExpr
-#define Coercion evCoercion
+#define Coercion EvCoercion
 -- #if __GLASGOW_HASKELL__ < 711
 --                     $ TcCoercion
 -- #endif
