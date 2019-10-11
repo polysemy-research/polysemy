@@ -49,8 +49,6 @@ atomicGet :: forall s r
            . Member (AtomicState s) r
           => Sem r s
 
--- | Only the \"get\" part of this operation is atomic - 
--- the function call doesn't block other consumers of the state.
 atomicGets :: forall s s' r
             . Member (AtomicState s) r
            => (s -> s')
