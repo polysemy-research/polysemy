@@ -17,6 +17,9 @@ module Polysemy.Internal.Union
   , Member
   , MemberWithError
   , Before
+  , After
+  , Firstly
+  , Lastly
   , weave
   , hoist
   -- * Building Unions
@@ -156,6 +159,36 @@ type BeforeNoError e1 e2 r =
   , e2 ~ IndexOf r (Found r e2)
   , Compare (Found r e1) (Found r e2) 'LT)
 
+-------------------------------------------------------------------------------
+-- | A proof that the effect @e1@ is interpreted after the effect @e2@ in
+-- the stack @r@.
+type After e1 e2 r = AfterNoError e1 e2 r
+
+type AfterNoError e1 e2 r =
+  ( Find r e1
+  , Find r e2
+  , e1 ~ IndexOf r (Found r e1)
+  , e2 ~ IndexOf r (Found r e2)
+  , Compare (Found r e1) (Found r e2) 'GT)
+
+-------------------------------------------------------------------------------
+-- | A proof that the effect @e@ is interpreted first in the stack @r@.
+type Firstly e r = FirstlyNoError e r
+
+type FirstlyNoError e r =
+  ( Find r e
+  , e ~ IndexOf r (Found r e)
+  , Compare (Found r e) 'Z 'EQ)
+
+-------------------------------------------------------------------------------
+-- | A proof that the effect @e@ is interpreted last in the stack @r@.
+type Lastly e r = LastlyNoError e r
+
+type LastlyNoError e r =
+  ( Find r e
+  , e ~ IndexOf r (Found r e)
+  , Compare (Found r e) (MinusOne (Length r)) 'EQ)
+
 ------------------------------------------------------------------------------
 -- | The kind of type-level natural numbers.
 data Nat = Z | S Nat
@@ -185,7 +218,6 @@ instance TestEquality SNat where
       Just Refl -> Just Refl
   {-# INLINE testEquality #-}
 
-
 type family IndexOf (ts :: [k]) (n :: Nat) :: k where
   IndexOf (k ': ks) 'Z = k
   IndexOf (k ': ks) ('S n) = IndexOf ks n
@@ -198,6 +230,12 @@ type family Found (ts :: [k]) (t :: k) :: Nat where
   Found (t ': ts) t = 'Z
   Found (u ': ts) t = 'S (Found ts t)
 
+type family Length (ts :: [k]) :: Nat where
+  Length '[] = 'Z
+  Length (t ': ts) = 'S (Length ts)
+
+type family MinusOne (n :: Nat) :: Nat where
+  MinusOne ('S n) = n
 
 class Find (r :: [k]) (t :: k) where
   finder :: SNat (Found r t)

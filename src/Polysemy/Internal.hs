@@ -11,6 +11,9 @@ module Polysemy.Internal
   , Member
   , Members
   , Before
+  , After
+  , Firstly
+  , Lastly
   , send
   , embed
   , run

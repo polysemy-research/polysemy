@@ -4,6 +4,9 @@ module Polysemy
   , Member
   , Members
   , Before
+  , After
+  , Firstly
+  , Lastly
 
   -- * Running Sem
   , run
