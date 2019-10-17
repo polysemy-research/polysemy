@@ -49,6 +49,7 @@ library
       Polysemy.Async
       Polysemy.AtomicState
       Polysemy.Comp
+      Polysemy.Compose
       Polysemy.Embed
       Polysemy.Embed.Type
       Polysemy.Error

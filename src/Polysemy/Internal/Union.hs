@@ -16,6 +16,7 @@ module Polysemy.Internal.Union
   ( Union (..)
   , Weaving (..)
   , Member
+  , Member'
   , MemberWithError
   , weave
   , hoist
@@ -127,7 +128,7 @@ hoist f' (Union w (Weaving e s nt f v)) = Union w $ Weaving e s (f' . nt) f v
 ------------------------------------------------------------------------------
 -- | A proof that the effect @e@ is available somewhere inside of the effect
 -- stack @r@.
--- type Member e r = MemberNoError e r
+type Member e r = MemberNoError e r
 
 ------------------------------------------------------------------------------
 -- | Like 'Member', but will produce an error message if the types are
@@ -135,19 +136,23 @@ hoist f' (Union w (Weaving e s nt f v)) = Union w $ Weaving e s (f' . nt) f v
 --
 -- @since TODO
 type MemberWithError e r =
-  ( MemberNoError e r
+  ( Member' e r
 #ifndef NO_ERROR_MESSAGES
     -- NOTE: The plugin explicitly pattern matches on
     -- `WhenStuck (IndexOf r _) _`, so if you change this, make sure to change
     -- the corresponding implementation in
     -- Polysemy.Plugin.Fundep.solveBogusError
-  -- , WhenStuck (IndexOf r (Found r e)) (AmbiguousSend r e)
+  , (LocateEffect r e ~ '())
+  , WhenStuck (LocateEffect r e) (AmbiguousSend r e)
+  -- -- , WhenStuck (LocateEffect r e) (AmbiguousSend r e)
 #endif
   )
 
 type MemberNoError e r =
-  ( Member r e
-  -- , e ~ IndexOf r (Found r e)
+  ( Member' e r
+#ifndef NO_ERROR_MESSAGES
+  , LocateEffect r e ~ '()
+#endif
   )
 
 
@@ -190,6 +195,14 @@ type family IndexOf (ts :: [k]) (n :: Nat) :: k where
   IndexOf (k ': ks) ('S n) = IndexOf ks n
 
 
+
+type family LocateEffect (ts :: [k]) (t :: k) :: () where
+#ifndef NO_ERROR_MESSAGES
+  LocateEffect '[] t = UnhandledEffect t
+#endif
+  LocateEffect (t ': ts) t = '()
+  LocateEffect (u ': ts) t = LocateEffect ts t
+
 type family Found (ts :: [k]) (t :: k) :: Nat where
 #ifndef NO_ERROR_MESSAGES
   Found '[]       t = UnhandledEffect t
@@ -201,22 +214,25 @@ type family Reduce (ts :: [k]) :: () where
   Reduce '[] = '()
   Reduce (_x ': xs) = Reduce xs
 
-class Member (t :: Effect) (r :: EffectRow) where
-  membership :: EffectOf r t
+class Member' (t :: Effect) (r :: EffectRow) where
+  membership' :: EffectOf r t
 
-instance {-# OVERLAPPABLE #-} WhenStuck (IndexOf z (Found z t)) (AmbiguousSend z t)
-  => Member t z where
-  membership = membership
+-- instance {-# OVERLAPPABLE #-} WhenStuck (IndexOf z (Found z t)) (AmbiguousSend z t)
+--   => Member t z where
+--   membership = membership
 
-instance {-# OVERLAPPING #-} Member t (t ': z) where
-  membership = Choice
-  {-# INLINE membership #-}
+instance {-# OVERLAPPING #-} Member' t (t ': z) where
+  membership' = Choice
+  {-# INLINE membership' #-}
 
-instance ( Member t z
-         ) => Member t (_1 ': z) where
-  membership = Other $ membership @t @z
-  {-# INLINE membership #-}
+instance ( Member' t z
+         ) => Member' t (_1 ': z) where
+  membership' = Other $ membership' @t @z
+  {-# INLINE membership' #-}
 
+membership :: Member e r => EffectOf r e
+membership = membership'
+{-# INLINE membership #-}
 
 ------------------------------------------------------------------------------
 -- | Decompose a 'Union'. Either this union contains an effect @e@---the head
@@ -291,3 +307,4 @@ decompCoerce (Union p a) =
     Choice -> Right a
     Other pr -> Left (Union (Other pr) a)
 {-# INLINE decompCoerce #-}
+

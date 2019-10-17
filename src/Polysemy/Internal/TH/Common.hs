@@ -33,7 +33,7 @@ import           Language.Haskell.TH
 import           Language.Haskell.TH.Datatype
 import           Language.Haskell.TH.PprLib
 import           Polysemy.Internal (Sem, send)
-import           Polysemy.Internal.Union (Member)
+import           Polysemy.Internal.Union (MemberWithError)
 
 #if __GLASGOW_HASKELL__ >= 804
 import           Prelude hiding ((<>))
@@ -157,7 +157,7 @@ makeMemberConstraint r cli = makeMemberConstraint' r $ makeEffectType cli
 -- | @'makeMemberConstraint'' r type@ will produce a @Member type r@
 -- constraint.
 makeMemberConstraint' :: Name -> Type -> Pred
-makeMemberConstraint' r eff = classPred ''Member [eff, VarT r]
+makeMemberConstraint' r eff = classPred ''MemberWithError [eff, VarT r]
 
 
 ------------------------------------------------------------------------------
