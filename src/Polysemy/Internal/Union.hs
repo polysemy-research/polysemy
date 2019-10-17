@@ -16,6 +16,7 @@ module Polysemy.Internal.Union
   , Weaving (..)
   , Member
   , MemberWithError
+  , Before
   , weave
   , hoist
   -- * Building Unions
@@ -143,11 +144,30 @@ type MemberNoError e r =
   , e ~ IndexOf r (Found r e)
   )
 
+-------------------------------------------------------------------------------
+-- | A proof that the effect @e1@ is interpreted before the effect @e2@ in
+-- the stack @r@.
+type Before e1 e2 r = BeforeNoError e1 e2 r
+
+type BeforeNoError e1 e2 r =
+  ( Find r e1
+  , Find r e2
+  , e1 ~ IndexOf r (Found r e1)
+  , e2 ~ IndexOf r (Found r e2)
+  , Compare (Found r e1) (Found r e2) 'LT)
 
 ------------------------------------------------------------------------------
 -- | The kind of type-level natural numbers.
 data Nat = Z | S Nat
 
+------------------------------------------------------------------------------
+-- | A relation which allows us to assert relative order between two
+-- type-level natural numbers.
+class Compare (n :: Nat) (m :: Nat) (o :: Ordering)
+instance Compare 'Z 'Z 'EQ
+instance Compare 'Z ('S n) 'LT
+instance Compare ('S n) 'Z 'GT
+instance Compare n m o => Compare ('S n) ('S m) o 
 
 ------------------------------------------------------------------------------
 -- | A singleton for 'Nat'.

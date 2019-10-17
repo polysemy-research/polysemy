@@ -10,6 +10,7 @@ module Polysemy.Internal
   ( Sem (..)
   , Member
   , Members
+  , Before
   , send
   , embed
   , run
