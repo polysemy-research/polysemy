@@ -5,7 +5,7 @@ cache:
   directories:
     - $HOME/.cabal/store
 
-cabal: "2.4"
+cabal: "3.0"
 
 matrix:
   include:
