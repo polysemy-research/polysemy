@@ -29,8 +29,8 @@ script:
 # Check that the resulting source distribution can be built & installed.
 # If there are no other `.tar.gz` files in `dist`, this can be even simpler:
 # `cabal install --force-reinstalls dist/*-*.tar.gz`
- - SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
-   (cabal install --force-reinstalls "$SRC_TGZ")
+ - POLYSEMY_NAME_WITH_VERSION=$(cabal info . | awk '{print $2;exit}') &&
+   (cabal install --force-reinstalls "$POLYSEMY_NAME_WITH_VERSION")
 
  - cabal v2-build polysemy-plugin
  - cabal v2-test --enable-test polysemy-plugin
