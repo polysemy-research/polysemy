@@ -9,6 +9,8 @@ module Polysemy.Internal.Combinators
   , reinterpret
   , reinterpret2
   , reinterpret3
+  , rewrite
+  , transform
 
     -- * Higher order
   , interpretH
@@ -285,3 +287,33 @@ interceptH f (Sem m) = Sem $ \k -> m $ \u ->
       usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
     Nothing -> k $ hoist (interceptH f) u
 {-# INLINE interceptH #-}
+
+
+------------------------------------------------------------------------------
+-- | Rewrite an effect @e1@ directly into @e2@, and put it on the top of the
+-- effect stack.
+rewrite
+    :: forall e1 e2 r a
+     . (forall m x. e1 m x -> e2 m x)
+    -> Sem (e1 ': r) a
+    -> Sem (e2 ': r) a
+rewrite f (Sem m) = Sem $ \k -> m $ \u ->
+  k $ hoist (rewrite f) $ case decompCoerce u of
+    Left x -> x
+    Right (Weaving e s d n y) -> injWeaving $ Weaving (f e) s d n y
+
+
+------------------------------------------------------------------------------
+-- | Transform an effect @e1@ into an effect @e2@ that is already somewhere
+-- inside of the stack.
+transform
+    :: forall e1 e2 r a
+     . Member e2 r
+    => (forall m x. e1 m x -> e2 m x)
+    -> Sem (e1 ': r) a
+    -> Sem r a
+transform f (Sem m) = Sem $ \k -> m $ \u ->
+  k $ hoist (transform f) $ case decomp u of
+    Left g -> g
+    Right (Weaving e s wv ex ins) -> injWeaving (Weaving (f e) s wv ex ins)
+
