@@ -1,5 +1,13 @@
 # Changelog for polysemy
 
+## 1.2.2.0 (2019-10-22)
+
+- Fixed a bug in `resourceToIO` and `resourceToIOFinal` that prevented the
+    finalizers from being called in `BracketOnError` when the computation failed
+    due to a `Sem` failure
+- Added `atomicGets` (thanks to @googleson78)
+- Added `sequenceConcurrently` to `Polysemy.Async` (thanks to @spacekitteh)
+
 ## 1.2.1.0 (2019-09-15)
 
 - Added `InterpreterFor` (thanks to @bolt12)
