@@ -185,7 +185,7 @@ lowerError
        )
     => (∀ x. Sem r x -> IO x)
        -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is
-       -- likely some combination of 'runM' and other interpters composed via
+       -- likely some combination of 'runM' and other interpreters composed via
        -- '.@'.
     -> Sem (Error e ': r) a
     -> Sem r (Either e a)
