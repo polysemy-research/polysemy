@@ -9,6 +9,7 @@
 module Polysemy.Internal
   ( Sem (..)
   , Member
+  , MemberWithError
   , Members
   , send
   , embed
@@ -436,8 +437,8 @@ runM (Sem m) = m $ \z ->
 {-# INLINE runM #-}
 
 ------------------------------------------------------------------------------
--- | Type synonym for interpreters that consume an effect without changing the 
--- return value. Offered for user convenience. 
+-- | Type synonym for interpreters that consume an effect without changing the
+-- return value. Offered for user convenience.
 --
 -- @r@ Is kept polymorphic so it's possible to place constraints upon it:
 --

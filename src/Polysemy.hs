@@ -2,6 +2,7 @@ module Polysemy
   ( -- * Core Types
     Sem ()
   , Member
+  , MemberWithError
   , Members
 
   -- * Running Sem
