@@ -58,9 +58,9 @@ import Polysemy.Internal.Union
 -- The value of the 'Sem' monad is that it allows you to write programs
 -- against a set of effects without a predefined meaning, and provide that
 -- meaning later. For example, unlike with mtl, you can decide to interpret an
--- 'Polysemy.Error.Error' effect tradtionally as an 'Either', or instead
--- significantly faster as an 'IO' 'Control.Exception.Exception'. These
--- interpretations (and others that you might add) may be used interchangably
+-- 'Polysemy.Error.Error' effect traditionally as an 'Either', or instead
+-- as (a significantly faster) 'IO' 'Control.Exception.Exception'. These
+-- interpretations (and others that you might add) may be used interchangeably
 -- without needing to write any newtypes or 'Monad' instances. The only
 -- change needed to swap interpretations is to change a call from
 -- 'Polysemy.Error.runError' to 'Polysemy.Error.errorToIOFinal'.
