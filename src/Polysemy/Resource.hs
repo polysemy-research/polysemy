@@ -103,10 +103,23 @@ resourceToIOFinal = interpretFinal $ \case
     pure $ X.bracket a d u
 
   BracketOnError alloc dealloc use -> do
+    ins <- getInspectorS
     a <- runS  alloc
     d <- bindS dealloc
     u <- bindS use
-    pure $ X.bracketOnError a d u
+    pure $
+      X.bracketOnError
+        a
+        d
+        (\x -> do
+          result <- u x
+          case inspect ins result of
+            Just _ -> pure result
+            Nothing -> do
+              _ <- d x
+              pure result
+        )
+
 {-# INLINE resourceToIOFinal #-}
 
 
@@ -222,6 +235,7 @@ resourceToIO = interpretH $ \case
           (done . mc)
 
   BracketOnError a b c -> do
+    ins <- getInspectorT
     ma <- runT a
     mb <- bindT b
     mc <- bindT c
@@ -232,6 +246,13 @@ resourceToIO = interpretH $ \case
       X.bracketOnError
           (done ma)
           (\x -> done (mb x) >> finish)
-          (done . mc)
+          (\x -> do
+            result <- done $ mc x
+            case inspect ins result of
+              Just _ -> pure result
+              Nothing -> do
+                _ <- done $ mb x
+                pure result
+          )
 {-# INLINE resourceToIO #-}
 
