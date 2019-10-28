@@ -5,6 +5,7 @@ license:             BSD3
 author:              "Sandy Maguire"
 maintainer:          "sandy@sandymaguire.me"
 copyright:           "2019 Sandy Maguire"
+build-type:          Custom
 
 extra-source-files:
 - README.md
@@ -29,6 +30,12 @@ dependencies:
 - async >= 2.2 && < 3
 - type-errors >= 0.2.0.0
 - type-errors-pretty >= 0.0.0.0 && < 0.1
+
+custom-setup:
+  dependencies:
+    - base >= 4.9 && < 5
+    - Cabal
+    - cabal-doctest >=1.0.6 && <1.1
 
 default-extensions:
   - DataKinds

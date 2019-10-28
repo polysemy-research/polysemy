@@ -5,6 +5,7 @@ license:             BSD3
 author:              "Sandy Maguire"
 maintainer:          "sandy@sandymaguire.me"
 copyright:           "2019 Sandy Maguire"
+build-type:          Custom
 
 extra-source-files:
 - README.md
@@ -23,6 +24,12 @@ dependencies:
 - syb >= 0.7 && < 0.8
 - transformers >= 0.5.2.0 && < 0.6
 - containers >= 0.5 && < 0.7
+
+custom-setup:
+  dependencies:
+    - base >= 4.9 && < 5
+    - Cabal
+    - cabal-doctest >=1.0.6 && <1.1
 
 library:
   source-dirs: src

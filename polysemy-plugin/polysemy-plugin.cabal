@@ -1,10 +1,10 @@
-cabal-version: 1.12
+cabal-version: 1.24
 
 -- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 736c186c771b4ab50e8d7cf9a5467675844f3cdb1df336b2d505572263cf01ef
+-- hash: 8348af2f14be3efd7dce818f80b5dd436afe615c141b837852c2f1f2536c08b0
 
 name:           polysemy-plugin
 version:        0.2.3.0
@@ -28,10 +28,10 @@ source-repository head
   location: https://github.com/isovector/polysemy
 
 custom-setup
-    setup-depends:
-        base
-      , Cabal
-      , cabal-doctest >=1.0.6 && <1.1
+  setup-depends:
+      Cabal
+    , base >=4.9 && <5
+    , cabal-doctest >=1.0.6 && <1.1
 
 library
   exposed-modules:
