@@ -18,7 +18,7 @@ maintainer:     sandy@sandymaguire.me
 copyright:      2019 Sandy Maguire
 license:        BSD3
 license-file:   LICENSE
-build-type:     Simple
+build-type:     Custom
 extra-source-files:
     README.md
     ChangeLog.md
@@ -26,6 +26,12 @@ extra-source-files:
 source-repository head
   type: git
   location: https://github.com/isovector/polysemy
+
+custom-setup
+    setup-depends:
+        base
+      , Cabal
+      , cabal-doctest >=1.0.6 && <1.1
 
 library
   exposed-modules:

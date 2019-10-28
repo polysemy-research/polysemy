@@ -18,10 +18,16 @@ maintainer:     sandy@sandymaguire.me
 copyright:      2019 Sandy Maguire
 license:        BSD3
 license-file:   LICENSE
-build-type:     Simple
+build-type:     Custom
 extra-source-files:
     README.md
     ChangeLog.md
+
+custom-setup
+    setup-depends:
+        base
+      , Cabal
+      , cabal-doctest >=1.0.6 && <1.1
 
 source-repository head
   type: git
