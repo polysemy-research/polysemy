@@ -1,5 +1,11 @@
 # Changelog for polysemy
 
+## 1.2.3.0 (2019-10-29)
+
+- Polysemy now works on GHC 8.8.1 (thanks to @googleson78 and @sevanspowell)
+- Exported `MemberWithError` from `Polysemy`
+- Added `rewrite` and `transform` interpretation combinators
+
 ## 1.2.2.0 (2019-10-22)
 
 - Fixed a bug in `resourceToIO` and `resourceToIOFinal` that prevented the

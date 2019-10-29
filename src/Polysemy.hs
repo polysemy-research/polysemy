@@ -99,6 +99,8 @@ module Polysemy
   , reinterpret
   , reinterpret2
   , reinterpret3
+  , rewrite
+  , transform
 
     -- * Combinators for Interpreting Higher-Order Effects
   , interpretH

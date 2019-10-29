@@ -292,6 +292,8 @@ interceptH f (Sem m) = Sem $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Rewrite an effect @e1@ directly into @e2@, and put it on the top of the
 -- effect stack.
+--
+-- @since 1.2.3.0
 rewrite
     :: forall e1 e2 r a
      . (forall m x. e1 m x -> e2 m x)
@@ -306,6 +308,8 @@ rewrite f (Sem m) = Sem $ \k -> m $ \u ->
 ------------------------------------------------------------------------------
 -- | Transform an effect @e1@ into an effect @e2@ that is already somewhere
 -- inside of the stack.
+--
+-- @since 1.2.3.0
 transform
     :: forall e1 e2 r a
      . Member e2 r
