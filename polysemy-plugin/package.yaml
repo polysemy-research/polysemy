@@ -1,5 +1,5 @@
 name:                polysemy-plugin
-version:             0.2.3.0
+version:             0.2.4.0
 github:              "isovector/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -34,6 +34,12 @@ custom-setup:
 library:
   source-dirs: src
 
+flags:
+  corelint:
+    description: Perform the corelint tests
+    default:     False
+    manual:      True
+
 tests:
   polysemy-plugin-test:
     main:                Main.hs
@@ -43,8 +49,11 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -fplugin=Polysemy.Plugin
-    - -dcore-lint
-    - -dsuppress-all
+    when:
+    - condition: flag(corelint)
+      ghc-options:
+        - -dcore-lint
+        - -dsuppress-all
     build-tools:
     - hspec-discover
     dependencies:
