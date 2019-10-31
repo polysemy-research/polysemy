@@ -4,13 +4,16 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE ViewPatterns           #-}
 
-module Polysemy.Law where
+module Polysemy.Law
+  ( Law (..)
+  , runLaw
+  , Citizen (..)
+  , module Test.QuickCheck
+  ) where
 
+import Control.Arrow (first)
 import Data.Char
-import Control.Applicative
-import Control.Arrow ((&&&), first)
 import Polysemy
-import Polysemy.State
 import Test.QuickCheck
 
 
@@ -43,6 +46,18 @@ data Law e r where
       -> String
       -> res
       -> Law e r
+  LawIO
+      :: ( Eq a
+         , Show a
+         , Citizen i12n (Sem r x -> IO a)
+         , Citizen res (Sem (e ': r) x)
+         )
+      => i12n
+      -> String
+      -> res
+      -> String
+      -> res
+      -> Law e r
 
 
 runLaw :: InterpreterFor e r -> Law e r -> Property
@@ -56,6 +71,17 @@ runLaw i12n (Law finish str1 a str2 b) = property $ do
     counterexample
       (mkCounterexampleString str1 a' str2 b' args)
       (a' == b')
+runLaw i12n (LawIO finish str1 a str2 b) = property $ do
+  (_, (lower, _)) <- getCitizen finish finish
+  (args, (ma, mb)) <- getCitizen a b
+  let run_it = lower . i12n
+  pure $ ioProperty $ do
+    a' <- run_it ma
+    b' <- run_it mb
+    pure $
+      counterexample
+        (mkCounterexampleString str1 a' str2 b' args)
+        (a' == b')
 
 
 mkCounterexampleString
@@ -71,67 +97,6 @@ mkCounterexampleString str1 a str2 b args =
     [ printf str1 args , " (result: " , show a , ")\n /= \n"
     , printf str2 args , " (result: " , show b , ")"
     ]
-
-
----
-
-runStateLaws
-    :: (Eq s, Show s, Arbitrary s)
-    => InterpreterFor (State s) '[]
-    -> Property
-runStateLaws i12n = conjoin
-  [ runLaw i12n lawPutTwice
-  , runLaw i12n lawGetTwice
-  , runLaw i12n lawGetPutGet
-  ]
-
----
-
-
-stateLaw
-    :: (Eq a, Show a, Citizen res (Sem '[State s] a))
-    => String
-    -> res
-    -> String
-    -> res
-    -> Law (State s) '[]
-stateLaw = Law run
-
-
-lawPutTwice
-    :: (Eq s, Arbitrary s, Show s)
-    => Law (State s) '[]
-lawPutTwice =
-  stateLaw
-    "put %1 >> put %2 >> get"
-    (\s s' -> put s >> put s' >> get)
-    "put %2 >> get"
-    (\s s' ->          put s' >> get)
-
-
-lawGetTwice
-    :: (Eq s, Arbitrary s, Show s)
-    => Law (State s) '[]
-lawGetTwice =
-  stateLaw
-    "liftA2 (,) get get"
-    (liftA2 (,) get get)
-    "(id &&& id) <$> get"
-    ((id &&& id) <$> get)
-
-
-lawGetPutGet
-    :: (Eq s, Arbitrary s, Show s)
-    => Law (State s) '[]
-lawGetPutGet =
-  stateLaw
-    "get >>= put >> get"
-    (get >>= put >> get)
-    "get"
-    get
-
----
-
 
 printf :: String -> [String] -> String
 printf str args = splitArgs str
