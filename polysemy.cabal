@@ -4,7 +4,7 @@ cabal-version: 1.24
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5fb909edb732407e798db0fa3e2e0a62dbeb807e960b77564b99b34a3235fdb3
+-- hash: bcf86bf09cb080035ee40fd186fd3cee03e1563f5d6bbcf831bb61e8bb9705e7
 
 name:           polysemy
 version:        1.2.3.0
@@ -71,6 +71,7 @@ library
       Polysemy.Internal.Union
       Polysemy.Internal.Writer
       Polysemy.IO
+      Polysemy.Law
       Polysemy.NonDet
       Polysemy.Output
       Polysemy.Reader
@@ -85,7 +86,8 @@ library
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -Wall
   build-depends:
-      async >=2.2 && <3
+      QuickCheck
+    , async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.7
@@ -145,7 +147,8 @@ test-suite polysemy-test
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
   build-depends:
-      async >=2.2 && <3
+      QuickCheck
+    , async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , doctest >=0.16.0.1 && <0.17
@@ -179,7 +182,8 @@ benchmark polysemy-bench
       bench
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
-      async >=2.2 && <3
+      QuickCheck
+    , async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , criterion
