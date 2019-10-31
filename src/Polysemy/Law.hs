@@ -50,10 +50,20 @@ runLaw str1 str2 i12n (Law finish a b) = property $ do
   let run_it = lower . i12n
       a' = run_it ma
       b' = run_it mb
-  pure $ counterexample (mkCounterexampleString str1 a' str2 b' args) $ a' == b'
+  pure $
+    counterexample
+      (mkCounterexampleString str1 a' str2 b' args)
+      (a' == b')
 
 
-mkCounterexampleString :: Show a => String -> a -> String -> a -> [String] -> String
+mkCounterexampleString
+    :: Show a
+    => String
+    -> a
+    -> String
+    -> a
+    -> [String]
+    -> String
 mkCounterexampleString str1 a str2 b args =
   mconcat
     [ printf str1 args , " (result: " , show a , ")\n /= \n"
@@ -68,9 +78,21 @@ runStateLaws
     => InterpreterFor (State s) '[]
     -> Property
 runStateLaws i12n = conjoin
-  [ runLaw "put %1 >> put %2 >> get" "put %2 >> get" i12n lawPutTwice
-  , runLaw "liftA2 (,) get get" "(id &&& id) <$> get" i12n lawGetTwice
-  , runLaw "get >>= put >> get" "get" i12n lawGetPutGet
+  [ runLaw
+      "put %1 >> put %2 >> get"
+      "put %2 >> get"
+      i12n
+      lawPutTwice
+  , runLaw
+      "liftA2 (,) get get"
+      "(id &&& id) <$> get"
+      i12n
+      lawGetTwice
+  , runLaw
+      "get >>= put >> get"
+      "get"
+      i12n
+      lawGetPutGet
   ]
 
 ---
