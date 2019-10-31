@@ -7,6 +7,7 @@
 module Polysemy.Law
   ( Law (..)
   , runLaw
+  , MakeLaw (..)
   , Citizen (..)
   , module Test.QuickCheck
   ) where
@@ -58,6 +59,22 @@ data Law e r where
       -> String
       -> res
       -> Law e r
+
+
+class MakeLaw e r where
+  mkLaw
+      :: (Eq a, Show a, Citizen res (Sem (e ': r) a))
+      => String
+      -> res
+      -> String
+      -> res
+      -> Law e r
+
+instance MakeLaw e '[] where
+  mkLaw = Law run
+
+instance MakeLaw e '[Embed IO] where
+  mkLaw = LawIO runM
 
 
 runLaw :: InterpreterFor e r -> Law e r -> Property
