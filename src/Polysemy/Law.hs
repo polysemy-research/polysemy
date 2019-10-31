@@ -38,13 +38,15 @@ data Law e r where
          , Citizen res (Sem (e ': r) x)
          )
       => i12n
+      -> String
       -> res
+      -> String
       -> res
       -> Law e r
 
 
-runLaw :: String -> String -> InterpreterFor e r -> Law e r -> Property
-runLaw str1 str2 i12n (Law finish a b) = property $ do
+runLaw :: InterpreterFor e r -> Law e r -> Property
+runLaw i12n (Law finish str1 a str2 b) = property $ do
   (_, (lower, _)) <- getCitizen finish finish
   (args, (ma, mb)) <- getCitizen a b
   let run_it = lower . i12n
@@ -78,21 +80,9 @@ runStateLaws
     => InterpreterFor (State s) '[]
     -> Property
 runStateLaws i12n = conjoin
-  [ runLaw
-      "put %1 >> put %2 >> get"
-      "put %2 >> get"
-      i12n
-      lawPutTwice
-  , runLaw
-      "liftA2 (,) get get"
-      "(id &&& id) <$> get"
-      i12n
-      lawGetTwice
-  , runLaw
-      "get >>= put >> get"
-      "get"
-      i12n
-      lawGetPutGet
+  [ runLaw i12n lawPutTwice
+  , runLaw i12n lawGetTwice
+  , runLaw i12n lawGetPutGet
   ]
 
 ---
@@ -100,7 +90,9 @@ runStateLaws i12n = conjoin
 
 stateLaw
     :: (Eq a, Show a, Citizen res (Sem '[State s] a))
-    => res
+    => String
+    -> res
+    -> String
     -> res
     -> Law (State s) '[]
 stateLaw = Law run
@@ -111,7 +103,9 @@ lawPutTwice
     => Law (State s) '[]
 lawPutTwice =
   stateLaw
+    "put %1 >> put %2 >> get"
     (\s s' -> put s >> put s' >> get)
+    "put %2 >> get"
     (\s s' ->          put s' >> get)
 
 
@@ -120,7 +114,9 @@ lawGetTwice
     => Law (State s) '[]
 lawGetTwice =
   stateLaw
+    "liftA2 (,) get get"
     (liftA2 (,) get get)
+    "(id &&& id) <$> get"
     ((id &&& id) <$> get)
 
 
@@ -129,7 +125,9 @@ lawGetPutGet
     => Law (State s) '[]
 lawGetPutGet =
   stateLaw
+    "get >>= put >> get"
     (get >>= put >> get)
+    "get"
     get
 
 ---
@@ -141,7 +139,6 @@ printf str args = splitArgs str
     splitArgs :: String -> String
     splitArgs s =
       case break (== '%') s of
-        ("", "") -> ""
         (as, "") -> as
         (as, drop 1 -> (b : bs))
           | isDigit b
