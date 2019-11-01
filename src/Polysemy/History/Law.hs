@@ -15,6 +15,7 @@ prop_lawfulHistory
 prop_lawfulHistory i12n = conjoin
   [ runLaw i12n law_undoes
   , runLaw i12n law_redoes
+  , runLaw i12n law_redoNop
   , runLaw i12n law_forgotten
   ]
 
@@ -39,6 +40,18 @@ law_redoes =
   Law (\s -> run . evalState @s s)
     "put %1 >> undo >> redo >> get"
     (\s -> put @s s >> undo @s >> redo @s >> get @s)
+    "put %1 >> get"
+    (\s -> put @s s >> get @s)
+
+
+law_redoNop
+    :: forall s
+     . (Eq s, Arbitrary s, Show s)
+    => Law (History s) '[State s]
+law_redoNop =
+  Law (\s -> run . evalState @s s)
+    "put %1 >> redo >> get"
+    (\s -> put @s s >> redo @s >> get @s)
     "put %1 >> get"
     (\s -> put @s s >> get @s)
 
