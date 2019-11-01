@@ -7,7 +7,7 @@ import Polysemy.History
 
 
 ------------------------------------------------------------------------------
--- | A collection of laws that show a `State` interpreter is correct.
+-- | A collection of laws that show a 'History' interpreter is correct.
 prop_lawfulHistory
     :: (Eq s, Show s, Arbitrary s)
     => InterpreterFor (History s) '[State s]
@@ -62,7 +62,7 @@ law_forgotten
     => Law (History s) '[State s]
 law_forgotten =
   Law (\s -> run . evalState @s s)
-    "put %1 >> undo >> redo >> get"
+    "put %1 >> putAndForget %2 >> undo >> redo >> get"
     (\s s' -> put @s s >> putAndForget @s s' >> undo @s >> redo @s >> get @s)
     "put %1 >> get"
     (\s _ -> put @s s >> get @s)

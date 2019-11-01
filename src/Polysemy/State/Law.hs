@@ -11,7 +11,7 @@ import Control.Arrow
 
 
 ------------------------------------------------------------------------------
--- | A collection of laws that show a `State` interpreter is correct.
+-- | A collection of laws that show a 'State' interpreter is correct.
 prop_lawfulState
     :: forall r s
      . (Eq s, Show s, Arbitrary s, MakeLaw (State s) r)
