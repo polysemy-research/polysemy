@@ -8,6 +8,7 @@ module Polysemy.AtomicState
   , atomicState
   , atomicState'
   , atomicGet
+  , atomicGets
   , atomicPut
   , atomicModify
   , atomicModify'
@@ -47,6 +48,15 @@ atomicState :: forall s a r
 atomicGet :: forall s r
            . Member (AtomicState s) r
           => Sem r s
+
+------------------------------------------------------------------------------
+-- | @since 1.2.2.0
+atomicGets :: forall s s' r
+            . Member (AtomicState s) r
+           => (s -> s')
+           -> Sem r s'
+atomicGets = (<$> atomicGet)
+{-# INLINE atomicGets #-}
 
 -----------------------------------------------------------------------------
 -- | A variant of 'atomicState' in which the computation is strict in the new

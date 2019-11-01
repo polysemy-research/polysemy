@@ -1,13 +1,13 @@
-cabal-version: 1.12
+cabal-version: 1.24
 
 -- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 01634ce3c7ac101e60c1a02f8ccad7ec499c02a04b66e5d9dd5993f314318097
+-- hash: 82e62a325b42351fc99bb87c3d491920a5a047c179e686cd398c82a9870f5e46
 
 name:           polysemy-plugin
-version:        0.2.3.0
+version:        0.2.4.0
 synopsis:       Disambiguate obvious uses of effects.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy/tree/master/polysemy-plugin#readme>
 category:       Polysemy
@@ -18,7 +18,7 @@ maintainer:     sandy@sandymaguire.me
 copyright:      2019 Sandy Maguire
 license:        BSD3
 license-file:   LICENSE
-build-type:     Simple
+build-type:     Custom
 extra-source-files:
     README.md
     ChangeLog.md
@@ -26,6 +26,17 @@ extra-source-files:
 source-repository head
   type: git
   location: https://github.com/isovector/polysemy
+
+custom-setup
+  setup-depends:
+      Cabal
+    , base >=4.9 && <5
+    , cabal-doctest >=1.0.6 && <1.1
+
+flag corelint
+  description: Perform the corelint tests
+  manual: True
+  default: False
 
 library
   exposed-modules:
@@ -82,4 +93,6 @@ test-suite polysemy-plugin-test
     , should-not-typecheck >=2.1.0 && <3
     , syb >=0.7 && <0.8
     , transformers >=0.5.2.0 && <0.6
+  if flag(corelint)
+    ghc-options: -dcore-lint -dsuppress-all
   default-language: Haskell2010

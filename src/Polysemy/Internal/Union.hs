@@ -127,6 +127,11 @@ hoist f' (Union w (Weaving e s nt f v)) = Union w $ Weaving e s (f' . nt) f v
 -- stack @r@.
 type Member e r = MemberNoError e r
 
+------------------------------------------------------------------------------
+-- | Like 'Member', but will produce an error message if the types are
+-- ambiguous.
+--
+-- @since TODO
 type MemberWithError e r =
   ( MemberNoError e r
 #ifndef NO_ERROR_MESSAGES

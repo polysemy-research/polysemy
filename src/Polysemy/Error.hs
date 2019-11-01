@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Polysemy.Error
   ( -- * Effect
@@ -9,6 +10,8 @@ module Polysemy.Error
   , catch
   , fromEither
   , fromEitherM
+  , fromException
+  , fromExceptionVia
 
     -- * Interpretations
   , runError
@@ -65,6 +68,37 @@ fromEitherM
     => m (Either e a)
     -> Sem r a
 fromEitherM = fromEither <=< embed
+
+
+------------------------------------------------------------------------------
+-- | Lift an exception generated from an 'IO' action into an 'Error'.
+fromException
+    :: forall e r a
+     . ( X.Exception e
+       , Member (Error e) r
+       , Member (Embed IO) r
+       )
+    => IO a
+    -> Sem r a
+fromException = fromExceptionVia @e id
+
+
+------------------------------------------------------------------------------
+-- | Like 'fromException', but with the ability to transform the exception
+-- before turning it into an 'Error'.
+fromExceptionVia
+    :: ( X.Exception exc
+       , Member (Error err) r
+       , Member (Embed IO) r
+       )
+    => (exc -> err)
+    -> IO a
+    -> Sem r a
+fromExceptionVia f m = do
+  r <- embed $ X.try m
+  case r of
+    Left e -> throw $ f e
+    Right a -> pure a
 
 
 ------------------------------------------------------------------------------
@@ -185,7 +219,7 @@ lowerError
        )
     => (∀ x. Sem r x -> IO x)
        -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is
-       -- likely some combination of 'runM' and other interpters composed via
+       -- likely some combination of 'runM' and other interpreters composed via
        -- '.@'.
     -> Sem (Error e ': r) a
     -> Sem r (Either e a)

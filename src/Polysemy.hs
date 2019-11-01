@@ -2,6 +2,7 @@ module Polysemy
   ( -- * Core Types
     Sem ()
   , Member
+  , MemberWithError
   , Members
 
   -- * Running Sem
@@ -9,11 +10,15 @@ module Polysemy
   , runM
   , runFinal
 
+  -- * Type synonyms for user convenience
+  , InterpreterFor
+
   -- * Interoperating With Other Monads
   -- ** Embed
   , Embed (..)
   , embed
   , embedToFinal
+
   -- ** Final
   -- | For advanced uses of 'Final', including creating your own interpreters
   -- that make use of it, see "Polysemy.Final"
@@ -94,6 +99,8 @@ module Polysemy
   , reinterpret
   , reinterpret2
   , reinterpret3
+  , rewrite
+  , transform
 
     -- * Combinators for Interpreting Higher-Order Effects
   , interpretH
@@ -132,11 +139,11 @@ module Polysemy
   , Inspector (..)
   ) where
 
+import Polysemy.Final
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
 import Polysemy.Internal.Forklift
 import Polysemy.Internal.Kind
-import Polysemy.Internal.TH.Effect
 import Polysemy.Internal.Tactics
-import Polysemy.Final
+import Polysemy.Internal.TH.Effect
 

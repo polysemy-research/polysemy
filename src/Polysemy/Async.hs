@@ -8,6 +8,9 @@ module Polysemy.Async
   , async
   , await
 
+    -- * Helpers
+  , sequenceConcurrently
+
     -- * Interpretations
   , asyncToIO
   , asyncToIOFinal
@@ -32,6 +35,17 @@ data Async m a where
   Await :: A.Async a -> Async m a
 
 makeSem ''Async
+
+
+------------------------------------------------------------------------------
+-- | Perform a sequence of effectful actions concurrently.
+--
+-- @since 1.2.2.0
+sequenceConcurrently :: forall t r a. (Traversable t, Member Async r) =>
+    t (Sem r a) -> Sem r (t (Maybe a))
+sequenceConcurrently t = traverse async t >>= traverse await
+{-# INLINABLE sequenceConcurrently #-}
+
 
 ------------------------------------------------------------------------------
 -- | A more flexible --- though less performant ---

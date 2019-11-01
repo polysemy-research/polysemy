@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Polysemy.Plugin.Fundep.Stuff
   ( PolysemyStuff (..)
   , LookupState (..)
@@ -9,7 +11,10 @@ import FastString (fsLit)
 import GHC (Name, Class, TyCon, mkModuleName)
 import GHC.TcPluginM.Extra (lookupModule, lookupName)
 import OccName (mkTcOcc)
-import TcPluginM (TcPluginM, tcLookupClass, tcLookupTyCon)
+import TcPluginM (TcPluginM, tcLookupClass, tcLookupTyCon, unsafeTcPluginTcM)
+import GhcPlugins (getDynFlags)
+import Packages (lookupModuleWithSuggestions, LookupResult (..))
+import Outputable (pprPanic, empty, text, (<+>), ($$))
 
 
 
@@ -39,12 +44,30 @@ polysemyStuffLocations = PolysemyStuff
 ------------------------------------------------------------------------------
 -- | Lookup all of the 'PolysemyStuff'.
 polysemyStuff :: TcPluginM (PolysemyStuff 'Things)
-polysemyStuff =
+polysemyStuff = do
+  dflags <- unsafeTcPluginTcM getDynFlags
+
+  let error_msg = pprPanic "polysemy-plugin"
+          $ text ""
+         $$ text "--------------------------------------------------------------------------------"
+         $$ text "`polysemy-plugin` is loaded, but"
+        <+> text "`polysemy` isn't available as a package."
+         $$ text "Probable fix: add `polysemy` to your cabal `build-depends`"
+         $$ text "--------------------------------------------------------------------------------"
+         $$ text ""
+  case lookupModuleWithSuggestions dflags (mkModuleName "Polysemy") Nothing of
+    LookupHidden _ _ -> error_msg
+    LookupNotFound _ -> error_msg
+#if __GLASGOW_HASKELL__ >= 806
+    LookupUnusable _ -> error_msg
+#endif
+    _                -> pure ()
+
   let PolysemyStuff a b c d = polysemyStuffLocations
-   in PolysemyStuff <$> doLookup a
-                    <*> doLookup b
-                    <*> doLookup c
-                    <*> doLookup d
+  PolysemyStuff <$> doLookup a
+                <*> doLookup b
+                <*> doLookup c
+                <*> doLookup d
 
 
 ------------------------------------------------------------------------------

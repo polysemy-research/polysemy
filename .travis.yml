@@ -5,10 +5,11 @@ cache:
   directories:
     - $HOME/.cabal/store
 
-cabal: "2.4"
+cabal: "3.0"
 
 matrix:
   include:
+    - ghc: "8.8.1"
     - ghc: "8.6.5"
     - ghc: "8.4.4"
 
@@ -29,7 +30,8 @@ script:
 # If there are no other `.tar.gz` files in `dist`, this can be even simpler:
 # `cabal install --force-reinstalls dist/*-*.tar.gz`
  - SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
-   (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
+   (cd dist-newstyle/sdist && cabal v1-install --force-reinstalls "$SRC_TGZ")
+
 
  - cabal v2-build polysemy-plugin
  - cabal v2-test --enable-test polysemy-plugin

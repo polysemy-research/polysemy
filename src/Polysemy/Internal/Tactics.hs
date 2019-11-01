@@ -110,8 +110,6 @@ getInitialStateT = send @(Tactics _ m (e ': r)) GetInitialState
 -- let a = 'inspect' ins fa   -- Just "hello"
 --     b = 'inspect' ins fb   -- Just True
 -- @
---
--- We
 getInspectorT :: forall e f m r. Sem (WithTactics e f m r) (Inspector f)
 getInspectorT = send @(Tactics _ m (e ': r)) GetInspector
 
