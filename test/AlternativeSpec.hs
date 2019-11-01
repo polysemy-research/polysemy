@@ -51,5 +51,7 @@ spec = parallel $ do
        \ a higher-order action of a later effect (See Issue #246.)" $ do
       (fst . run . runTraceList . runReader () . runNonDet @[]) inHigherOrder
         `shouldBe` ["1","2","3","3"]
+      (fst . run . runTraceList . runReader () . runNonDet @[]) inHigherOrder
+        `shouldNotBe` ["1","3","2","3"] -- This is what we actually WANT it to be.
       (fst . run . runTraceList . runNonDet @[] . runReader ()) inHigherOrder
         `shouldBe` ["1","3","2","3"]
