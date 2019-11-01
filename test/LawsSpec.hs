@@ -4,6 +4,8 @@ import Polysemy
 import Polysemy.Law
 import Polysemy.State
 import Polysemy.State.Law
+import Polysemy.History
+import Polysemy.History.Law
 import Test.Hspec
 
 spec :: Spec
@@ -17,4 +19,8 @@ spec = parallel $ do
 
     it "stateToIO should pass the laws" $
       property $ prop_lawfulState @'[Embed IO] $ fmap snd . stateToIO @Int 0
+
+  describe "History effects" $ do
+    it "runHistory should pass the laws" $
+      property $ prop_lawfulHistory $ runHistory @Int
 
