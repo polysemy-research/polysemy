@@ -1,7 +1,16 @@
+{-# LANGUAGE CPP                    #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE UndecidableInstances   #-}
+
+#if __GLASGOW_HASKELL__ < 806
+-- There is a bug in older versions of Haddock that don't allow documentation
+-- on GADT arguments.
+#define HADDOCK --
+#else
+#define HADDOCK -- ^
+#endif
 
 module Polysemy.Law
   ( Law (..)
@@ -51,21 +60,21 @@ data Law e r where
          , Citizen res (Sem (e ': r) x)
          )
       => i12n
-         -- ^ An interpretation from @'Sem' r x@ down to a pure value. This is
+         HADDOCK An interpretation from @'Sem' r x@ down to a pure value. This is
          -- likely 'run'.
       -> String
-         -- ^ A string representation of the left-hand of the rule. This is
+         HADDOCK A string representation of the left-hand of the rule. This is
          -- a formatted string, for more details, refer to 'printf'.
       -> res
-         -- ^ The left-hand rule. This thing may be of type @'Sem' (e ': r) x@,
+         HADDOCK The left-hand rule. This thing may be of type @'Sem' (e ': r) x@,
          -- or be a function type that reproduces a @'Sem' (e ': r) x@. If this
          -- is a function type, it's guaranteed to be called with the same
          -- arguments that the right-handed side was called with.
       -> String
-         -- ^ A string representation of the right-hand of the rule. This is
+         HADDOCK A string representation of the right-hand of the rule. This is
          -- a formatted string, for more details, refer to 'printf'.
       -> res
-         -- ^ The right-hand rule. This thing may be of type @'Sem' (e ': r) x@,
+         HADDOCK The right-hand rule. This thing may be of type @'Sem' (e ': r) x@,
          -- or be a function type that reproduces a @'Sem' (e ': r) x@. If this
          -- is a function type, it's guaranteed to be called with the same
          -- arguments that the left-handed side was called with.
@@ -78,21 +87,21 @@ data Law e r where
          , Citizen res (Sem (e ': r) x)
          )
       => i12n
-         -- ^ An interpretation from @'Sem' r x@ down to an 'IO' value. This is
+         HADDOCK An interpretation from @'Sem' r x@ down to an 'IO' value. This is
          -- likely 'runM'.
       -> String
-         -- ^ A string representation of the left-hand of the rule. This is
+         HADDOCK A string representation of the left-hand of the rule. This is
          -- a formatted string, for more details, refer to 'printf'.
       -> res
-         -- ^ The left-hand rule. This thing may be of type @'Sem' (e ': r) x@,
+         HADDOCK The left-hand rule. This thing may be of type @'Sem' (e ': r) x@,
          -- or be a function type that reproduces a @'Sem' (e ': r) x@. If this
          -- is a function type, it's guaranteed to be called with the same
          -- arguments that the right-handed side was called with.
       -> String
-         -- ^ A string representation of the right-hand of the rule. This is
+         HADDOCK A string representation of the right-hand of the rule. This is
          -- a formatted string, for more details, refer to 'printf'.
       -> res
-         -- ^ The right-hand rule. This thing may be of type @'Sem' (e ': r) x@,
+         HADDOCK The right-hand rule. This thing may be of type @'Sem' (e ': r) x@,
          -- or be a function type that reproduces a @'Sem' (e ': r) x@. If this
          -- is a function type, it's guaranteed to be called with the same
          -- arguments that the left-handed side was called with.
