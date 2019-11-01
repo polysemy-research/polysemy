@@ -4,7 +4,7 @@ cabal-version: 1.24
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d90ba5f8e898c69c6644b6ef731f79da8896ef5cef722d082dce7a09e5118f8a
+-- hash: 9c9c8b8561c30bd1736e7de233dd3ffd9bf260977d78704950e3d0b48be7f291
 
 name:           polysemy
 version:        1.2.3.0
@@ -78,7 +78,9 @@ library
       Polysemy.Resource
       Polysemy.State
       Polysemy.State.Law
+      Polysemy.Tagged
       Polysemy.Trace
+      Polysemy.View
       Polysemy.Writer
   other-modules:
       Polysemy.Internal.PluginLookup
@@ -129,6 +131,7 @@ test-suite polysemy-test
       AsyncSpec
       BracketSpec
       DoctestSpec
+      ErrorSpec
       FailSpec
       FinalSpec
       FixpointSpec
@@ -140,6 +143,7 @@ test-suite polysemy-test
       OutputSpec
       ThEffectSpec
       TypeErrors
+      ViewSpec
       WriterSpec
       Paths_polysemy
   hs-source-dirs:
