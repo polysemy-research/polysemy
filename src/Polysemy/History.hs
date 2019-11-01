@@ -45,7 +45,7 @@ runHistory m = do
           put s'
         PutAndForget s' ->
           put s'
-                )
+                             )
     . intercept @(State s) ( \case
         Get -> get
         Put s' -> do
