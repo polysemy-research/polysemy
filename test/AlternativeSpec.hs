@@ -5,6 +5,7 @@ import Polysemy.NonDet
 import Test.Hspec
 import Control.Applicative
 import Polysemy.Trace
+import Polysemy.Reader
 
 runAlt :: Alternative f => Sem '[NonDet] a -> f a
 runAlt = run . runNonDet
@@ -16,6 +17,12 @@ failtrace = pure () <|> trace "trace"
 failtrace' :: (Member NonDet r, Member Trace r)
            => Sem r ()
 failtrace' = trace "sim" *> empty <|> trace "salabim"
+
+inHigherOrder :: Members '[NonDet, Trace, Reader ()] r
+              => Sem r ()
+inHigherOrder = do
+  local (\_ -> ()) $ trace "1" <|> trace "2"
+  trace "3"
 
 spec :: Spec
 spec = parallel $ do
@@ -38,3 +45,11 @@ spec = parallel $ do
         `shouldBe` Just (["salabim"], ())
       (run . runTraceList . runNonDetMaybe) failtrace'
         `shouldBe` (["sim", "salabim"], Just ())
+
+  describe "runNonDet" $ do
+    it "should have terrible semantics when <|> is used within\
+       \ a higher-order action of a later effect (See Issue #246.)" $ do
+      (fst . run . runTraceList . runReader () . runNonDet @[]) inHigherOrder
+        `shouldBe` ["1","2","3","3"]
+      (fst . run . runTraceList . runNonDet @[] . runReader ()) inHigherOrder
+        `shouldBe` ["1","3","2","3"]
