@@ -2,7 +2,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE UndecidableInstances   #-}
-{-# LANGUAGE ViewPatterns           #-}
 
 module Polysemy.Law
   ( Law (..)
@@ -167,6 +166,8 @@ mkCounterexampleString str1 a str2 b args =
 -- | A bare-boned implementation of printf. This function will replace tokens
 -- of the form @"%n"@ in the first string with @args !! n@.
 --
+-- This will only work for indexes up to 9.
+--
 -- For example:
 --
 -- >>> printf "hello %1 %2% %3 %1" ["world", "50"]
@@ -178,10 +179,10 @@ printf str args = splitArgs str
     splitArgs s =
       case break (== '%') s of
         (as, "") -> as
-        (as, drop 1 -> (b : bs))
+        (as, _ : b : bs)
           | isDigit b
           , let d = read [b] - 1
           , d < length args
             -> as ++ (args !! d) ++ splitArgs bs
-        (as, drop 1 -> bs) ->  as ++ "%" ++ splitArgs bs
+        (as, _ : bs) ->  as ++ "%" ++ splitArgs bs
 
