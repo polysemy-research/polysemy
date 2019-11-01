@@ -64,7 +64,7 @@ spec = parallel $ do
 -- #if __GLASGOW_HASKELL__ >= 810
 --       shouldSucceed $(inspectTest $ 'tryIt `doesNotUse` 'Weaving)
 -- #endif
-#endif
+-- #endif
 
 
 go :: Sem '[State Int] Int
