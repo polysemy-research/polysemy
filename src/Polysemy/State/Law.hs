@@ -18,40 +18,39 @@ prop_lawfulState
     => InterpreterFor (State s) r
     -> Property
 prop_lawfulState i12n = conjoin
-  [ runLaw i12n lawPutTwice
-  , runLaw i12n lawGetTwice
-  , runLaw i12n lawGetPutGet
+  [ runLaw i12n law_putTwice
+  , runLaw i12n law_getTwice
+  , runLaw i12n law_getPutGet
   ]
 
 
-
-lawPutTwice
+law_putTwice
     :: forall s r
      . (Eq s, Arbitrary s, Show s, MakeLaw (State s) r)
     => Law (State s) r
-lawPutTwice =
+law_putTwice =
   mkLaw
     "put %1 >> put %2 >> get"
     (\s s' -> put @s s >> put @s s' >> get @s)
     "put %2 >> get"
     (\_ s' ->             put @s s' >> get @s)
 
-lawGetTwice
+law_getTwice
     :: forall s r
      . (Eq s, Arbitrary s, Show s, MakeLaw (State s) r)
     => Law (State s) r
-lawGetTwice =
+law_getTwice =
   mkLaw
     "liftA2 (,) get get"
     (liftA2 (,) (get @s) (get @s))
     "(id &&& id) <$> get"
     ((id &&& id) <$> get @s)
 
-lawGetPutGet
+law_getPutGet
     :: forall s r
      . (Eq s, Arbitrary s, Show s, MakeLaw (State s) r)
     => Law (State s) r
-lawGetPutGet =
+law_getPutGet =
   mkLaw
     "get >>= put >> get"
     (get @s >>= put @s >> get @s)
