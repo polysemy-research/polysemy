@@ -13,6 +13,7 @@ module Polysemy.NonDet
 
 import Control.Applicative
 import Control.Monad.Trans.Maybe
+import Data.Maybe
 
 import Polysemy
 import Polysemy.Error
@@ -108,46 +109,15 @@ instance Monad (NonDetC m) where
 runNonDetInC :: Sem (NonDet ': r) a -> NonDetC (Sem r) a
 runNonDetInC = usingSem $ \u ->
   case decomp u of
-    Left x  -> consC $ fmap getNonDetState $
-      liftSem $ weave (NonDetState (Just ((), empty)))
-                  distribNonDetC
-                  -- TODO(KingoftheHomeless): Is THIS the right semantics?
-                  (fmap fst . getNonDetState)
+    Left x  -> NonDetC $ \c b -> do
+      l <- liftSem $ weave [()]
+                  -- KingoftheHomeless: This is NOT the right semantics, but
+                  -- the known alternatives are worse. See Issue #246.
+                  (fmap concat . traverse runNonDet)
+                  listToMaybe
                   x
+      foldr c b l
     Right (Weaving Empty _ _ _ _) -> empty
     Right (Weaving (Choose left right) s wv ex _) -> fmap ex $
       runNonDetInC (wv (left <$ s)) <|> runNonDetInC (wv (right <$ s))
 {-# INLINE runNonDetInC #-}
-
--- This choice of functorial state is inspired from the
--- MonadBaseControl instance for 'ListT' from 'list-t'.
---
--- TODO(KingoftheHomeless):
--- Is there a different representation of this which doesn't require
--- 'unconsC' in 'distribNonDetC'?
-newtype NonDetState r a = NonDetState {
-  getNonDetState :: Maybe (a, NonDetC (Sem r) a)
-  } deriving (Functor)
-
--- KingoftheHomeless: The performance of this could be improved
--- if we weren't forced to use unconsC, which causes this to have
--- potentially O(n^2) behaviour.
-distribNonDetC :: NonDetState r (Sem (NonDet ': r) a) -> Sem r (NonDetState r a)
-distribNonDetC = \case
-  NonDetState (Just (a, r)) ->
-    fmap NonDetState $ unconsC $ runNonDetInC a <|> (r >>= runNonDetInC)
-  _ ->
-    pure (NonDetState Nothing)
-{-# INLINE distribNonDetC #-}
-
--- O(n)
-unconsC :: NonDetC (Sem r) a -> Sem r (Maybe (a, NonDetC (Sem r) a))
-unconsC (NonDetC n) = n (\a r -> pure (Just (a, consC r))) (pure Nothing)
-{-# INLINE unconsC #-}
-
-consC :: Sem r (Maybe (a, NonDetC (Sem r) a)) -> NonDetC (Sem r) a
-consC m = NonDetC $ \cons nil -> m >>= \case
-  Just (a, r) -> cons a (unNonDetC r cons nil)
-  _           -> nil
-{-# INLINE consC #-}
-
