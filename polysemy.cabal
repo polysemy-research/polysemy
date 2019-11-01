@@ -76,6 +76,7 @@ library
       Polysemy.Reader
       Polysemy.Resource
       Polysemy.State
+      Polysemy.Tagged
       Polysemy.Trace
       Polysemy.Writer
   other-modules:
