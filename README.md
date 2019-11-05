@@ -245,3 +245,27 @@ Several things need to be in place to fully realize our performance goals:
 - Additional concerns:
   - additional core passes (turned on by the plugin)
 
+
+## Acknowledgements, citations, and related work
+
+The following is a non-exhaustive list of people and works that have had a
+significant impact, directly or indirectly, on `polysemy`’s design and
+implementation:
+
+  - Oleg Kiselyov, Amr Sabry, and Cameron Swords — [Extensible Effects: An alternative to monad transfomers][oleg:exteff]
+  - Oleg Kiselyov and Hiromi Ishii — [Freer Monads, More Extensible Effects][oleg:more]
+  - Nicolas Wu, Tom Schrijvers, and Ralf Hinze — [Effect Handlers in Scope][wu:scope]
+  - Nicolas Wu and Tom Schrijvers — [Fusion for Free: Efficient Algebraic Effect Handlers][schrijvers:fusion]
+  - Andy Gill and other contributors — [`mtl`][hackage:mtl]
+  - Rob Rix, Patrick Thomson, and other contributors — [`fused-effects`][gh:fused-effects]
+  - Alexis King and other contributors — [`freer-simple`][gh:freer-simple]
+
+[docs]: https://hasura.github.io/eff/Control-Effect.html
+[gh:fused-effects]: https://github.com/fused-effects/fused-effects
+[gh:freer-simple]: https://github.com/lexi-lambda/freer-simple
+[hackage:mtl]: https://hackage.haskell.org/package/mtl
+[oleg:exteff]: http://okmij.org/ftp/Haskell/extensible/exteff.pdf
+[oleg:more]: http://okmij.org/ftp/Haskell/extensible/more.pdf
+[schrijvers:fusion]: https://people.cs.kuleuven.be/~tom.schrijvers/Research/papers/mpc2015.pdf
+[wu:scope]: https://www.cs.ox.ac.uk/people/nicolas.wu/papers/Scope.pdf
+
