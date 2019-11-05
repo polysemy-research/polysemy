@@ -67,9 +67,14 @@ Or by adding `-fplugin=Polysemy.Plugin` to your package.yaml/.cabal file `ghc-op
 <sup><a name="fn1">1</a></sup>: Unfortunately this is not true in GHC 8.6.3, but
 will be true in GHC 8.10.1.
 
-## Tutorial
 
-Raghu Kaippully wrote a beginner friendly [tutorial](https://haskell-explained.gitlab.io/blog/posts/2019/07/28/polysemy-is-cool-part-1/index.html).
+## Tutorials and Resources
+
+- Raghu Kaippully wrote a beginner friendly [tutorial](https://haskell-explained.gitlab.io/blog/posts/2019/07/28/polysemy-is-cool-part-1/index.html).
+- Paweł Szulc gave a [great talk](https://youtu.be/idU7GdlfP9Q?t=1394) on how to start thinking about polysemy.
+- I've given a talk on some of the [performance implementation](https://www.youtube.com/watch?v=-dHFOjcK6pA)
+- I've also written [some](http://reasonablypolymorphic.com/blog/freer-higher-order-effects/) [blog posts](http://reasonablypolymorphic.com/blog/tactics/) on other implementation details.
+
 
 ## Examples
 
@@ -226,7 +231,7 @@ You're going to want to stick all of this into your `package.yaml` file.
 
 ## Stellar Engineering - Aligning the stars to optimize `polysemy` away
 
-Several things need to be in place to fully realize our performance goals: 
+Several things need to be in place to fully realize our performance goals:
 
 - GHC Version
   - GHC 8.9+
