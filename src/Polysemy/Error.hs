@@ -136,6 +136,14 @@ fromExceptionSemVia f m = do
     Right a -> pure a
 
 ------------------------------------------------------------------------------
+-- | Attempt to extract a @'Just' a@ from a @'Maybe' a@, throwing the
+-- provided exception upon 'Nothing'.
+note :: Member (Error e) r => e -> Maybe a -> Sem r a
+note e Nothing  = throw e
+note _ (Just a) = pure a
+
+
+------------------------------------------------------------------------------
 -- | Run an 'Error' effect in the style of
 -- 'Control.Monad.Trans.Except.ExceptT'.
 runError
@@ -160,14 +168,6 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
               Left e' -> pure $ Left e'
               Right a -> pure . Right $ y a
 {-# INLINE runError #-}
-
-------------------------------------------------------------------------------
--- | Attempt to extract a @'Just' a@ from a @'Maybe' a@, throwing the
--- provided exception upon 'Nothing'.
-note :: Member (Error e) r => e -> Maybe a -> Sem r a
-note e Nothing  = throw e
-note _ (Just a) = pure a
-
 
 ------------------------------------------------------------------------------
 -- | Transform one 'Error' into another. This function can be used to aggregate
