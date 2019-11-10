@@ -14,6 +14,7 @@ module Polysemy.Error
   , fromExceptionVia
   , fromExceptionSem
   , fromExceptionSemVia
+  , note
 
     -- * Interpretations
   , runError
@@ -159,6 +160,13 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
               Left e' -> pure $ Left e'
               Right a -> pure . Right $ y a
 {-# INLINE runError #-}
+
+------------------------------------------------------------------------------
+-- | Attempt to extract a @'Just' a@ from a @'Maybe' a@, throwing the
+-- provided exception upon 'Nothing'.
+note :: Member (Error e) r => e -> Maybe a -> Sem r a
+note e Nothing  = throw e
+note _ (Just a) = pure a
 
 
 ------------------------------------------------------------------------------
