@@ -15,14 +15,15 @@ module Polysemy.Input
   ) where
 
 import Control.Concurrent.Async (race)
+import Data.Coerce
 import Data.Foldable (for_)
 import Data.List (uncons)
 import Polysemy
-import Polysemy.Internal
 import Polysemy.Final
+import Polysemy.Internal
 import Polysemy.State
 import Polysemy.Tagged
-import Data.Coerce
+
 
 ------------------------------------------------------------------------------
 -- | An effect which can provide input to an application. Useful for dealing
