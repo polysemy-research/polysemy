@@ -14,10 +14,15 @@ module Polysemy.Input
   , raceInput
   ) where
 
+import Control.Concurrent.Async (race)
 import Data.Foldable (for_)
 import Data.List (uncons)
 import Polysemy
+import Polysemy.Internal
+import Polysemy.Final
 import Polysemy.State
+import Polysemy.Tagged
+import Data.Coerce
 
 ------------------------------------------------------------------------------
 -- | An effect which can provide input to an application. Useful for dealing
@@ -70,14 +75,20 @@ raceInput
   :: forall i r
    . Member (Final IO) r
   => InterpreterFor (Input i) r
-  -> InterpreterFor (Input i) (Tagged "intr1" (Input i) ': r)
+  -> InterpreterFor (Input i) (Tagged "intr1" (RacedInput i) ': r)
   -> InterpreterFor (Input i) r
 raceInput intr1 intr2 =
-     intr1 . untag @"intr1"
+     intr1 . untag @"intr1" . rewrite coerce
    . intr2 . untag @"intr2"
    . (reinterpret2 $ \Input -> withStrategicToFinal $ do
-        input1 <- runS $ tag @"intr1" input
-        input2 <- runS $ tag @"intr2" input
+        input1 <- runS $ tag @"intr1" @(RacedInput i) $ send $ RacedInput Input
+        input2 <- runS $ tag @"intr2" @(Input i) input
         pure $ either id id <$> race input1 input2
      )
+
+
+------------------------------------------------------------------------------
+-- | An unexposed newtype to ensure nobody in 'raceInput' monkeys with the
+-- input.
+newtype RacedInput i m a = RacedInput (Input i m a)
 
