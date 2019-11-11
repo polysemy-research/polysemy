@@ -11,6 +11,7 @@ module Polysemy.Input
   , runInputConst
   , runInputList
   , runInputSem
+  , raceInput
   ) where
 
 import Data.Foldable (for_)
@@ -58,4 +59,25 @@ runInputSem :: forall i r a. Sem r i -> Sem (Input i ': r) a -> Sem r a
 runInputSem m = interpret $ \case
   Input -> m
 {-# INLINE runInputSem #-}
+
+
+------------------------------------------------------------------------------
+-- | Given two blocking interpretations of 'Input', use whichever one completes
+-- first for each invocation of 'input'. The interpreter provided by
+-- 'raceInput' is itself a blocking interpretation of 'Input', and can thus be
+-- used as an argument to itself.
+raceInput
+  :: forall i r
+   . Member (Final IO) r
+  => InterpreterFor (Input i) r
+  -> InterpreterFor (Input i) (Tagged "intr1" (Input i) ': r)
+  -> InterpreterFor (Input i) r
+raceInput intr1 intr2 =
+     intr1 . untag @"intr1"
+   . intr2 . untag @"intr2"
+   . (reinterpret2 $ \Input -> withStrategicToFinal $ do
+        input1 <- runS $ tag @"intr1" input
+        input2 <- runS $ tag @"intr2" input
+        pure $ either id id <$> race input1 input2
+     )
 
