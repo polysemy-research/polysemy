@@ -188,3 +188,4 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
    forall s e (f :: forall m x. e m x -> Sem (State s ': r) x).
      runLazyState s (reinterpret f e) = lazilyStateful (\x s' -> runLazyState s' $ f x) s e
      #-}
+

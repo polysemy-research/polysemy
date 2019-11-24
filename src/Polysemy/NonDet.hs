@@ -70,6 +70,7 @@ nonDetToError (e :: e) = interpretH $ \case
     raise (left' `catch` \(_ :: e) -> right')
 {-# INLINE nonDetToError #-}
 
+
 --------------------------------------------------------------------------------
 -- This stuff is lifted from 'fused-effects'. Thanks guys!
 runNonDetC :: (Alternative f, Applicative m) => NonDetC m a -> m (f a)

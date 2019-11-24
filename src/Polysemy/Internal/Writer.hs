@@ -156,5 +156,3 @@ runWriterSTMAction write = interpretH $ \case
       writeTVar switch True
       return o'
 {-# INLINE runWriterSTMAction #-}
--- huh :: Member (Writer Int) r => Sem r ()
--- huh = tell  1

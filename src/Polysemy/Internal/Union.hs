@@ -287,4 +287,3 @@ decompCoerce (Union p a) =
     Here  -> Right a
     In pr -> Left (Union (In pr) a)
 {-# INLINE decompCoerce #-}
-
