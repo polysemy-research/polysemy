@@ -20,6 +20,7 @@ module Polysemy.Internal
   , raiseUnder2
   , raiseUnder3
   , subsume
+  , subsumeUsing
   , Embed (..)
   , usingSem
   , liftSem
@@ -351,8 +352,8 @@ raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
   where
     weakenUnder :: ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': r) m x
-    weakenUnder (Union Choice a) = Union Choice a
-    weakenUnder (Union (Other n) a) = Union (Other (Other n)) a
+    weakenUnder (Union Here a) = Union Here a
+    weakenUnder (Union (In n) a) = Union (In (In n)) a
     {-# INLINE weakenUnder #-}
 {-# INLINE raiseUnder #-}
 
@@ -366,8 +367,8 @@ raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
 raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
   where
     weakenUnder2 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': r) m x
-    weakenUnder2 (Union Choice a) = Union Choice a
-    weakenUnder2 (Union (Other n) a) = Union (Other (Other (Other n))) a
+    weakenUnder2 (Union Here a) = Union Here a
+    weakenUnder2 (Union (In n) a) = Union (In (In (In n))) a
     {-# INLINE weakenUnder2 #-}
 {-# INLINE raiseUnder2 #-}
 
@@ -381,8 +382,8 @@ raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4
 raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
   where
     weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
-    weakenUnder3 (Union Choice a) = Union Choice a
-    weakenUnder3 (Union (Other n) a) = Union (Other (Other (Other (Other n)))) a
+    weakenUnder3 (Union Here a) = Union Here a
+    weakenUnder3 (Union (In n) a) = Union (In (In (In (In n)))) a
     {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
 
@@ -400,6 +401,19 @@ subsume = hoistSem $ \u -> hoist subsume $ case decomp u of
   Right w -> injWeaving w
   Left  g -> g
 {-# INLINE subsume #-}
+
+------------------------------------------------------------------------------
+-- | Interprets an effect in terms of another identical effect, given a
+-- proof that the effect exists in @r@.
+--
+-- This is useful in conjunction with @tryMembership@.
+--
+-- @since TODO
+subsumeUsing :: forall e r a. ElemOf r e -> Sem (e ': r) a -> Sem r a
+subsumeUsing pr = hoistSem $ \u -> hoist (subsumeUsing pr) $ case decomp u of
+  Right w -> Union pr w
+  Left  g -> g
+{-# INLINE subsumeUsing #-}
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem'. This is used primarily via

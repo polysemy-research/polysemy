@@ -30,7 +30,6 @@ import Data.Semigroup
 import Polysemy
 import Polysemy.Output
 import Polysemy.State
-import Polysemy.Async
 
 import Polysemy.Internal.Writer
 
@@ -164,21 +163,3 @@ writerToIOAssocRFinal =
   . writerToEndoWriter
   . raiseUnder
 {-# INLINE writerToIOAssocRFinal #-}
-
-
-maramaraminne :: (Member (Writer String) r, Member Async r)
-              => Sem r ()
-maramaraminne = do
-  tell "MARAMARAMINNE "
-  a <- async $ do
-    tell "MARAMARAMINNE "
-  _ <- await a
-  tell "BOR DU HÄRINNE "
-  a <- async $ do
-    tell "SÅ SKALL DU "
-  await a
-  tell "HÄRUT "
-  a <- async $ do
-    tell "JAG DRIVER "
-  await a
-  tell "DIG UT!"

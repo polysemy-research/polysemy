@@ -12,12 +12,10 @@ module Polysemy.NonDet
   ) where
 
 import Control.Applicative
-import Control.Concurrent.Async
 import Control.Monad.Trans.Maybe
 import Data.Maybe
 
 import Polysemy
-import Polysemy.Final
 import Polysemy.Error
 import Polysemy.Internal
 import Polysemy.Internal.NonDet
@@ -71,16 +69,6 @@ nonDetToError (e :: e) = interpretH $ \case
     right' <- nonDetToError e <$> runT right
     raise (left' `catch` \(_ :: e) -> right')
 {-# INLINE nonDetToError #-}
-
-runNonDetRace :: Member (Final IO) r
-              => Sem (NonDet ': r) a
-              -> Sem r a
-runNonDetRace = interpretFinal $ \case
-  Empty -> pure $ runConcurrently empty
-  Choose left right -> do
-    left'  <- runS left
-    right' <- runS right
-    pure $ either id id <$> race left' right'
 
 --------------------------------------------------------------------------------
 -- This stuff is lifted from 'fused-effects'. Thanks guys!

@@ -4,6 +4,7 @@
 {-# LANGUAGE EmptyCase               #-}
 {-# LANGUAGE FlexibleInstances       #-}
 {-# LANGUAGE FunctionalDependencies  #-}
+{-# LANGUAGE InstanceSigs            #-}
 {-# LANGUAGE MultiParamTypeClasses   #-}
 {-# LANGUAGE StrictData              #-}
 {-# LANGUAGE TypeFamilies            #-}
@@ -16,7 +17,6 @@ module Polysemy.Internal.Union
   ( Union (..)
   , Weaving (..)
   , Member
-  , Member'
   , MemberWithError
   , weave
   , hoist
@@ -27,20 +27,20 @@ module Polysemy.Internal.Union
   -- * Using Unions
   , decomp
   , prj
+  , prjUsing
   , extract
   , absurdU
   , decompCoerce
   -- * Witnesses
-  , EffectOf (..)
+  , ElemOf (..)
   , membership
-  , SNat (..)
-  , Nat (..)
   ) where
 
 import Control.Monad
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Kind
+import Data.Typeable
 import Data.Type.Equality
 import Polysemy.Internal.Kind
 
@@ -54,7 +54,7 @@ import Polysemy.Internal.CustomErrors
 data Union (r :: EffectRow) (m :: Type -> Type) a where
   Union
       :: -- A proof that the effect is actually in @r@.
-         EffectOf r e
+         ElemOf r e
          -- The effect to wrap. The functions 'prj' and 'decomp' can help
          -- retrieve this value later.
       -> Weaving e m a
@@ -133,68 +133,38 @@ type Member e r = MemberNoError e r
 ------------------------------------------------------------------------------
 -- | Like 'Member', but will produce an error message if the types are
 -- ambiguous.
---
--- @since TODO
 type MemberWithError e r =
-  ( Member' e r
+  ( Find r e
 #ifndef NO_ERROR_MESSAGES
     -- NOTE: The plugin explicitly pattern matches on
-    -- `WhenStuck (IndexOf r _) _`, so if you change this, make sure to change
+    -- `WhenStuck (LocateEffect r _) _`, so if you change this, make sure to change
     -- the corresponding implementation in
     -- Polysemy.Plugin.Fundep.solveBogusError
-  , (LocateEffect r e ~ '())
+  , LocateEffect r e ~ '()
   , WhenStuck (LocateEffect r e) (AmbiguousSend r e)
-  -- -- , WhenStuck (LocateEffect r e) (AmbiguousSend r e)
 #endif
   )
 
 type MemberNoError e r =
-  ( Member' e r
+  ( Find r e
 #ifndef NO_ERROR_MESSAGES
   , LocateEffect r e ~ '()
 #endif
   )
 
-
 ------------------------------------------------------------------------------
--- | The kind of type-level natural numbers.
-data Nat = Z | S Nat
+-- | A proof that @e@ is an element of @r@
+data ElemOf r e where
+  Here :: ElemOf (e ': r) e
+  In   :: ElemOf r e -> ElemOf (e' ': r) e
 
-
-data EffectOf r e where
-  Choice :: EffectOf (e ': r) e
-  Other  :: EffectOf r e -> EffectOf (e' ': r) e
-
-instance TestEquality (EffectOf r) where
-  testEquality Choice Choice
+instance TestEquality (ElemOf r) where
+  testEquality Here Here
     = Just Refl
-  testEquality (Other e) (Other e')
+  testEquality (In e) (In e')
     = testEquality e e'
   testEquality _ _ =
     Nothing
-
-------------------------------------------------------------------------------
--- | A singleton for 'Nat'.
-data SNat :: Nat -> Type where
-  SZ :: SNat 'Z
-  SS :: SNat n -> SNat ('S n)
-
-instance TestEquality SNat where
-  testEquality SZ     SZ     = Just Refl
-  testEquality (SS _) SZ     = Nothing
-  testEquality SZ     (SS _) = Nothing
-  testEquality (SS n) (SS m) =
-    case testEquality n m of
-      Nothing -> Nothing
-      Just Refl -> Just Refl
-  {-# INLINE testEquality #-}
-
-
-type family IndexOf (ts :: [k]) (n :: Nat) :: k where
-  IndexOf (k ': ks) 'Z = k
-  IndexOf (k ': ks) ('S n) = IndexOf ks n
-
-
 
 type family LocateEffect (ts :: [k]) (t :: k) :: () where
 #ifndef NO_ERROR_MESSAGES
@@ -203,34 +173,32 @@ type family LocateEffect (ts :: [k]) (t :: k) :: () where
   LocateEffect (t ': ts) t = '()
   LocateEffect (u ': ts) t = LocateEffect ts t
 
-type family Found (ts :: [k]) (t :: k) :: Nat where
-#ifndef NO_ERROR_MESSAGES
-  Found '[]       t = UnhandledEffect t
-#endif
-  Found (t ': ts) t = 'Z
-  Found (u ': ts) t = 'S (Found ts t)
+class Find (r :: [k]) (t :: k) where
+  membership' :: ElemOf r t
 
-type family Reduce (ts :: [k]) :: () where
-  Reduce '[] = '()
-  Reduce (_x ': xs) = Reduce xs
-
-class Member' (t :: Effect) (r :: EffectRow) where
-  membership' :: EffectOf r t
-
--- instance {-# OVERLAPPABLE #-} WhenStuck (IndexOf z (Found z t)) (AmbiguousSend z t)
---   => Member t z where
---   membership = membership
-
-instance {-# OVERLAPPING #-} Member' t (t ': z) where
-  membership' = Choice
+instance {-# OVERLAPPING #-} Find (t ': z) t where
+  membership' = Here
   {-# INLINE membership' #-}
 
-instance ( Member' t z
-         ) => Member' t (_1 ': z) where
-  membership' = Other $ membership' @t @z
+instance Find z t => Find (_1 ': z) t where
+  membership' = In $ membership' @_ @z @t
   {-# INLINE membership' #-}
 
-membership :: Member e r => EffectOf r e
+class KnownEffectRow r where
+  tryMembership :: forall e. Typeable e => Maybe (ElemOf r e)
+
+instance KnownEffectRow '[] where
+  tryMembership = Nothing
+  {-# INLINE tryMembership #-}
+
+instance (Typeable e, KnownEffectRow r) => KnownEffectRow (e ': r) where
+  tryMembership :: forall e'. Typeable e' => Maybe (ElemOf (e ': r) e')
+  tryMembership = case eqT @e @e' of
+    Just Refl -> Just Here
+    _         -> In <$> tryMembership @r @e'
+  {-# INLINE tryMembership #-}
+
+membership :: Member e r => ElemOf r e
 membership = membership'
 {-# INLINE membership #-}
 
@@ -240,14 +208,14 @@ membership = membership'
 decomp :: Union (e ': r) m a -> Either (Union r m a) (Weaving e m a)
 decomp (Union p a) =
   case p of
-    Choice   -> Right a
-    Other pr -> Left $ Union pr a
+    Here  -> Right a
+    In pr -> Left $ Union pr a
 {-# INLINE decomp #-}
 
 ------------------------------------------------------------------------------
 -- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> Weaving e m a
-extract (Union Choice a) = a
+extract (Union Here a) = a
 extract _ = error "impossible"
 {-# INLINE extract #-}
 
@@ -261,7 +229,7 @@ absurdU (Union pr _) = case pr of {}
 ------------------------------------------------------------------------------
 -- | Weaken a 'Union' so it is capable of storing a new sort of effect.
 weaken :: forall e r m a. Union r m a -> Union (e ': r) m a
-weaken (Union pr a) = Union (Other pr) a
+weaken (Union pr a) = Union (In pr) a
 {-# INLINE weaken #-}
 
 
@@ -295,6 +263,16 @@ prj (Union sn a) =
     Just Refl -> Just a
 {-# INLINE prj #-}
 
+prjUsing
+  :: forall e r m a
+   . ElemOf r e
+  -> Union r m a
+  -> Maybe (Weaving e m a)
+prjUsing pr (Union sn a) =
+  case testEquality sn pr of
+    Nothing -> Nothing
+    Just Refl -> Just a
+{-# INLINE prjUsing #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'decomp', but allows for a more efficient
@@ -304,7 +282,7 @@ decompCoerce
     -> Either (Union (f ': r) m a) (Weaving e m a)
 decompCoerce (Union p a) =
   case p of
-    Choice -> Right a
-    Other pr -> Left (Union (Other pr) a)
+    Here  -> Right a
+    In pr -> Left (Union (In pr) a)
 {-# INLINE decompCoerce #-}
 
