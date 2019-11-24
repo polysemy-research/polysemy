@@ -35,7 +35,8 @@ module Polysemy.Internal.Union
   , ElemOf (..)
   , membership
   -- * Checking membership
-  , KnownRow (..)
+  , KnownRow
+  , tryMembership
   ) where
 
 import Control.Monad
@@ -52,7 +53,8 @@ import Polysemy.Internal.CustomErrors
 
 
 ------------------------------------------------------------------------------
--- | An extensible, type-safe union. The @r@ type parameter is a type-- list of effects, any one of which may be held within the 'Union'.
+-- | An extensible, type-safe union. The @r@ type parameter is a type-level
+-- list of effects, any one of which may be held within the 'Union'.
 data Union (r :: EffectRow) (m :: Type -> Type) a where
   Union
       :: -- A proof that the effect is actually in @r@.
@@ -135,6 +137,14 @@ type Member e r = MemberNoError e r
 ------------------------------------------------------------------------------
 -- | Like 'Member', but will produce an error message if the types are
 -- ambiguous.
+--
+-- /Be careful with this./ Due to quirks of 'GHC.TypeLits.TypeError',
+-- the custom error messages emitted by this can potentially override other,
+-- more helpful error messages.
+-- See the discussion in
+-- <https://github.com/polysemy-research/polysemy/issues/227 Issue #227>.
+--
+-- @since 1.2.3.0
 type MemberWithError e r =
   ( Find r e
 #ifndef NO_ERROR_MESSAGES
@@ -155,7 +165,11 @@ type MemberNoError e r =
   )
 
 ------------------------------------------------------------------------------
--- | A proof that @e@ is an element of @r@
+-- | A proof that @e@ is an element of @r@.
+--
+-- Due to technical reasons, @'ElemOf' r e@ is not powerful enough to
+-- prove @'Member' e r@; however, it can still be used send actions of @e@
+-- into @r@ by using 'Polysemy.Internal.subsumeUsing'.
 data ElemOf r e where
   Here :: ElemOf (e ': r) e
   In   :: ElemOf r e -> ElemOf (e' ': r) e
@@ -186,23 +200,39 @@ instance Find z t => Find (_1 ': z) t where
   membership' = In $ membership' @_ @z @t
   {-# INLINE membership' #-}
 
+------------------------------------------------------------------------------
+-- | A class for effect rows whose elements are inspectable.
+--
+-- This constraint is eventually satisfied as @r@ is instantied to a
+-- monomorphic list.
+-- (E.g when @r@ becomes something like
+-- @'[State Int, Output String, Embed IO]@)
 class KnownRow r where
-  tryMembership :: forall e. Typeable e => Maybe (ElemOf r e)
+  tryMembership' :: forall e. Typeable e => Maybe (ElemOf r e)
 
 instance KnownRow '[] where
-  tryMembership = Nothing
-  {-# INLINE tryMembership #-}
+  tryMembership' = Nothing
+  {-# INLINE tryMembership' #-}
 
 instance (Typeable e, KnownRow r) => KnownRow (e ': r) where
-  tryMembership :: forall e'. Typeable e' => Maybe (ElemOf (e ': r) e')
-  tryMembership = case eqT @e @e' of
+  tryMembership' :: forall e'. Typeable e' => Maybe (ElemOf (e ': r) e')
+  tryMembership' = case eqT @e @e' of
     Just Refl -> Just Here
-    _         -> In <$> tryMembership @r @e'
-  {-# INLINE tryMembership #-}
+    _         -> In <$> tryMembership' @r @e'
+  {-# INLINE tryMembership' #-}
 
+------------------------------------------------------------------------------
+-- | Given @'Member' e r@, extract a proof that @e@ is an element of @r@.
 membership :: Member e r => ElemOf r e
 membership = membership'
 {-# INLINE membership #-}
+
+------------------------------------------------------------------------------
+-- | Extracts a proof that @e@ is an element of @r@ if that
+-- is indeed the case; otherwise returns @Nothing@.
+tryMembership :: forall e r. (Typeable e, KnownRow r) => Maybe (ElemOf r e)
+tryMembership = tryMembership' @r @e
+{-# INLINE tryMembership #-}
 
 ------------------------------------------------------------------------------
 -- | Decompose a 'Union'. Either this union contains an effect @e@---the head
@@ -217,8 +247,8 @@ decomp (Union p a) =
 ------------------------------------------------------------------------------
 -- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> Weaving e m a
-extract (Union Here a) = a
-extract _ = error "impossible"
+extract (Union Here a)   = a
+extract (Union (In g) _) = case g of {}
 {-# INLINE extract #-}
 
 
@@ -265,6 +295,9 @@ prj (Union sn a) =
     Just Refl -> Just a
 {-# INLINE prj #-}
 
+------------------------------------------------------------------------------
+-- | Attempt to take an @e@ effect out of a 'Union', given an explicit
+-- proof that the effect exists in @r@.
 prjUsing
   :: forall e r m a
    . ElemOf r e
