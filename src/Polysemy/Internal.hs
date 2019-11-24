@@ -406,7 +406,7 @@ subsume = hoistSem $ \u -> hoist subsume $ case decomp u of
 -- | Interprets an effect in terms of another identical effect, given a
 -- proof that the effect exists in @r@.
 --
--- This is useful in conjunction with @tryMembership@.
+-- This is useful in conjunction with 'tryMembership'.
 --
 -- @since TODO
 subsumeUsing :: forall e r a. ElemOf r e -> Sem (e ': r) a -> Sem r a

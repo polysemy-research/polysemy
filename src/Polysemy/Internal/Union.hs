@@ -34,6 +34,8 @@ module Polysemy.Internal.Union
   -- * Witnesses
   , ElemOf (..)
   , membership
+  -- * Checking membership
+  , KnownRow (..)
   ) where
 
 import Control.Monad
@@ -184,14 +186,14 @@ instance Find z t => Find (_1 ': z) t where
   membership' = In $ membership' @_ @z @t
   {-# INLINE membership' #-}
 
-class KnownEffectRow r where
+class KnownRow r where
   tryMembership :: forall e. Typeable e => Maybe (ElemOf r e)
 
-instance KnownEffectRow '[] where
+instance KnownRow '[] where
   tryMembership = Nothing
   {-# INLINE tryMembership #-}
 
-instance (Typeable e, KnownEffectRow r) => KnownEffectRow (e ': r) where
+instance (Typeable e, KnownRow r) => KnownRow (e ': r) where
   tryMembership :: forall e'. Typeable e' => Maybe (ElemOf (e ': r) e')
   tryMembership = case eqT @e @e' of
     Just Refl -> Just Here
