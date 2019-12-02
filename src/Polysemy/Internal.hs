@@ -173,7 +173,7 @@ import Polysemy.Internal.Union
 --
 -- functions as well.
 --
--- There this sense, a @'Member' ('Polysemy.State.State' s) r@ constraint is
+-- In this sense, a @'Member' ('Polysemy.State.State' s) r@ constraint is
 -- analogous to mtl's @'Control.Monad.State.Class.MonadState' s m@ and should
 -- be thought of as such. However, /unlike/ mtl, a 'Sem' monad may have
 -- an arbitrary number of the same effect.
