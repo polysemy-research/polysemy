@@ -76,7 +76,7 @@ data FindConstraint = FindConstraint
 -- | Given a list of constraints, filter out the 'FindConstraint's.
 getFindConstraints :: PolysemyStuff 'Things -> [Ct] -> [FindConstraint]
 getFindConstraints (findClass -> cls) cts = do
-  cd@CDictCan{cc_class = cls', cc_tyargs = [_, r, eff]} <- cts
+  cd@CDictCan{cc_class = cls', cc_tyargs = [_, eff, r]} <- cts
   guard $ cls == cls'
   pure $ FindConstraint
     { fcLoc = ctLoc cd
@@ -163,7 +163,7 @@ extractRowFromSem (semTyCon -> sem) ty = do
 
 ------------------------------------------------------------------------------
 -- | Given a list of bogus @r@s, and the wanted constraints, produce bogus
--- evidence terms that will prevent @IfStuck (LocateEffect r _) _ _@ error messsages.
+-- evidence terms that will prevent @IfStuck (LocateEffect _ r) _ _@ error messsages.
 solveBogusError :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
 solveBogusError stuff wanteds = do
   let splitTyConApp_list = maybeToList  . splitTyConApp_maybe
@@ -172,7 +172,7 @@ solveBogusError stuff wanteds = do
   ct@(CIrredCan ce _) <- wanteds
   (stuck, [_, _, expr, _, _]) <- splitTyConApp_list $ ctev_pred ce
   guard $ stuck == ifStuckTyCon stuff
-  (idx, [_, r, _]) <- splitTyConApp_list expr
+  (idx, [_, _, r]) <- splitTyConApp_list expr
   guard $ idx == locateEffectTyCon stuff
   guard $ elem @[] (OrdType r) $ coerce bogus
   pure (error "bogus proof for stuck type family", ct)

@@ -34,6 +34,7 @@ module Polysemy.Internal.Union
   -- * Witnesses
   , ElemOf (..)
   , membership
+  , sameMember
   -- * Checking membership
   , KnownRow
   , tryMembership
@@ -44,7 +45,6 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Kind
 import Data.Typeable
-import Data.Type.Equality
 import Polysemy.Internal.Kind
 
 #ifndef NO_ERROR_MESSAGES
@@ -58,7 +58,7 @@ import Polysemy.Internal.CustomErrors
 data Union (r :: EffectRow) (m :: Type -> Type) a where
   Union
       :: -- A proof that the effect is actually in @r@.
-         ElemOf r e
+         ElemOf e r
          -- The effect to wrap. The functions 'prj' and 'decomp' can help
          -- retrieve this value later.
       -> Weaving e m a
@@ -146,21 +146,20 @@ type Member e r = MemberNoError e r
 --
 -- @since 1.2.3.0
 type MemberWithError e r =
-  ( Find r e
+  ( MemberNoError e r
 #ifndef NO_ERROR_MESSAGES
     -- NOTE: The plugin explicitly pattern matches on
-    -- `WhenStuck (LocateEffect r _) _`, so if you change this, make sure to change
+    -- `WhenStuck (LocateEffect _ r) _`, so if you change this, make sure to change
     -- the corresponding implementation in
     -- Polysemy.Plugin.Fundep.solveBogusError
-  , LocateEffect r e ~ '()
-  , WhenStuck (LocateEffect r e) (AmbiguousSend r e)
+  , WhenStuck (LocateEffect e r) (AmbiguousSend e r)
 #endif
   )
 
 type MemberNoError e r =
-  ( Find r e
+  ( Find e r
 #ifndef NO_ERROR_MESSAGES
-  , LocateEffect r e ~ '()
+  , LocateEffect e r ~ '()
 #endif
   )
 
@@ -170,34 +169,44 @@ type MemberNoError e r =
 -- Due to technical reasons, @'ElemOf' r e@ is not powerful enough to
 -- prove @'Member' e r@; however, it can still be used send actions of @e@
 -- into @r@ by using 'Polysemy.Internal.subsumeUsing'.
-data ElemOf r e where
-  Here :: ElemOf (e ': r) e
-  In   :: ElemOf r e -> ElemOf (e' ': r) e
+data ElemOf e r where
+  Here  :: ElemOf e (e ': r)
+  There :: ElemOf e r -> ElemOf e (e' ': r)
 
-instance TestEquality (ElemOf r) where
-  testEquality Here Here
-    = Just Refl
-  testEquality (In e) (In e')
-    = testEquality e e'
-  testEquality _ _ =
-    Nothing
+sameMember :: forall e e' r
+            . ElemOf e r
+           -> ElemOf e' r
+           -> Maybe (e :~: e')
+sameMember Here       Here =
+  Just Refl
+sameMember (There pr) (There pr') =
+  sameMember @e @e' pr pr'
+sameMember (There _)  _ =
+  Nothing
+sameMember _          _ =
+  Nothing
 
-type family LocateEffect (ts :: [k]) (t :: k) :: () where
+
+------------------------------------------------------------------------------
+-- | Used to detect ambiguous uses of effects. If @r@ isn't concrete,
+-- and we haven't been given `LocateEffect e r ~ '()` from a
+-- `Member e r` constraint, then `LocateEffect e r` will get stuck.
+type family LocateEffect (t :: k) (ts :: [k]) :: () where
 #ifndef NO_ERROR_MESSAGES
-  LocateEffect '[] t = UnhandledEffect t
+  LocateEffect t '[] = UnhandledEffect t
 #endif
-  LocateEffect (t ': ts) t = '()
-  LocateEffect (u ': ts) t = LocateEffect ts t
+  LocateEffect t (t ': ts) = '()
+  LocateEffect t (u ': ts) = LocateEffect t ts
 
-class Find (r :: [k]) (t :: k) where
-  membership' :: ElemOf r t
+class Find (t :: k) (r :: [k]) where
+  membership' :: ElemOf t r
 
-instance {-# OVERLAPPING #-} Find (t ': z) t where
+instance {-# OVERLAPPING #-} Find t (t ': z) where
   membership' = Here
   {-# INLINE membership' #-}
 
-instance Find z t => Find (_1 ': z) t where
-  membership' = In $ membership' @_ @z @t
+instance Find t z => Find t (_1 ': z) where
+  membership' = There $ membership' @_ @t @z
   {-# INLINE membership' #-}
 
 ------------------------------------------------------------------------------
@@ -208,29 +217,29 @@ instance Find z t => Find (_1 ': z) t where
 -- (E.g when @r@ becomes something like
 -- @'[State Int, Output String, Embed IO]@)
 class KnownRow r where
-  tryMembership' :: forall e. Typeable e => Maybe (ElemOf r e)
+  tryMembership' :: forall e. Typeable e => Maybe (ElemOf e r)
 
 instance KnownRow '[] where
   tryMembership' = Nothing
   {-# INLINE tryMembership' #-}
 
 instance (Typeable e, KnownRow r) => KnownRow (e ': r) where
-  tryMembership' :: forall e'. Typeable e' => Maybe (ElemOf (e ': r) e')
+  tryMembership' :: forall e'. Typeable e' => Maybe (ElemOf e' (e ': r))
   tryMembership' = case eqT @e @e' of
     Just Refl -> Just Here
-    _         -> In <$> tryMembership' @r @e'
+    _         -> There <$> tryMembership' @r @e'
   {-# INLINE tryMembership' #-}
 
 ------------------------------------------------------------------------------
 -- | Given @'Member' e r@, extract a proof that @e@ is an element of @r@.
-membership :: Member e r => ElemOf r e
+membership :: Member e r => ElemOf e r
 membership = membership'
 {-# INLINE membership #-}
 
 ------------------------------------------------------------------------------
 -- | Extracts a proof that @e@ is an element of @r@ if that
 -- is indeed the case; otherwise returns @Nothing@.
-tryMembership :: forall e r. (Typeable e, KnownRow r) => Maybe (ElemOf r e)
+tryMembership :: forall e r. (Typeable e, KnownRow r) => Maybe (ElemOf e r)
 tryMembership = tryMembership' @r @e
 {-# INLINE tryMembership #-}
 
@@ -241,14 +250,14 @@ decomp :: Union (e ': r) m a -> Either (Union r m a) (Weaving e m a)
 decomp (Union p a) =
   case p of
     Here  -> Right a
-    In pr -> Left $ Union pr a
+    There pr -> Left $ Union pr a
 {-# INLINE decomp #-}
 
 ------------------------------------------------------------------------------
 -- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> Weaving e m a
 extract (Union Here a)   = a
-extract (Union (In g) _) = case g of {}
+extract (Union (There g) _) = case g of {}
 {-# INLINE extract #-}
 
 
@@ -261,7 +270,7 @@ absurdU (Union pr _) = case pr of {}
 ------------------------------------------------------------------------------
 -- | Weaken a 'Union' so it is capable of storing a new sort of effect.
 weaken :: forall e r m a. Union r m a -> Union (e ': r) m a
-weaken (Union pr a) = Union (In pr) a
+weaken (Union pr a) = Union (There pr) a
 {-# INLINE weaken #-}
 
 
@@ -289,10 +298,7 @@ prj :: forall e r m a
        )
     => Union r m a
     -> Maybe (Weaving e m a)
-prj (Union sn a) =
-  case testEquality sn (membership @e @r) of
-    Nothing -> Nothing
-    Just Refl -> Just a
+prj = prjUsing membership
 {-# INLINE prj #-}
 
 ------------------------------------------------------------------------------
@@ -300,13 +306,10 @@ prj (Union sn a) =
 -- proof that the effect exists in @r@.
 prjUsing
   :: forall e r m a
-   . ElemOf r e
+   . ElemOf e r
   -> Union r m a
   -> Maybe (Weaving e m a)
-prjUsing pr (Union sn a) =
-  case testEquality sn pr of
-    Nothing -> Nothing
-    Just Refl -> Just a
+prjUsing pr (Union sn a) = (\Refl -> a) <$> sameMember pr sn
 {-# INLINE prjUsing #-}
 
 ------------------------------------------------------------------------------
@@ -318,5 +321,5 @@ decompCoerce
 decompCoerce (Union p a) =
   case p of
     Here  -> Right a
-    In pr -> Left (Union (In pr) a)
+    There pr -> Left (Union (There pr) a)
 {-# INLINE decompCoerce #-}

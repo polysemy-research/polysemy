@@ -40,7 +40,6 @@ import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Data.Kind
 import Data.Typeable
-import Data.Type.Equality
 import Polysemy.Embed.Type
 import Polysemy.Fail.Type
 import Polysemy.Internal.Fixpoint
@@ -174,7 +173,7 @@ import Polysemy.Internal.Union
 --
 -- functions as well.
 --
--- In this sense, a @'Member' ('Polysemy.State.State' s) r@ constraint is
+-- There this sense, a @'Member' ('Polysemy.State.State' s) r@ constraint is
 -- analogous to mtl's @'Control.Monad.State.Class.MonadState' s m@ and should
 -- be thought of as such. However, /unlike/ mtl, a 'Sem' monad may have
 -- an arbitrary number of the same effect.
@@ -357,7 +356,7 @@ raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
   where
     weakenUnder :: ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': r) m x
     weakenUnder (Union Here a) = Union Here a
-    weakenUnder (Union (In n) a) = Union (In (In n)) a
+    weakenUnder (Union (There n) a) = Union (There (There n)) a
     {-# INLINE weakenUnder #-}
 {-# INLINE raiseUnder #-}
 
@@ -372,13 +371,13 @@ raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
   where
     weakenUnder2 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': r) m x
     weakenUnder2 (Union Here a) = Union Here a
-    weakenUnder2 (Union (In n) a) = Union (In (In (In n))) a
+    weakenUnder2 (Union (There n) a) = Union (There (There (There n))) a
     {-# INLINE weakenUnder2 #-}
 {-# INLINE raiseUnder2 #-}
 
 
 ------------------------------------------------------------------------------
--- | Like 'raise', but introduces two new effects underneath the head of the
+-- | Like 'raise', but introduces three new effects underneath the head of the
 -- list.
 --
 -- @since 1.2.0.0
@@ -387,7 +386,7 @@ raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
   where
     weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
     weakenUnder3 (Union Here a) = Union Here a
-    weakenUnder3 (Union (In n) a) = Union (In (In (In (In n)))) a
+    weakenUnder3 (Union (There n) a) = Union (There (There (There (There n)))) a
     {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
 
@@ -401,9 +400,7 @@ raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
 --
 -- @since 1.2.0.0
 subsume :: Member e r => Sem (e ': r) a -> Sem r a
-subsume = hoistSem $ \u -> hoist subsume $ case decomp u of
-  Right w -> injWeaving w
-  Left  g -> g
+subsume = subsumeUsing membership
 {-# INLINE subsume #-}
 
 ------------------------------------------------------------------------------
@@ -413,10 +410,16 @@ subsume = hoistSem $ \u -> hoist subsume $ case decomp u of
 -- This is useful in conjunction with 'Polysemy.Internal.Union.tryMembership'.
 --
 -- @since TODO
-subsumeUsing :: forall e r a. ElemOf r e -> Sem (e ': r) a -> Sem r a
-subsumeUsing pr = hoistSem $ \u -> hoist (subsumeUsing pr) $ case decomp u of
-  Right w -> Union pr w
-  Left  g -> g
+subsumeUsing :: forall e r a. ElemOf e r -> Sem (e ': r) a -> Sem r a
+subsumeUsing pr =
+  let
+    go :: forall x. Sem (e ': r) x -> Sem r x
+    go = hoistSem $ \u -> hoist go $ case decomp u of
+      Right w -> Union pr w
+      Left  g -> g
+    {-# INLINE go #-}
+  in
+    go
 {-# INLINE subsumeUsing #-}
 
 ------------------------------------------------------------------------------
@@ -433,12 +436,14 @@ subsumeUsing pr = hoistSem $ \u -> hoist (subsumeUsing pr) $ case decomp u of
 -- Typically, there's little reason to use 'expose' instead of
 -- 'intercept'\/'interceptH'. It's only offered for symmetry:
 -- 'subsume'\/'subsumeUsing' and 'expose'\/'exposeUsing'.
+--
+-- @since TODO
 expose :: Member e r => Sem r a -> Sem (e ': r) a
 expose = exposeUsing membership
 {-# INLINE expose #-}
 
 ------------------------------------------------------------------------------
--- | Given an explicit proof that @e@ exists in @r@, moves all uses of e@
+-- | Given an explicit proof that @e@ exists in @r@, moves all uses of @e@
 -- within the argument computation to a new @e@ placed on top of the effect
 -- stack. Note that this does not consume the inner @e@.
 --
@@ -447,11 +452,17 @@ expose = exposeUsing membership
 -- 'intercept'-like operations.
 --
 -- @since TODO
-exposeUsing :: forall e r a. ElemOf r e -> Sem r a -> Sem (e ': r) a
-exposeUsing pr = hoistSem $ \(Union pr' wav) -> hoist (exposeUsing pr) $
-  case testEquality pr pr' of
-    Just Refl -> Union Here wav
-    _         -> Union (In pr') wav
+exposeUsing :: forall e r a. ElemOf e r -> Sem r a -> Sem (e ': r) a
+exposeUsing pr =
+  let
+    go :: forall x. Sem r x -> Sem (e ': r) x
+    go = hoistSem $ \(Union pr' wav) -> hoist go $
+      case sameMember pr pr' of
+      Just Refl -> Union Here wav
+      _         -> Union (There pr') wav
+    {-# INLINE go #-}
+  in
+    go
 {-# INLINE exposeUsing #-}
 
 

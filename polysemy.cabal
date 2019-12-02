@@ -4,7 +4,7 @@ cabal-version: 1.24
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9901ffab188e3e83de5955f88d17856c9457f3cdd9250f86216bf76374e13217
+-- hash: 582807c5d69a34a9e991a77c6111532c05dbb54a5d7aa6662267b7af2d3047ee
 
 name:           polysemy
 version:        1.2.3.0
@@ -48,7 +48,7 @@ library
       Polysemy
       Polysemy.Async
       Polysemy.AtomicState
-      Polysemy.Compose
+      Polysemy.Bundle
       Polysemy.Embed
       Polysemy.Embed.Type
       Polysemy.Error
@@ -58,6 +58,7 @@ library
       Polysemy.Fixpoint
       Polysemy.Input
       Polysemy.Internal
+      Polysemy.Internal.Bundle
       Polysemy.Internal.Combinators
       Polysemy.Internal.CustomErrors
       Polysemy.Internal.CustomErrors.Redefined
@@ -73,6 +74,7 @@ library
       Polysemy.Internal.Writer
       Polysemy.IO
       Polysemy.Law
+      Polysemy.Membership
       Polysemy.NonDet
       Polysemy.Output
       Polysemy.Reader
