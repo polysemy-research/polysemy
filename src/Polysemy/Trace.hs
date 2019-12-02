@@ -77,16 +77,16 @@ runTraceList = runOutputList . reinterpret (
 
 
 ------------------------------------------------------------------------------
--- | Transform an 'Output' 'String' effect into a 'Trace' effect.
+-- | Transform an @'Output' w@ effect into a 'Trace' effect given a function
+-- to transform each @w@ to a 'String'.
 --
 -- @since 1.0.0.0
 outputToTrace
-    :: ( Show w
-       , Member Trace r
-       )
-    => Sem (Output w ': r) a
-    -> Sem r a
-outputToTrace = interpret $ \case
-  Output m -> trace $ show m
+  :: Member Trace r
+  => (w -> String)
+  -> Sem (Output w ': r) a
+  -> Sem r a
+outputToTrace show' = interpret $ \case
+  Output m -> trace $ show' m
 {-# INLINE outputToTrace #-}
 
