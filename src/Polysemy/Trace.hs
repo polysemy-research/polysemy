@@ -82,7 +82,8 @@ runTraceList = runOutputList . reinterpret (
 --
 -- @since 1.0.0.0
 outputToTrace
-  :: Member Trace r
+  :: forall w r a
+   . Member Trace r
   => (w -> String)
   -> Sem (Output w ': r) a
   -> Sem r a
