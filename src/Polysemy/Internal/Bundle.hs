@@ -1,4 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+
+{-# OPTIONS_HADDOCK not-home #-}
+
 module Polysemy.Internal.Bundle where
 
 import Data.Proxy

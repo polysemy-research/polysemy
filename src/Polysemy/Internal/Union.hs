@@ -168,14 +168,14 @@ type MemberNoError e r =
 ------------------------------------------------------------------------------
 -- | A proof that @e@ is an element of @r@.
 --
--- Due to technical reasons, @'ElemOf' r e@ is not powerful enough to
+-- Due to technical reasons, @'ElemOf' e r@ is not powerful enough to
 -- prove @'Member' e r@; however, it can still be used send actions of @e@
 -- into @r@ by using 'Polysemy.Internal.subsumeUsing'.
 data ElemOf e r where
+  -- | @e@ is located at the head of the list.
   Here  :: ElemOf e (e ': r)
-  -- ^ @e@ is located at the head of the list.
+  -- | @e@ is located somewhere in the tail of the list.
   There :: ElemOf e r -> ElemOf e (e' ': r)
-  -- ^ @e@ is located somewhere in the tail of the list.
 
 ------------------------------------------------------------------------------
 -- | Checks if two membership proofs are equal. If they are, then that means
