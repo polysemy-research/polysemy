@@ -100,7 +100,7 @@ getInitialStateT = send @(Tactics _ m (e ': r)) GetInitialState
 --
 -- ==== Example
 --
--- We can use the result of 'getInspectT' to "undo" 'pureT' (or any of the other
+-- We can use the result of 'getInspectorT' to "undo" 'pureT' (or any of the other
 -- 'Tactical' functions):
 --
 -- @

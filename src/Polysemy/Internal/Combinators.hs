@@ -19,6 +19,10 @@ module Polysemy.Internal.Combinators
   , reinterpret2H
   , reinterpret3H
 
+  -- * Conditional
+  , interceptUsing
+  , interceptUsingH
+
     -- * Statefulness
   , stateful
   , lazilyStateful
@@ -281,13 +285,55 @@ interceptH
     -> Sem r a
        -- ^ Unlike 'interpretH', 'interceptH' does not consume any effects.
     -> Sem r a
-interceptH f (Sem m) = Sem $ \k -> m $ \u ->
-  case prj u of
-    Just (Weaving e s d y v) ->
-      usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
-    Nothing -> k $ hoist (interceptH f) u
+interceptH = interceptUsingH membership
 {-# INLINE interceptH #-}
 
+------------------------------------------------------------------------------
+-- | A variant of 'intercept' that accepts an explicit proof that the effect
+-- is in the effect stack rather then requiring a 'Member' constraint.
+--
+-- This is useful in conjunction with 'Polysemy.Membership.tryMembership'
+-- in order to conditionally perform 'intercept'.
+interceptUsing
+    :: FirstOrder e "interceptUsing"
+    => ElemOf e r
+       -- ^ A proof that the handled effect exists in @r@.
+       -- This can be retrieved through 'Polysemy.Membership.membership' or
+       -- 'Polysemy.Membership.tryMembership'.
+    -> (∀ x m. e m x -> Sem r x)
+       -- ^ A natural transformation from the handled effect to other effects
+       -- already in 'Sem'.
+    -> Sem r a
+       -- ^ Unlike 'interpret', 'intercept' does not consume any effects.
+    -> Sem r a
+interceptUsing pr f = interceptUsingH pr $ \(e :: e m x) -> liftT @m $ f e
+{-# INLINE interceptUsing #-}
+
+------------------------------------------------------------------------------
+-- | A variant of 'interceptH' that accepts an explicit proof that the effect
+-- is in the effect stack rather then requiring a 'Member' constraint.
+--
+-- This is useful in conjunction with 'Polysemy.Membership.tryMembership'
+-- in order to conditionally perform 'interceptH'.
+--
+-- See the notes on 'Tactical' for how to use this function.
+interceptUsingH
+    :: ElemOf e r
+       -- ^ A proof that the handled effect exists in @r@.
+       -- This can be retrieved through 'Polysemy.Membership.membership' or
+       -- 'Polysemy.Membership.tryMembership'.
+    -> (∀ x m. e m x -> Tactical e m r x)
+       -- ^ A natural transformation from the handled effect to other effects
+       -- already in 'Sem'.
+    -> Sem r a
+       -- ^ Unlike 'interpretH', 'interceptUsingH' does not consume any effects.
+    -> Sem r a
+interceptUsingH pr f (Sem m) = Sem $ \k -> m $ \u ->
+  case prjUsing pr u of
+    Just (Weaving e s d y v) ->
+      usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
+    Nothing -> k $ hoist (interceptUsingH pr f) u
+{-# INLINE interceptUsingH #-}
 
 ------------------------------------------------------------------------------
 -- | Rewrite an effect @e1@ directly into @e2@, and put it on the top of the
@@ -302,7 +348,7 @@ rewrite
 rewrite f (Sem m) = Sem $ \k -> m $ \u ->
   k $ hoist (rewrite f) $ case decompCoerce u of
     Left x -> x
-    Right (Weaving e s d n y) -> injWeaving $ Weaving (f e) s d n y
+    Right (Weaving e s d n y) -> Union Here $ Weaving (f e) s d n y
 
 
 ------------------------------------------------------------------------------

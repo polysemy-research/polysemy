@@ -12,6 +12,7 @@ module Polysemy.Internal
   , MemberWithError
   , Members
   , send
+  , sendUsing
   , embed
   , run
   , runM
@@ -20,6 +21,7 @@ module Polysemy.Internal
   , raiseUnder2
   , raiseUnder3
   , subsume
+  , subsumeUsing
   , Embed (..)
   , usingSem
   , liftSem
@@ -351,8 +353,8 @@ raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
   where
     weakenUnder :: ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': r) m x
-    weakenUnder (Union SZ a) = Union SZ a
-    weakenUnder (Union (SS n) a) = Union (SS (SS n)) a
+    weakenUnder (Union Here a) = Union Here a
+    weakenUnder (Union (There n) a) = Union (There (There n)) a
     {-# INLINE weakenUnder #-}
 {-# INLINE raiseUnder #-}
 
@@ -366,14 +368,14 @@ raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
 raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
   where
     weakenUnder2 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': r) m x
-    weakenUnder2 (Union SZ a) = Union SZ a
-    weakenUnder2 (Union (SS n) a) = Union (SS (SS (SS n))) a
+    weakenUnder2 (Union Here a) = Union Here a
+    weakenUnder2 (Union (There n) a) = Union (There (There (There n))) a
     {-# INLINE weakenUnder2 #-}
 {-# INLINE raiseUnder2 #-}
 
 
 ------------------------------------------------------------------------------
--- | Like 'raise', but introduces two new effects underneath the head of the
+-- | Like 'raise', but introduces three new effects underneath the head of the
 -- list.
 --
 -- @since 1.2.0.0
@@ -381,8 +383,8 @@ raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4
 raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
   where
     weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
-    weakenUnder3 (Union SZ a) = Union SZ a
-    weakenUnder3 (Union (SS n) a) = Union (SS (SS (SS (SS n)))) a
+    weakenUnder3 (Union Here a) = Union Here a
+    weakenUnder3 (Union (There n) a) = Union (There (There (There (There n)))) a
     {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
 
@@ -396,10 +398,36 @@ raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
 --
 -- @since 1.2.0.0
 subsume :: Member e r => Sem (e ': r) a -> Sem r a
-subsume = hoistSem $ \u -> hoist subsume $ case decomp u of
-  Right w -> injWeaving w
-  Left  g -> g
+subsume = subsumeUsing membership
 {-# INLINE subsume #-}
+
+------------------------------------------------------------------------------
+-- | Interprets an effect in terms of another identical effect, given an
+-- explicit proof that the effect exists in @r@.
+--
+-- This is useful in conjunction with 'Polysemy.Membership.tryMembership'
+-- in order to conditionally make use of effects. For example:
+--
+-- @
+-- tryListen :: 'Polysemy.Membership.KnownRow' r => 'Sem' r a -> Maybe ('Sem' r ([Int], a))
+-- tryListen m = case 'Polysemy.Membership.tryMembership' @('Polysemy.Writer.Writer' [Int]) of
+--   Just pr -> Just $ 'subsumeUsing' pr ('Polysemy.Writer.listen' ('raise' m))
+--   _       -> Nothing
+-- @
+--
+-- @since TODO
+subsumeUsing :: forall e r a. ElemOf e r -> Sem (e ': r) a -> Sem r a
+subsumeUsing pr =
+  let
+    go :: forall x. Sem (e ': r) x -> Sem r x
+    go = hoistSem $ \u -> hoist go $ case decomp u of
+      Right w -> Union pr w
+      Left  g -> g
+    {-# INLINE go #-}
+  in
+    go
+{-# INLINE subsumeUsing #-}
+
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem'. This is used primarily via
@@ -407,6 +435,16 @@ subsume = hoistSem $ \u -> hoist subsume $ case decomp u of
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}
+
+------------------------------------------------------------------------------
+-- | Embed an effect into a 'Sem', given an explicit proof
+-- that the effect exists in @r@.
+--
+-- This is useful in conjunction with 'Polysemy.Membership.tryMembership',
+-- in order to conditionally make use of effects.
+sendUsing :: ElemOf e r -> e (Sem r) a -> Sem r a
+sendUsing pr = liftSem . injUsing pr
+{-# INLINE[3] sendUsing #-}
 
 
 ------------------------------------------------------------------------------

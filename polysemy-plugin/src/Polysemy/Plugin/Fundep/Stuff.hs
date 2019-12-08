@@ -23,10 +23,10 @@ import Outputable (pprPanic, empty, text, (<+>), ($$))
 -- When @l ~ 'Locations@, each of these is just a pair of strings. When @l
 -- ~ 'Things@, it's actually references to the stuff.
 data PolysemyStuff (l :: LookupState) = PolysemyStuff
-  { findClass    :: ThingOf l Class
-  , semTyCon     :: ThingOf l TyCon
-  , ifStuckTyCon :: ThingOf l TyCon
-  , indexOfTyCon :: ThingOf l TyCon
+  { findClass         :: ThingOf l Class
+  , semTyCon          :: ThingOf l TyCon
+  , ifStuckTyCon      :: ThingOf l TyCon
+  , locateEffectTyCon :: ThingOf l TyCon
   }
 
 
@@ -34,10 +34,10 @@ data PolysemyStuff (l :: LookupState) = PolysemyStuff
 -- | All of the things we need to lookup.
 polysemyStuffLocations :: PolysemyStuff 'Locations
 polysemyStuffLocations = PolysemyStuff
-  { findClass    = ("Polysemy.Internal.Union",                  "Find")
-  , semTyCon     = ("Polysemy.Internal",                        "Sem")
-  , ifStuckTyCon = ("Polysemy.Internal.CustomErrors.Redefined", "IfStuck")
-  , indexOfTyCon = ("Polysemy.Internal.Union",                  "IndexOf")
+  { findClass         = ("Polysemy.Internal.Union",                  "Find")
+  , semTyCon          = ("Polysemy.Internal",                        "Sem")
+  , ifStuckTyCon      = ("Polysemy.Internal.CustomErrors.Redefined", "IfStuck")
+  , locateEffectTyCon = ("Polysemy.Internal.Union",                  "LocateEffect")
   }
 
 

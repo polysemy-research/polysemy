@@ -76,7 +76,7 @@ type AmbigousEffectMessage (rstate :: EffectRowCtor)
   % "    " <> PrettyPrintList vs <> " directly, or activate polysemy-plugin which"
   % "      can usually infer the type correctly."
 
-type AmbiguousSend r e =
+type AmbiguousSend e r =
       (IfStuck r
         (AmbiguousSendError 'TyVarR r e)
         (Pure (AmbiguousSendError (UnstuckRState r) r e)))
