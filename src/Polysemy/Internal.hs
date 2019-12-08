@@ -12,6 +12,7 @@ module Polysemy.Internal
   , MemberWithError
   , Members
   , send
+  , sendUsing
   , embed
   , run
   , runM
@@ -21,8 +22,6 @@ module Polysemy.Internal
   , raiseUnder3
   , subsume
   , subsumeUsing
-  , expose
-  , exposeUsing
   , Embed (..)
   , usingSem
   , liftSem
@@ -39,7 +38,6 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Data.Kind
-import Data.Typeable
 import Polysemy.Embed.Type
 import Polysemy.Fail.Type
 import Polysemy.Internal.Fixpoint
@@ -407,7 +405,15 @@ subsume = subsumeUsing membership
 -- | Interprets an effect in terms of another identical effect, given an
 -- explicit proof that the effect exists in @r@.
 --
--- This is useful in conjunction with 'Polysemy.Internal.Union.tryMembership'.
+-- This is useful in conjunction with 'Polysemy.Membership.tryMembership'
+-- in order to conditionally make use of effects. For example:
+--
+-- @
+-- tryListen :: 'Polysemy.Membership.KnownRow' r => 'Sem' r a -> Maybe ('Sem' r ([Int], a))
+-- tryListen m = case 'Polysemy.Membership.tryMembership' @('Polysemy.Writer.Writer' [Int]) of
+--   Just pr -> Just $ 'subsumeUsing' pr ('Polysemy.Writer.listen' ('raise' m))
+--   _       -> Nothing
+-- @
 --
 -- @since TODO
 subsumeUsing :: forall e r a. ElemOf e r -> Sem (e ': r) a -> Sem r a
@@ -422,49 +428,6 @@ subsumeUsing pr =
     go
 {-# INLINE subsumeUsing #-}
 
-------------------------------------------------------------------------------
--- | Moves all uses of an effect @e@ within the argument computation
--- to a new @e@ placed on top of the effect stack. Note that this does not
--- consume the inner @e@.
---
--- This can be used to replicate 'intercept'\/'interceptH':
---
--- @
--- interceptH k = interpretH k . expose
--- @
---
--- Typically, there's little reason to use 'expose' instead of
--- 'intercept'\/'interceptH'. It's only offered for symmetry:
--- 'subsume'\/'subsumeUsing' and 'expose'\/'exposeUsing'.
---
--- @since TODO
-expose :: Member e r => Sem r a -> Sem (e ': r) a
-expose = exposeUsing membership
-{-# INLINE expose #-}
-
-------------------------------------------------------------------------------
--- | Given an explicit proof that @e@ exists in @r@, moves all uses of @e@
--- within the argument computation to a new @e@ placed on top of the effect
--- stack. Note that this does not consume the inner @e@.
---
--- This is useful in conjunction with 'Polysemy.Internal.Union.tryMembership'
--- and 'interpret'\/'interpretH' in order to conditionally perform
--- 'intercept'-like operations.
---
--- @since TODO
-exposeUsing :: forall e r a. ElemOf e r -> Sem r a -> Sem (e ': r) a
-exposeUsing pr =
-  let
-    go :: forall x. Sem r x -> Sem (e ': r) x
-    go = hoistSem $ \(Union pr' wav) -> hoist go $
-      case sameMember pr pr' of
-      Just Refl -> Union Here wav
-      _         -> Union (There pr') wav
-    {-# INLINE go #-}
-  in
-    go
-{-# INLINE exposeUsing #-}
-
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem'. This is used primarily via
@@ -472,6 +435,16 @@ exposeUsing pr =
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}
+
+------------------------------------------------------------------------------
+-- | Embed an effect into a 'Sem', given an explicit proof
+-- that the effect exists in @r@.
+--
+-- This is useful in conjunction with 'Polysemy.Membership.tryMembership',
+-- in order to conditionally make use of effects.
+sendUsing :: ElemOf e r -> e (Sem r) a -> Sem r a
+sendUsing pr = liftSem . injUsing pr
+{-# INLINE[3] sendUsing #-}
 
 
 ------------------------------------------------------------------------------

@@ -8,8 +8,10 @@ module Polysemy.Membership
   , tryMembership
   -- * Using membership
   , subsumeUsing
-  , exposeUsing
+  , interceptUsing
+  , interceptUsingH
   ) where
 
 import Polysemy.Internal
+import Polysemy.Internal.Combinators
 import Polysemy.Internal.Union
