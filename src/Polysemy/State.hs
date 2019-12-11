@@ -211,7 +211,7 @@ stateToST
 stateToST s sem = do
   ref <- embed @(ST st) $ newSTRef s
   res <- runStateSTRef ref sem
-  end <- embed @(ST st) $ readSTRef ref
+  end <- embed $ readSTRef ref
   return (end, res)
 {-# INLINE stateToST #-}
 
