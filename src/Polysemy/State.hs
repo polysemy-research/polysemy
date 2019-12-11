@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Polysemy.State
@@ -18,13 +19,17 @@ module Polysemy.State
   , evalLazyState
   , runStateIORef
   , stateToIO
+  , runStateSTRef
+  , stateToST
 
     -- * Interoperation with MTL
   , hoistStateIntoStateT
   ) where
 
+import           Control.Monad.ST
 import qualified Control.Monad.Trans.State as S
 import           Data.IORef
+import           Data.STRef
 import           Data.Tuple (swap)
 import           Polysemy
 import           Polysemy.Internal
@@ -156,6 +161,59 @@ stateToIO s sem = do
   end <- embed $ readIORef ref
   return (end, res)
 {-# INLINE stateToIO #-}
+
+------------------------------------------------------------------------------
+-- | Run a 'State' effect by transforming it into operations over an 'STRef'.
+--
+-- @since TODO: version
+runStateSTRef
+    :: forall s st r a
+     . Member (Embed (ST st)) r
+    => STRef st s
+    -> Sem (State s ': r) a
+    -> Sem r a
+runStateSTRef ref = interpret $ \case
+  Get   -> embed $ readSTRef ref
+  Put s -> embed $ writeSTRef ref s
+{-# INLINE runStateSTRef #-}
+
+--------------------------------------------------------------------
+-- | Run an 'State' effect in terms of operations
+-- in 'ST'.
+--
+-- Internally, this simply creates a new 'STRef', passes it to
+-- 'runStateSTRef', and then returns the result and the final value
+-- of the 'STRef'.
+--
+-- /Beware/: As this uses an 'STRef' internally,
+-- all other effects will have local
+-- state semantics in regards to 'State' effects
+-- interpreted this way.
+-- For example, 'Polysemy.Error.throw' and 'Polysemy.Error.catch' will
+-- never revert 'put's, even if 'Polysemy.Error.runError' is used
+-- after 'stateToST'.
+--
+-- Additionally, one has to introduce the @st@ type to 'stateToST' by binding
+-- the type after 'runM' with an explicit forall with @-XScopedTypeVariables@.
+--
+-- @
+-- stResult :: (Int, ())
+-- stResult = runST ( (runM $ stateToST \@_ \@st 0 $ pure ()) :: forall st. ST st (Int, ()) )
+-- @
+--
+-- @since TODO: version
+stateToST
+    :: forall s st r a
+     . Member (Embed (ST st)) r
+    => s
+    -> Sem (State s ': r) a
+    -> Sem r (s, a)
+stateToST s sem = do
+  ref <- embed @(ST st) $ newSTRef s
+  res <- runStateSTRef ref sem
+  end <- embed @(ST st) $ readSTRef ref
+  return (end, res)
+{-# INLINE stateToST #-}
 
 ------------------------------------------------------------------------------
 -- | Hoist a 'State' effect into a 'S.StateT' monad transformer. This can be
