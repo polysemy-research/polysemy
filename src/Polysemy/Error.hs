@@ -15,6 +15,9 @@ module Polysemy.Error
   , fromExceptionSem
   , fromExceptionSemVia
   , note
+  , try
+  , tryJust
+  , catchJust
 
     -- * Interpretations
   , runError
@@ -28,6 +31,7 @@ import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
 import           Data.Bifunctor (first)
 import           Data.Typeable
+import           Data.Maybe (fromJust)
 import           Polysemy
 import           Polysemy.Final
 import           Polysemy.Internal
@@ -147,6 +151,37 @@ note :: Member (Error e) r => e -> Maybe a -> Sem r a
 note e Nothing  = throw e
 note _ (Just a) = pure a
 {-# INLINABLE note #-}
+
+------------------------------------------------------------------------------
+-- | Attempt to run a computation, returning an @'Either'@ with the
+-- exception.
+try :: Member (Error e) r => Sem r a -> Sem r (Either e a)
+try m = catch (Right <$> m) (return . Left)
+{-# INLINABLE try #-}
+
+------------------------------------------------------------------------------
+-- | Attempt to run a computation, with a provided exception function,
+-- returnreturning an @'Either'@ with the exception.
+tryJust :: Member (Error e) r => (e -> Maybe b) -> Sem r a -> Sem r (Either b a)
+tryJust f m = do
+    r <- try m
+    case r of
+      Right v -> return (Right v)
+      Left e -> case f e of
+                  Nothing -> throw e
+                  Just b -> return $ Left b
+{-# INLINABLE tryJust #-}
+
+------------------------------------------------------------------------------
+-- | Attempt to run a computation, with a provided exception function and
+-- catch function.
+catchJust :: Member (Error e) r => (e -> Maybe b) -> Sem r a -> (b -> Sem r a) -> Sem r a
+catchJust ef m bf = catch m handler
+  where
+      handler e = case ef e of
+                    Nothing -> throw e
+                    Just b -> bf b
+{-# INLINABLE catchJust #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Error' effect in the style of
