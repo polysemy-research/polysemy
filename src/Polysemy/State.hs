@@ -193,12 +193,14 @@ runStateSTRef ref = interpret $ \case
 -- never revert 'put's, even if 'Polysemy.Error.runError' is used
 -- after 'stateToST'.
 --
--- Additionally, one has to introduce the @st@ type to 'stateToST' by binding
--- the type after 'runM' with an explicit forall with @-XScopedTypeVariables@.
+-- When not using the plugin, one must introduce the existential @st@ type to
+-- 'stateToST', so that the resulting type after 'runM' can be resolved into
+-- @forall st. ST st (s, a)@ for use with 'runST'. Doing so requires
+-- @-XScopedTypeVariables@.
 --
 -- @
--- stResult :: (Int, ())
--- stResult = runST ( (runM $ stateToST \@_ \@st 0 $ pure ()) :: forall st. ST st (Int, ()) )
+-- stResult :: forall s a. (s, a)
+-- stResult = runST ( (runM $ stateToST \@_ \@st undefined $ pure undefined) :: forall st. ST st (s, a) )
 -- @
 --
 -- @since TODO: version
