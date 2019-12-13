@@ -31,7 +31,6 @@ import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
 import           Data.Bifunctor (first)
 import           Data.Typeable
-import           Data.Maybe (fromJust)
 import           Polysemy
 import           Polysemy.Final
 import           Polysemy.Internal
@@ -153,15 +152,18 @@ note _ (Just a) = pure a
 {-# INLINABLE note #-}
 
 ------------------------------------------------------------------------------
--- | Attempt to run a computation, returning an @'Either'@ with the
--- exception.
+-- | Similar to @'catch'@, but returns an @'Either'@ result which is (@'Right' a@) 
+-- if no exception of type @e@ was raised, or (@'Left' ex@) if an exception of type 
+-- @e@ was raised and its value is @ex@. If any other type of exception is raised 
+-- than it will be propogated up to the next enclosing exception handler.
 try :: Member (Error e) r => Sem r a -> Sem r (Either e a)
 try m = catch (Right <$> m) (return . Left)
 {-# INLINABLE try #-}
 
 ------------------------------------------------------------------------------
--- | Attempt to run a computation, with a provided exception function,
--- returnreturning an @'Either'@ with the exception.
+-- | A variant of @'try'@ that takes an exception predicate to select which exceptions
+-- are caught (c.f. @'catchJust'@). If the exception does not match the predicate, 
+-- it is re-thrown.
 tryJust :: Member (Error e) r => (e -> Maybe b) -> Sem r a -> Sem r (Either b a)
 tryJust f m = do
     r <- try m
@@ -173,9 +175,14 @@ tryJust f m = do
 {-# INLINABLE tryJust #-}
 
 ------------------------------------------------------------------------------
--- | Attempt to run a computation, with a provided exception function and
--- catch function.
-catchJust :: Member (Error e) r => (e -> Maybe b) -> Sem r a -> (b -> Sem r a) -> Sem r a
+-- | The function @'catchJust'@ is like @'catch'@, but it takes an extra argument 
+-- which is an exception predicate, a function which selects which type of exceptions 
+-- we're interested in.
+catchJust :: Member (Error e) r 
+          => (e -> Maybe b) -- ^ Predicate to select exceptions
+          -> Sem r a  -- ^ Computation to run
+          -> (b -> Sem r a) -- ^ Handler
+          -> Sem r a
 catchJust ef m bf = catch m handler
   where
       handler e = case ef e of
