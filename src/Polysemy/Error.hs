@@ -153,9 +153,8 @@ note _ (Just a) = pure a
 
 ------------------------------------------------------------------------------
 -- | Similar to @'catch'@, but returns an @'Either'@ result which is (@'Right' a@) 
--- if no exception of type @e@ was raised, or (@'Left' ex@) if an exception of type 
--- @e@ was raised and its value is @ex@. If any other type of exception is raised 
--- than it will be propogated up to the next enclosing exception handler.
+-- if no exception of type @e@ was @'throw'@n, or (@'Left' ex@) if an exception of type 
+-- @e@ was raised and its value is @ex@. 
 try :: Member (Error e) r => Sem r a -> Sem r (Either e a)
 try m = catch (Right <$> m) (return . Left)
 {-# INLINABLE try #-}
@@ -163,7 +162,7 @@ try m = catch (Right <$> m) (return . Left)
 ------------------------------------------------------------------------------
 -- | A variant of @'try'@ that takes an exception predicate to select which exceptions
 -- are caught (c.f. @'catchJust'@). If the exception does not match the predicate, 
--- it is re-thrown.
+-- it is re-@'throw'@n.
 tryJust :: Member (Error e) r => (e -> Maybe b) -> Sem r a -> Sem r (Either b a)
 tryJust f m = do
     r <- try m
