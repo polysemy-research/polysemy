@@ -154,7 +154,7 @@ note _ (Just a) = pure a
 ------------------------------------------------------------------------------
 -- | Similar to @'catch'@, but returns an @'Either'@ result which is (@'Right' a@) 
 -- if no exception of type @e@ was @'throw'@n, or (@'Left' ex@) if an exception of type 
--- @e@ was raised and its value is @ex@. 
+-- @e@ was @'throw'@n and its value is @ex@. 
 try :: Member (Error e) r => Sem r a -> Sem r (Either e a)
 try m = catch (Right <$> m) (return . Left)
 {-# INLINABLE try #-}
