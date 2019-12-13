@@ -15,6 +15,9 @@ module Polysemy.Error
   , fromExceptionSem
   , fromExceptionSemVia
   , note
+  , try
+  , tryJust
+  , catchJust
 
     -- * Interpretations
   , runError
@@ -147,6 +150,44 @@ note :: Member (Error e) r => e -> Maybe a -> Sem r a
 note e Nothing  = throw e
 note _ (Just a) = pure a
 {-# INLINABLE note #-}
+
+------------------------------------------------------------------------------
+-- | Similar to @'catch'@, but returns an @'Either'@ result which is (@'Right' a@) 
+-- if no exception of type @e@ was @'throw'@n, or (@'Left' ex@) if an exception of type 
+-- @e@ was @'throw'@n and its value is @ex@. 
+try :: Member (Error e) r => Sem r a -> Sem r (Either e a)
+try m = catch (Right <$> m) (return . Left)
+{-# INLINABLE try #-}
+
+------------------------------------------------------------------------------
+-- | A variant of @'try'@ that takes an exception predicate to select which exceptions
+-- are caught (c.f. @'catchJust'@). If the exception does not match the predicate, 
+-- it is re-@'throw'@n.
+tryJust :: Member (Error e) r => (e -> Maybe b) -> Sem r a -> Sem r (Either b a)
+tryJust f m = do
+    r <- try m
+    case r of
+      Right v -> return (Right v)
+      Left e -> case f e of
+                  Nothing -> throw e
+                  Just b -> return $ Left b
+{-# INLINABLE tryJust #-}
+
+------------------------------------------------------------------------------
+-- | The function @'catchJust'@ is like @'catch'@, but it takes an extra argument 
+-- which is an exception predicate, a function which selects which type of exceptions 
+-- we're interested in.
+catchJust :: Member (Error e) r 
+          => (e -> Maybe b) -- ^ Predicate to select exceptions
+          -> Sem r a  -- ^ Computation to run
+          -> (b -> Sem r a) -- ^ Handler
+          -> Sem r a
+catchJust ef m bf = catch m handler
+  where
+      handler e = case ef e of
+                    Nothing -> throw e
+                    Just b -> bf b
+{-# INLINABLE catchJust #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Error' effect in the style of
