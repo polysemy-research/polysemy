@@ -15,8 +15,10 @@ module Polysemy.State
     -- * Interpretations
   , runState
   , evalState
+  , execState
   , runLazyState
   , evalLazyState
+  , execLazyState
   , runStateIORef
   , stateToIO
   , runStateSTRef
@@ -90,6 +92,15 @@ evalState :: s -> Sem (State s ': r) a -> Sem r a
 evalState s = fmap snd . runState s
 {-# INLINE evalState #-}
 
+------------------------------------------------------------------------------
+-- | Run a 'State' effect with local state.
+--
+-- @since 1.2.3.1
+execState :: s -> Sem (State s ': r) a -> Sem r s
+execState s = fmap fst . runState s
+{-# INLINE execState #-}
+
+
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect with local state, lazily.
@@ -106,6 +117,16 @@ runLazyState = lazilyStateful $ \case
 evalLazyState :: s -> Sem (State s ': r) a -> Sem r a
 evalLazyState s = fmap snd . runLazyState s
 {-# INLINE evalLazyState #-}
+
+
+------------------------------------------------------------------------------
+-- | Run a 'State' effect with local state, lazily.
+--
+-- @since 1.2.3.1
+execLazyState :: s -> Sem (State s ': r) a -> Sem r s
+execLazyState s = fmap fst . runLazyState s
+{-# INLINE execLazyState #-}
+
 
 
 ------------------------------------------------------------------------------
