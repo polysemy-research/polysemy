@@ -15,6 +15,7 @@ module Polysemy.State
     -- * Interpretations
   , runState
   , evalState
+  , execState
   , runLazyState
   , evalLazyState
   , runStateIORef
@@ -89,6 +90,15 @@ runState = stateful $ \case
 evalState :: s -> Sem (State s ': r) a -> Sem r a
 evalState s = fmap snd . runState s
 {-# INLINE evalState #-}
+
+------------------------------------------------------------------------------
+-- | Run a 'State' effect with local state.
+--
+-- @since 1.2.3.1
+execState :: s -> Sem (State s ': r) a -> Sem r s
+execState s = fmap fst . runState s
+{-# INLINE execState #-}
+
 
 
 ------------------------------------------------------------------------------
