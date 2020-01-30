@@ -185,6 +185,7 @@ interpretViaLazyWriter f sem = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) 
             (Just . snd)
             g
         return (a, o)
+    {-# INLINE go #-}
   in do
     ~(a,s) <- Lazy.runWriterT (go sem)
     return (s, a)
