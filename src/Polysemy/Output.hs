@@ -9,8 +9,11 @@ module Polysemy.Output
 
     -- * Interpretations
   , runOutputList
+  , runLazyOutputList
   , runOutputMonoid
+  , runLazyOutputMonoid
   , runOutputMonoidAssocR
+  , runLazyOutputMonoidAssocR
   , runOutputMonoidIORef
   , runOutputMonoidTVar
   , outputToIOMonoid
@@ -22,12 +25,16 @@ module Polysemy.Output
 
 import Data.IORef
 import Control.Concurrent.STM
+import qualified Control.Monad.Trans.Writer.Lazy as Lazy
 
 import Data.Semigroup (Endo(..))
 import Data.Bifunctor (first)
 import Polysemy
 import Polysemy.State
 import Control.Monad (when)
+
+import Polysemy.Internal.Union
+import Polysemy.Internal.Writer
 
 
 ------------------------------------------------------------------------------
@@ -53,6 +60,22 @@ runOutputList = fmap (first reverse) . runState [] . reinterpret
   )
 {-# INLINE runOutputList #-}
 
+
+------------------------------------------------------------------------------
+-- | Run an 'Output' effect by transforming it into a list of its values,
+-- lazily.
+--
+-- __Warning: This inherits the nasty space leak issue of__
+-- __'Lazy.WriterT'! Don't use this if you don't have to.__
+--
+-- @since TODO
+runLazyOutputList
+    :: forall o r a
+     . Sem (Output o ': r) a
+    -> Sem r ([o], a)
+runLazyOutputList = runLazyOutputMonoidAssocR pure
+{-# INLINE runLazyOutputList #-}
+
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into a monoid.
 --
@@ -68,6 +91,25 @@ runOutputMonoid f = runState mempty . reinterpret
       Output o -> modify' (`mappend` f o)
   )
 {-# INLINE runOutputMonoid #-}
+
+
+------------------------------------------------------------------------------
+-- | Run an 'Output' effect by transforming it into a monoid, which is
+-- streamed lazily.
+--
+-- __Warning: This inherits the nasty space leak issue of__
+-- __'Lazy.WriterT'! Don't use this if you don't have to.__
+--
+-- @since TODO
+runLazyOutputMonoid
+    :: forall o m r a
+     . Monoid m
+    => (o -> m)
+    -> Sem (Output o ': r) a
+    -> Sem r (m, a)
+runLazyOutputMonoid f = interpretViaLazyWriter $ \(Weaving e s _ ex _) ->
+  case e of
+    Output o -> ex s <$ Lazy.tell (f o)
 
 ------------------------------------------------------------------------------
 -- | Like 'runOutputMonoid', but right-associates uses of '<>'.
@@ -89,6 +131,30 @@ runOutputMonoidAssocR f =
     fmap (first (`appEndo` mempty))
   . runOutputMonoid (\o -> let !o' = f o in Endo (o' <>))
 {-# INLINE runOutputMonoidAssocR #-}
+
+------------------------------------------------------------------------------
+-- | Like 'runLazyOutputMonoid', but right-associates uses of '<>'.
+--
+-- This asymptotically improves performance if the time complexity of '<>' for
+-- the 'Monoid' depends only on the size of the first argument.
+--
+-- You should always use this instead of 'runLazyOutputMonoid' if the monoid
+-- is a list, such as 'String'.
+--
+-- __Warning: This inherits the nasty space leak issue of__
+-- __'Lazy.WriterT'! Don't use this if you don't have to.__
+--
+-- @since TODO
+runLazyOutputMonoidAssocR
+    :: forall o m r a
+     . Monoid m
+    => (o -> m)
+    -> Sem (Output o ': r) a
+    -> Sem r (m, a)
+runLazyOutputMonoidAssocR f =
+    fmap (first (`appEndo` mempty))
+  . runLazyOutputMonoid (\o -> let !o' = f o in Endo (o' <>))
+{-# INLINE runLazyOutputMonoidAssocR #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into atomic operations

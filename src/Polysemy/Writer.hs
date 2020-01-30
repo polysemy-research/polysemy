@@ -12,7 +12,9 @@ module Polysemy.Writer
 
     -- * Interpretations
   , runWriter
+  , runLazyWriter
   , runWriterAssocR
+  , runLazyWriterAssocR
   , runWriterTVar
   , writerToIOFinal
   , writerToIOAssocRFinal
@@ -23,6 +25,7 @@ module Polysemy.Writer
   ) where
 
 import Control.Concurrent.STM
+import qualified Control.Monad.Trans.Writer.Lazy as Lazy
 
 import Data.Bifunctor (first)
 import Data.Semigroup
@@ -31,6 +34,7 @@ import Polysemy
 import Polysemy.Output
 import Polysemy.State
 
+import Polysemy.Internal.Union
 import Polysemy.Internal.Writer
 
 
@@ -55,7 +59,8 @@ outputToWriter = interpret $ \case
 
 
 ------------------------------------------------------------------------------
--- | Run a 'Writer' effect in the style of 'Control.Monad.Trans.Writer.WriterT'
+-- | Run a 'Writer' effect in the style of
+-- 'Control.Monad.Trans.Writer.Strict.WriterT'
 -- (but without the nasty space leak!)
 runWriter
     :: Monoid o
@@ -81,6 +86,35 @@ runWriter = runState mempty . reinterpretH
   )
 {-# INLINE runWriter #-}
 
+
+------------------------------------------------------------------------------
+-- | Run a 'Writer' effect in the style of 'Control.Monad.Trans.Writer.WriterT'
+-- lazily.
+--
+-- __Warning: This inherits the nasty space leak issue of__
+-- __'Lazy.WriterT'! Don't use this if you don't have to.__
+--
+-- @since TODO
+runLazyWriter
+    :: forall o r a
+     . Monoid o
+    => Sem (Writer o ': r) a
+    -> Sem r (o, a)
+runLazyWriter = interpretViaLazyWriter $ \(Weaving e s wv ex ins) ->
+  case e of
+    Tell o   -> ex s <$ Lazy.tell o
+    Listen m -> do
+      let m' = wv (m <$ s)
+      ~(fa, o) <- Lazy.listen m'
+      return $ ex $ (,) o <$> fa
+    Pass m -> do
+      let m' = wv (m <$ s)
+      Lazy.pass $ do
+        ft <- m'
+        let f = maybe id fst (ins ft)
+        return (ex (fmap snd ft), f)
+{-# INLINE runLazyWriter #-}
+
 -----------------------------------------------------------------------------
 -- | Like 'runWriter', but right-associates uses of '<>'.
 --
@@ -101,6 +135,31 @@ runWriterAssocR =
   . writerToEndoWriter
   . raiseUnder
 {-# INLINE runWriterAssocR #-}
+
+
+-----------------------------------------------------------------------------
+-- | Like 'runLazyWriter', but right-associates uses of '<>'.
+--
+-- This asymptotically improves performance if the time complexity of '<>'
+-- for the 'Monoid' depends only on the size of the first argument.
+--
+-- You should always use this instead of 'runLazyWriter' if the monoid
+-- is a list, such as 'String'.
+--
+-- __Warning: This inherits the nasty space leak issue of__
+-- __'Lazy.WriterT'! Don't use this if you don't have to.__
+--
+-- @since TODO
+runLazyWriterAssocR
+    :: Monoid o
+    => Sem (Writer o ': r) a
+    -> Sem r (o, a)
+runLazyWriterAssocR =
+    (fmap . first) (`appEndo` mempty)
+  . runLazyWriter
+  . writerToEndoWriter
+  . raiseUnder
+{-# INLINE runLazyWriterAssocR #-}
 
 --------------------------------------------------------------------
 -- | Transform a 'Writer' effect into atomic operations

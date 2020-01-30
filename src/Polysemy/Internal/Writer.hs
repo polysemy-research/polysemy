@@ -5,11 +5,16 @@ module Polysemy.Internal.Writer where
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
+import qualified Control.Monad.Trans.Writer.Lazy as Lazy
 
+import Data.Bifunctor (first)
 import Data.Semigroup
 
 import Polysemy
 import Polysemy.Final
+
+import Polysemy.Internal
+import Polysemy.Internal.Union
 
 
 ------------------------------------------------------------------------------
@@ -156,3 +161,31 @@ runWriterSTMAction write = interpretH $ \case
       writeTVar switch True
       return o'
 {-# INLINE runWriterSTMAction #-}
+
+
+-- TODO (KingoftheHomeless):
+-- Benchmark to see if switching to a more flexible variant
+-- would incur a performance loss
+interpretViaLazyWriter
+  :: forall o e r a
+   . Monoid o
+  => (forall m x. Monad m => Weaving e (Lazy.WriterT o m) x -> Lazy.WriterT o m x)
+  -> Sem (e ': r) a
+  -> Sem r (o, a)
+interpretViaLazyWriter f sem = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
+  let
+    go :: forall x. Sem (e ': r) x -> Lazy.WriterT o m x
+    go = usingSem $ \u -> case decomp u of
+      Right (Weaving e s wv ex ins) -> f $ Weaving e s (go . wv) ex ins
+      Left g -> Lazy.WriterT $ do
+        ~(o, a) <- k $
+          weave
+            (mempty, ())
+            (\ ~(o, m) -> (fmap . first) (o <>) (interpretViaLazyWriter f m))
+            (Just . snd)
+            g
+        return (a, o)
+  in do
+    ~(a,s) <- Lazy.runWriterT (go sem)
+    return (s, a)
+{-# INLINE interpretViaLazyWriter #-}
