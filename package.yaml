@@ -25,7 +25,7 @@ dependencies:
 - template-haskell >= 2.12.0.0 && < 3
 - th-abstraction >= 0.3.1.0 && < 0.4
 - transformers >= 0.5.2.0 && < 0.6
-- first-class-families >= 0.5.0.0 && < 0.7
+- first-class-families >= 0.5.0.0 && < 0.8
 - unagi-chan >= 0.4.0.0 && < 0.5
 - async >= 2.2 && < 3
 - type-errors >= 0.2.0.0
