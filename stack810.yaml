@@ -1,0 +1,74 @@
+# This file was generated:
+# https://github.com/DanBurton/stack-setup-info-gen/
+setup-info:
+  ghc:
+    linux-aarch64:
+        8.10.0.20200123:
+            url: "https://downloads.haskell.org/ghc/8.10.1-rc1/ghc-8.10.0.20200123-aarch64-deb9-linux.tar.xz"
+            content-length: 313129184
+            sha1: d7f049bfc0a56b794bb854b82a929ec6c46fd638
+            sha256: 8fae7fc2ef938b8db362d593ccc73518c61aff05d7ed7bfca26bae46b8b09daf
+    linux32:
+        8.10.0.20200123:
+            url: "https://downloads.haskell.org/ghc/8.10.1-rc1/ghc-8.10.0.20200123-i386-deb9-linux.tar.xz"
+            content-length: 215831016
+            sha1: 8cb0e46bffb0f688d7aa3fd66548ee466545ae25
+            sha256: a9bdcc1db4968a6a48ff9aa5387536a1241dcb1dd72cc5e958c2a3b54aed07bf
+    macosx:
+        8.10.0.20200123:
+            url: "https://downloads.haskell.org/ghc/8.10.1-rc1/ghc-8.10.0.20200123-x86_64-apple-darwin.tar.xz"
+            content-length: 193201644
+            sha1: dd7a767d5a4af03884ac8f8c9f953485a77fd285
+            sha256: cc90bfc5d070fdce747e0914f10ad1eb4155e396ad20772ccaacb4db8eed33f9
+    linux64-gmp4:
+        8.10.0.20200123:
+            url: "https://downloads.haskell.org/ghc/8.10.1-rc1/ghc-8.10.0.20200123-x86_64-centos7-linux.tar.xz"
+            content-length: 200871736
+            sha1: 4e86ed77cfae5d21d1c338ff724242f6a6d93fb3
+            sha256: dba5ffccdbc9a1d02c1d5bda45fb213b7f6f064ca95997b517d00564e42a8fa3
+    linux64:
+        8.10.0.20200123:
+            url: "https://downloads.haskell.org/ghc/8.10.1-rc1/ghc-8.10.0.20200123-x86_64-deb9-linux.tar.xz"
+            content-length: 212518484
+            sha1: ce8654b08c846e462b33ed82c75ece13751aed0b
+            sha256: 86482e2325e8b9b53acfa2a362aac3d5e058b22be94707bce77acfc7802ed1bd
+    linux64-tinfo6:
+        8.10.0.20200123:
+            url: "https://downloads.haskell.org/ghc/8.10.1-rc1/ghc-8.10.0.20200123-x86_64-fedora27-linux.tar.xz"
+            content-length: 214915000
+            sha1: 8f964bfecfb3158b4ffe5d425ee3435837993f3c
+            sha256: 6d071fc7deaeffd1c5af42c5537cf5f0a69fb0b50bb6529c76fd15834d712fd6
+    windows64:
+        8.10.0.20200123:
+            url: "https://downloads.haskell.org/ghc/8.10.1-rc1/ghc-8.10.0.20200123-x86_64-unknown-mingw32.tar.xz"
+            content-length: 427515084
+            sha1: 3f3f4a9b6f0c406a959c0c0ac8077991583330eb
+            sha256: 025ffced9915464433bccfd5e8e5074508376d8e0897e765d4174233c149f796
+
+resolver: ghc-8.10.0.20200123
+compiler: ghc-8.10.0.20200123
+compiler-check: match-exact
+packages:
+- .
+- polysemy-plugin
+
+extra-deps:
+- git: https://github.com/Avi-D-coder/loopbreaker.git
+  commit: 96a4351586b681927f2b0f7d50d6292281e55b4b
+- QuickCheck-2.13.2
+- async-2.2.2
+- cabal-doctest-1.0.8
+- first-class-families-0.7.0.0
+- ghc-tcplugins-extra-0.3.2
+- syb-0.7.1
+- th-abstraction-0.3.2.0
+- type-errors-0.2.0.0
+- type-errors-pretty-0.0.1.0
+- unagi-chan-0.4.1.3
+- atomic-primops-0.8.3
+- hashable-1.3.0.0
+- primitive-0.7.0.0
+- random-1.1
+- splitmix-0.0.3
+
+allow-newer: true
