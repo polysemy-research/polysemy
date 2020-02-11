@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ViewPatterns               #-}
+{-# LANGUAGE CPP                        #-}
 
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
@@ -48,6 +49,9 @@ import           TcPluginM (TcPluginM, tcPluginIO)
 import           TcRnTypes
 import           TcSMonad hiding (tcLookupClass)
 import           Type
+#if __GLASGOW_HASKELL__ > 808
+import           Constraint
+#endif
 
 
 

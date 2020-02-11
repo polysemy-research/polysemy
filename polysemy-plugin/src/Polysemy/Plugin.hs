@@ -61,6 +61,7 @@ module Polysemy.Plugin
   ( plugin
   ) where
 
+import Data.Bool
 import Polysemy.Plugin.Fundep
 #if __GLASGOW_HASKELL__ >= 810
 import Polysemy.Plugin.Phases

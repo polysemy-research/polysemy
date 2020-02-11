@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Polysemy.Plugin.Fundep.Unification where
 
 import           Data.Bool
@@ -5,6 +7,9 @@ import           Data.Function (on)
 import qualified Data.Set as S
 import           TcRnTypes
 import           Type
+#if __GLASGOW_HASKELL__ > 808
+import           Constraint
+#endif
 
 
 ------------------------------------------------------------------------------
