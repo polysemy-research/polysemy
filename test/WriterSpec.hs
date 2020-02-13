@@ -11,6 +11,7 @@ import Control.Exception (evaluate)
 import Polysemy
 import Polysemy.Async
 import Polysemy.Error
+import Polysemy.Input
 import Polysemy.Writer
 
 censor' :: forall e s a r
@@ -156,3 +157,44 @@ spec = do
       Right end2 <- runFinal . runError $ test6
       end1 `shouldBe` "message has been received"
       end2 `shouldBe` "message has been received"
+
+  describe "runLazyWriter" $ do
+    let
+      runLazily     = run . runInputConst () . runLazyWriter @[Int]
+      runSemiLazily = runLazily . runError @()
+      runStrictly   = run . runError @() . runLazyWriter @[Int]
+      runStrictlyM  = runM . runLazyWriter @[Int]
+
+      act :: Member (Writer [Int]) r => Sem r ()
+      act = do
+        tell @[Int] [1]
+        tell @[Int] [2]
+        error "strict"
+
+    it "should build the final output lazily, if the interpreters after \
+       \runLazyWriter and the final monad are lazy" $ do
+      (take 2 . fst . runLazily) act `shouldBe` [1,2]
+      (take 2 . fst . runSemiLazily) act `shouldBe` [1,2]
+      evaluate (runStrictly act) `shouldThrow` errorCall "strict"
+      runStrictlyM act `shouldThrow` errorCall "strict"
+
+    it "should listen lazily if all interpreters and final monad are lazy" $ do
+      let
+        listenAct :: Member (Writer [Int]) r => Sem r [Int]
+        listenAct = do
+          (end,_) <- listen @[Int] act
+          return (take 2 end)
+      (snd . runLazily) listenAct `shouldBe` [1,2]
+
+      evaluate ((snd . runSemiLazily) listenAct) `shouldThrow` errorCall "strict"
+      evaluate (runStrictly listenAct) `shouldThrow` errorCall "strict"
+      runStrictlyM listenAct `shouldThrow` errorCall "strict"
+
+    it "should censor lazily if all interpreters and final monad are lazy" $ do
+      let
+        censorAct :: Member (Writer [Int]) r => Sem r ()
+        censorAct = censor @[Int] (\(_:y:_) -> [0,y]) act
+      (fst . runLazily) censorAct `shouldBe` [0,2]
+      evaluate ((fst . runSemiLazily) censorAct) `shouldThrow` errorCall "strict"
+      evaluate (runStrictly censorAct) `shouldThrow` errorCall "strict"
+      runStrictlyM censorAct `shouldThrow` errorCall "strict"
