@@ -415,7 +415,7 @@ subsume = subsumeUsing membership
 --   _       -> Nothing
 -- @
 --
--- @since TODO
+-- @since 1.3.0.0
 subsumeUsing :: forall e r a. ElemOf e r -> Sem (e ': r) a -> Sem r a
 subsumeUsing pr =
   let

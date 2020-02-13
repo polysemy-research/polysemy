@@ -1,5 +1,29 @@
 # Changelog for polysemy
 
+
+## 1.3.0.0 (2020-02-14)
+
+### Breaking Changes
+- The semantics for `runNonDet` when `<|>` is used inside a higher-order action
+    of another effect has been reverted to that of 1.1.0.0 and earlier.
+    (See [issue #246](https://github.com/polysemy-research/polysemy/issues/246))
+- Type parameters for `outputToTrace` have been rearranged (thanks to
+    @juanpaucar)
+
+### Other Changes
+- Added `Bundle` effect, for bundling multiple effects into a single one.
+- Added `Tagged` effect, for annotating and disambiguating identical effects.
+- Added `View` effect, an `Input`-like effect for caching an expensive computation.
+- Added `catchJust`
+- Added `fromException`/`Via` and `fromExceptionSem`/`Via`
+- Added `note`
+- Added `try` and `tryJust`
+- Added `runStateSTRef` and `stateToST`
+- Added `execState` and `execLazyState`
+- Added `Polysemy.Law`, which offers machinery for creating laws for effects.
+- Added `Polysemy.Membership` for retrieving and making use of effect membership
+    proofs.
+
 ## 1.2.3.0 (2019-10-29)
 
 - Polysemy now works on GHC 8.8.1 (thanks to @googleson78 and @sevanspowell)
@@ -32,7 +56,7 @@
 - Type variables for certain internal functions, `failToEmbed`, and
     `atomicState'` have been rearranged.
 
-## Other changes
+### Other changes
 
 - Added `Final` effect, an effect for embedding higher-order actions in the
     final monad of the effect stack. Any interpreter should use this instead of
@@ -260,4 +284,3 @@
 
 - Changed the tyvars of `fromEitherM`, `runErrorAsAnother`, `runEmbedded`,
   `asks` and `gets`
-
