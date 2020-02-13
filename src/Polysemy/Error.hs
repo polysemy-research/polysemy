@@ -203,9 +203,9 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
             hush
             x
     Right (Weaving (Throw e) _ _ _ _) -> E.throwE e
-    Right (Weaving (Catch try handle) s d y _) ->
+    Right (Weaving (Catch main handle) s d y _) ->
       E.ExceptT $ usingSem k $ do
-        ma <- runError $ d $ try <$ s
+        ma <- runError $ d $ main <$ s
         case ma of
           Right a -> pure . Right $ y a
           Left e -> do
@@ -329,11 +329,11 @@ runErrorAsExc
     -> Sem r a
 runErrorAsExc lower = interpretH $ \case
   Throw e -> embed $ X.throwIO $ WrappedExc e
-  Catch try handle -> do
+  Catch main handle -> do
     is <- getInitialStateT
-    t  <- runT try
+    m  <- runT main
     h  <- bindT handle
     let runIt = lower . runErrorAsExc lower
-    embed $ X.catch (runIt t) $ \(se :: WrappedExc e) ->
+    embed $ X.catch (runIt m) $ \(se :: WrappedExc e) ->
       runIt $ h $ unwrapExc se <$ is
 {-# INLINE runErrorAsExc #-}

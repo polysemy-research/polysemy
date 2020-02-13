@@ -4,10 +4,10 @@ cabal-version: 1.24
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 582807c5d69a34a9e991a77c6111532c05dbb54a5d7aa6662267b7af2d3047ee
+-- hash: 0f1599ec8e1caf24489536a197f2eb261ecdfb3613fdc2f2221186cdb0f31a5e
 
 name:           polysemy
-version:        1.2.3.0
+version:        1.3.0.0
 synopsis:       Higher-order, low-boilerplate, zero-cost free monads.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
 category:       Language
@@ -96,7 +96,7 @@ library
     , async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
-    , first-class-families >=0.5.0.0 && <0.7
+    , first-class-families >=0.5.0.0 && <0.8
     , mtl >=2.2.2 && <3
     , stm >=2 && <3
     , syb >=0.7 && <0.8
@@ -157,7 +157,7 @@ test-suite polysemy-test
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , doctest >=0.16.0.1 && <0.17
-    , first-class-families >=0.5.0.0 && <0.7
+    , first-class-families >=0.5.0.0 && <0.8
     , hspec >=2.6.0 && <3
     , inspection-testing >=0.4.2 && <0.5
     , mtl >=2.2.2 && <3
@@ -189,7 +189,7 @@ benchmark polysemy-bench
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , criterion
-    , first-class-families >=0.5.0.0 && <0.7
+    , first-class-families >=0.5.0.0 && <0.8
     , free
     , freer-simple
     , mtl

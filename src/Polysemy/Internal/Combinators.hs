@@ -294,6 +294,8 @@ interceptH = interceptUsingH membership
 --
 -- This is useful in conjunction with 'Polysemy.Membership.tryMembership'
 -- in order to conditionally perform 'intercept'.
+--
+-- @since 1.3.0.0
 interceptUsing
     :: FirstOrder e "interceptUsing"
     => ElemOf e r
@@ -317,6 +319,8 @@ interceptUsing pr f = interceptUsingH pr $ \(e :: e m x) -> liftT @m $ f e
 -- in order to conditionally perform 'interceptH'.
 --
 -- See the notes on 'Tactical' for how to use this function.
+--
+-- @since 1.3.0.0
 interceptUsingH
     :: ElemOf e r
        -- ^ A proof that the handled effect exists in @r@.

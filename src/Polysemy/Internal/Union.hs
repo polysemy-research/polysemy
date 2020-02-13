@@ -171,6 +171,8 @@ type MemberNoError e r =
 -- Due to technical reasons, @'ElemOf' e r@ is not powerful enough to
 -- prove @'Member' e r@; however, it can still be used send actions of @e@
 -- into @r@ by using 'Polysemy.Internal.subsumeUsing'.
+--
+-- @since 1.3.0.0
 data ElemOf e r where
   -- | @e@ is located at the head of the list.
   Here  :: ElemOf e (e ': r)

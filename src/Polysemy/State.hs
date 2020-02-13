@@ -186,7 +186,7 @@ stateToIO s sem = do
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect by transforming it into operations over an 'STRef'.
 --
--- @since TODO: version
+-- @since 1.3.0.0
 runStateSTRef
     :: forall s st r a
      . Member (Embed (ST st)) r
@@ -224,7 +224,7 @@ runStateSTRef ref = interpret $ \case
 -- stResult = runST ( (runM $ stateToST \@_ \@st undefined $ pure undefined) :: forall st. ST st (s, a) )
 -- @
 --
--- @since TODO: version
+-- @since 1.3.0.0
 stateToST
     :: forall s st r a
      . Member (Embed (ST st)) r

@@ -1,5 +1,11 @@
 # Changelog for polysemy-plugin
 
+
+## 0.2.5.0 (2020-10-14)
+- Updated the lower bounds to `polysemy-1.3.0.0` because of changes to
+    `polysemy` internals
+- Updated the test suite to test against `polysemy-1.3.0.0`.
+
 ## 0.2.4.0 (2019-10-29)
 
 - The plugin now works on GHC 8.8.1 (thanks to @googleson78 and @sevanspowell)

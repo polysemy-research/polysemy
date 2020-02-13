@@ -90,68 +90,97 @@ runWriterSTMAction write = interpretH $ \case
       tvar   <- newTVarIO mempty
       switch <- newTVarIO False
       fa     <-
-        restore (wv (runWriterSTMAction (write' tvar switch) m' <$ s))
-          `onException` commit tvar switch id
-      o      <- commit tvar switch id
+        restore (wv (runWriterSTMAction (writeListen tvar switch) m' <$ s))
+          `onException` commitListen tvar switch
+      o      <- commitListen tvar switch
       return $ (fmap . fmap) (o, ) fa
   Pass m -> do
     m'  <- runT m
     ins <- getInspectorT
     raise $ withWeavingToFinal $ \s wv ins' -> mask $ \restore -> do
+      -- See below to understand how this works
       tvar   <- newTVarIO mempty
       switch <- newTVarIO False
       t      <-
-        restore (wv (runWriterSTMAction (write' tvar switch) m' <$ s))
-          `onException` commit tvar switch id
-      _      <- commit tvar switch
+        restore (wv (runWriterSTMAction (writePass tvar switch) m' <$ s))
+          `onException` commitPass tvar switch id
+      commitPass tvar switch
         (maybe id fst $ ins' t >>= inspect ins)
       return $ (fmap . fmap) snd t
 
   where
     {- KingoftheHomeless:
-      'write'' is used by the argument computation to a 'listen' or 'pass'
-      in order to 'tell', rather than directly using the 'write'.
+      'writeListen'/'writePass' is used by the argument computation to a
+      'listen' or 'pass' in order to 'tell', rather than directly using
+      the provided 'write'.
       This is because we need to temporarily store its
-      'tell's seperately in order for the 'listen'/'pass' to work
-      properly. Once the 'listen'/'pass' completes, we 'commit' the
-      changes done to the local tvar globally through 'write'.
+      'tell's locally in order for the 'listen'/'pass' to work
+      properly. In the case of 'listen', this is done in parallel with
+      the global 'write's. In the case of 'pass', the argument computation
+      doesn't use 'write' at all, and instead, when the computation completes,
+      commit the changes it made to the local tvar by 'commitPass',
+      globally 'write'ing it all at once.
+      ('commitListen' serves only as a (likely unneeded)
+      safety measure.)
 
-      'commit' is protected by 'mask'+'onException'. Combine this
-      with the fact that the 'withWeavingToFinal' can't be interrupted
-      by pure errors emitted by effects (since these will be
+      'commitListen'/'commitPass' is protected by 'mask'+'onException'.
+      Combine this with the fact that the 'withWeavingToFinal' can't be
+      interrupted by pure errors emitted by effects (since these will be
       represented as part of the functorial state), and we
       guarantee that no writes will be lost if the argument computation
       fails for whatever reason.
 
-      The argument computation to a 'listen'/'pass' may also spawn
+      The argument computation to a 'pass' may also spawn
       asynchronous computations which do 'tell's of their own.
       In order to make sure these 'tell's won't be lost once a
-      'listen'/'pass' completes, a switch is used to
-      control which tvar 'write'' writes to. The switch is flipped
+      'pass' completes, a switch is used to
+      control which tvar 'writePass' writes to. The switch is flipped
       atomically together with commiting the writes of the local tvar
       as part of 'commit'. Once the switch is flipped,
-      any asynchrounous computations spawned by the argument
+      any asynchronous computations spawned by the argument
       computation will write to the global tvar instead of the local
       tvar (which is no longer relevant), and thus no writes will be
       lost.
     -}
-    write' :: TVar o
-           -> TVar Bool
-           -> o
-           -> STM ()
-    write' tvar switch = \o -> do
+
+    writeListen :: TVar o
+                -> TVar Bool
+                -> o
+                -> STM ()
+    writeListen tvar switch = \o -> do
+      alreadyCommited <- readTVar switch
+      unless alreadyCommited $ do
+        s <- readTVar tvar
+        writeTVar tvar $! s <> o
+      write o
+    {-# INLINE writeListen #-}
+
+    writePass :: TVar o
+              -> TVar Bool
+              -> o
+              -> STM ()
+    writePass tvar switch = \o -> do
       useGlobal <- readTVar switch
       if useGlobal then
         write o
       else do
         s <- readTVar tvar
         writeTVar tvar $! s <> o
+    {-# INLINE writePass #-}
 
-    commit :: TVar o
-           -> TVar Bool
-           -> (o -> o)
-           -> IO o
-    commit tvar switch f = atomically $ do
+    commitListen :: TVar o
+                 -> TVar Bool
+                 -> IO o
+    commitListen tvar switch = atomically $ do
+      writeTVar switch True
+      readTVar tvar
+    {-# INLINE commitListen #-}
+
+    commitPass :: TVar o
+               -> TVar Bool
+               -> (o -> o)
+               -> IO ()
+    commitPass tvar switch f = atomically $ do
       o <- readTVar tvar
       let !o' = f o
       -- Likely redundant, but doesn't hurt.
@@ -159,7 +188,7 @@ runWriterSTMAction write = interpretH $ \case
       unless alreadyCommited $
         write o'
       writeTVar switch True
-      return o'
+    {-# INLINE commitPass #-}
 {-# INLINE runWriterSTMAction #-}
 
 
