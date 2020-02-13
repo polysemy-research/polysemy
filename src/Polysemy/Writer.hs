@@ -94,7 +94,7 @@ runWriter = runState mempty . reinterpretH
 -- __Warning: This inherits the nasty space leak issue of__
 -- __'Lazy.WriterT'! Don't use this if you don't have to.__
 --
--- @since TODO
+-- @since 1.3.0.0
 runLazyWriter
     :: forall o r a
      . Monoid o
@@ -149,7 +149,7 @@ runWriterAssocR =
 -- __Warning: This inherits the nasty space leak issue of__
 -- __'Lazy.WriterT'! Don't use this if you don't have to.__
 --
--- @since TODO
+-- @since 1.3.0.0
 runLazyWriterAssocR
     :: Monoid o
     => Sem (Writer o ': r) a

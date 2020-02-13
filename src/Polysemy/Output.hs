@@ -68,7 +68,7 @@ runOutputList = fmap (first reverse) . runState [] . reinterpret
 -- __Warning: This inherits the nasty space leak issue of__
 -- __'Lazy.WriterT'! Don't use this if you don't have to.__
 --
--- @since TODO
+-- @since 1.3.0.0
 runLazyOutputList
     :: forall o r a
      . Sem (Output o ': r) a
@@ -94,13 +94,13 @@ runOutputMonoid f = runState mempty . reinterpret
 
 
 ------------------------------------------------------------------------------
--- | Run an 'Output' effect by transforming it into a monoid, which is
--- streamed lazily.
+-- | Run an 'Output' effect by transforming it into a monoid, and accumulate
+-- it lazily.
 --
 -- __Warning: This inherits the nasty space leak issue of__
 -- __'Lazy.WriterT'! Don't use this if you don't have to.__
 --
--- @since TODO
+-- @since 1.3.0.0
 runLazyOutputMonoid
     :: forall o m r a
      . Monoid m
@@ -144,7 +144,7 @@ runOutputMonoidAssocR f =
 -- __Warning: This inherits the nasty space leak issue of__
 -- __'Lazy.WriterT'! Don't use this if you don't have to.__
 --
--- @since TODO
+-- @since 1.3.0.0
 runLazyOutputMonoidAssocR
     :: forall o m r a
      . Monoid m
@@ -153,7 +153,8 @@ runLazyOutputMonoidAssocR
     -> Sem r (m, a)
 runLazyOutputMonoidAssocR f =
     fmap (first (`appEndo` mempty))
-  . runLazyOutputMonoid (\o -> let !o' = f o in Endo (o' <>))
+  . runLazyOutputMonoid (\o -> let o' = f o in Endo (o' <>))
+                              --   ^ N.B. No bang pattern
 {-# INLINE runLazyOutputMonoidAssocR #-}
 
 ------------------------------------------------------------------------------
