@@ -18,6 +18,7 @@
 - Added `fromException`/`Via` and `fromExceptionSem`/`Via`
 - Added `note`
 - Added `try` and `tryJust`
+- Using `listen` with `runWriterTVar` or `writerToIO` will no longer delay writing until the `listen` completes.  
 - Added `runStateSTRef` and `stateToST`
 - Added `execState` and `execLazyState`
 - Added `Polysemy.Law`, which offers machinery for creating laws for effects.
