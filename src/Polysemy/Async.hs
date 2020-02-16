@@ -7,9 +7,11 @@ module Polysemy.Async
     -- * Actions
   , async
   , await
+  , cancel
 
     -- * Helpers
   , sequenceConcurrently
+  , withAsync
 
     -- * Interpretations
   , asyncToIO
@@ -33,6 +35,7 @@ import           Polysemy.Final
 data Async m a where
   Async :: m a -> Async m (A.Async (Maybe a))
   Await :: A.Async a -> Async m a
+  Cancel :: A.Async a -> Async m ()
 
 makeSem ''Async
 
@@ -46,6 +49,21 @@ sequenceConcurrently :: forall t r a. (Traversable t, Member Async r) =>
 sequenceConcurrently t = traverse async t >>= traverse await
 {-# INLINABLE sequenceConcurrently #-}
 
+------------------------------------------------------------------------------
+-- | Perform a 'Async' action with automatic cancelation.
+--
+-- Does not cancel in the event of an exception. Use with caution.
+withAsync
+    :: Member Async r
+    => Sem r a
+    -> (A.Async (Maybe a) -> Sem r b)
+    -> Sem r b
+withAsync action inner = do
+  a <- async action
+  r <- inner a
+  cancel a
+  pure r
+{-# INLINABLE withAsync #-}
 
 ------------------------------------------------------------------------------
 -- | A more flexible --- though less performant ---
@@ -80,6 +98,7 @@ asyncToIO m = withLowerToIO $ \lower _ -> lower $
           pureT $ fmap (inspect ins) fa
 
         Await a -> pureT =<< embed (A.wait a)
+        Cancel a -> pureT =<< embed (A.cancel a)
     )  m
 {-# INLINE asyncToIO #-}
 
@@ -110,6 +129,7 @@ asyncToIOFinal = interpretFinal $ \case
     m'  <- runS m
     liftS $ A.async (inspect ins <$> m')
   Await a -> liftS (A.wait a)
+  Cancel a -> liftS (A.cancel a)
 {-# INLINE asyncToIOFinal #-}
 
 ------------------------------------------------------------------------------
@@ -132,6 +152,7 @@ lowerAsync lower m = interpretH
           pureT $ fmap (inspect ins) fa
 
         Await a -> pureT =<< embed (A.wait a)
+        Cancel a -> pureT =<< embed (A.cancel a)
     )  m
 {-# INLINE lowerAsync #-}
 {-# DEPRECATED lowerAsync "Use 'asyncToIOFinal' instead" #-}
