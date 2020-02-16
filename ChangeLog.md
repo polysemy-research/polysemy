@@ -13,14 +13,15 @@
 ### Other Changes
 - Added `Bundle` effect, for bundling multiple effects into a single one.
 - Added `Tagged` effect, for annotating and disambiguating identical effects.
-- Added `View` effect, an `Input`-like effect for caching an expensive computation.
-- Added `catchJust`
+- Added `View` effect, an `Input`-like effect for caching an expensive
+    computation.
 - Added `fromException`/`Via` and `fromExceptionSem`/`Via`
 - Added `note`
-- Added `try` and `tryJust`
-- Using `listen` with `runWriterTVar` or `writerToIO` will no longer delay writing until the `listen` completes.  
-- Added `runStateSTRef` and `stateToST`
-- Added `execState` and `execLazyState`
+- Added `catchJust`, `try` and `tryJust` (thanks to @bolt12)
+- Using `listen` with `runWriterTVar` or `writerToIO` will no longer delay writing
+    until the `listen` completes.
+- Added `runStateSTRef` and `stateToST` (thanks to @incertia)
+- Added `execState` and `execLazyState` (thanks to @tjweir)
 - Added `Polysemy.Law`, which offers machinery for creating laws for effects.
 - Added `Polysemy.Membership` for retrieving and making use of effect membership
     proofs.
