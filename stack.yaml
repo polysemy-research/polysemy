@@ -5,7 +5,7 @@ packages:
 - polysemy-plugin
 
 extra-deps:
-- first-class-families-0.6.0.0
+- first-class-families-0.8.0.0
 - ghc-lib-0.20190204
 - dump-core-0.1.3.2 # used when the dump-core flag is toggled
 - monadLib-3.10 # used by the dump-core library when the dump-core flag is toggled
