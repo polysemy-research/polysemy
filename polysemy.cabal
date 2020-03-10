@@ -1,10 +1,10 @@
 cabal-version: 1.24
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0f1599ec8e1caf24489536a197f2eb261ecdfb3613fdc2f2221186cdb0f31a5e
+-- hash: ec74258aa591e3c44193ce9761d4f282c6fb64e4647a58600716af498ff295c0
 
 name:           polysemy
 version:        1.3.0.0
@@ -96,7 +96,7 @@ library
     , async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
-    , first-class-families >=0.5.0.0 && <0.8
+    , first-class-families >=0.5.0.0 && <0.9
     , mtl >=2.2.2 && <3
     , stm >=2 && <3
     , syb >=0.7 && <0.8
@@ -157,7 +157,7 @@ test-suite polysemy-test
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , doctest >=0.16.0.1 && <0.17
-    , first-class-families >=0.5.0.0 && <0.8
+    , first-class-families >=0.5.0.0 && <0.9
     , hspec >=2.6.0 && <3
     , inspection-testing >=0.4.2 && <0.5
     , mtl >=2.2.2 && <3
@@ -189,7 +189,7 @@ benchmark polysemy-bench
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , criterion
-    , first-class-families >=0.5.0.0 && <0.8
+    , first-class-families >=0.5.0.0 && <0.9
     , free
     , freer-simple
     , mtl
