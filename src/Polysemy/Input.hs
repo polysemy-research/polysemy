@@ -6,6 +6,7 @@ module Polysemy.Input
 
     -- * Actions
   , input
+  , inputs
 
     -- * Interpretations
   , runInputConst
@@ -26,6 +27,10 @@ data Input i m a where
 
 makeSem ''Input
 
+-- | Apply a function to an input, cf. 'Polysemy.Reader.asks'
+inputs :: forall i j r. Member (Input i) r => (i -> j) -> Sem r j
+inputs f = f <$> input
+{-# INLINABLE inputs #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Input' effect by always giving back the same value.
