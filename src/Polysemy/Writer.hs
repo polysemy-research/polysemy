@@ -100,7 +100,8 @@ runLazyWriter
      . Monoid o
     => Sem (Writer o ': r) a
     -> Sem r (o, a)
-runLazyWriter = interpretViaLazyWriter $ \(Weaving e s wv ex ins) ->
+runLazyWriter = interpretViaLazyWriter $
+  \(Weaving (WeavingDetails e s wv ex ins)) ->
   case e of
     Tell o   -> ex s <$ Lazy.tell o
     Listen m -> do

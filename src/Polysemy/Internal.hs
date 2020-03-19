@@ -353,8 +353,9 @@ raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
   where
     weakenUnder :: ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': r) m x
-    weakenUnder (Union Here a) = Union Here a
-    weakenUnder (Union (There n) a) = Union (There (There n)) a
+    weakenUnder (Union (UnionDetails Here a)) = Union $ UnionDetails Here a
+    weakenUnder (Union (UnionDetails (There n) a)) = Union $
+      UnionDetails (There (There n)) a
     {-# INLINE weakenUnder #-}
 {-# INLINE raiseUnder #-}
 
@@ -368,8 +369,9 @@ raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
 raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
   where
     weakenUnder2 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': r) m x
-    weakenUnder2 (Union Here a) = Union Here a
-    weakenUnder2 (Union (There n) a) = Union (There (There (There n))) a
+    weakenUnder2 (Union (UnionDetails Here a)) = Union $ UnionDetails Here a
+    weakenUnder2 (Union (UnionDetails (There n) a)) = Union $
+      UnionDetails (There (There (There n))) a
     {-# INLINE weakenUnder2 #-}
 {-# INLINE raiseUnder2 #-}
 
@@ -383,8 +385,9 @@ raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4
 raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
   where
     weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
-    weakenUnder3 (Union Here a) = Union Here a
-    weakenUnder3 (Union (There n) a) = Union (There (There (There (There n)))) a
+    weakenUnder3 (Union (UnionDetails Here a)) = Union $ UnionDetails Here a
+    weakenUnder3 (Union (UnionDetails (There n) a)) = Union $
+      UnionDetails (There (There (There (There n)))) a
     {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
 
@@ -421,7 +424,7 @@ subsumeUsing pr =
   let
     go :: forall x. Sem (e ': r) x -> Sem r x
     go = hoistSem $ \u -> hoist go $ case decomp u of
-      Right w -> Union pr w
+      Right w -> Union $ UnionDetails pr w
       Left  g -> g
     {-# INLINE go #-}
   in
@@ -469,7 +472,7 @@ run (Sem m) = runIdentity $ m absurdU
 runM :: Monad m => Sem '[Embed m] a -> m a
 runM (Sem m) = m $ \z ->
   case extract z of
-    Weaving e s _ f _ -> do
+    Weaving (WeavingDetails e s _ f _) -> do
       a <- unEmbed e
       pure $ f $ a <$ s
 {-# INLINE runM #-}

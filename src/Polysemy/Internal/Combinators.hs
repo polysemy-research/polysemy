@@ -81,11 +81,10 @@ interpretH
 interpretH f (Sem m) = m $ \u ->
   case decomp u of
     Left  x -> liftSem $ hoist (interpretH f) x
-    Right (Weaving e s d y v) -> do
+    Right (Weaving (WeavingDetails e s d y v)) -> do
       a <- runTactics s d v $ f e
       pure $ y a
 {-# INLINE interpretH #-}
-
 
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
@@ -105,7 +104,7 @@ interpretInStateT f s (Sem m) = Sem $ \k ->
                     (uncurry $ interpretInStateT f)
                     (Just . snd)
             $ x
-        Right (Weaving e z _ y _) ->
+        Right (Weaving (WeavingDetails e z _ y _)) ->
           fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInStateT #-}
 
@@ -127,7 +126,7 @@ interpretInLazyStateT f s (Sem m) = Sem $ \k ->
                     (uncurry $ interpretInLazyStateT f)
                     (Just . snd)
             $ x
-        Right (Weaving e z _ y _) ->
+        Right (Weaving (WeavingDetails e z _ y _)) ->
           fmap (y . (<$ z)) $ LS.mapStateT (usingSem k) $ f e
 {-# INLINE interpretInLazyStateT #-}
 
@@ -160,14 +159,14 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 -- See the notes on 'Tactical' for how to use this function.
 reinterpretH
     :: forall e1 e2 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
+     . (∀ m x. Monad m => e1 m x -> Tactical e1 m (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': r) a
 reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ hoist (reinterpretH f) $ x
-    Right (Weaving e s d y v) -> do
+    Right (Weaving (WeavingDetails e s d y v)) -> do
       a <- usingSem k $ runTactics s (raiseUnder . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpretH #-}
@@ -197,14 +196,14 @@ reinterpret = firstOrder reinterpretH
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret2H
     :: forall e1 e2 e3 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
+     . (∀ m x. Monad m => e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': r) a
 reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ weaken $ hoist (reinterpret2H f) $ x
-    Right (Weaving e s d y v) -> do
+    Right (Weaving (WeavingDetails e s d y v)) -> do
       a <- usingSem k $ runTactics s (raiseUnder2 . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpret2H #-}
@@ -229,14 +228,14 @@ reinterpret2 = firstOrder reinterpret2H
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret3H
     :: forall e1 e2 e3 e4 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
+     . (∀ m x. Monad m => e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': e4 ': r) a
 reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k . weaken . weaken . hoist (reinterpret3H f) $ x
-    Right (Weaving e s d y v) -> do
+    Right (Weaving (WeavingDetails e s d y v)) -> do
       a <- usingSem k $ runTactics s (raiseUnder3 . d) v $ f e
       pure $ y a
 {-# INLINE[3] reinterpret3H #-}
@@ -279,7 +278,7 @@ intercept f = interceptH $ \(e :: e m x) -> liftT @m $ f e
 -- See the notes on 'Tactical' for how to use this function.
 interceptH
     :: Member e r
-    => (∀ x m. e m x -> Tactical e m r x)
+    => (∀ x m. Monad m => e m x -> Tactical e m r x)
        -- ^ A natural transformation from the handled effect to other effects
        -- already in 'Sem'.
     -> Sem r a
@@ -326,7 +325,7 @@ interceptUsingH
        -- ^ A proof that the handled effect exists in @r@.
        -- This can be retrieved through 'Polysemy.Membership.membership' or
        -- 'Polysemy.Membership.tryMembership'.
-    -> (∀ x m. e m x -> Tactical e m r x)
+    -> (∀ x m. Monad m => e m x -> Tactical e m r x)
        -- ^ A natural transformation from the handled effect to other effects
        -- already in 'Sem'.
     -> Sem r a
@@ -334,7 +333,7 @@ interceptUsingH
     -> Sem r a
 interceptUsingH pr f (Sem m) = Sem $ \k -> m $ \u ->
   case prjUsing pr u of
-    Just (Weaving e s d y v) ->
+    Just (Weaving (WeavingDetails e s d y v)) ->
       usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
     Nothing -> k $ hoist (interceptUsingH pr f) u
 {-# INLINE interceptUsingH #-}
@@ -352,7 +351,8 @@ rewrite
 rewrite f (Sem m) = Sem $ \k -> m $ \u ->
   k $ hoist (rewrite f) $ case decompCoerce u of
     Left x -> x
-    Right (Weaving e s d n y) -> Union Here $ Weaving (f e) s d n y
+    Right (Weaving (WeavingDetails e s d n y)) ->
+      Union $ UnionDetails Here $ Weaving $ WeavingDetails (f e) s d n y
 
 
 ------------------------------------------------------------------------------
@@ -369,5 +369,6 @@ transform
 transform f (Sem m) = Sem $ \k -> m $ \u ->
   k $ hoist (transform f) $ case decomp u of
     Left g -> g
-    Right (Weaving e s wv ex ins) -> injWeaving (Weaving (f e) s wv ex ins)
+    Right (Weaving (WeavingDetails e s wv ex ins)) ->
+      injWeaving (Weaving $ WeavingDetails (f e) s wv ex ins)
 

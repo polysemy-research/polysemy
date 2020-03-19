@@ -190,9 +190,9 @@ interpretFinal n =
   let
     go :: Sem (e ': r) x -> Sem r x
     go = hoistSem $ \u -> case decomp u of
-      Right (Weaving e s wv ex ins) ->
+      Right (Weaving (WeavingDetails e s wv ex ins)) ->
         injWeaving $
-          Weaving
+          Weaving $ WeavingDetails
             (WithWeavingToFinal (runStrategy (n e)))
             s
             (go . wv)
@@ -214,7 +214,7 @@ interpretFinal n =
 -- @since 1.2.0.0
 runFinal :: Monad m => Sem '[Final m] a -> m a
 runFinal = usingSem $ \u -> case extract u of
-  Weaving (WithWeavingToFinal wav) s wv ex ins ->
+  Weaving (WeavingDetails (WithWeavingToFinal wav) s wv ex ins) ->
     ex <$> wav s (runFinal . wv) ins
 {-# INLINE runFinal #-}
 
@@ -233,9 +233,9 @@ finalToFinal to from =
   let
     go :: Sem (Final m1 ': r) x -> Sem r x
     go = hoistSem $ \u -> case decomp u of
-      Right (Weaving (WithWeavingToFinal wav) s wv ex ins) ->
+      Right (Weaving (WeavingDetails (WithWeavingToFinal wav) s wv ex ins)) ->
         injWeaving $
-          Weaving
+          Weaving $ WeavingDetails
             (WithWeavingToFinal $ \s' wv' ins' ->
               to $ wav s' (from . wv') ins'
             )

@@ -107,9 +107,10 @@ runLazyOutputMonoid
     => (o -> m)
     -> Sem (Output o ': r) a
     -> Sem r (m, a)
-runLazyOutputMonoid f = interpretViaLazyWriter $ \(Weaving e s _ ex _) ->
-  case e of
-    Output o -> ex s <$ Lazy.tell (f o)
+runLazyOutputMonoid f = interpretViaLazyWriter $
+  \(Weaving (WeavingDetails e s _ ex _)) ->
+    case e of
+      Output o -> ex s <$ Lazy.tell (f o)
 
 ------------------------------------------------------------------------------
 -- | Like 'runOutputMonoid', but right-associates uses of '<>'.

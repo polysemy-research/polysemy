@@ -202,8 +202,8 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
             (either (pure . Left) runError)
             hush
             x
-    Right (Weaving (Throw e) _ _ _ _) -> E.throwE e
-    Right (Weaving (Catch main handle) s d y _) ->
+    Right (Weaving (WeavingDetails (Throw e) _ _ _ _)) -> E.throwE e
+    Right (Weaving (WeavingDetails (Catch main handle) s d y _)) ->
       E.ExceptT $ usingSem k $ do
         ma <- runError $ d $ main <$ s
         case ma of
