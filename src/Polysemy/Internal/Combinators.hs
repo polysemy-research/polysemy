@@ -86,7 +86,6 @@ interpretH f (Sem m) = m $ \u ->
       pure $ y a
 {-# INLINE interpretH #-}
 
-
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
 -- 'stateful' for a more user-friendly variety of this function.
@@ -160,7 +159,7 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 -- See the notes on 'Tactical' for how to use this function.
 reinterpretH
     :: forall e1 e2 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': r) x)
+     . (∀ m x. Monad m => e1 m x -> Tactical e1 m (e2 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effect.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': r) a
@@ -197,7 +196,7 @@ reinterpret = firstOrder reinterpretH
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret2H
     :: forall e1 e2 e3 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
+     . (∀ m x. Monad m => e1 m x -> Tactical e1 m (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': r) a
@@ -229,7 +228,7 @@ reinterpret2 = firstOrder reinterpret2H
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret3H
     :: forall e1 e2 e3 e4 r a
-     . (∀ m x. e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
+     . (∀ m x. Monad m => e1 m x -> Tactical e1 m (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': e4 ': r) a
@@ -279,7 +278,7 @@ intercept f = interceptH $ \(e :: e m x) -> liftT @m $ f e
 -- See the notes on 'Tactical' for how to use this function.
 interceptH
     :: Member e r
-    => (∀ x m. e m x -> Tactical e m r x)
+    => (∀ x m. Monad m => e m x -> Tactical e m r x)
        -- ^ A natural transformation from the handled effect to other effects
        -- already in 'Sem'.
     -> Sem r a
@@ -326,7 +325,7 @@ interceptUsingH
        -- ^ A proof that the handled effect exists in @r@.
        -- This can be retrieved through 'Polysemy.Membership.membership' or
        -- 'Polysemy.Membership.tryMembership'.
-    -> (∀ x m. e m x -> Tactical e m r x)
+    -> (∀ x m. Monad m => e m x -> Tactical e m r x)
        -- ^ A natural transformation from the handled effect to other effects
        -- already in 'Sem'.
     -> Sem r a
