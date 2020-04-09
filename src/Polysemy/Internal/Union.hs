@@ -111,12 +111,12 @@ instance Functor (Weaving e m) where
 
 
 weave
-    :: (Functor s, Functor mMid, Functor mAfter)
+    :: (Functor s, Functor m, Functor n)
     => s ()
-    -> (∀ x. s (mMid x) -> mAfter (s x))
+    -> (∀ x. s (m x) -> n (s x))
     -> (∀ x. s x -> Maybe x)
-    -> Union r mMid a
-    -> Union r mAfter (s a)
+    -> Union r m a
+    -> Union r n (s a)
 weave s' d v' (Union (UnionDetails w (Weaving (WeavingDetails e s nt f v)))) =
   Union $ UnionDetails w $ Weaving $ WeavingDetails
               e (Compose $ s <$ s')
@@ -127,9 +127,9 @@ weave s' d v' (Union (UnionDetails w (Weaving (WeavingDetails e s nt f v)))) =
 
 
 hoist
-    :: (∀ x. mBefore x -> mAfter x)
-    -> Union r mBefore a
-    -> Union r mAfter a
+    :: (∀ x. m x -> n x)
+    -> Union r m a
+    -> Union r n a
 hoist f' (Union (UnionDetails w (Weaving (WeavingDetails e s nt f v)))) =
   Union $ UnionDetails w $ Weaving $ WeavingDetails e s (f' . nt) f v
 {-# INLINE hoist #-}
@@ -291,7 +291,7 @@ weaken (Union (UnionDetails pr a)) = Union $ UnionDetails (There pr) a
 
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
-inj :: forall e r rWoven a. (Member e r) => e (Sem rWoven) a -> Union r (Sem rWoven) a
+inj :: forall e r rInitial a. (Member e r) => e (Sem rInitial) a -> Union r (Sem rInitial) a
 inj e = injWeaving $
   Weaving $ WeavingDetails e (Identity ())
               (fmap Identity . runIdentity)
@@ -303,8 +303,8 @@ inj e = injWeaving $
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it,
 -- given an explicit proof that the effect exists in @r@
-injUsing :: forall e r rWoven a.
-  ElemOf e r -> e (Sem rWoven) a -> Union r (Sem rWoven) a
+injUsing :: forall e r rInitial a.
+  ElemOf e r -> e (Sem rInitial) a -> Union r (Sem rInitial) a
 injUsing pr e = Union $ UnionDetails pr $ Weaving $ WeavingDetails
             e (Identity ())
             (fmap Identity . runIdentity)
