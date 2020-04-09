@@ -80,7 +80,7 @@ data Weaving e mAfter resultType where
     => !(WeavingDetails f e rBefore a resultType mAfter)
     -> Weaving e mAfter resultType
 
-data Functor f => WeavingDetails f e rBefore a resultType mAfter =
+data WeavingDetails f e rBefore a resultType mAfter =
   WeavingDetails {
     weaveEffect :: e (Sem rBefore) a
     -- ^ The original effect GADT originally lifted via
