@@ -81,7 +81,7 @@ untag
 -- Once GHC 8.10 rolls out, I will benchmark and compare.
 untag = hoistSem $ \u -> case decompCoerce u of
   Right (Weaving (WeavingDetails (Tagged e) s wv ex ins)) ->
-    Union $ UnionDetails Here (Weaving $ WeavingDetails e s (untag . wv) ex ins)
+    Union Here (Weaving $ WeavingDetails e s (untag . wv) ex ins)
   Left g -> hoist untag g
 {-# INLINE untag #-}
 

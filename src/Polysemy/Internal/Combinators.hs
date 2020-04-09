@@ -360,7 +360,7 @@ rewrite f (Sem m) = Sem $ \k -> m $ \u ->
   k $ hoist (rewrite f) $ case decompCoerce u of
     Left x -> x
     Right (Weaving (WeavingDetails e s d n y)) ->
-      Union $ UnionDetails Here $ Weaving $ WeavingDetails (f e) s d n y
+      Union Here $ Weaving $ WeavingDetails (f e) s d n y
 
 
 ------------------------------------------------------------------------------
