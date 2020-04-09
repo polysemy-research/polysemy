@@ -182,7 +182,7 @@ withStrategicToFinal strat = withWeavingToFinal (runStrategy strat)
 interpretFinal
     :: forall m e r a
      . Member (Final m) r
-    => (forall x n. e n x -> Strategic m n x)
+    => (forall x rInitial. e (Sem rInitial) x -> Strategic m (Sem rInitial) x)
        -- ^ A natural transformation from the handled effect to the final monad.
     -> Sem (e ': r) a
     -> Sem r a
