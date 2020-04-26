@@ -6,6 +6,7 @@ module Polysemy.Resource
 
     -- * Actions
   , bracket
+  , bracket_
   , bracketOnError
   , finally
   , onException
@@ -48,6 +49,20 @@ data Resource m a where
 
 makeSem ''Resource
 
+------------------------------------------------------------------------------
+-- | A variant of 'bracket' where the return value from the first computation
+-- is not required.
+--
+-- cf. 'Control.Exception.bracket' and 'Control.Exception.bracket_'
+--
+-- @since TODO
+bracket_
+    :: Member Resource r
+    => Sem r a -- ^ computation to run first
+    -> Sem r b -- ^ computation to run last (even if an exception was raised)
+    -> Sem r c -- ^ computation to run in-between
+    -> Sem r c
+bracket_ begin end act = bracket begin (const end) (const act)
 
 ------------------------------------------------------------------------------
 -- | Like 'bracket', but for the simple case of one computation to run
