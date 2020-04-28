@@ -64,6 +64,7 @@ module Polysemy.Plugin
 import Polysemy.Plugin.Fundep
 #if __GLASGOW_HASKELL__ >= 810
 import Polysemy.Plugin.Phases
+import Data.Bool (bool)
 #endif
 
 import GhcPlugins

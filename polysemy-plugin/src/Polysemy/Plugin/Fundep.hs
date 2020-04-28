@@ -46,6 +46,7 @@ import           Polysemy.Plugin.Fundep.Utils
 import           TcEvidence
 import           TcPluginM (TcPluginM, tcPluginIO)
 import           TcRnTypes
+import           Constraint
 import           TcSMonad hiding (tcLookupClass)
 import           Type
 

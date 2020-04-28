@@ -3,7 +3,8 @@ module Polysemy.Plugin.Fundep.Unification where
 import           Data.Bool
 import           Data.Function (on)
 import qualified Data.Set as S
-import           TcRnTypes
+import           Constraint
+
 import           Type
 
 
