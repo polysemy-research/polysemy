@@ -9,6 +9,7 @@ cabal: "3.0"
 
 matrix:
   include:
+    - ghc: "8.10.1"
     - ghc: "8.8.1"
     - ghc: "8.6.5"
     - ghc: "8.4.4"

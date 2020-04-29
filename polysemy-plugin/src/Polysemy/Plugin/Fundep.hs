@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ViewPatterns               #-}
+{-# LANGUAGE CPP                        #-}
 
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
@@ -46,6 +47,9 @@ import           Polysemy.Plugin.Fundep.Utils
 import           TcEvidence
 import           TcPluginM (TcPluginM, tcPluginIO)
 import           TcRnTypes
+#if __GLASGOW_HASKELL__ >= 810
+import           Constraint
+#endif
 import           TcSMonad hiding (tcLookupClass)
 import           Type
 
