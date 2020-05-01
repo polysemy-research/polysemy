@@ -11,7 +11,6 @@ module Polysemy.Async
 
     -- * Helpers
   , sequenceConcurrently
-  , withAsync
 
     -- * Interpretations
   , asyncToIO
@@ -48,22 +47,6 @@ sequenceConcurrently :: forall t r a. (Traversable t, Member Async r) =>
     t (Sem r a) -> Sem r (t (Maybe a))
 sequenceConcurrently t = traverse async t >>= traverse await
 {-# INLINABLE sequenceConcurrently #-}
-
-------------------------------------------------------------------------------
--- | Perform a 'Async' action with automatic cancelation.
---
--- Does not cancel in the event of an exception. Use with caution.
-withAsync
-    :: Member Async r
-    => Sem r a
-    -> (A.Async (Maybe a) -> Sem r b)
-    -> Sem r b
-withAsync action inner = do
-  a <- async action
-  r <- inner a
-  cancel a
-  pure r
-{-# INLINABLE withAsync #-}
 
 ------------------------------------------------------------------------------
 -- | A more flexible --- though less performant ---
