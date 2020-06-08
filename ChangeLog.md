@@ -1,6 +1,12 @@
 # Changelog for polysemy
 
 
+## Unreleased changes
+
+- Changed the tyvars of `fromEitherM`, `runErrorAsAnother`, `runEmbedded`,
+  `asks` and `gets`
+
+
 ## 1.3.0.0 (2020-02-14)
 
 ### Breaking Changes
@@ -281,8 +287,3 @@
 ## 0.1.0.0 (2019-04-11)
 
 - Initial release
-
-## Unreleased changes
-
-- Changed the tyvars of `fromEitherM`, `runErrorAsAnother`, `runEmbedded`,
-  `asks` and `gets`
