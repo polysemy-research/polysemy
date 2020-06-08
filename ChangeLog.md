@@ -6,6 +6,7 @@
 - Changed the tyvars of `fromEitherM`, `runErrorAsAnother`, `runEmbedded`,
   `asks` and `gets`
 
+- Add ability to `Cancel` to `Async` (thanks to @aidangilmore)
 
 ## 1.3.0.0 (2020-02-14)
 
