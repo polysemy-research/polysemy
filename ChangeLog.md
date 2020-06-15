@@ -8,6 +8,8 @@
 
 - Add ability to `Cancel` to `Async` (thanks to @aidangilmore)
 
+- Add `bracket_` (thanks to @expipiplus1)
+
 ## 1.3.0.0 (2020-02-14)
 
 ### Breaking Changes
