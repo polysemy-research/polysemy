@@ -74,7 +74,7 @@ finally
     => Sem r a -- ^ computation to run first
     -> Sem r b -- ^ computation to run afterward (even if an exception was raised)
     -> Sem r a
-finally act end = bracket (pure ()) (pure end) (const act)
+finally act end = bracket (pure ()) (const end) (const act)
 
 
 ------------------------------------------------------------------------------
