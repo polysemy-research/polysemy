@@ -1,7 +1,7 @@
 # Changelog for polysemy-plugin
 
 
-## 0.2.5.0 (2020-10-14)
+## 0.2.5.0 (2020-02-14)
 - Updated the lower bounds to `polysemy-1.3.0.0` because of changes to
     `polysemy` internals
 - Updated the test suite to test against `polysemy-1.3.0.0`.
