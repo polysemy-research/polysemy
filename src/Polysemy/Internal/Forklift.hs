@@ -36,7 +36,7 @@ runViaForklift
     -> IO a
 runViaForklift chan = usingSem $ \u -> do
   case prj u of
-    Just (Weaving (WeavingDetails (Embed m) s _ ex _)) ->
+    Just (Weaving (Embed m) s _ ex _) ->
       ex . (<$ s) <$> m
     _ -> do
       mvar <- newEmptyMVar

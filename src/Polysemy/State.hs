@@ -255,9 +255,9 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
                                   $ S.runStateT m' s')
                       (Just . snd)
               $ hoist hoistStateIntoStateT x
-    Right (Weaving (WeavingDetails Get z _ y _))     ->
+    Right (Weaving Get z _ y _)     ->
       fmap (y . (<$ z)) $ S.get
-    Right (Weaving (WeavingDetails (Put s) z _ y _)) ->
+    Right (Weaving (Put s) z _ y _) ->
       fmap (y . (<$ z)) $ S.put s
 {-# INLINE hoistStateIntoStateT #-}
 

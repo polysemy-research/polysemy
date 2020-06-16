@@ -37,7 +37,7 @@ runNonDet = runNonDetC . runNonDetInC
 runNonDetMaybe :: Sem (NonDet ': r) a -> Sem r (Maybe a)
 runNonDetMaybe (Sem sem) = Sem $ \k -> runMaybeT $ sem $ \u ->
   case decomp u of
-    Right (Weaving (WeavingDetails e s wv ex _)) ->
+    Right (Weaving e s wv ex _) ->
       case e of
         Empty -> empty
         Choose left right ->
@@ -117,7 +117,7 @@ runNonDetInC = usingSem $ \u ->
                   listToMaybe
                   x
       foldr c b l
-    Right (Weaving (WeavingDetails Empty _ _ _ _)) -> empty
-    Right (Weaving (WeavingDetails (Choose left right) s wv ex _)) -> fmap ex $
+    Right (Weaving Empty _ _ _ _) -> empty
+    Right (Weaving (Choose left right) s wv ex _) -> fmap ex $
       runNonDetInC (wv (left <$ s)) <|> runNonDetInC (wv (right <$ s))
 {-# INLINE runNonDetInC #-}

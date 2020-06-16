@@ -108,7 +108,7 @@ runLazyOutputMonoid
     -> Sem (Output o ': r) a
     -> Sem r (m, a)
 runLazyOutputMonoid f = interpretViaLazyWriter $
-  \(Weaving (WeavingDetails e s _ ex _)) ->
+  \(Weaving e s _ ex _) ->
     case e of
       Output o -> ex s <$ Lazy.tell (f o)
 

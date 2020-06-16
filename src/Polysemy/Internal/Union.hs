@@ -16,7 +16,6 @@
 module Polysemy.Internal.Union
   ( Union (..)
   , Weaving (..)
-  , WeavingDetails (..)
   , Member
   , MemberWithError
   , weave
@@ -75,35 +74,31 @@ instance Functor (Union r mWoven) where
 data Weaving e mAfter resultType where
   Weaving
     :: forall f e rBefore a resultType mAfter. (Functor f)
-    => !(WeavingDetails f e rBefore a resultType mAfter)
-    -> Weaving e mAfter resultType
-
-data WeavingDetails f e rBefore a resultType mAfter =
-  WeavingDetails {
-    weaveEffect :: e (Sem rBefore) a
-    -- ^ The original effect GADT originally lifted via
-    -- 'Polysemy.Internal.send'.
-  , weaveState :: f ()
-    -- ^ A piece of state that other effects' interpreters have already
-    -- woven through this 'Weaving'. @f@ is a 'Functor', so you can always
-    -- 'fmap' into this thing.
-  , weaveDistrib :: forall x. f (Sem rBefore x) -> mAfter (f x)
-    -- ^ Distribute @f@ by transforming @Sem rBefore@ into @mAfter@. We have an
-    -- invariants on @rBefore@, which means in actuality this function looks like
-    -- @f ('Polysemy.Sem' rBefore x) -> mAfter (f x)@.
-  , weaveResult :: f a -> resultType
-    -- ^ Even though @f a@ is the moral resulting type of 'Weaving', we
-    -- can't expose that fact; such a thing would prevent 'Polysemy.Sem'
-    -- from being a 'Monad'.
-  , weaveInspect :: forall x. f x -> Maybe x
-    -- ^ A function for attempting to see inside an @f@. This is no
-    -- guarantees that such a thing will succeed (for example,
-    -- 'Polysemy.Error.Error' might have 'Polysemy.Error.throw'n.)
-  }
+    => {
+      weaveEffect :: e (Sem rBefore) a
+      -- ^ The original effect GADT originally lifted via
+      -- 'Polysemy.Internal.send'.
+      , weaveState :: f ()
+      -- ^ A piece of state that other effects' interpreters have already
+      -- woven through this 'Weaving'. @f@ is a 'Functor', so you can always
+      -- 'fmap' into this thing.
+      , weaveDistrib :: forall x. f (Sem rBefore x) -> mAfter (f x)
+      -- ^ Distribute @f@ by transforming @Sem rBefore@ into @mAfter@. We have an
+      -- invariants on @rBefore@, which means in actuality this function looks like
+      -- @f ('Polysemy.Sem' rBefore x) -> mAfter (f x)@.
+      , weaveResult :: f a -> resultType
+      -- ^ Even though @f a@ is the moral resulting type of 'Weaving', we
+      -- can't expose that fact; such a thing would prevent 'Polysemy.Sem'
+      -- from being a 'Monad'.
+      , weaveInspect :: forall x. f x -> Maybe x
+      -- ^ A function for attempting to see inside an @f@. This is no
+      -- guarantees that such a thing will succeed (for example,
+      -- 'Polysemy.Error.Error' might have 'Polysemy.Error.throw'n.)
+      } -> Weaving e mAfter resultType
 
 instance Functor (Weaving e m) where
-  fmap f (Weaving (WeavingDetails e s d f' v)) =
-    Weaving $ WeavingDetails e s d (f . f') v
+  fmap f (Weaving e s d f' v) =
+    Weaving e s d (f . f') v
   {-# INLINE fmap #-}
 
 
@@ -115,8 +110,8 @@ weave
     -> (∀ x. s x -> Maybe x)
     -> Union r m a
     -> Union r n (s a)
-weave s' d v' (Union w (Weaving (WeavingDetails e s nt f v))) =
-  Union w $ Weaving $ WeavingDetails
+weave s' d v' (Union w (Weaving e s nt f v)) =
+  Union w $ Weaving
               e (Compose $ s <$ s')
               (fmap Compose . d . fmap nt . getCompose)
               (fmap f . getCompose)
@@ -128,8 +123,8 @@ hoist
     :: (∀ x. m x -> n x)
     -> Union r m a
     -> Union r n a
-hoist f' (Union w (Weaving (WeavingDetails e s nt f v))) =
-  Union w $ Weaving $ WeavingDetails e s (f' . nt) f v
+hoist f' (Union w (Weaving e s nt f v)) =
+  Union w $ Weaving e s (f' . nt) f v
 {-# INLINE hoist #-}
 
 
@@ -291,7 +286,7 @@ weaken (Union pr a) = Union (There pr) a
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
 inj :: forall e r rInitial a. (Member e r) => e (Sem rInitial) a -> Union r (Sem rInitial) a
 inj e = injWeaving $
-  Weaving $ WeavingDetails e (Identity ())
+  Weaving e (Identity ())
               (fmap Identity . runIdentity)
               runIdentity
               (Just . runIdentity)
@@ -303,7 +298,7 @@ inj e = injWeaving $
 -- given an explicit proof that the effect exists in @r@
 injUsing :: forall e r rInitial a.
   ElemOf e r -> e (Sem rInitial) a -> Union r (Sem rInitial) a
-injUsing pr e = Union pr $ Weaving $ WeavingDetails
+injUsing pr e = Union pr $ Weaving
             e (Identity ())
             (fmap Identity . runIdentity)
             runIdentity

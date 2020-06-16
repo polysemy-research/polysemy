@@ -205,8 +205,8 @@ interpretViaLazyWriter f sem = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) 
   let
     go :: forall x. Sem (e ': r) x -> Lazy.WriterT o m x
     go = usingSem $ \u -> case decomp u of
-      Right (Weaving (WeavingDetails e s wv ex ins)) ->
-        f $ Weaving $ WeavingDetails e s (go . wv) ex ins
+      Right (Weaving e s wv ex ins) ->
+        f $ Weaving e s (go . wv) ex ins
       Left g -> Lazy.WriterT $ do
         ~(o, a) <- k $
           weave
