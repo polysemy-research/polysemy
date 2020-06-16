@@ -18,6 +18,11 @@ module Polysemy.Error
   , try
   , tryJust
   , catchJust
+  , bracket
+  , bracket_
+  , bracketOnError
+  , finally
+  , onException
 
     -- * Interpretations
   , runError
@@ -188,6 +193,53 @@ catchJust ef m bf = catch m handler
                     Nothing -> throw e
                     Just b -> bf b
 {-# INLINABLE catchJust #-}
+
+------------------------------------------------------------------------------
+-- | The 'Sem' equivalent of resource acquisition, use, and release.
+bracket :: forall e r a b c
+         . Member (Error e) r
+        => Sem r a            -- ^ compututation to run first (\"acquire\")
+        -> (a -> Sem r b)     -- ^ computation to run last (\"release\")
+        -> (a -> Sem r c)     -- ^ computation to run in between (\"use\")
+        -> Sem r c
+bracket before after thing = do
+  a   <- before
+  res <- onException @e (thing a) (after a)
+  _   <- after a
+  pure res
+{-# INLINABLE bracket #-}
+
+------------------------------------------------------------------------------
+-- | Like 'bracket' but the result of the first computation is not needed.
+bracket_ :: forall e r a b c. Member (Error e) r => Sem r a -> Sem r b -> Sem r c -> Sem r c
+bracket_ before after thing = bracket @e before (const after) (const thing)
+{-# INLINABLE bracket_ #-}
+
+------------------------------------------------------------------------------
+-- | Like 'bracket' but only run the final computation if an exception was
+-- raised by the in-between computation.
+bracketOnError :: forall e r a b c
+                . Member (Error e) r
+               => Sem r a -> (a -> Sem r b) -> (a -> Sem r c) -> Sem r c
+bracketOnError before after thing = do
+  a <- before
+  onException @e (thing a) (after a)
+{-# INLINABLE bracketOnError #-}
+
+------------------------------------------------------------------------------
+-- | Executes the second action regardless of the result of the first.
+finally :: forall e r a b. Member (Error e) r => Sem r a -> Sem r b -> Sem r a
+finally a b = do
+  res <- onException @e a b -- execute a, and maybe b, capturing the result
+  _   <- b                  -- execute b, now that a did not throw
+  pure res
+{-# INLINABLE finally #-}
+
+------------------------------------------------------------------------------
+-- | Executes the second action if the first one throws.
+onException :: forall e r a b. Member (Error e) r => Sem r a -> Sem r b -> Sem r a
+onException a b = catch @e a (\e -> b >> throw e)
+{-# INLINABLE onException #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Error' effect in the style of
