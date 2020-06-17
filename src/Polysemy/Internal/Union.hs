@@ -47,6 +47,7 @@ import Data.Functor.Identity
 import Data.Kind
 import Data.Typeable
 import Polysemy.Internal.Kind
+import {-# SOURCE #-} Polysemy.Internal
 
 #ifndef NO_ERROR_MESSAGES
 import Polysemy.Internal.CustomErrors
@@ -56,7 +57,7 @@ import Polysemy.Internal.CustomErrors
 ------------------------------------------------------------------------------
 -- | An extensible, type-safe union. The @r@ type parameter is a type-level
 -- list of effects, any one of which may be held within the 'Union'.
-data Union (r :: EffectRow) (m :: Type -> Type) a where
+data Union (r :: EffectRow) (mWoven :: Type -> Type) a where
   Union
       :: -- A proof that the effect is actually in @r@.
          ElemOf e r
@@ -65,38 +66,37 @@ data Union (r :: EffectRow) (m :: Type -> Type) a where
       -> Weaving e m a
       -> Union r m a
 
-instance Functor (Union r m) where
+instance Functor (Union r mWoven) where
   fmap f (Union w t) = Union w $ fmap f t
   {-# INLINE fmap #-}
 
 
-data Weaving e m a where
+data Weaving e mAfter resultType where
   Weaving
-    :: Functor f
-    =>   { weaveEffect :: e m a
-         -- ^ The original effect GADT originally lifted via
-         -- 'Polysemy.Internal.send'. There is an invariant that @m ~ Sem r0@,
-         -- where @r0@ is the effect row that was in scope when this 'Weaving'
-         -- was originally created.
-       , weaveState :: f ()
-         -- ^ A piece of state that other effects' interpreters have already
-         -- woven through this 'Weaving'. @f@ is a 'Functor', so you can always
-         -- 'fmap' into this thing.
-       , weaveDistrib :: forall x. f (m x) -> n (f x)
-         -- ^ Distribute @f@ by transforming @m@ into @n@. We have invariants
-         -- on @m@ and @n@, which means in actuality this function looks like
-         -- @f ('Polysemy.Sem' (Some ': Effects ': r) x) -> 'Polysemy.Sem' r (f
-         -- x)@.
-       , weaveResult :: f a -> b
-         -- ^ Even though @f a@ is the moral resulting type of 'Weaving', we
-         -- can't expose that fact; such a thing would prevent 'Polysemy.Sem'
-         -- from being a 'Monad'.
-       , weaveInspect :: forall x. f x -> Maybe x
-         -- ^ A function for attempting to see inside an @f@. This is no
-         -- guarantees that such a thing will succeed (for example,
-         -- 'Polysemy.Error.Error' might have 'Polysemy.Error.throw'n.)
-       }
-    -> Weaving e n b
+    :: forall f e rInitial a resultType mAfter. (Functor f)
+    => {
+      weaveEffect :: e (Sem rInitial) a
+      -- ^ The original effect GADT originally lifted via
+      -- 'Polysemy.Internal.send'.
+      -- ^ @rInitial@ is the effect row that was in scope when this 'Weaving'
+      -- was originally created.
+      , weaveState :: f ()
+      -- ^ A piece of state that other effects' interpreters have already
+      -- woven through this 'Weaving'. @f@ is a 'Functor', so you can always
+      -- 'fmap' into this thing.
+      , weaveDistrib :: forall x. f (Sem rInitial x) -> mAfter (f x)
+      -- ^ Distribute @f@ by transforming @Sem rInitial@ into @mAfter@. This is
+      -- usually of the form @f ('Polysemy.Sem' (Some ': Effects ': r) x) ->
+      --   Sem r (f x)@
+      , weaveResult :: f a -> resultType
+      -- ^ Even though @f a@ is the moral resulting type of 'Weaving', we
+      -- can't expose that fact; such a thing would prevent 'Polysemy.Sem'
+      -- from being a 'Monad'.
+      , weaveInspect :: forall x. f x -> Maybe x
+      -- ^ A function for attempting to see inside an @f@. This is no
+      -- guarantees that such a thing will succeed (for example,
+      -- 'Polysemy.Error.Error' might have 'Polysemy.Error.throw'n.)
+      } -> Weaving e mAfter resultType
 
 instance Functor (Weaving e m) where
   fmap f (Weaving e s d f' v) = Weaving e s d (f . f') v
@@ -105,14 +105,15 @@ instance Functor (Weaving e m) where
 
 
 weave
-    :: (Functor s, Functor m, Functor n)
+    :: (Functor s, Functor n)
     => s ()
     -> (∀ x. s (m x) -> n (s x))
     -> (∀ x. s x -> Maybe x)
     -> Union r m a
     -> Union r n (s a)
-weave s' d v' (Union w (Weaving e s nt f v)) = Union w $
-    Weaving e (Compose $ s <$ s')
+weave s' d v' (Union w (Weaving e s nt f v)) =
+  Union w $ Weaving
+              e (Compose $ s <$ s')
               (fmap Compose . d . fmap nt . getCompose)
               (fmap f . getCompose)
               (v <=< v' . getCompose)
@@ -120,13 +121,11 @@ weave s' d v' (Union w (Weaving e s nt f v)) = Union w $
 
 
 hoist
-    :: ( Functor m
-       , Functor n
-       )
-    => (∀ x. m x -> n x)
+    :: (∀ x. m x -> n x)
     -> Union r m a
     -> Union r n a
-hoist f' (Union w (Weaving e s nt f v)) = Union w $ Weaving e s (f' . nt) f v
+hoist f' (Union w (Weaving e s nt f v)) =
+  Union w $ Weaving e s (f' . nt) f v
 {-# INLINE hoist #-}
 
 
@@ -286,24 +285,27 @@ weaken (Union pr a) = Union (There pr) a
 
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
-inj :: forall e r m a. (Functor m , Member e r) => e m a -> Union r m a
-inj e = injWeaving $
-  Weaving e (Identity ())
-            (fmap Identity . runIdentity)
-            runIdentity
-            (Just . runIdentity)
+inj :: forall e r rInitial a. (Member e r) => e (Sem rInitial) a -> Union r (Sem rInitial) a
+inj e = injWeaving $ Weaving
+  e
+  (Identity ())
+  (fmap Identity . runIdentity)
+  runIdentity
+  (Just . runIdentity)
 {-# INLINE inj #-}
 
 
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it,
 -- given an explicit proof that the effect exists in @r@
-injUsing :: forall e r m a. Functor m => ElemOf e r -> e m a -> Union r m a
-injUsing pr e = Union pr $
-  Weaving e (Identity ())
-            (fmap Identity . runIdentity)
-            runIdentity
-            (Just . runIdentity)
+injUsing :: forall e r rInitial a.
+  ElemOf e r -> e (Sem rInitial) a -> Union r (Sem rInitial) a
+injUsing pr e = Union pr $ Weaving
+  e
+  (Identity ())
+  (fmap Identity . runIdentity)
+  runIdentity
+  (Just . runIdentity)
 {-# INLINE injUsing #-}
 
 ------------------------------------------------------------------------------
