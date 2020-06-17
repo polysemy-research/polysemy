@@ -10,6 +10,8 @@
 
 - Add `bracket_` (thanks to @expipiplus1)
 
+- Restrict the existentially quantified monad in a `Weaving` to be `Sem r` (thanks to @A1kmm)
+
 ## 1.3.0.0 (2020-02-14)
 
 ### Breaking Changes
