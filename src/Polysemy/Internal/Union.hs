@@ -64,7 +64,7 @@ data Union (r :: EffectRow) (mWoven :: Type -> Type) a where
          -- The effect to wrap. The functions 'prj' and 'decomp' can help
          -- retrieve this value later.
       -> Weaving e m a
-      -> Union r m a  
+      -> Union r m a
 
 instance Functor (Union r mWoven) where
   fmap f (Union w t) = Union w $ fmap f t
@@ -73,19 +73,21 @@ instance Functor (Union r mWoven) where
 
 data Weaving e mAfter resultType where
   Weaving
-    :: forall f e rBefore a resultType mAfter. (Functor f)
+    :: forall f e rInitial a resultType mAfter. (Functor f)
     => {
-      weaveEffect :: e (Sem rBefore) a
+      weaveEffect :: e (Sem rInitial) a
       -- ^ The original effect GADT originally lifted via
       -- 'Polysemy.Internal.send'.
+      -- ^ @rInitial@ is the effect row that was in scope when this 'Weaving'
+      -- was originally created.
       , weaveState :: f ()
       -- ^ A piece of state that other effects' interpreters have already
       -- woven through this 'Weaving'. @f@ is a 'Functor', so you can always
       -- 'fmap' into this thing.
-      , weaveDistrib :: forall x. f (Sem rBefore x) -> mAfter (f x)
-      -- ^ Distribute @f@ by transforming @Sem rBefore@ into @mAfter@. We have an
-      -- invariants on @rBefore@, which means in actuality this function looks like
-      -- @f ('Polysemy.Sem' rBefore x) -> mAfter (f x)@.
+      , weaveDistrib :: forall x. f (Sem rInitial x) -> mAfter (f x)
+      -- ^ Distribute @f@ by transforming @Sem rInitial@ into @mAfter@. This is
+      -- usually of the form @f ('Polysemy.Sem' (Some ': Effects ': r) x) ->
+      --   Sem r (f x)@
       , weaveResult :: f a -> resultType
       -- ^ Even though @f a@ is the moral resulting type of 'Weaving', we
       -- can't expose that fact; such a thing would prevent 'Polysemy.Sem'
@@ -97,14 +99,13 @@ data Weaving e mAfter resultType where
       } -> Weaving e mAfter resultType
 
 instance Functor (Weaving e m) where
-  fmap f (Weaving e s d f' v) =
-    Weaving e s d (f . f') v
+  fmap f (Weaving e s d f' v) = Weaving e s d (f . f') v
   {-# INLINE fmap #-}
 
 
 
 weave
-    :: (Functor s, Functor m, Functor n)
+    :: (Functor s, Functor n)
     => s ()
     -> (∀ x. s (m x) -> n (s x))
     -> (∀ x. s x -> Maybe x)
@@ -285,11 +286,12 @@ weaken (Union pr a) = Union (There pr) a
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
 inj :: forall e r rInitial a. (Member e r) => e (Sem rInitial) a -> Union r (Sem rInitial) a
-inj e = injWeaving $
-  Weaving e (Identity ())
-              (fmap Identity . runIdentity)
-              runIdentity
-              (Just . runIdentity)
+inj e = injWeaving $ Weaving
+  e
+  (Identity ())
+  (fmap Identity . runIdentity)
+  runIdentity
+  (Just . runIdentity)
 {-# INLINE inj #-}
 
 
@@ -299,10 +301,11 @@ inj e = injWeaving $
 injUsing :: forall e r rInitial a.
   ElemOf e r -> e (Sem rInitial) a -> Union r (Sem rInitial) a
 injUsing pr e = Union pr $ Weaving
-            e (Identity ())
-            (fmap Identity . runIdentity)
-            runIdentity
-            (Just . runIdentity)
+  e
+  (Identity ())
+  (fmap Identity . runIdentity)
+  runIdentity
+  (Just . runIdentity)
 {-# INLINE injUsing #-}
 
 ------------------------------------------------------------------------------

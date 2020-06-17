@@ -63,8 +63,7 @@ tagged
 tagged = hoistSem $ \u ->
   case decompCoerce u of
     Right (Weaving e s wv ex ins) ->
-      injWeaving $ Weaving
-        (Tagged @k e) s (tagged @k . wv) ex ins
+      injWeaving $ Weaving (Tagged @k e) s (tagged @k . wv) ex ins
     Left g -> hoist (tagged @k) g
 {-# INLINE tagged #-}
 
@@ -95,8 +94,7 @@ retag
     -> Sem r a
 retag = hoistSem $ \u -> case decomp u of
   Right (Weaving (Tagged e) s wv ex ins) ->
-    injWeaving $ Weaving
-      (Tagged @k2 e) s (retag @_ @k2 . wv) ex ins
+    injWeaving $ Weaving (Tagged @k2 e) s (retag @_ @k2 . wv) ex ins
   Left g -> hoist (retag @_ @k2) g
 {-# INLINE retag #-}
 

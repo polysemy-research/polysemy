@@ -44,8 +44,8 @@ sendBundle
   -> Sem r a
 sendBundle = hoistSem $ \u -> case decomp u of
   Right (Weaving e s wv ex ins) ->
-    injWeaving $ Weaving
-      (Bundle (membership @e @r') e) s (sendBundle @e @r' . wv) ex ins
+    injWeaving $
+      Weaving (Bundle (membership @e @r') e) s (sendBundle @e @r' . wv) ex ins
   Left g -> hoist (sendBundle @e @r') g
 {-# INLINE sendBundle #-}
 
@@ -71,7 +71,6 @@ subsumeBundle
   -> Sem r a
 subsumeBundle = hoistSem $ \u -> hoist subsumeBundle $ case decomp u of
   Right (Weaving (Bundle pr e) s wv ex ins) ->
-    Union (subsumeMembership pr)
-              (Weaving e s wv ex ins)
+    Union (subsumeMembership pr) (Weaving e s wv ex ins)
   Left g -> g
 {-# INLINE subsumeBundle #-}

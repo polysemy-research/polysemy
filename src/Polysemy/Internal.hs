@@ -384,8 +384,7 @@ raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
   where
     weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
     weakenUnder3 (Union Here a) = Union Here a
-    weakenUnder3 (Union (There n) a) = Union
-      (There (There (There (There n)))) a
+    weakenUnder3 (Union (There n) a) = Union (There (There (There (There n)))) a
     {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
 

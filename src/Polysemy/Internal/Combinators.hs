@@ -218,7 +218,7 @@ reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
 reinterpret2
     :: forall e1 e2 e3 r a
      . FirstOrder e1 "reinterpret2"
-    => (∀ m x. e1 m x ->
+    => (∀ rInitial x. e1 (Sem rInitial) x ->
         Sem (e2 ': e3 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
@@ -252,7 +252,7 @@ reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
 reinterpret3
     :: forall e1 e2 e3 e4 r a
      . FirstOrder e1 "reinterpret3"
-    => (∀ m x. e1 m x -> Sem (e2 ': e3 ': e4 ': r) x)
+    => (∀ rInitial x. e1 (Sem rInitial) x -> Sem (e2 ': e3 ': e4 ': r) x)
        -- ^ A natural transformation from the handled effect to the new effects.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': e3 ': e4 ': r) a
