@@ -265,14 +265,13 @@ decomp (Union p a) =
 -- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> Weaving e m a
 extract (Union Here a)   = a
-extract (Union (There g) _) = case g of {}
 {-# INLINE extract #-}
 
 
 ------------------------------------------------------------------------------
 -- | An empty union contains nothing, so this function is uncallable.
 absurdU :: Union '[] m a -> b
-absurdU (Union pr _) = case pr of {}
+absurdU = \case {}
 
 
 ------------------------------------------------------------------------------

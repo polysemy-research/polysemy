@@ -40,7 +40,6 @@ module Polysemy.Internal
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Fail
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
