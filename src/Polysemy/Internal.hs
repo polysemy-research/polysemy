@@ -103,7 +103,8 @@ import Polysemy.Internal.Union
 --         catching = do
 --           modify (++"-catch")
 --           get
---     catch @String throwing (\ _ -> catching)
+--     -- Without `-fplugin=Polysemy.Plugin` you need `catch @String`
+--     catch throwing (\ _ -> catching)
 -- :}
 --
 -- when handling 'Polysemy.Error.Error' first, state is preserved after error
