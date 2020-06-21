@@ -80,7 +80,7 @@ will be true in GHC 8.10.1.
 ## Examples
 
 Make sure you read the [Necessary Language
-Extensions](https://github.com/isovector/polysemy#necessary-language-extensions)
+Extensions](https://github.com/isovector/polysemy#necessary-language-extensions) and add any extras in example source blocks (such as LambdaCase and BlockArguments below)
 before trying these yourself!
 
 Teletype effect:
