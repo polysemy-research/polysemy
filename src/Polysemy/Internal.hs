@@ -113,6 +113,7 @@ import Polysemy.Internal.Union
 --   example
 --     & runError
 --     & fmap (either id id)
+--     -- Without `-fplugin=Polysemy.Plugin` you need `evalState @String`
 --     & evalState ""
 --     & runM
 --     & (print =<<)
@@ -123,6 +124,7 @@ import Polysemy.Internal.Union
 --
 -- >>> :{
 --   example
+--     -- Without `-fplugin=Polysemy.Plugin` you need `evalState @String`
 --     & evalState ""
 --     & runError
 --     & fmap (either id id)
