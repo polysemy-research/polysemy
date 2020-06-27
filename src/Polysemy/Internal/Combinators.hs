@@ -280,7 +280,7 @@ intercept f = interceptH $ \(e :: e (Sem rInitial) x) ->
 
 
 ------------------------------------------------------------------------------
--- | Like 'interceptH', but for higher-order effects.
+-- | Like 'intercept', but for higher-order effects.
 --
 -- See the notes on 'Tactical' for how to use this function.
 interceptH
