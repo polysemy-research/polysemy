@@ -249,7 +249,7 @@ usingSem k m = runSem m k
 
 
 instance Functor (Sem f) where
-  fmap f (Sem m) = Sem $ \k -> fmap f $ m k
+  fmap f (Sem m) = Sem $ \k -> f <$> m k
   {-# INLINE fmap #-}
 
 

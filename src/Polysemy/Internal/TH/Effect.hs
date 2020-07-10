@@ -161,7 +161,7 @@ genSig cli
 -- @x a b c = send (X a b c :: E m a)@.
 genDec :: Bool -> ConLiftInfo -> Q [Dec]
 genDec should_mk_sigs cli = do
-  let fun_args_names = fmap fst $ cliFunArgs cli
+  let fun_args_names = fst <$> cliFunArgs cli
 
   pure
     [ PragmaD $ InlineP (cliFunName cli) Inlinable ConLike AllPhases
