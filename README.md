@@ -292,24 +292,6 @@ GHC with features that will allow for creation of effects implementation with
 stable and strong performance. It's what `polysemy` may choose at some point,
 but it will probably require few breaking changes.
 
-## Stellar Engineering - Aligning the stars to optimize `polysemy` ~~away~~ better
-
-Several things need to be in place to fully realize our performance goals:
-
-- GHC Version
-  - GHC 8.9+
-- Your code
-  - The module you want to be optimized needs to import `Polysemy.Internal`
-    somewhere in its dependency tree (sufficient to `import Polysemy`)
-- GHC Flags
-  - `-O` or `-O2`
-  - `-flate-specialise` (this should be automatically turned on by the plugin,
-    but it's worth mentioning)
-- Plugin
-  - `-fplugin=Polysemy.Plugin`
-- Additional concerns:
-  - additional core passes (turned on by the plugin)
-
 ## Acknowledgements, citations, and related work
 
 The following is a non-exhaustive list of people and works that have had a
