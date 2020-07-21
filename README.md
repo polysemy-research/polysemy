@@ -42,7 +42,7 @@ the
 and nicely solves the
 [trouble with typed errors](https://www.parsonsmatt.org/2018/11/03/trouble_with_typed_errors.html).
 
-Concerned about type inference? `polysemy` comes with companion
+Concerned about type inference? `polysemy` comes with its companion
 [`polysemy-plugin`](https://github.com/isovector/polysemy/tree/master/polysemy-plugin),
 which helps it perform just as well as `mtl`'s! Add `polysemy-plugin` to your
 `package.yaml` or `.cabal` file's `dependencies` section to use. Then turn it on with a pragma in your source files:
@@ -246,7 +246,7 @@ another, resulting in
 [visible drop in performance](https://github.com/lexi-lambda/ghc-proposals/blob/delimited-continuation-primops/proposals/0000-delimited-continuation-primops.md#putting-numbers-to-the-cost)
 compared to equivalent code without use of effect systems.
 
-*Why nobody noticed this for such a long time?*
+*Why did nobody notice this?*
 
 One factor may be that while GHC's optimizer is
 very, very good in general in optimizing all sorts of abstraction, it's
