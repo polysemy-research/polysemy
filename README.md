@@ -69,7 +69,7 @@ Or by adding `-fplugin=Polysemy.Plugin` to your `package.yaml`/`.cabal` file `gh
   to start thinking about polysemy.
 - Sandy Maguire, the author, gave a talk on some of the
   [performance implementation](https://www.youtube.com/watch?v=-dHFOjcK6pA)
-- He have also written
+- He has also written
   [some](http://reasonablypolymorphic.com/blog/freer-higher-order-effects/)
   [blog posts](http://reasonablypolymorphic.com/blog/tactics/) on other
   implementation details.
@@ -162,12 +162,13 @@ program = catch @CustomException work \e -> writeTTY $ "Caught " ++ show e
       _             -> writeTTY input *> writeTTY "no exceptions"
 
 main :: IO (Either CustomException ())
-main = runFinal
-     . embedToFinal @IO
-     . resourceToIOFinal
-     . errorToIOFinal @CustomException
-     . teletypeToIO
-     $ program
+main
+  = runFinal
+  . embedToFinal @IO
+  . resourceToIOFinal
+  . errorToIOFinal @CustomException
+  . teletypeToIO
+  $ program
 ```
 
 Easy.
@@ -229,16 +230,17 @@ You're going to want to stick all of this into your `package.yaml` file.
 
 ## *What about performance?* ([TL;DR](#tldr))
 
-Previous versions of this `README` mentioned **library being** ***zero-cost***, as in
-having no visible effect on performance. While this was the original motivation
-and main factor in implementation of this library, it turned out that
+Previous versions of this `README` mentioned **the library being**
+***zero-cost***, as in having no visible effect on performance. While this was
+the original motivation and main factor in implementation of this library, it
+turned out that
 [**optimizations** we depend on](https://reasonablypolymorphic.com/blog/specialization/),
 while showing amazing results in small benchmarks, **don't work in
 [bigger, multi-module programs](https://github.com/ghc-proposals/ghc-proposals/pull/313#issuecomment-590143835)**,
 what greatly limits their usefulness.
 
 What's more interesting though is that
-this **isn't `polysemy`-specific** problem - basically **all popular effects
+this **isn't a `polysemy`-specific** problem - basically **all popular effects
 libraries** ended up being bitten by variation of this problem in one way or
 another, resulting in
 [visible drop in performance](https://github.com/lexi-lambda/ghc-proposals/blob/delimited-continuation-primops/proposals/0000-delimited-continuation-primops.md#putting-numbers-to-the-cost)
@@ -250,7 +252,7 @@ One factor may be that while GHC's optimizer is
 very, very good in general in optimizing all sorts of abstraction, it's
 relatively complex and hard to predict - authors of libraries may have not
 deemed location of code relevant, even though it had big effect at the end.
-The other is that maybe **it doesn't matter as much** as I we like to tell
+The other is that maybe **it doesn't matter as much** as we like to tell
 ourselves. Many of these effects
 libraries are used in production and they're doing just fine, because maximum
 performance usually matters in small, controlled areas of code, that often
