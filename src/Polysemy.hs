@@ -30,6 +30,8 @@ module Polysemy
   , raiseUnder
   , raiseUnder2
   , raiseUnder3
+  , raise2Under
+  , raise3Under
 
     -- * Trivial Interpretation
   , subsume
