@@ -32,6 +32,8 @@ module Polysemy
   , raiseUnder3
   , raise2Under
   , raise3Under
+  , raise'
+  , subsume'
 
     -- * Trivial Interpretation
   , subsume
@@ -148,4 +150,3 @@ import Polysemy.Internal.Forklift
 import Polysemy.Internal.Kind
 import Polysemy.Internal.Tactics
 import Polysemy.Internal.TH.Effect
-

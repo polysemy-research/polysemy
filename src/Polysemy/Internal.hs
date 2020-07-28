@@ -1,7 +1,8 @@
-{-# LANGUAGE AllowAmbiguousTypes  #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE MonoLocalBinds       #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MonoLocalBinds        #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
@@ -16,12 +17,16 @@ module Polysemy.Internal
   , embed
   , run
   , runM
+  , raise'
+  , Raise (..)
   , raise
   , raiseUnder
   , raiseUnder2
   , raiseUnder3
   , raise2Under
   , raise3Under
+  , subsume'
+  , Subsume (..)
   , subsume
   , subsumeUsing
   , Embed (..)
@@ -43,6 +48,7 @@ import Data.Kind
 import Polysemy.Embed.Type
 import Polysemy.Fail.Type
 import Polysemy.Internal.Fixpoint
+import Polysemy.Internal.Kind
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
@@ -294,7 +300,7 @@ instance (Member Fail r) => MonadFail (Sem r) where
 -- | This instance will only lift 'IO' actions. If you want to lift into some
 -- other 'MonadIO' type, use this instance, and handle it via the
 -- 'Polysemy.IO.embedToMonadIO' interpretation.
-instance (Member (Embed IO) r) => MonadIO (Sem r) where
+instance Member (Embed IO) r => MonadIO (Sem r) where
   liftIO = embed
   {-# INLINE liftIO #-}
 
@@ -317,21 +323,50 @@ hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 
 
 ------------------------------------------------------------------------------
--- | Introduce an effect into 'Sem'. Analogous to
--- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem
-raise :: ∀ e r a. Sem r a -> Sem (e ': r) a
-raise = hoistSem $ hoist raise . weaken
+-- | Introduce arbitrary number of effects on top of effect stack. This
+-- function is highly polymorphic, so it may be good idea to use it's more
+-- concrete versions (like 'raise') or type annotations to avoid vague errors
+-- in ambiguous contexts.
+--
+-- @since 1.4.0.0
+raise' :: ∀ r r' a. Raise r r' => Sem r a -> Sem r' a
+raise' = hoistSem $ hoist raise' . raiseUnion
 {-# INLINE raise #-}
+
+
+-- | See 'raise''.
+--
+-- @since 1.4.0.0
+class Raise (r :: EffectRow) (r' :: EffectRow) where
+  raiseUnion :: Union r m a -> Union r' m a
+
+instance {-# overlapping #-} Raise r r where
+  raiseUnion = id
+  {-# INLINE raiseUnion #-}
+
+instance (r' ~ (_0:r''), Raise r r'') => Raise r r' where
+  raiseUnion = (\(Union n w) -> Union (There n) w) . raiseUnion
+  {-# INLINE raiseUnion #-}
+
+
+------------------------------------------------------------------------------
+-- | Introduce an effect into 'Sem'. Analogous to
+-- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem. For variant that can
+-- introduce arbitrary number of effects, see 'raise''.
+raise :: ∀ e r a. Sem r a -> Sem (e ': r) a
+raise = raise'
+{-# INLINE raise' #-}
 
 
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces a new effect underneath the head of the
--- list.
+-- list. See 'raiseUnder2' or 'raiseUnder3' for introducing more effects. If
+-- you need to introduce even more of them, check out 'subsume''.
 --
 -- 'raiseUnder' can be used in order to turn transformative interpreters
--- into reinterpreters. This is especially useful if you're writing an interpreter
--- which introduces an intermediary effect, and then want to use an existing
--- interpreter on that effect.
+-- into reinterpreters. This is especially useful if you're writing an
+-- interpreter which introduces an intermediary effect, and then want to use
+-- an existing interpreter on that effect.
 --
 -- For example, given:
 --
@@ -352,12 +387,7 @@ raise = hoistSem $ hoist raise . weaken
 --
 -- @since 1.2.0.0
 raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
-raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
-  where
-    weakenUnder :: ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': r) m x
-    weakenUnder (Union Here a) = Union Here a
-    weakenUnder (Union (There n) a) = Union (There (There n)) a
-    {-# INLINE weakenUnder #-}
+raiseUnder = subsume'
 {-# INLINE raiseUnder #-}
 
 
@@ -367,12 +397,7 @@ raiseUnder = hoistSem $ hoist raiseUnder . weakenUnder
 --
 -- @since 1.2.0.0
 raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
-raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
-  where
-    weakenUnder2 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': r) m x
-    weakenUnder2 (Union Here a) = Union Here a
-    weakenUnder2 (Union (There n) a) = Union (There (There (There n))) a
-    {-# INLINE weakenUnder2 #-}
+raiseUnder2 = subsume'
 {-# INLINE raiseUnder2 #-}
 
 
@@ -382,12 +407,7 @@ raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
 --
 -- @since 1.2.0.0
 raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
-raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
-  where
-    weakenUnder3 ::  ∀ m x. Union (e1 ': r) m x -> Union (e1 ': e2 ': e3 ': e4 ': r) m x
-    weakenUnder3 (Union Here a) = Union Here a
-    weakenUnder3 (Union (There n) a) = Union (There (There (There (There n)))) a
-    {-# INLINE weakenUnder3 #-}
+raiseUnder3 = subsume'
 {-# INLINE raiseUnder3 #-}
 
 
@@ -423,6 +443,40 @@ raise3Under = hoistSem $ hoist raise3Under . weaken3Under
     {-# INLINE weaken3Under #-}
 {-# INLINE raise3Under #-}
 
+
+------------------------------------------------------------------------------
+-- | Allows reordering and adding known effects on top of effect stack, as
+-- long as polymorphic "tail" of new stack is 'raise'-d version of the
+-- original one. This function is highly polymorphic, so it may be good idea
+-- to use it's more concrete version ('subsume'), fitting functions from
+-- 'raise' family or type annotations to avoid vague errors in ambiguous
+-- contexts.
+--
+-- @since 1.4.0.0
+subsume' :: ∀ r r' a. Subsume r r' => Sem r a -> Sem r' a
+subsume' = hoistSem $ hoist subsume' . subsumeUnion
+{-# INLINE subsume' #-}
+
+
+-- | See 'subsume''.
+--
+-- @since 1.4.0.0
+class Subsume (r :: EffectRow) (r' :: EffectRow) where
+  subsumeUnion :: Union r m a -> Union r' m a
+
+instance {-# incoherent #-} Raise r r' => Subsume r r' where
+  subsumeUnion = raiseUnion
+  {-# INLINE subsumeUnion #-}
+
+instance (Member e r', Subsume r r') => Subsume (e:r) r' where
+  subsumeUnion = either subsumeUnion injWeaving . decomp
+  {-# INLINE subsumeUnion #-}
+
+instance Subsume '[] r where
+  subsumeUnion = absurdU
+  {-# INLINE subsumeUnion #-}
+
+
 ------------------------------------------------------------------------------
 -- | Interprets an effect in terms of another identical effect.
 --
@@ -431,10 +485,14 @@ raise3Under = hoistSem $ hoist raise3Under . weaken3Under
 -- Using such an interpreter recursively may result in duplicate effects,
 -- which may then be eliminated using 'subsume'.
 --
+-- For version that can introduce arbitrary number of new effects and reorder
+-- existing ones, see 'subsume''.
+--
 -- @since 1.2.0.0
-subsume :: Member e r => Sem (e ': r) a -> Sem r a
-subsume = subsumeUsing membership
+subsume :: ∀ e r a. Member e r => Sem (e ': r) a -> Sem r a
+subsume = subsume'
 {-# INLINE subsume #-}
+
 
 ------------------------------------------------------------------------------
 -- | Interprets an effect in terms of another identical effect, given an
@@ -451,10 +509,10 @@ subsume = subsumeUsing membership
 -- @
 --
 -- @since 1.3.0.0
-subsumeUsing :: forall e r a. ElemOf e r -> Sem (e ': r) a -> Sem r a
+subsumeUsing :: ∀ e r a. ElemOf e r -> Sem (e ': r) a -> Sem r a
 subsumeUsing pr =
   let
-    go :: forall x. Sem (e ': r) x -> Sem r x
+    go :: ∀ x. Sem (e ': r) x -> Sem r x
     go = hoistSem $ \u -> hoist go $ case decomp u of
       Right w -> Union pr w
       Left  g -> g
@@ -470,6 +528,7 @@ subsumeUsing pr =
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}
+
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem', given an explicit proof
@@ -509,6 +568,7 @@ runM (Sem m) = m $ \z ->
       pure $ f $ a <$ s
 {-# INLINE runM #-}
 
+
 ------------------------------------------------------------------------------
 -- | Type synonym for interpreters that consume an effect without changing the
 -- return value. Offered for user convenience.
@@ -519,7 +579,8 @@ runM (Sem m) = m $ \z ->
 -- teletypeToIO :: 'Member' (Embed IO) r
 --              => 'InterpreterFor' Teletype r
 -- @
-type InterpreterFor e r = forall a. Sem (e ': r) a -> Sem r a
+type InterpreterFor e r = ∀ a. Sem (e ': r) a -> Sem r a
+
 
 ------------------------------------------------------------------------------
 -- | Some interpreters need to be able to lower down to the base monad (often
@@ -582,4 +643,3 @@ infixl 8 .@
     -> m (f z)
 f .@@ g = f . g f
 infixl 8 .@@
-
