@@ -20,6 +20,8 @@ module Polysemy.Internal
   , raiseUnder
   , raiseUnder2
   , raiseUnder3
+  , raise2Under
+  , raise3Under
   , subsume
   , subsumeUsing
   , Embed (..)
@@ -387,6 +389,39 @@ raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
     weakenUnder3 (Union (There n) a) = Union (There (There (There (There n)))) a
     {-# INLINE weakenUnder3 #-}
 {-# INLINE raiseUnder3 #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'raise', but introduces an effect two levels underneath the head of
+-- the list.
+--
+-- @since 1.4.0.0
+raise2Under :: ∀ e3 e1 e2 r a. Sem (e1 : e2 : r) a -> Sem (e1 : e2 : e3 : r) a
+raise2Under = hoistSem $ hoist raise2Under . weaken2Under
+  where
+    weaken2Under :: ∀ m x. Union (e1 : e2 : r) m x -> Union (e1 : e2 : e3 : r) m x
+    weaken2Under (Union Here a) = Union Here a
+    weaken2Under (Union (There Here) a) = Union (There Here) a
+    weaken2Under (Union (There (There n)) a) = Union (There (There (There n))) a
+    {-# INLINE weaken2Under #-}
+{-# INLINE raise2Under #-}
+
+
+------------------------------------------------------------------------------
+-- | Like 'raise', but introduces an effect three levels underneath the head
+-- of the list.
+--
+-- @since 1.4.0.0
+raise3Under :: ∀ e4 e1 e2 e3 r a. Sem (e1 : e2 : e3 : r) a -> Sem (e1 : e2 : e3 : e4 : r) a
+raise3Under = hoistSem $ hoist raise3Under . weaken3Under
+  where
+    weaken3Under :: ∀ m x. Union (e1 : e2 : e3 : r) m x -> Union (e1 : e2 : e3 : e4 : r) m x
+    weaken3Under (Union Here a) = Union Here a
+    weaken3Under (Union (There Here) a) = Union (There Here) a
+    weaken3Under (Union (There (There Here)) a) = Union (There (There Here)) a
+    weaken3Under (Union (There (There (There n))) a) = Union (There (There (There (There n)))) a
+    {-# INLINE weaken3Under #-}
+{-# INLINE raise3Under #-}
 
 ------------------------------------------------------------------------------
 -- | Interprets an effect in terms of another identical effect.
