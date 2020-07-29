@@ -17,7 +17,7 @@ module Polysemy.Internal
   , embed
   , run
   , runM
-  , raise'
+  , raise_
   , Raise (..)
   , raise
   , raiseUnder
@@ -25,7 +25,7 @@ module Polysemy.Internal
   , raiseUnder3
   , raise2Under
   , raise3Under
-  , subsume'
+  , subsume_
   , Subsume (..)
   , subsume
   , subsumeUsing
@@ -329,8 +329,8 @@ hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 -- in ambiguous contexts.
 --
 -- @since 1.4.0.0
-raise' :: ∀ r r' a. Raise r r' => Sem r a -> Sem r' a
-raise' = hoistSem $ hoist raise' . raiseUnion
+raise_ :: ∀ r r' a. Raise r r' => Sem r a -> Sem r' a
+raise_ = hoistSem $ hoist raise_ . raiseUnion
 {-# INLINE raise #-}
 
 
@@ -352,16 +352,16 @@ instance (r' ~ (_0:r''), Raise r r'') => Raise r r' where
 ------------------------------------------------------------------------------
 -- | Introduce an effect into 'Sem'. Analogous to
 -- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem. For variant that can
--- introduce arbitrary number of effects, see 'raise''.
+-- introduce arbitrary number of effects, see 'raise_'.
 raise :: ∀ e r a. Sem r a -> Sem (e ': r) a
-raise = raise'
-{-# INLINE raise' #-}
+raise = raise_
+{-# INLINE raise_ #-}
 
 
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces a new effect underneath the head of the
 -- list. See 'raiseUnder2' or 'raiseUnder3' for introducing more effects. If
--- you need to introduce even more of them, check out 'subsume''.
+-- you need to introduce even more of them, check out 'subsume_'.
 --
 -- 'raiseUnder' can be used in order to turn transformative interpreters
 -- into reinterpreters. This is especially useful if you're writing an
@@ -387,7 +387,7 @@ raise = raise'
 --
 -- @since 1.2.0.0
 raiseUnder :: ∀ e2 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
-raiseUnder = subsume'
+raiseUnder = subsume_
 {-# INLINE raiseUnder #-}
 
 
@@ -397,7 +397,7 @@ raiseUnder = subsume'
 --
 -- @since 1.2.0.0
 raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
-raiseUnder2 = subsume'
+raiseUnder2 = subsume_
 {-# INLINE raiseUnder2 #-}
 
 
@@ -407,7 +407,7 @@ raiseUnder2 = subsume'
 --
 -- @since 1.2.0.0
 raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
-raiseUnder3 = subsume'
+raiseUnder3 = subsume_
 {-# INLINE raiseUnder3 #-}
 
 
@@ -453,12 +453,12 @@ raise3Under = hoistSem $ hoist raise3Under . weaken3Under
 -- contexts.
 --
 -- @since 1.4.0.0
-subsume' :: ∀ r r' a. Subsume r r' => Sem r a -> Sem r' a
-subsume' = hoistSem $ hoist subsume' . subsumeUnion
-{-# INLINE subsume' #-}
+subsume_ :: ∀ r r' a. Subsume r r' => Sem r a -> Sem r' a
+subsume_ = hoistSem $ hoist subsume_ . subsumeUnion
+{-# INLINE subsume_ #-}
 
 
--- | See 'subsume''.
+-- | See 'subsume_'.
 --
 -- @since 1.4.0.0
 class Subsume (r :: EffectRow) (r' :: EffectRow) where
@@ -486,11 +486,11 @@ instance Subsume '[] r where
 -- which may then be eliminated using 'subsume'.
 --
 -- For version that can introduce arbitrary number of new effects and reorder
--- existing ones, see 'subsume''.
+-- existing ones, see 'subsume_'.
 --
 -- @since 1.2.0.0
 subsume :: ∀ e r a. Member e r => Sem (e ': r) a -> Sem r a
-subsume = subsume'
+subsume = subsume_
 {-# INLINE subsume #-}
 
 
