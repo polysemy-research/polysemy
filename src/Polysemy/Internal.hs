@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MonoLocalBinds        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -40,7 +41,9 @@ module Polysemy.Internal
 
 import Control.Applicative
 import Control.Monad
+#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
+#endif
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity

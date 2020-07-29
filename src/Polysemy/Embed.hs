@@ -12,7 +12,6 @@ module Polysemy.Embed
   ) where
 
 import Polysemy
-import Polysemy.Embed.Type (Embed (..))
 
 ------------------------------------------------------------------------------
 -- | Given a natural transform from @m1@ to @m2@

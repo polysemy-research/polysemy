@@ -265,14 +265,20 @@ decomp (Union p a) =
 -- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> Weaving e m a
 extract (Union Here a)   = a
+#if __GLASGOW_HASKELL__ < 808
 extract (Union (There g) _) = case g of {}
+#endif
 {-# INLINE extract #-}
 
 
 ------------------------------------------------------------------------------
 -- | An empty union contains nothing, so this function is uncallable.
 absurdU :: Union '[] m a -> b
+#if __GLASGOW_HASKELL__ < 808
 absurdU (Union pr _) = case pr of {}
+#else
+absurdU = \case {}
+#endif
 
 
 ------------------------------------------------------------------------------
