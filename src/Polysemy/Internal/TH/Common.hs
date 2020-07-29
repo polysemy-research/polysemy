@@ -172,7 +172,7 @@ makeSemType r result = ConT ''Sem `AppT` VarT r `AppT` result
 -- the 'ConLiftInfo'.
 makeUnambiguousSend :: Bool -> ConLiftInfo -> Exp
 makeUnambiguousSend should_make_sigs cli =
-  let fun_args_names = fmap fst $ cliFunArgs cli
+  let fun_args_names = fst <$> cliFunArgs cli
       action = foldl1' AppE
              $ ConE (cliConName cli) : (VarE <$> fun_args_names)
       eff    = foldl' AppT (ConT $ cliEffName cli) $ args

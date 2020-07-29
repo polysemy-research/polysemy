@@ -199,7 +199,7 @@ exactlyOneWantedForR wanteds
                -- work?
                . fmap (second (/= 1))
                . countLength
-               $ fmap (OrdType . fcRow) wanteds
+               $ OrdType . fcRow <$> wanteds
 
 
 solveFundep
@@ -241,4 +241,3 @@ solveFundep (ref, stuff) given _ wanted = do
   tcPluginIO $ modifyIORef ref $ S.union $ S.fromList unifications
 
   pure $ TcPluginOk (solveBogusError stuff wanted) new_wanteds
-

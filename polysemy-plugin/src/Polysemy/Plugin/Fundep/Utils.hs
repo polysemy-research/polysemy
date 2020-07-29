@@ -21,7 +21,7 @@ whenA
     -> m a
     -> m (z a)
 whenA False _ = pure empty
-whenA True ma = fmap pure ma
+whenA True ma = pure <$> ma
 
 
 ------------------------------------------------------------------------------
@@ -30,4 +30,3 @@ countLength ::  Eq a => [a] -> [(a, Int)]
 countLength as =
   let grouped = group as
    in zipWith (curry $ bimap head length) grouped grouped
-

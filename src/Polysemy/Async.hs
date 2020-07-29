@@ -78,7 +78,7 @@ asyncToIO m = withLowerToIO $ \lower _ -> lower $
           ma  <- runT a
           ins <- getInspectorT
           fa  <- embed $ A.async $ lower $ asyncToIO ma
-          pureT $ fmap (inspect ins) fa
+          pureT $ inspect ins <$> fa
 
         Await a -> pureT =<< embed (A.wait a)
         Cancel a -> pureT =<< embed (A.cancel a)
@@ -132,7 +132,7 @@ lowerAsync lower m = interpretH
           ma  <- runT a
           ins <- getInspectorT
           fa  <- embed $ A.async $ lower $ lowerAsync lower ma
-          pureT $ fmap (inspect ins) fa
+          pureT $ inspect ins <$> fa
 
         Await a -> pureT =<< embed (A.wait a)
         Cancel a -> pureT =<< embed (A.cancel a)

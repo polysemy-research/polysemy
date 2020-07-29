@@ -67,7 +67,7 @@ data Union (r :: EffectRow) (mWoven :: Type -> Type) a where
       -> Union r m a
 
 instance Functor (Union r mWoven) where
-  fmap f (Union w t) = Union w $ fmap f t
+  fmap f (Union w t) = Union w $ f <$> t
   {-# INLINE fmap #-}
 
 

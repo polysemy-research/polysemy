@@ -82,7 +82,7 @@ spec = parallel $ describe "fixpointToFinal on Identity" $ do
   it "should work with runState" $ do
     test1 `shouldBe` ("12",  (2, ()))
   it "should work with runError" $ do
-    let res = fmap (take 10) test2
+    let res = take 10 <$> test2
     res `shouldBe` Right (take 10 $ cycle [1,2])
   it "should not trigger the bomb" $ do
     test3 `shouldBe` Left ()

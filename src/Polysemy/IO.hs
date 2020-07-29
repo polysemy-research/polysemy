@@ -69,5 +69,4 @@ lowerEmbedded run_m (Sem m) = withLowerToIO $ \lower _ ->
               $ hoist (lowerEmbedded run_m) x
 
       Right (Weaving (Embed wd) s _ y _) ->
-        fmap y $ fmap (<$ s) wd
-
+        y <$> ((<$ s) <$> wd)

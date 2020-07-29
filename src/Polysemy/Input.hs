@@ -52,7 +52,7 @@ runInputList is = fmap snd . runState is . reinterpret
       Input -> do
         s <- gets uncons
         for_ s $ put . snd
-        pure $ fmap fst s
+        pure $ fst <$> s
   )
 {-# INLINE runInputList #-}
 
@@ -63,4 +63,3 @@ runInputSem :: forall i r a. Sem r i -> Sem (Input i ': r) a -> Sem r a
 runInputSem m = interpret $ \case
   Input -> m
 {-# INLINE runInputSem #-}
-
