@@ -344,7 +344,7 @@ instance {-# overlapping #-} Raise r r where
   raiseUnion = id
   {-# INLINE raiseUnion #-}
 
-instance (r' ~ (_0:r''), Raise r r'') => Raise r r' where
+instance (r' ~ (_0 ': r''), Raise r r'') => Raise r r' where
   raiseUnion = (\(Union n w) -> Union (There n) w) . raiseUnion
   {-# INLINE raiseUnion #-}
 
@@ -468,7 +468,7 @@ instance {-# incoherent #-} Raise r r' => Subsume r r' where
   subsumeUnion = raiseUnion
   {-# INLINE subsumeUnion #-}
 
-instance (Member e r', Subsume r r') => Subsume (e:r) r' where
+instance (Member e r', Subsume r r') => Subsume (e ': r) r' where
   subsumeUnion = either subsumeUnion injWeaving . decomp
   {-# INLINE subsumeUnion #-}
 
