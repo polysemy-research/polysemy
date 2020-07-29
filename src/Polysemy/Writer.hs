@@ -45,7 +45,7 @@ censor :: Member (Writer o) r
        => (o -> o)
        -> Sem r a
        -> Sem r a
-censor f m = pass (fmap (f ,) m)
+censor f m = pass $ (f ,) <$> m
 {-# INLINE censor #-}
 
 ------------------------------------------------------------------------------
@@ -75,14 +75,14 @@ runWriter = runState mempty . reinterpretH
         -- TODO(sandy): this is stupid
         (o, fa) <- raise $ runWriter mm
         modify' (<> o)
-        pure $ fmap (o, ) fa
+        pure $ (o, ) <$> fa
       Pass m -> do
         mm <- runT m
         (o, t) <- raise $ runWriter mm
         ins <- getInspectorT
         let f = maybe id fst (inspect ins t)
         modify' (<> f o)
-        pure (fmap snd t)
+        pure $ snd <$> t
   )
 {-# INLINE runWriter #-}
 
@@ -112,7 +112,7 @@ runLazyWriter = interpretViaLazyWriter $ \(Weaving e s wv ex ins) ->
       Lazy.pass $ do
         ft <- m'
         let f = maybe id fst (ins ft)
-        return (ex (fmap snd ft), f)
+        return (ex $ snd <$> ft, f)
 {-# INLINE runLazyWriter #-}
 
 -----------------------------------------------------------------------------

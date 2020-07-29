@@ -41,7 +41,7 @@ runNonDetMaybe (Sem sem) = Sem $ \k -> runMaybeT $ sem $ \u ->
       case e of
         Empty -> empty
         Choose left right ->
-          MaybeT $ usingSem k $ runMaybeT $ fmap ex $ do
+          MaybeT $ usingSem k $ runMaybeT $ fmap ex $
               MaybeT (runNonDetMaybe (wv (left <$ s)))
           <|> MaybeT (runNonDetMaybe (wv (right <$ s)))
     Left x -> MaybeT $

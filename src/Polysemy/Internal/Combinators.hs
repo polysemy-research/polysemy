@@ -107,7 +107,7 @@ interpretInStateT f s (Sem m) = Sem $ \k ->
                     (Just . snd)
             $ x
         Right (Weaving e z _ y _) ->
-          fmap (y . (<$ z)) $ S.mapStateT (usingSem k) $ f e
+          y . (<$ z) <$> S.mapStateT (usingSem k) (f e)
 {-# INLINE interpretInStateT #-}
 
 
@@ -129,7 +129,7 @@ interpretInLazyStateT f s (Sem m) = Sem $ \k ->
                     (Just . snd)
             $ x
         Right (Weaving e z _ y _) ->
-          fmap (y . (<$ z)) $ LS.mapStateT (usingSem k) $ f e
+          y . (<$ z) <$> LS.mapStateT (usingSem k) (f e)
 {-# INLINE interpretInLazyStateT #-}
 
 
@@ -342,7 +342,7 @@ interceptUsingH
 interceptUsingH pr f (Sem m) = Sem $ \k -> m $ \u ->
   case prjUsing pr u of
     Just (Weaving e s d y v) ->
-      usingSem k $ fmap y $ runTactics s (raise . d) v $ f e
+      usingSem k $ y <$> runTactics s (raise . d) v (f e)
     Nothing -> k $ hoist (interceptUsingH pr f) u
 {-# INLINE interceptUsingH #-}
 
@@ -379,4 +379,3 @@ transform f (Sem m) = Sem $ \k -> m $ \u ->
     Left g -> g
     Right (Weaving e s wv ex ins) ->
       injWeaving (Weaving (f e) s wv ex ins)
-

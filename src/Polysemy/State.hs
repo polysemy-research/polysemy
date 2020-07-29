@@ -55,7 +55,7 @@ makeSem ''State
 
 
 gets :: forall s a r. Member (State s) r => (s -> a) -> Sem r a
-gets f = fmap f get
+gets f = f <$> get
 {-# INLINABLE gets #-}
 
 
@@ -251,8 +251,7 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
     Left x -> S.StateT $ \s ->
       liftSem . fmap swap
               . weave (s, ())
-                      (\(s', m') -> fmap swap
-                                  $ S.runStateT m' s')
+                      (\(s', m') -> swap <$> S.runStateT m' s')
                       (Just . snd)
               $ hoist hoistStateIntoStateT x
     Right (Weaving Get z _ y _)     -> y . (<$ z) <$> S.get
@@ -269,4 +268,3 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
    forall s e (f :: forall m x. e m x -> Sem (State s ': r) x).
      runLazyState s (reinterpret f e) = lazilyStateful (\x s' -> runLazyState s' $ f x) s e
      #-}
-

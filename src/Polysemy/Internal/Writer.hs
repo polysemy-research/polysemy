@@ -59,7 +59,7 @@ writerToEndoWriter = interpretH $ \case
                 id
                 (\(f, _) (Endo oo) -> let !o' = f (oo mempty) in Endo (o' <>))
                 (inspect ins t)
-          return (f', fmap snd t)
+          return (f', snd <$> t)
 {-# INLINE writerToEndoWriter #-}
 
 

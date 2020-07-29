@@ -100,7 +100,7 @@ pureS a = pure . (a <$) <$> getInitialStateS
 liftS :: Functor m => m a -> Strategic m n a
 liftS m = do
   s <- getInitialStateS
-  pure $ fmap (<$ s) m
+  pure $ (<$ s) <$> m
 {-# INLINE liftS #-}
 
 
@@ -128,4 +128,3 @@ runS na = bindS (const na) <*> getInitialStateS
 bindS :: (a -> n b) -> Sem (WithStrategy m f n) (f a -> m (f b))
 bindS = send . HoistInterpretation
 {-# INLINE bindS #-}
-
