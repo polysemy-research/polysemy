@@ -5,23 +5,23 @@ module Polysemy
   , MemberWithError
   , Members
 
-  -- * Running Sem
+    -- * Running Sem
   , run
   , runM
   , runFinal
 
-  -- * Type synonyms for user convenience
+    -- * Type synonyms for user convenience
   , InterpreterFor
 
-  -- * Interoperating With Other Monads
-  -- ** Embed
+    -- * Interoperating With Other Monads
+    -- ** Embed
   , Embed (..)
   , embed
   , embedToFinal
 
-  -- ** Final
-  -- | For advanced uses of 'Final', including creating your own interpreters
-  -- that make use of it, see "Polysemy.Final"
+    -- ** Final
+    -- | For advanced uses of 'Final', including creating your own interpreters
+    -- that make use of it, see "Polysemy.Final"
   , Final
   , embedFinal
 
@@ -32,6 +32,8 @@ module Polysemy
   , raiseUnder3
   , raise2Under
   , raise3Under
+  , raise_
+  , subsume_
 
     -- * Trivial Interpretation
   , subsume
@@ -148,4 +150,3 @@ import Polysemy.Internal.Forklift
 import Polysemy.Internal.Kind
 import Polysemy.Internal.Tactics
 import Polysemy.Internal.TH.Effect
-
