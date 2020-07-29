@@ -26,7 +26,6 @@ module Polysemy
   , embedFinal
 
     -- * Lifting
-
   , raise
   , raiseUnder
   , raiseUnder2

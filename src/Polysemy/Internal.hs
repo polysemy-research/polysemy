@@ -323,8 +323,8 @@ hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 
 
 ------------------------------------------------------------------------------
--- | Introduce arbitrary number of effects on top of effect stack. This
--- function is highly polymorphic, so it may be good idea to use it's more
+-- | Introduce an arbitrary number of effects on top of the effect stack. This
+-- function is highly polymorphic, so it may be good idea to use its more
 -- concrete versions (like 'raise') or type annotations to avoid vague errors
 -- in ambiguous contexts.
 --
@@ -351,8 +351,8 @@ instance (r' ~ (_0:r''), Raise r r'') => Raise r r' where
 
 ------------------------------------------------------------------------------
 -- | Introduce an effect into 'Sem'. Analogous to
--- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem. For variant that can
--- introduce arbitrary number of effects, see 'raise_'.
+-- 'Control.Monad.Class.Trans.lift' in the mtl ecosystem. For a variant that
+-- can introduce an arbitrary number of effects, see 'raise_'.
 raise :: ∀ e r a. Sem r a -> Sem (e ': r) a
 raise = raise_
 {-# INLINE raise_ #-}
@@ -445,10 +445,10 @@ raise3Under = hoistSem $ hoist raise3Under . weaken3Under
 
 
 ------------------------------------------------------------------------------
--- | Allows reordering and adding known effects on top of effect stack, as
--- long as polymorphic "tail" of new stack is 'raise'-d version of the
--- original one. This function is highly polymorphic, so it may be good idea
--- to use it's more concrete version ('subsume'), fitting functions from
+-- | Allows reordering and adding known effects on top of the effect stack, as
+-- long as the polymorphic "tail" of new stack is a 'raise'-d version of the
+-- original one. This function is highly polymorphic, so it may be a good idea
+-- to use its more concrete version ('subsume'), fitting functions from the
 -- 'raise' family or type annotations to avoid vague errors in ambiguous
 -- contexts.
 --
@@ -485,8 +485,8 @@ instance Subsume '[] r where
 -- Using such an interpreter recursively may result in duplicate effects,
 -- which may then be eliminated using 'subsume'.
 --
--- For version that can introduce arbitrary number of new effects and reorder
--- existing ones, see 'subsume_'.
+-- For a version that can introduce an arbitrary number of new effects and
+-- reorder existing ones, see 'subsume_'.
 --
 -- @since 1.2.0.0
 subsume :: ∀ e r a. Member e r => Sem (e ': r) a -> Sem r a
