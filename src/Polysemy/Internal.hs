@@ -274,9 +274,6 @@ instance Applicative (Sem f) where
   {-# INLINE (*>) #-}
 
 instance Monad (Sem f) where
-  return = pure
-  {-# INLINE return #-}
-
   Sem ma >>= f = Sem $ \k -> do
     z <- ma k
     runSem (f z) k
