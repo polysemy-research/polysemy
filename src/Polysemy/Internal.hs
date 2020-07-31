@@ -271,11 +271,18 @@ instance Applicative (Sem f) where
   Sem f <*> Sem a = Sem $ \k -> f k <*> a k
   {-# INLINE (<*>) #-}
 
+  liftA2 f ma mb = Sem $ \k -> liftA2 f (runSem ma k) (runSem mb k)
+  {-# INLINE liftA2 #-}
+
+  ma <* mb = Sem $ \k -> runSem ma k <* runSem mb k
+  {-# INLINE (<*) #-}
+
+  -- Use (>>=) because many monads are bad at optimizing (*>).
+  -- Ref https://github.com/polysemy-research/polysemy/issues/368
+  ma *> mb = Sem $ \k -> runSem ma k >>= \_ -> runSem mb k
+  {-# INLINE (*>) #-}
 
 instance Monad (Sem f) where
-  return = pure
-  {-# INLINE return #-}
-
   Sem ma >>= f = Sem $ \k -> do
     z <- ma k
     runSem (f z) k
