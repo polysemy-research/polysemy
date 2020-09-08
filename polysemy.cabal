@@ -1,18 +1,18 @@
 cabal-version: 1.24
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ec74258aa591e3c44193ce9761d4f282c6fb64e4647a58600716af498ff295c0
+-- hash: 6f6080a4e65486639af03142e56fdf232ed5c7747e77c24b378b0bb8033a079d
 
 name:           polysemy
 version:        1.3.0.0
 synopsis:       Higher-order, low-boilerplate, zero-cost free monads.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
 category:       Language
-homepage:       https://github.com/isovector/polysemy#readme
-bug-reports:    https://github.com/isovector/polysemy/issues
+homepage:       https://github.com/polysemy-research/polysemy#readme
+bug-reports:    https://github.com/polysemy-research/polysemy/issues
 author:         Sandy Maguire
 maintainer:     sandy@sandymaguire.me
 copyright:      2019 Sandy Maguire
@@ -25,7 +25,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/isovector/polysemy
+  location: https://github.com/polysemy-research/polysemy
 
 custom-setup
   setup-depends:
