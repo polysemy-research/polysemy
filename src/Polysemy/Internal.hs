@@ -341,7 +341,7 @@ hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 -- @since 1.4.0.0
 raise_ :: ∀ r r' a. Raise r r' => Sem r a -> Sem r' a
 raise_ = hoistSem $ hoist raise_ . raiseUnion
-{-# INLINE raise #-}
+{-# INLINE raise_ #-}
 
 
 -- | See 'raise''.
@@ -365,7 +365,7 @@ instance (r' ~ (_0 ': r''), Raise r r'') => Raise r r' where
 -- can introduce an arbitrary number of effects, see 'raise_'.
 raise :: ∀ e r a. Sem r a -> Sem (e ': r) a
 raise = raise_
-{-# INLINE raise_ #-}
+{-# INLINE raise #-}
 
 
 ------------------------------------------------------------------------------
