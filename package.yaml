@@ -1,6 +1,6 @@
 name:                polysemy
 version:             1.3.0.0
-github:              "isovector/polysemy"
+github:              "polysemy-research/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
 maintainer:          "sandy@sandymaguire.me"
