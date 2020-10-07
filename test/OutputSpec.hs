@@ -1,5 +1,6 @@
 module OutputSpec where
 
+import qualified Control.Concurrent.Async as A
 import Control.Concurrent.STM
 import Control.Exception (evaluate)
 
@@ -78,11 +79,11 @@ runOutput size = run . runOutputMonoid (:[]) . runOutputBatched size
 runOutputList' :: Sem '[Output Int] a -> ([Int], a)
 runOutputList' = run . runOutputList
 
-test1 :: Members '[Async, Output Int] r
+test1 :: Members '[Async A.Async, Output Int] r
      => Sem r ()
 test1 = do
   output @Int 1
-  a <- async $ do
+  a <- async @A.Async $ do
     output @Int 2
   _ <- await a
   return ()

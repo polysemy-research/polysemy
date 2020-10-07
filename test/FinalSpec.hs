@@ -3,6 +3,7 @@ module FinalSpec where
 
 import Test.Hspec
 
+import qualified Control.Concurrent.Async as A
 import Data.Either
 import Data.IORef
 
@@ -52,7 +53,7 @@ test1 = do
      n1 <- mkNode 1
      n2 <- mkNode 2
      linkNode n2 n1
-     aw <- async $ do
+     aw <- async @A.Async $ do
        linkNode n1 n2
        modify (++"hadabra")
        n2' <- follow n2
@@ -69,7 +70,7 @@ test2 =
   . errorToIOFinal
   . asyncToIOFinal
   $ do
-  fut <- async $ do
+  fut <- async @A.Async $ do
     trace "Global state semantics?"
   catch @() (trace "What's that?" *> throw ()) (\_ -> return ())
   _ <- await fut

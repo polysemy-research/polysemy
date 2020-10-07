@@ -2,6 +2,7 @@
 
 module AsyncSpec where
 
+import qualified Control.Concurrent.Async as A
 import Control.Concurrent.MVar
 import Control.Monad
 import Polysemy
@@ -23,7 +24,7 @@ spec = describe "async" $ do
             [ show n, "> ", msg ]
       ~[lock1, lock2] <- embed $
         replicateM 2 newEmptyMVar
-      a1 <- async $ do
+      a1 <- async @A.Async $ do
           v <- get @String
           message 1 v
           put $ reverse v
@@ -34,7 +35,7 @@ spec = describe "async" $ do
 
           get @String
 
-      void $ async $ do
+      void $ async @A.Async $ do
           embed $ takeMVar lock1
           get >>= message 2
           put "pong"

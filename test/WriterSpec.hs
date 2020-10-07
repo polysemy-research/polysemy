@@ -61,7 +61,7 @@ test4 = do
     tell "message "
     listen $ do
       tell "has been"
-      a <- async $ tell " received"
+      a <- async @A.Async $ tell " received"
       await a
   end <- readTVarIO tvar
   return (end, listened)
@@ -74,7 +74,7 @@ test5 = do
     tell "message "
     listen $ do
       tell "has been"
-      a <- async $ do
+      a <- async @A.Async $ do
         embedFinal $ takeMVar lock
         tell " received"
       return a
@@ -92,7 +92,7 @@ test6 = do
         tell "message "
         fmap snd $ listen @String $ do
           tell "has been"
-          a <- async $ do
+          a <- async @A.Async $ do
             embedFinal $ takeMVar lock
             tell " received"
           throw a
