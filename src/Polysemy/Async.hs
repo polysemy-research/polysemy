@@ -157,9 +157,8 @@ runAsync = interpretH
         ins <- getInspectorT
         sem <- runAsync <$> runT ma
         pure (inspect ins <$> sem <$ is)
-      Await sem -> do
-        is <- getInitialStateT
-        (<$ is) <$> raise sem
+      Await sem ->
+        pureT =<< raise sem
       Cancel _ -> pureT ()
     )
 {-# INLINE runAsync #-}
