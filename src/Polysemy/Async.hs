@@ -17,8 +17,10 @@ module Polysemy.Async
   , asyncToIO
   , asyncToIOFinal
   , lowerAsync
+  , runAsync
   ) where
 
+import           Data.Kind (Type)
 import qualified Control.Concurrent.Async as A
 import           Polysemy
 import           Polysemy.Final
@@ -32,7 +34,7 @@ import           Polysemy.Final
 -- 'Polysemy.Error.Error' effect didn't fail locally.
 --
 -- @since 0.5.0.0
-data Async (h :: * -> *) m a where
+data Async (h :: Type -> Type) m a where
   Async :: m a -> Async h m (h (Maybe a))
   Await :: h a -> Async h m a
   Cancel :: h a -> Async h m ()
@@ -140,3 +142,24 @@ lowerAsync lower m = interpretH
     )  m
 {-# INLINE lowerAsync #-}
 {-# DEPRECATED lowerAsync "Use 'asyncToIOFinal' instead" #-}
+
+------------------------------------------------------------------------------
+-- | Run an 'Async' effect purely.
+--
+-- @since 1.4.0.0
+runAsync
+  :: Sem (Async (Sem r) ': r) a
+  -> Sem r a
+runAsync = interpretH
+    ( \case
+      Async ma -> do
+        is <- getInitialStateT
+        ins <- getInspectorT
+        sem <- runAsync <$> runT ma
+        pure (inspect ins <$> sem <$ is)
+      Await sem -> do
+        is <- getInitialStateT
+        (<$ is) <$> raise sem
+      Cancel _ -> pureT ()
+    )
+{-# INLINE runAsync #-}
