@@ -23,7 +23,7 @@ dependencies:
 - syb >= 0.7 && < 0.8
 - stm >= 2 && < 3
 - template-haskell >= 2.12.0.0 && < 3
-- th-abstraction >= 0.3.1.0 && < 0.4
+- th-abstraction >= 0.3.1.0 && < 0.5
 - transformers >= 0.5.2.0 && < 0.6
 - first-class-families >= 0.5.0.0 && < 0.9
 - unagi-chan >= 0.4.0.0 && < 0.5
@@ -119,6 +119,8 @@ tests:
     - inspection-testing >= 0.4.2 && < 0.5
     - hspec >= 2.6.0 && < 3
     - doctest >= 0.16.0.1 && < 0.17
+    generated-other-modules:
+    - Build_doctests
 
 benchmarks:
   polysemy-bench:

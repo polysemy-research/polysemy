@@ -1,10 +1,10 @@
-cabal-version: 1.24
+cabal-version: 2.0
 
 -- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0f4635d86ee9b6424b575257afd4fc1a42b0ddbbf2270bdcb1a71b8e54f0226d
+-- hash: c7e130178c5199be49659c43bf9e2d9dc5792c21c41b81b7ba50279ebea963e0
 
 name:           polysemy-plugin
 version:        0.2.5.1
@@ -45,7 +45,6 @@ library
       Polysemy.Plugin.Fundep.Stuff
       Polysemy.Plugin.Fundep.Unification
       Polysemy.Plugin.Fundep.Utils
-      Polysemy.Plugin.Phases
   other-modules:
       Paths_polysemy_plugin
   hs-source-dirs:
@@ -74,6 +73,9 @@ test-suite polysemy-plugin-test
       TypeErrors
       VDQSpec
       Paths_polysemy_plugin
+      Build_doctests
+  autogen-modules:
+      Build_doctests
   hs-source-dirs:
       test
   default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
