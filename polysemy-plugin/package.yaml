@@ -33,6 +33,8 @@ custom-setup:
 
 library:
   source-dirs: src
+  generated-other-modules:
+  - Paths_polysemy_plugin
 
 flags:
   corelint:

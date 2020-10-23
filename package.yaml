@@ -77,6 +77,8 @@ library:
   ghc-options: -Wall
   source-dirs: src
   other-modules: Polysemy.Internal.PluginLookup
+  generated-other-modules:
+  - Paths_polysemy
 
   when:
     - condition: flag(dump-core)
