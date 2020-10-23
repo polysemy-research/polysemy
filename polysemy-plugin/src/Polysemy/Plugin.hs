@@ -62,43 +62,14 @@ module Polysemy.Plugin
   ) where
 
 import Polysemy.Plugin.Fundep
-#if __GLASGOW_HASKELL__ >= 810
-import Polysemy.Plugin.Phases
-import Data.Bool (bool)
-#endif
 
 import GhcPlugins
-
 
 ------------------------------------------------------------------------------
 plugin :: Plugin
 plugin = defaultPlugin
     { tcPlugin = const $ Just fundepPlugin
-    , installCoreToDos = const installTodos
 #if __GLASGOW_HASKELL__ >= 806
     , pluginRecompile  = purePlugin
 #endif
     }
-
-------------------------------------------------------------------------------
-#if __GLASGOW_HASKELL__ >= 810
-polysemyInternal :: ModuleName
-polysemyInternal = mkModuleName "Polysemy.Internal"
-#endif
-
-------------------------------------------------------------------------------
-installTodos :: [CoreToDo] -> CoreM [CoreToDo]
-installTodos todos = do
-  dflags <- getDynFlags
-
-  case optLevel dflags of
-    0 -> pure todos
-    _ -> do
-#if __GLASGOW_HASKELL__ >= 810
-      mods <- moduleSetElts <$> getVisibleOrphanMods
-      pure $ todos ++ bool []
-                           (extraPhases dflags)
-                           (any ((== polysemyInternal) . moduleName) mods)
-#else
-      pure todos
-#endif

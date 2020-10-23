@@ -33,6 +33,8 @@ custom-setup:
 
 library:
   source-dirs: src
+  generated-other-modules:
+  - Paths_polysemy_plugin
 
 flags:
   corelint:
@@ -63,6 +65,8 @@ tests:
     - should-not-typecheck >= 2.1.0 && < 3
     - inspection-testing >= 0.4.2 && < 0.5
     - doctest >= 0.16.0.1 && < 0.17
+    generated-other-modules:
+    - Build_doctests
 
 default-extensions:
   - DataKinds
