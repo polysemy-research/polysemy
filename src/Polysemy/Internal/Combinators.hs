@@ -14,6 +14,7 @@ module Polysemy.Internal.Combinators
 
     -- * Higher order
   , interpretH
+  , interpretHSimple
   , interceptH
   , reinterpretH
   , reinterpret2H
@@ -87,6 +88,27 @@ interpretH f (Sem m) = m $ \u ->
       a <- runTactics s d v $ f e
       pure $ y a
 {-# INLINE interpretH #-}
+
+interpretHSimple
+    :: (
+      ∀ x rInitial .
+      (∀ b .  Sem rInitial b -> Tactical e (Sem rInitial) r b) ->
+      (∀ f b c .  (b -> Sem rInitial c) -> f b -> Sem (WithTactics e f (Sem rInitial) r) (f c)) ->
+      e (Sem rInitial) x ->
+      Tactical e (Sem rInitial) r x
+    )
+       -- ^ A natural transformation from the handled effect to other effects
+       -- already in 'Sem', provided with a combinator for lifting embedded
+       -- thunks into 'Tactical' and one for calling functions in a similar way.
+    -> Sem (e ': r) a
+    -> Sem r a
+interpretHSimple f (Sem m) = m $ \u ->
+  case decomp u of
+    Left  x -> liftSem $ hoist (interpretHSimple f) x
+    Right (Weaving e s d y v) -> do
+      a <- runTactics s d v $ f (\ ma -> raise . interpretHSimple f =<< runT ma) (\ g c -> raise . interpretHSimple f . ($ c) =<< bindT g) e
+      pure $ y a
+{-# INLINE interpretHSimple #-}
 
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
