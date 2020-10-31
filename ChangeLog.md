@@ -3,14 +3,28 @@
 
 ## Unreleased changes
 
-- Changed the tyvars of `fromEitherM`, `runErrorAsAnother`, `runEmbedded`,
-  `asks` and `gets`
+## 1.4.0.0 (2020-10-31)
 
-- Add ability to `Cancel` to `Async` (thanks to @aidangilmore)
+### Breaking Changes
+- Added `Polysemy.Async.cancel` to allow cancelling `Async` action (possible name collision)
+  ([#321](https://github.com/polysemy-research/polysemy/pull/321), thanks to @aidangilmore)
 
-- Add `bracket_` (thanks to @expipiplus1)
-
-- Restrict the existentially quantified monad in a `Weaving` to be `Sem r` (thanks to @A1kmm)
+### Other Changes
+- Added `Polysemy.Input.inputs` to mirror `Polysemy.Reader.asks`
+  ([#327](https://github.com/polysemy-research/polysemy/issues/327), thanks to @expipiplus1)
+- Added `Polysemy.Resource.bracket_`
+  ([#335](https://github.com/polysemy-research/polysemy/pull/335), thanks to @expipiplus1)
+- Support GHC 8.10.x
+  ([#337](https://github.com/polysemy-research/polysemy/pull/337), [#382](https://github.com/polysemy-research/polysemy/pull/382))
+- Restrict the existentially quantified monad in a `Weaving` to `Sem r`
+  ([#333](https://github.com/polysemy-research/polysemy/pull/333), thanks to @A1kmm)
+- Added `raise2Under` and `raise3Under` 
+  ([#369](https://github.com/polysemy-research/polysemy/pull/369))
+- Added `Raise` and `Subsume`
+  ([#370](https://github.com/polysemy-research/polysemy/pull/370))
+- Fixed memory leaks in `Applicative (Sem r)` methods
+  ([#372](https://github.com/polysemy-research/polysemy/pull/372), thanks to @goertzenator)
+-  Smaller suggestions and fixes (thanks to @jeremyschlatter, @galagora and @felixonmars)
 
 ## 1.3.0.0 (2020-02-14)
 
@@ -158,7 +172,7 @@
 - Fixed a bug in `runWriter` where the MTL semantics wouldn't be respected (thanks to @KingoftheHomeless)
 - Removed the `Censor` constructor of `Writer` (thanks to @KingoftheHomeless)
 - Renamed `Yo` to `Weaving`
-- Changed the visible type applications for `asks`, `gets`, and `runErrorAsAnother`
+- Changed the visible type applications for `asks`, `gets`, `runEmbedded`, `fromEitherM` and `runErrorAsAnother`
 
 ### Other Changes
 

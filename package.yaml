@@ -1,5 +1,5 @@
 name:                polysemy
-version:             1.3.0.0
+version:             1.4.0.0
 github:              "polysemy-research/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -11,7 +11,7 @@ extra-source-files:
 - README.md
 - ChangeLog.md
 
-synopsis:            Higher-order, low-boilerplate, zero-cost free monads.
+synopsis:            Higher-order, low-boilerplate free monads.
 category:            Language
 
 description:         Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
