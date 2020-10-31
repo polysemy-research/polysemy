@@ -3,7 +3,7 @@
 
 ## Unreleased changes
 
-## 1.3.1.0 (2020-10-31)
+## 1.4.0.0 (2020-10-31)
 
 ### Breaking Changes
 - Added `Polysemy.Async.cancel` to allow cancelling `Async` action (possible name collision)
