@@ -3,7 +3,7 @@
 
 ## Unreleased changes
 
-## 1.3.1.0 (2020-10-14)
+## 1.3.1.0 (2020-10-31)
 
 - Added `Polysemy.Input.inputs` to mirror `Polysemy.Reader.asks`
   ([#327](https://github.com/polysemy-research/polysemy/issues/327), thanks to @expipiplus1)
