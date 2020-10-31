@@ -5,14 +5,17 @@
 
 ## 1.3.1.0 (2020-10-31)
 
+### Breaking Changes
+- Added `Polysemy.Async.cancel` to allow cancelling `Async` action (possible name collision)
+  ([#321](https://github.com/polysemy-research/polysemy/pull/321), thanks to @aidangilmore)
+
+### Other Changes
 - Added `Polysemy.Input.inputs` to mirror `Polysemy.Reader.asks`
   ([#327](https://github.com/polysemy-research/polysemy/issues/327), thanks to @expipiplus1)
 - Added `Polysemy.Resource.bracket_`
   ([#335](https://github.com/polysemy-research/polysemy/pull/335), thanks to @expipiplus1)
 - Support GHC 8.10.x
   ([#337](https://github.com/polysemy-research/polysemy/pull/337), [#382](https://github.com/polysemy-research/polysemy/pull/382))
-- Added `Polysemy.Async.cancel` to allow cancelling Async actions
-  ([#321](https://github.com/polysemy-research/polysemy/pull/321), thanks to @aidangilmore)
 - Restrict the existentially quantified monad in a `Weaving` to `Sem r`
   ([#333](https://github.com/polysemy-research/polysemy/pull/333), thanks to @A1kmm)
 - Added `raise2Under` and `raise3Under` 
