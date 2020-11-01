@@ -1,5 +1,9 @@
 # Changelog for polysemy-plugin
 
+## 0.2.5.2 (2020-11-01)
+
+- Fixed crashes stemming from unused optimization passes
+  ([#382](https://github.com/polysemy-research/polysemy/pull/382))
 
 ## 0.2.5.1 (2020-09-15)
 
