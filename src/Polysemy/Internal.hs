@@ -34,7 +34,9 @@ module Polysemy.Internal
   , usingSem
   , liftSem
   , hoistSem
+  , Append
   , InterpreterFor
+  , InterpretersFor
   , (.@)
   , (.@@)
   ) where
@@ -579,6 +581,11 @@ runM (Sem m) = m $ \z ->
 {-# INLINE runM #-}
 
 
+type family Append l r where
+  Append (a ': l) r = a ': (Append l r)
+  Append '[] r = r
+
+
 ------------------------------------------------------------------------------
 -- | Type synonym for interpreters that consume an effect without changing the
 -- return value. Offered for user convenience.
@@ -590,6 +597,12 @@ runM (Sem m) = m $ \z ->
 --              => 'InterpreterFor' Teletype r
 -- @
 type InterpreterFor e r = ∀ a. Sem (e ': r) a -> Sem r a
+
+
+------------------------------------------------------------------------------
+-- | Variant of 'InterpreterFor' that takes a list of effects.
+-- @since (TODO)
+type InterpretersFor es r = ∀ a. Sem (Append es r) a -> Sem r a
 
 
 ------------------------------------------------------------------------------

@@ -2,15 +2,15 @@
 
 {-# OPTIONS_HADDOCK not-home #-}
 
-module Polysemy.Internal.Bundle where
+module Polysemy.Internal.Bundle (
+  module Polysemy.Internal.Bundle,
+  Append,
+) where
 
 import Data.Proxy
 import Polysemy
+import Polysemy.Internal (Append)
 import Polysemy.Internal.Union
-
-type family Append l r where
-  Append (a ': l) r = a ': (Append l r)
-  Append '[] r = r
 
 extendMembership :: forall r r' e. ElemOf e r -> ElemOf e (Append r r')
 extendMembership Here = Here

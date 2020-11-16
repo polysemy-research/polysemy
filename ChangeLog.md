@@ -2,6 +2,7 @@
 
 
 ## Unreleased changes
+* Added `InterpretersFor` as a shorthand for interpreters consuming multiple effects
 
 ## 1.4.0.0 (2020-10-31)
 
