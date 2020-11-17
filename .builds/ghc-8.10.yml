@@ -1,8 +1,7 @@
 image:   nixos/latest
 sources: [https://github.com/polysemy-research/polysemy]
+packages:
+- haskell.packages.ghc8101.ghc
+- haskell.packages.ghc8101.cabal-install
 tasks:
-- ci: |
-    nix-shell \
-      -p haskell.packages.ghc8101.ghc \
-      -p haskell.packages.ghc8101.cabal-install \
-      --run ci.sh
+- ci: ./polysemy/ci.sh
