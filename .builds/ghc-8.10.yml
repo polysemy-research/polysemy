@@ -1,10 +1,10 @@
 shell:   true
-image:   nixos/unstable
+image:   nixos/20.09
 sources: [https://github.com/polysemy-research/polysemy]
 repositories:
-  nixpkgs: https://nixos.org/channels/nixpkgs-unstable
+  nixos: https://nixos.org/channels/nixos-20.09
 packages:
-- nixpkgs.haskell.packages.ghc8101.ghc
-- nixpkgs.haskell.packages.ghc8101.cabal-install
+- nixos.haskell.packages.ghc8101.ghc
+- nixos.haskell.packages.ghc8101.cabal-install
 tasks:
 - ci: ./polysemy/ci.sh
