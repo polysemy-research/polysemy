@@ -1,3 +1,4 @@
+shell:   true
 image:   nixos/unstable
 sources: [https://github.com/polysemy-research/polysemy]
 repositories:
