@@ -1,5 +1,7 @@
-image:   nixos/latest
+image:   nixos/unstable
 sources: [https://github.com/polysemy-research/polysemy]
+repositories:
+  nixpkgs: https://nixos.org/channels/nixpkgs-unstable
 packages:
 - nixpkgs.haskell.packages.ghc8101.ghc
 - nixpkgs.haskell.packages.ghc8101.cabal-install
