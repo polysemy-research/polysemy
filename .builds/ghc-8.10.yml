@@ -1,5 +1,5 @@
 image:   nixos/latest
-sources: https://github.com/polysemy-research/polysemy
+sources: [https://github.com/polysemy-research/polysemy]
 tasks:
 - ci: |
     nix-shell \
