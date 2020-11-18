@@ -139,6 +139,8 @@ module Polysemy
   , pureT
   , runT
   , bindT
+  , runTH
+  , bindTH
   , getInspectorT
   , Inspector (..)
   ) where

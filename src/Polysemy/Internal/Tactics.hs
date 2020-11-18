@@ -8,7 +8,9 @@ module Polysemy.Internal.Tactics
   , getInspectorT
   , Inspector (..)
   , runT
+  , runTH
   , bindT
+  , bindTH
   , pureT
   , liftT
   , runTactics
@@ -77,9 +79,10 @@ type Tactical e m r x = ∀ f. Functor f
 type WithTactics e f m r = Tactics f m (e ': r) ': r
 
 data Tactics f n r m a where
-  GetInitialState     :: Tactics f n r m (f ())
-  HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Sem r (f b))
-  GetInspector        :: Tactics f n r m (Inspector f)
+  GetInitialState      :: Tactics f n r m (f ())
+  HoistInterpretation  :: (a -> n b) -> Tactics f n r m (f a -> Sem r (f b))
+  HoistInterpretationH :: (a -> n b) -> f a -> Tactics f n r m (f b)
+  GetInspector         :: Tactics f n r m (Inspector f)
 
 
 ------------------------------------------------------------------------------
@@ -146,6 +149,19 @@ runT na = do
   pure $ na' istate
 {-# INLINE runT #-}
 
+------------------------------------------------------------------------------
+-- | A simpler variant of 'runT', which instead of returning a 'Sem' action
+-- corresponding to the provided action, runs the action immediately.
+runTH :: m a
+      -- ^ The monadic action to lift. This is usually a parameter in your
+      -- effect.
+      -> Tactical e m r a
+runTH na = do
+  istate <- getInitialStateT
+  bindTH (const na) istate
+{-# INLINE runTH #-}
+
+
 
 ------------------------------------------------------------------------------
 -- | Lift a kleisli action into the stateful environment. You can use
@@ -162,6 +178,22 @@ bindT
                 (f a -> Sem (e ': r) (f b))
 bindT f = send $ HoistInterpretation f
 {-# INLINE bindT #-}
+
+-- | A simpler variant of 'bindT', which instead of returning a 'Sem' kleisli
+-- action corresponding to the provided kleisli action, runs the kleisli
+-- action immediately.
+bindTH
+    :: forall m f r e a b
+     . (a -> m b)
+       -- ^ The monadic continuation to lift. This is usually a parameter in
+       -- your effect.
+       --
+       -- Continuations lifted via 'bindT' will run in the same environment
+       -- which produced the @a@.
+    -> f a
+    -> Sem (WithTactics e f m r) (f b)
+bindTH f s = send @(Tactics _ _ (e ': r)) $ HoistInterpretationH f s
+{-# INLINE bindTH #-}
 
 
 ------------------------------------------------------------------------------
@@ -185,15 +217,18 @@ runTactics
    => f ()
    -> (∀ x. f (m x) -> Sem r2 (f x))
    -> (∀ x. f x -> Maybe x)
+   -> (∀ x. f (m x) -> Sem r (f x))
    -> Sem (Tactics f m r2 ': r) a
    -> Sem r a
-runTactics s d v (Sem m) = m $ \u ->
+runTactics s d v d' (Sem m) = Sem $ \k -> m $ \u ->
   case decomp u of
-    Left x -> liftSem $ hoist (runTactics s d v) x
+    Left x -> k $ hoist (runTactics s d v d') x
     Right (Weaving GetInitialState s' _ y _) ->
       pure $ y $ s <$ s'
     Right (Weaving (HoistInterpretation na) s' _ y _) -> do
       pure $ y $ (d . fmap na) <$ s'
+    Right (Weaving (HoistInterpretationH na fa) s' _ y _) -> do
+      (y . (<$ s')) <$> runSem (d' (fmap na fa)) k
     Right (Weaving GetInspector s' _ y _) -> do
       pure $ y $ Inspector v <$ s'
 {-# INLINE runTactics #-}

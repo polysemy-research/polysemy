@@ -80,12 +80,11 @@ interpretH
        -- already in 'Sem'.
     -> Sem (e ': r) a
     -> Sem r a
-interpretH f (Sem m) = m $ \u ->
+interpretH f (Sem m) = Sem $ \k -> m $ \u ->
   case decomp u of
-    Left  x -> liftSem $ hoist (interpretH f) x
+    Left  x -> k $ hoist (interpretH f) x
     Right (Weaving e s d y v) -> do
-      a <- runTactics s d v $ f e
-      pure $ y a
+      fmap y $ usingSem k $ runTactics s d v (interpretH f . d) $ f e
 {-# INLINE interpretH #-}
 
 ------------------------------------------------------------------------------
@@ -166,13 +165,13 @@ reinterpretH
        -- ^ A natural transformation from the handled effect to the new effect.
     -> Sem (e1 ': r) a
     -> Sem (e2 ': r) a
-reinterpretH f (Sem m) = Sem $ \k -> m $ \u ->
+reinterpretH f sem = Sem $ \k -> runSem sem $ \u ->
   case decompCoerce u of
     Left x  -> k $ hoist (reinterpretH f) $ x
     Right (Weaving e s d y v) -> do
-      a <- usingSem k $ runTactics s (raiseUnder . d) v $ f e
-      pure $ y a
-{-# INLINE[3] reinterpretH #-}
+      fmap y $ usingSem k
+             $ runTactics s (raiseUnder . d) v (reinterpretH f . d)
+             $ f e
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 
 
@@ -208,8 +207,9 @@ reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ weaken $ hoist (reinterpret2H f) $ x
     Right (Weaving e s d y v) -> do
-      a <- usingSem k $ runTactics s (raiseUnder2 . d) v $ f e
-      pure $ y a
+      fmap y $ usingSem k
+             $ runTactics s (raiseUnder2 . d) v (reinterpret2H f . d)
+             $ f e
 {-# INLINE[3] reinterpret2H #-}
 
 
@@ -241,9 +241,10 @@ reinterpret3H
 reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k . weaken . weaken . hoist (reinterpret3H f) $ x
-    Right (Weaving e s d y v) -> do
-      a <- usingSem k $ runTactics s (raiseUnder3 . d) v $ f e
-      pure $ y a
+    Right (Weaving e s d y v) ->
+      fmap y $ usingSem k
+             $ runTactics s (raiseUnder3 . d) v (reinterpret3H f . d)
+             $ f e
 {-# INLINE[3] reinterpret3H #-}
 
 
@@ -342,7 +343,9 @@ interceptUsingH
 interceptUsingH pr f (Sem m) = Sem $ \k -> m $ \u ->
   case prjUsing pr u of
     Just (Weaving e s d y v) ->
-      usingSem k $ y <$> runTactics s (raise . d) v (f e)
+      fmap y $ usingSem k
+             $ runTactics s (raise . d) v (interceptUsingH pr f . d)
+             $ f e
     Nothing -> k $ hoist (interceptUsingH pr f) u
 {-# INLINE interceptUsingH #-}
 
