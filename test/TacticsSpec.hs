@@ -11,8 +11,8 @@ interpretTestE :: InterpreterFor TestE r
 interpretTestE =
   interpretH $ \case
     TestE ma f -> do
-      a <- runTH ma
-      bindTH f a
+      a <- runTSimple ma
+      bindTSimple f a
 
 spec :: Spec
 spec = parallel $ describe "runTH and bindTH" $ do

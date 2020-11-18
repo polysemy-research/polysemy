@@ -137,10 +137,10 @@ module Polysemy
   , WithTactics
   , getInitialStateT
   , pureT
+  , runTSimple
+  , bindTSimple
   , runT
   , bindT
-  , runTH
-  , bindTH
   , getInspectorT
   , Inspector (..)
   ) where

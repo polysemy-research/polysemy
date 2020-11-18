@@ -8,9 +8,9 @@ module Polysemy.Internal.Tactics
   , getInspectorT
   , Inspector (..)
   , runT
-  , runTH
+  , runTSimple
   , bindT
-  , bindTH
+  , bindTSimple
   , pureT
   , liftT
   , runTactics
@@ -150,17 +150,22 @@ runT na = do
 {-# INLINE runT #-}
 
 ------------------------------------------------------------------------------
--- | A simpler variant of 'runT', which instead of returning a 'Sem' action
--- corresponding to the provided action, runs the action immediately.
-runTH :: m a
-      -- ^ The monadic action to lift. This is usually a parameter in your
-      -- effect.
-      -> Tactical e m r a
-runTH na = do
+-- | Run a monadic action in a 'Tactical' environment. The stateful environment
+-- used will be the same one that the effect is initally run in.
+-- Use 'bindTSimple' if you'd prefer to explicitly manage your stateful
+-- environment.
+--
+-- This is a less flexible but significantly simpler variant of 'runT'.
+-- Instead of returning a 'Sem' action corresponding to the provided action,
+-- 'runTSimple' runs the action immediately.
+runTSimple :: m a
+              -- ^ The monadic action to lift. This is usually a parameter in your
+              -- effect.
+           -> Tactical e m r a
+runTSimple na = do
   istate <- getInitialStateT
-  bindTH (const na) istate
-{-# INLINE runTH #-}
-
+  bindTSimple (const na) istate
+{-# INLINE runTSimple #-}
 
 
 ------------------------------------------------------------------------------
@@ -179,21 +184,27 @@ bindT
 bindT f = send $ HoistInterpretation f
 {-# INLINE bindT #-}
 
--- | A simpler variant of 'bindT', which instead of returning a 'Sem' kleisli
--- action corresponding to the provided kleisli action, runs the kleisli
--- action immediately.
-bindTH
+------------------------------------------------------------------------------
+-- | Lift a kleisli action into the stateful environment.
+-- You can use 'bindTSimple' to execute an effect parameter of the form
+-- @a -> m b@ by providing the result of a `runTSimple` or another
+-- `bindTSimple`.
+--
+-- This is a less flexible but significantly simpler variant of 'bindT'.
+-- Instead of returning a 'Sem' kleisli action corresponding to the
+-- provided kleisli action, 'bindTSimple' runs the kleisli action immediately.
+bindTSimple
     :: forall m f r e a b
      . (a -> m b)
        -- ^ The monadic continuation to lift. This is usually a parameter in
        -- your effect.
        --
-       -- Continuations lifted via 'bindT' will run in the same environment
-       -- which produced the @a@.
+       -- Continuations executed via 'bindTSimple' will run in the same
+       -- environment which produced the @a@.
     -> f a
     -> Sem (WithTactics e f m r) (f b)
-bindTH f s = send @(Tactics _ _ (e ': r)) $ HoistInterpretationH f s
-{-# INLINE bindTH #-}
+bindTSimple f s = send @(Tactics _ _ (e ': r)) $ HoistInterpretationH f s
+{-# INLINE bindTSimple #-}
 
 
 ------------------------------------------------------------------------------
