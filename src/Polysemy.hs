@@ -137,6 +137,8 @@ module Polysemy
   , WithTactics
   , getInitialStateT
   , pureT
+  , runTSimple
+  , bindTSimple
   , runT
   , bindT
   , getInspectorT

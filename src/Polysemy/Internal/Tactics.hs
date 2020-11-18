@@ -8,7 +8,9 @@ module Polysemy.Internal.Tactics
   , getInspectorT
   , Inspector (..)
   , runT
+  , runTSimple
   , bindT
+  , bindTSimple
   , pureT
   , liftT
   , runTactics
@@ -77,9 +79,10 @@ type Tactical e m r x = ∀ f. Functor f
 type WithTactics e f m r = Tactics f m (e ': r) ': r
 
 data Tactics f n r m a where
-  GetInitialState     :: Tactics f n r m (f ())
-  HoistInterpretation :: (a -> n b) -> Tactics f n r m (f a -> Sem r (f b))
-  GetInspector        :: Tactics f n r m (Inspector f)
+  GetInitialState      :: Tactics f n r m (f ())
+  HoistInterpretation  :: (a -> n b) -> Tactics f n r m (f a -> Sem r (f b))
+  HoistInterpretationH :: (a -> n b) -> f a -> Tactics f n r m (f b)
+  GetInspector         :: Tactics f n r m (Inspector f)
 
 
 ------------------------------------------------------------------------------
@@ -146,6 +149,26 @@ runT na = do
   pure $ na' istate
 {-# INLINE runT #-}
 
+------------------------------------------------------------------------------
+-- | Run a monadic action in a 'Tactical' environment. The stateful environment
+-- used will be the same one that the effect is initally run in.
+-- Use 'bindTSimple' if you'd prefer to explicitly manage your stateful
+-- environment.
+--
+-- This is a less flexible but significantly simpler variant of 'runT'.
+-- Instead of returning a 'Sem' action corresponding to the provided action,
+-- 'runTSimple' runs the action immediately.
+--
+-- @since TODO
+runTSimple :: m a
+              -- ^ The monadic action to lift. This is usually a parameter in your
+              -- effect.
+           -> Tactical e m r a
+runTSimple na = do
+  istate <- getInitialStateT
+  bindTSimple (const na) istate
+{-# INLINE runTSimple #-}
+
 
 ------------------------------------------------------------------------------
 -- | Lift a kleisli action into the stateful environment. You can use
@@ -162,6 +185,30 @@ bindT
                 (f a -> Sem (e ': r) (f b))
 bindT f = send $ HoistInterpretation f
 {-# INLINE bindT #-}
+
+------------------------------------------------------------------------------
+-- | Lift a kleisli action into the stateful environment.
+-- You can use 'bindTSimple' to execute an effect parameter of the form
+-- @a -> m b@ by providing the result of a `runTSimple` or another
+-- `bindTSimple`.
+--
+-- This is a less flexible but significantly simpler variant of 'bindT'.
+-- Instead of returning a 'Sem' kleisli action corresponding to the
+-- provided kleisli action, 'bindTSimple' runs the kleisli action immediately.
+--
+-- @since TODO
+bindTSimple
+    :: forall m f r e a b
+     . (a -> m b)
+       -- ^ The monadic continuation to lift. This is usually a parameter in
+       -- your effect.
+       --
+       -- Continuations executed via 'bindTSimple' will run in the same
+       -- environment which produced the @a@.
+    -> f a
+    -> Sem (WithTactics e f m r) (f b)
+bindTSimple f s = send @(Tactics _ _ (e ': r)) $ HoistInterpretationH f s
+{-# INLINE bindTSimple #-}
 
 
 ------------------------------------------------------------------------------
@@ -185,15 +232,18 @@ runTactics
    => f ()
    -> (∀ x. f (m x) -> Sem r2 (f x))
    -> (∀ x. f x -> Maybe x)
+   -> (∀ x. f (m x) -> Sem r (f x))
    -> Sem (Tactics f m r2 ': r) a
    -> Sem r a
-runTactics s d v (Sem m) = m $ \u ->
+runTactics s d v d' (Sem m) = Sem $ \k -> m $ \u ->
   case decomp u of
-    Left x -> liftSem $ hoist (runTactics s d v) x
+    Left x -> k $ hoist (runTactics s d v d') x
     Right (Weaving GetInitialState s' _ y _) ->
       pure $ y $ s <$ s'
     Right (Weaving (HoistInterpretation na) s' _ y _) -> do
       pure $ y $ (d . fmap na) <$ s'
+    Right (Weaving (HoistInterpretationH na fa) s' _ y _) -> do
+      (y . (<$ s')) <$> runSem (d' (fmap na fa)) k
     Right (Weaving GetInspector s' _ y _) -> do
       pure $ y $ Inspector v <$ s'
 {-# INLINE runTactics #-}
