@@ -28,8 +28,11 @@ import Polysemy.Internal.Union
 -- effect @Tactics@, which is capable of rewriting monadic actions so they run
 -- in the correct stateful environment.
 --
--- Inside a 'Tactical', you're capable of running 'pureT', 'runT' and 'bindT'
--- which are the main tools for rewriting monadic stateful environments.
+-- Inside a 'Tactical', you're capable of running 'pureT', 'runTSimple', 'bindTSimple',
+-- 'runT' and 'bindT', which are the main tools for rewriting monadic stateful environments.
+--
+-- You should usually reach for 'runTSimple' and 'bindTSimple' first, as they are easier to use,
+-- albeit less powerful versions of 'runT' and 'bindT'.
 --
 -- For example, consider trying to write an interpreter for
 -- 'Polysemy.Resource.Resource', whose effect is defined as:
@@ -38,41 +41,48 @@ import Polysemy.Internal.Union
 -- data 'Polysemy.Resource.Resource' m a where
 --   'Polysemy.Resource.Bracket' :: m a -> (a -> m ()) -> (a -> m b) -> 'Polysemy.Resource.Resource' m b
 -- @
---
--- Here we have an @m a@ which clearly needs to be run first, and then
--- subsequently call the @a -> m ()@ and @a -> m b@ arguments. In a 'Tactical'
--- environment, we can write the threading code thusly:
+-- We can interpret this effect like so:
 --
 -- @
--- 'Polysemy.Resource.Bracket' alloc dealloc use -> do
---   alloc'   <- 'runT'  alloc
---   dealloc' <- 'bindT' dealloc
---   use'     <- 'bindT' use
+-- runResource = Polysemy.interpretH $ \\case
+--  'Polysemy.Resource.Bracket' alloc dealloc use -> do
+--    resource <- 'runTSimple' alloc
+--    result <- 'bindTSimple' use resource
+--    'bindTSimple' dealloc resource
+--    pure result
 -- @
 --
--- where
+-- To run embedded higher-order actions (e.g. @alloc :: m a@s) we use 'runTSimple'.
+--
+-- If we have a kleisli action (e.g. @use :: a -> m b@) we can instead use 'bindTSimple'.
+--
+-- There are however some cases where these functions are not sufficient.
+--
+-- Consider, for example, the 'Polysemy.Reader.local' action.
+--
+-- In it, we want any inner computations to be executed with a __modified__ environment.
+--
+-- This is not possible with 'runTSimple' and 'bindTSimple', because they automatically
+-- take the care to run all your embedded actions by using the current set of interpreters.
+--
+-- Instead, we need to use 'runT' and 'bindT', which give more control over how inner actions are run.
+--
+-- As an example, let's look at the implementation for running a 'Polysemy.Reader.Reader'
+-- with a constant value:
 --
 -- @
--- alloc'   ::         'Polysemy.Sem' ('Polysemy.Resource.Resource' ': r) (f a1)
--- dealloc' :: f a1 -> 'Polysemy.Sem' ('Polysemy.Resource.Resource' ': r) (f ())
--- use'     :: f a1 -> 'Polysemy.Sem' ('Polysemy.Resource.Resource' ': r) (f x)
+-- 'Polysemy.Reader.runReader' i = 'Polysemy.interpretH' $ \\case
+--   'Polysemy.Reader.Ask' -> pureT i
+--   'Polysemy.Reader.Local' f m -> do
+--     mm <- 'runT' m
+--     'Polysemy.raise' $ 'Polysemy.Reader.runReader' (f i) mm
 -- @
 --
--- The @f@ type here is existential and corresponds to "whatever
--- state the other effects want to keep track of." @f@ is always
--- a 'Functor'.
+-- We can see that there is a recursive call to 'Polysemy.Reader.runReader', which handles
+-- any other potential 'Polysemy.Reader' computations that might be present in our @m@.
 --
--- @alloc'@, @dealloc'@ and @use'@ are now in a form that can be
--- easily consumed by your interpreter. At this point, simply bind
--- them in the desired order and continue on your merry way.
---
--- We can see from the types of @dealloc'@ and @use'@ that since they both
--- consume a @f a1@, they must run in the same stateful environment. This
--- means, for illustration, any 'Polysemy.State.put's run inside the @use@
--- block will not be visible inside of the @dealloc@ block.
---
--- Power users may explicitly use 'getInitialStateT' and 'bindT' to construct
--- whatever data flow they'd like; although this is usually unnecessary.
+-- The thing to note here is that the call is made with a __modified__ environment of @f i@
+-- instead of the __initial__ @i@ that our interpreter was currently running with.
 type Tactical e m r x = ∀ f. Functor f
                           => Sem (WithTactics e f m r) (f x)
 
