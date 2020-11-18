@@ -172,6 +172,7 @@ reinterpretH f sem = Sem $ \k -> runSem sem $ \u ->
       fmap y $ usingSem k
              $ runTactics s (raiseUnder . d) v (reinterpretH f . d)
              $ f e
+{-# INLINE[3] reinterpretH #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 
 
