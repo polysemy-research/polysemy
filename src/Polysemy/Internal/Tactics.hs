@@ -28,6 +28,10 @@ import Polysemy.Internal.Union
 -- effect @Tactics@, which is capable of rewriting monadic actions so they run
 -- in the correct stateful environment.
 --
+-- The @f@ type here is existential and corresponds to "whatever
+-- state the other effects want to keep track of." @f@ is always
+-- a 'Functor'.
+--
 -- Inside a 'Tactical', you're capable of running 'pureT', 'runTSimple', 'bindTSimple',
 -- 'runT' and 'bindT', which are the main tools for rewriting monadic stateful environments.
 --
@@ -56,7 +60,12 @@ import Polysemy.Internal.Union
 --
 -- If we have a kleisli action (e.g. @use :: a -> m b@) we can instead use 'bindTSimple'.
 --
--- There are however some cases where these functions are not sufficient.
+-- Note that because of the types of @'bindTSimple' use resource@ and @'bindTSimple' dealloc resource@
+-- both use @f a@, they must run in the same stateful environment. This
+-- means, for illustration, any 'Polysemy.State.put's run inside the @'bindTSimple' use resource@
+-- block will not be visible inside of the @dealloc@ block.
+--
+-- There are however some cases where the @\*Simple@ functions are not sufficient.
 --
 -- Consider, for example, the 'Polysemy.Reader.local' action.
 --
