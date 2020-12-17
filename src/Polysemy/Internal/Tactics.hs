@@ -13,6 +13,8 @@ module Polysemy.Internal.Tactics
   , bindTSimple
   , pureT
   , liftT
+  , seqEitherT
+  , seqMaybeT
   , runTactics
   , Tactical
   , WithTactics
@@ -223,6 +225,39 @@ liftT m = do
   a <- raise m
   pureT a
 {-# INLINE liftT #-}
+
+------------------------------------------------------------------------------
+-- | When a higher-order interpreter passes a thunk @m a@ to a function
+-- returning @'Sem' r (Either e a)@, the resulting value has type
+-- @Either e (f a)@. 'Tactical' needs this to be in the shape
+-- @f (Either e a)@, necessitating the use of 'getInitialStateT'.
+-- This combinator is convenience for that situation.
+--
+-- @since TODO
+seqEitherT ::
+  Functor f =>
+  Either err (f a) ->
+  Sem (WithTactics e f m r) (f (Either err a))
+seqEitherT = \case
+  Right fa ->
+    pure (Right <$> fa)
+  Left err ->
+    (Left err <$) <$> getInitialStateT
+{-# INLINE seqEitherT #-}
+
+-- |Like 'seqEitherT', but for 'Maybe'.
+--
+-- @since TODO
+seqMaybeT ::
+  Functor f =>
+  Maybe (f a) ->
+  Sem (WithTactics e f m r) (f (Maybe a))
+seqMaybeT = \case
+  Just fa ->
+    pure (Just <$> fa)
+  Nothing ->
+    (Nothing <$) <$> getInitialStateT
+{-# INLINE seqMaybeT #-}
 
 
 ------------------------------------------------------------------------------

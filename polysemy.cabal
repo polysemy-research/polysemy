@@ -1,10 +1,10 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9d61a6c298262f3e765c48ccc01f30cd9c328104777970c3529931c4d5c4ca22
+-- hash: ffaf97c7796aa183e71f94aaca237e2f7b05439b62c19195a08428b06478164f
 
 name:           polysemy
 version:        1.4.0.0
@@ -92,7 +92,7 @@ library
       Paths_polysemy
   hs-source-dirs:
       src
-  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
+  default-extensions: BlockArguments DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -Wall
   build-depends:
       QuickCheck >=2.11.3 && <3
@@ -154,7 +154,7 @@ test-suite polysemy-test
       Build_doctests
   hs-source-dirs:
       test
-  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
+  default-extensions: BlockArguments DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
@@ -189,7 +189,7 @@ benchmark polysemy-bench
       Paths_polysemy
   hs-source-dirs:
       bench
-  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
+  default-extensions: BlockArguments DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
   build-depends:
       QuickCheck >=2.11.3 && <3
     , async >=2.2 && <3

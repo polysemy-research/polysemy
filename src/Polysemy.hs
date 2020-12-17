@@ -141,6 +141,8 @@ module Polysemy
   , bindTSimple
   , runT
   , bindT
+  , seqEitherT
+  , seqMaybeT
   , getInspectorT
   , Inspector (..)
   ) where
