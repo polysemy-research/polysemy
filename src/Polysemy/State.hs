@@ -32,7 +32,6 @@ import           Control.Monad.ST
 import qualified Control.Monad.Trans.State as S
 import           Data.IORef
 import           Data.STRef
-import           Data.Tuple (swap)
 import           Polysemy
 import           Polysemy.Internal
 import           Polysemy.Internal.Combinators
@@ -248,14 +247,10 @@ hoistStateIntoStateT
     -> S.StateT s (Sem r) a
 hoistStateIntoStateT (Sem m) = m $ \u ->
   case decomp u of
-    Left x -> S.StateT $ \s ->
-      liftSem . fmap swap
-              . weave (s, ())
-                      (\(s', m') -> swap <$> S.runStateT m' s')
-                      (Just . snd)
-              $ hoist hoistStateIntoStateT x
-    Right (Weaving Get z _ y _)     -> y . (<$ z) <$> S.get
-    Right (Weaving (Put s) z _ y _) -> y . (<$ z) <$> S.put s
+    Left x ->
+      liftHandlerWithNat hoistStateIntoStateT liftSem x
+    Right (Weaving Get _ lwr ex)     -> ex . (<$ mkInitState lwr) <$> S.get
+    Right (Weaving (Put s) _ lwr ex) -> ex . (<$ mkInitState lwr) <$> S.put s
 {-# INLINE hoistStateIntoStateT #-}
 
 

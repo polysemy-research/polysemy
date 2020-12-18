@@ -73,7 +73,7 @@ import Polysemy.Internal.Union
 --
 -- Power users may explicitly use 'getInitialStateT' and 'bindT' to construct
 -- whatever data flow they'd like; although this is usually unnecessary.
-type Tactical e m r x = ∀ f. Functor f
+type Tactical e m r x = ∀ f. Traversable f
                           => Sem (WithTactics e f m r) (f x)
 
 type WithTactics e f m r = Tactics f m (e ': r) ': r
@@ -216,7 +216,7 @@ bindTSimple f s = send @(Tactics _ _ (e ': r)) $ HoistInterpretationH f s
 -- higher-order ones.
 liftT
     :: forall m f r e a
-     . Functor f
+     . Traversable f
     => Sem r a
     -> Sem (WithTactics e f m r) (f a)
 liftT m = do
@@ -228,23 +228,24 @@ liftT m = do
 ------------------------------------------------------------------------------
 -- | Run the 'Tactics' effect.
 runTactics
-   :: Functor f
+   :: Traversable f
    => f ()
    -> (∀ x. f (m x) -> Sem r2 (f x))
-   -> (∀ x. f x -> Maybe x)
    -> (∀ x. f (m x) -> Sem r (f x))
    -> Sem (Tactics f m r2 ': r) a
    -> Sem r a
-runTactics s d v d' (Sem m) = Sem $ \k -> m $ \u ->
+runTactics s d d' (Sem m) = Sem $ \k -> m $ \u ->
   case decomp u of
-    Left x -> k $ hoist (runTactics s d v d') x
-    Right (Weaving GetInitialState s' _ y _) ->
-      pure $ y $ s <$ s'
-    Right (Weaving (HoistInterpretation na) s' _ y _) -> do
-      pure $ y $ (d . fmap na) <$ s'
-    Right (Weaving (HoistInterpretationH na fa) s' _ y _) -> do
-      (y . (<$ s')) <$> runSem (d' (fmap na fa)) k
-    Right (Weaving GetInspector s' _ y _) -> do
-      pure $ y $ Inspector v <$ s'
+    Left x -> k $ hoist (runTactics s d d') x
+    Right (Weaving e _ lwr ex) -> do
+      let s' = mkInitState lwr
+      case e of
+        GetInitialState ->
+          pure $ ex $ s <$ s'
+        HoistInterpretation na ->
+          pure $ ex $ (d . fmap na) <$ s'
+        HoistInterpretationH na fa ->
+          (ex . (<$ s')) <$> runSem (d' (fmap na fa)) k
+        GetInspector ->
+          pure $ ex $ Inspector mkInspector <$ s'
 {-# INLINE runTactics #-}
-

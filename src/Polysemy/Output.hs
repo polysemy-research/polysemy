@@ -32,6 +32,7 @@ import Data.Bifunctor (first)
 import Polysemy
 import Polysemy.State
 import Control.Monad (when)
+import Control.Monad.Trans
 
 import Polysemy.Internal.Union
 import Polysemy.Internal.Writer
@@ -107,9 +108,9 @@ runLazyOutputMonoid
     => (o -> m)
     -> Sem (Output o ': r) a
     -> Sem r (m, a)
-runLazyOutputMonoid f = interpretViaLazyWriter $ \(Weaving e s _ ex _) ->
+runLazyOutputMonoid f = interpretViaLazyWriter $ \(Weaving e _ lwr ex) ->
   case e of
-    Output o -> ex s <$ Lazy.tell (f o)
+    Output o -> fmap ex $ lwr $ lift $ Lazy.tell (f o)
 
 ------------------------------------------------------------------------------
 -- | Like 'runOutputMonoid', but right-associates uses of '<>'.

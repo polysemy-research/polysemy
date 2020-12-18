@@ -48,8 +48,8 @@ tag
     => Sem (e ': r) a
     -> Sem r a
 tag = hoistSem $ \u -> case decomp u of
-  Right (Weaving e s wv ex ins) ->
-    injWeaving $ Weaving (Tagged @k e) s (tag @k . wv) ex ins
+  Right (Weaving e mkT lwr ex) ->
+    injWeaving $ Weaving (Tagged @k e) (\n -> mkT (n . tag @k)) lwr ex
   Left g -> hoist (tag @k) g
 {-# INLINE tag #-}
 
@@ -62,8 +62,8 @@ tagged
     -> Sem (Tagged k e ': r) a
 tagged = hoistSem $ \u ->
   case decompCoerce u of
-    Right (Weaving e s wv ex ins) ->
-      injWeaving $ Weaving (Tagged @k e) s (tagged @k . wv) ex ins
+    Right (Weaving e mkT lwr ex) ->
+      injWeaving $ Weaving (Tagged @k e) (\n -> mkT (n . tagged @k)) lwr ex
     Left g -> hoist (tagged @k) g
 {-# INLINE tagged #-}
 
@@ -79,8 +79,8 @@ untag
 -- but doing so probably worsens performance, as it hampers optimizations.
 -- Once GHC 8.10 rolls out, I will benchmark and compare.
 untag = hoistSem $ \u -> case decompCoerce u of
-  Right (Weaving (Tagged e) s wv ex ins) ->
-    Union Here (Weaving e s (untag . wv) ex ins)
+  Right (Weaving (Tagged e) mkT lwr ex) ->
+    Union Here (Weaving e (\n -> mkT (n . untag)) lwr ex)
   Left g -> hoist untag g
 {-# INLINE untag #-}
 
@@ -93,8 +93,8 @@ retag
     => Sem (Tagged k1 e ': r) a
     -> Sem r a
 retag = hoistSem $ \u -> case decomp u of
-  Right (Weaving (Tagged e) s wv ex ins) ->
-    injWeaving $ Weaving (Tagged @k2 e) s (retag @_ @k2 . wv) ex ins
+  Right (Weaving (Tagged e) mkT lwr ex) ->
+    injWeaving $ Weaving (Tagged @k2 e) (\n -> mkT $ n . retag @_ @k2) lwr ex
   Left g -> hoist (retag @_ @k2) g
 {-# INLINE retag #-}
 

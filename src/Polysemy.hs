@@ -109,6 +109,13 @@ module Polysemy
   , transform
 
     -- * Combinators for Interpreting Higher-Order Effects
+  , interpretNew
+  , interceptNew
+  , reinterpretNew
+  , reinterpret2New
+  , reinterpret3New
+
+    -- * Combinators for Interpreting Higher-Order Effects using the 'Tactical' enviroment
   , interpretH
   , interceptH
   , reinterpretH
@@ -125,6 +132,14 @@ module Polysemy
     -- * Composing IO-based Interpreters
   , (.@)
   , (.@@)
+
+    -- * 'RunH'
+    -- | When interpreting higher-order effects using 'interpretNew'
+    -- and friends, you can't execute higher-order "thunks" given my
+    -- the interpreted effect directly. Instead, these must be executed
+    -- using 'runH'.
+  , RunH
+  , runH
 
     -- * Tactics
     -- | Higher-order effects need to explicitly thread /other effects'/ state
@@ -145,6 +160,7 @@ module Polysemy
   , bindT
   , getInspectorT
   , Inspector (..)
+
   ) where
 
 import Polysemy.Final

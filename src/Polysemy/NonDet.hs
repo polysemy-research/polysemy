@@ -12,8 +12,9 @@ module Polysemy.NonDet
   ) where
 
 import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans.Maybe
-import Data.Maybe
+import Control.Monad.Trans
 
 import Polysemy
 import Polysemy.Error
@@ -37,18 +38,14 @@ runNonDet = runNonDetC . runNonDetInC
 runNonDetMaybe :: Sem (NonDet ': r) a -> Sem r (Maybe a)
 runNonDetMaybe (Sem sem) = Sem $ \k -> runMaybeT $ sem $ \u ->
   case decomp u of
-    Right (Weaving e s wv ex _) ->
+    Right (Weaving e mkT lwr ex) ->
       case e of
         Empty -> empty
         Choose left right ->
           MaybeT $ usingSem k $ runMaybeT $ fmap ex $
-              MaybeT (runNonDetMaybe (wv (left <$ s)))
-          <|> MaybeT (runNonDetMaybe (wv (right <$ s)))
-    Left x -> MaybeT $
-      k $ weave (Just ())
-          (maybe (pure Nothing) runNonDetMaybe)
-          id
-          x
+              MaybeT (runNonDetMaybe (lwr (mkT id left)))
+          <|> MaybeT (runNonDetMaybe (lwr (mkT id right)))
+    Left x -> liftHandlerWithNat (MaybeT . runNonDetMaybe) k x
 {-# INLINE runNonDetMaybe #-}
 
 ------------------------------------------------------------------------------
@@ -106,18 +103,24 @@ instance Monad (NonDetC m) where
     a (\ a' -> unNonDetC (f a') cons)
   {-# INLINE (>>=) #-}
 
+instance MonadTrans NonDetC where
+  lift m = NonDetC $ \c b -> m >>= (`c` b)
+
+instance MonadTransControl NonDetC where
+  type StT NonDetC = []
+
+  hoistT n nd = NonDetC $ \c b ->
+    join $ n $ unNonDetC nd (\a r -> return $ c a (join (n r))) (return b)
+
+  liftWith main = lift $ main (\m -> unNonDetC m (\a -> fmap (a:)) (return []))
+
+  restoreT m = NonDetC $ \c b -> m >>= foldr c b
+
 runNonDetInC :: Sem (NonDet ': r) a -> NonDetC (Sem r) a
 runNonDetInC = usingSem $ \u ->
   case decomp u of
-    Left x  -> NonDetC $ \c b -> do
-      l <- liftSem $ weave [()]
-                  -- KingoftheHomeless: This is NOT the right semantics, but
-                  -- the known alternatives are worse. See Issue #246.
-                  (fmap concat . traverse runNonDet)
-                  listToMaybe
-                  x
-      foldr c b l
-    Right (Weaving Empty _ _ _ _) -> empty
-    Right (Weaving (Choose left right) s wv ex _) -> fmap ex $
-      runNonDetInC (wv (left <$ s)) <|> runNonDetInC (wv (right <$ s))
+    Left x  -> liftHandlerWithNat runNonDetInC liftSem x
+    Right (Weaving Empty _ _ _)-> empty
+    Right (Weaving (Choose left right) mkT lwr ex) -> fmap ex $
+      runNonDetInC (lwr (mkT id left)) <|> runNonDetInC (lwr (mkT id right))
 {-# INLINE runNonDetInC #-}

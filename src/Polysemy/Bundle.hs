@@ -43,9 +43,12 @@ sendBundle
   => Sem (e ': r) a
   -> Sem r a
 sendBundle = hoistSem $ \u -> case decomp u of
-  Right (Weaving e s wv ex ins) ->
+  Right (Weaving e mkT lwr ex) ->
     injWeaving $
-      Weaving (Bundle (membership @e @r') e) s (sendBundle @e @r' . wv) ex ins
+      Weaving (Bundle (membership @e @r') e)
+              (\n -> mkT (n . sendBundle @e @r'))
+              lwr
+              ex
   Left g -> hoist (sendBundle @e @r') g
 {-# INLINE sendBundle #-}
 
@@ -57,8 +60,8 @@ runBundle
   => Sem (Bundle r' ': r) a
   -> Sem (Append r' r) a
 runBundle = hoistSem $ \u -> hoist runBundle $ case decomp u of
-  Right (Weaving (Bundle pr e) s wv ex ins) ->
-    Union (extendMembershipRight @r' @r pr) $ Weaving e s wv ex ins
+  Right (Weaving (Bundle pr e) mkT lwr ex) ->
+    Union (extendMembershipRight @r' @r pr) $ Weaving e mkT lwr ex
   Left g -> weakenList @r' @r (singList @r') g
 {-# INLINE runBundle #-}
 
@@ -70,7 +73,7 @@ subsumeBundle
   => Sem (Bundle r' ': r) a
   -> Sem r a
 subsumeBundle = hoistSem $ \u -> hoist subsumeBundle $ case decomp u of
-  Right (Weaving (Bundle pr e) s wv ex ins) ->
-    Union (subsumeMembership pr) (Weaving e s wv ex ins)
+  Right (Weaving (Bundle pr e) mkT lwr ex) ->
+    Union (subsumeMembership pr) (Weaving e mkT lwr ex)
   Left g -> g
 {-# INLINE subsumeBundle #-}

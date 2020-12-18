@@ -3,6 +3,8 @@ cabal-version: 2.0
 -- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
+--
+-- hash: 754ab355722062c11ee014b832c3c95ddeea81fec4242a5938436c0ca64383c8
 
 name:           polysemy
 version:        1.6.0.0
@@ -71,6 +73,7 @@ library
       Polysemy.Internal.TH.Common
       Polysemy.Internal.TH.Effect
       Polysemy.Internal.Union
+      Polysemy.Internal.WeaveClass
       Polysemy.Internal.Writer
       Polysemy.IO
       Polysemy.Law
