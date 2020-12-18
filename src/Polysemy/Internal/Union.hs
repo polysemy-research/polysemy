@@ -20,11 +20,15 @@ module Polysemy.Internal.Union
   , MemberWithError
   , weave
   , hoist
+  , liftHandler
+  , liftHandlerWithNat
+
   -- * Building Unions
   , inj
   , injUsing
   , injWeaving
   , weaken
+
   -- * Using Unions
   , decomp
   , prj
@@ -39,14 +43,19 @@ module Polysemy.Internal.Union
   -- * Checking membership
   , KnownRow
   , tryMembership
+
+  , module Polysemy.Internal.WeaveClass
+
   ) where
 
-import Control.Monad
+import Control.Monad.Trans.Identity
+import Data.Coerce
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Kind
 import Data.Typeable
 import Polysemy.Internal.Kind
+import Polysemy.Internal.WeaveClass
 import {-# SOURCE #-} Polysemy.Internal
 
 #ifndef NO_ERROR_MESSAGES
@@ -73,59 +82,55 @@ instance Functor (Union r mWoven) where
 
 data Weaving e mAfter resultType where
   Weaving
-    :: forall f e rInitial a resultType mAfter. (Functor f)
+    :: forall t e rInitial a resultType mAfter. (MonadTransControl t)
     => {
-      weaveEffect :: e (Sem rInitial) a
+        weaveEffect :: e (Sem rInitial) a
       -- ^ The original effect GADT originally lifted via
       -- 'Polysemy.Internal.send'.
       -- ^ @rInitial@ is the effect row that was in scope when this 'Weaving'
       -- was originally created.
-      , weaveState :: f ()
-      -- ^ A piece of state that other effects' interpreters have already
-      -- woven through this 'Weaving'. @f@ is a 'Functor', so you can always
-      -- 'fmap' into this thing.
-      , weaveDistrib :: forall x. f (Sem rInitial x) -> mAfter (f x)
-      -- ^ Distribute @f@ by transforming @Sem rInitial@ into @mAfter@. This is
-      -- usually of the form @f ('Polysemy.Sem' (Some ': Effects ': r) x) ->
-      --   Sem r (f x)@
-      , weaveResult :: f a -> resultType
-      -- ^ Even though @f a@ is the moral resulting type of 'Weaving', we
-      -- can't expose that fact; such a thing would prevent 'Polysemy.Sem'
-      -- from being a 'Monad'.
-      , weaveInspect :: forall x. f x -> Maybe x
-      -- ^ A function for attempting to see inside an @f@. This is no
-      -- guarantees that such a thing will succeed (for example,
-      -- 'Polysemy.Error.Error' might have 'Polysemy.Error.throw'n.)
+      , weaveTrans :: forall n x. Monad n => (forall y. mAfter y -> n y) -> Sem rInitial x -> t n x
+      , weaveLowering :: forall z x. Monad z => t z x -> z (StT t x)
+      , weaveResult :: StT t a -> resultType
       } -> Weaving e mAfter resultType
 
 instance Functor (Weaving e m) where
-  fmap f (Weaving e s d f' v) = Weaving e s d (f . f') v
+  fmap f (Weaving e mkT lwr ex) = Weaving e mkT lwr (f . ex)
   {-# INLINE fmap #-}
 
 
 
-weave
-    :: (Functor s, Functor n)
-    => s ()
-    -> (∀ x. s (m x) -> n (s x))
-    -> (∀ x. s x -> Maybe x)
-    -> Union r m a
-    -> Union r n (s a)
-weave s' d v' (Union w (Weaving e s nt f v)) =
-  Union w $ Weaving
-              e (Compose $ s <$ s')
-              (fmap Compose . d . fmap nt . getCompose)
-              (fmap f . getCompose)
-              (v <=< v' . getCompose)
+weave :: (MonadTransControl t, Monad n)
+      => (forall x. m x -> t n x)
+      -> (forall z x. Monad z => t z x -> z (StT t x))
+      -> Union r m a
+      -> Union r n (StT t a)
+weave mkT' lwr' (Union pr (Weaving e mkT lwr ex)) =
+  Union pr $ Weaving e
+                     (\n sem0 -> ComposeT $ mkT (hoistT n . mkT') sem0)
+                     (fmap Compose . lwr' . lwr . getComposeT)
+                     (fmap ex . getCompose)
 {-# INLINE weave #-}
 
+liftHandler :: (MonadTransControl t, Monad m, Monad n)
+            => (forall x. Union r m x -> n x)
+            -> Union r (t m) a -> t n a
+liftHandler = liftHandlerWithNat id
+{-# INLINE liftHandler #-}
+
+liftHandlerWithNat :: (MonadTransControl t, Monad m, Monad n)
+                   => (forall x. q x -> t m x)
+                   -> (forall x. Union r m x -> n x)
+                   -> Union r q a -> t n a
+liftHandlerWithNat n handler u = controlT $ \lower -> handler (weave n lower u)
+{-# INLINE liftHandlerWithNat #-}
 
 hoist
     :: (∀ x. m x -> n x)
     -> Union r m a
     -> Union r n a
-hoist f' (Union w (Weaving e s nt f v)) =
-  Union w $ Weaving e s (f' . nt) f v
+hoist n' (Union w (Weaving e mkT lwr ex)) =
+  Union w $ Weaving e (\n -> mkT (n . n')) lwr ex
 {-# INLINE hoist #-}
 
 
@@ -291,13 +296,12 @@ weaken (Union pr a) = Union (There pr) a
 
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
-inj :: forall e r rInitial a. (Member e r) => e (Sem rInitial) a -> Union r (Sem rInitial) a
+inj :: forall e r rInitial a. Member e r => e (Sem rInitial) a -> Union r (Sem rInitial) a
 inj e = injWeaving $ Weaving
   e
-  (Identity ())
-  (fmap Identity . runIdentity)
+  (coerce :: (Sem rInitial x -> n x) -> Sem rInitial x -> IdentityT n x)
+  (fmap Identity . runIdentityT)
   runIdentity
-  (Just . runIdentity)
 {-# INLINE inj #-}
 
 
@@ -308,10 +312,9 @@ injUsing :: forall e r rInitial a.
   ElemOf e r -> e (Sem rInitial) a -> Union r (Sem rInitial) a
 injUsing pr e = Union pr $ Weaving
   e
-  (Identity ())
-  (fmap Identity . runIdentity)
+  (coerce :: (Sem rInitial x -> n x) -> Sem rInitial x -> IdentityT n x)
+  (fmap Identity . runIdentityT)
   runIdentity
-  (Just . runIdentity)
 {-# INLINE injUsing #-}
 
 ------------------------------------------------------------------------------

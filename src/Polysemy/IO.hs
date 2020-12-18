@@ -68,5 +68,5 @@ lowerEmbedded run_m (Sem m) = withLowerToIO $ \lower _ ->
               . liftSem
               $ hoist (lowerEmbedded run_m) x
 
-      Right (Weaving (Embed wd) s _ y _) ->
-        y <$> ((<$ s) <$> wd)
+      Right (Weaving (Embed wd) _ lwr ex) ->
+        ex <$> ((<$ mkInitState lwr) <$> wd)

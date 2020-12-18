@@ -13,6 +13,16 @@ module Polysemy.Internal.Combinators
   , transform
 
     -- * Higher order
+  , RunH(..)
+  , runH
+
+  , interpretNew
+  , interceptNew
+  , reinterpretNew
+  , reinterpret2New
+  , reinterpret3New
+
+    -- * Higher order with 'Tactical'
   , interpretH
   , interceptH
   , reinterpretH
@@ -22,6 +32,7 @@ module Polysemy.Internal.Combinators
   -- * Conditional
   , interceptUsing
   , interceptUsingH
+  , interceptUsingNew
 
     -- * Statefulness
   , stateful
@@ -73,6 +84,10 @@ interpret = firstOrder interpretH
 -- | Like 'interpret', but for higher-order effects (ie. those which make use of
 -- the @m@ parameter.)
 --
+-- 'interpretNew' is /heavily recommended/ over this. Only use 'interpretH'
+-- if you need the additional power of the 'Tactical' environment -- that is,
+-- the ability to inspect and manipulate the underlying effectful state.
+--
 -- See the notes on 'Tactical' for how to use this function.
 interpretH
     :: (∀ x rInitial . e (Sem rInitial) x -> Tactical e (Sem rInitial) r x)
@@ -83,8 +98,10 @@ interpretH
 interpretH f (Sem m) = Sem $ \k -> m $ \u ->
   case decomp u of
     Left  x -> k $ hoist (interpretH f) x
-    Right (Weaving e s d y v) -> do
-      fmap y $ usingSem k $ runTactics s d v (interpretH f . d) $ f e
+    Right (Weaving e mkT lwr ex) -> do
+      let s = mkInitState lwr
+          Distrib d = mkDistrib mkT lwr
+      fmap ex $ usingSem k $ runTactics s d (interpretH f . d) $ f e
 {-# INLINE interpretH #-}
 
 ------------------------------------------------------------------------------
@@ -95,18 +112,16 @@ interpretInStateT
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
-interpretInStateT f s (Sem m) = Sem $ \k ->
-  (S.swap <$!>) $ flip S.runStateT s $ m $ \u ->
+interpretInStateT f s (Sem sem) = Sem $ \k ->
+  (S.swap <$!>) $ flip S.runStateT s $ sem $ \u ->
     case decomp u of
-        Left x -> S.StateT $ \s' ->
-              (S.swap <$!>)
-            . k
-            . weave (s', ())
-                    (uncurry $ interpretInStateT f)
-                    (Just . snd)
-            $ x
-        Right (Weaving e z _ y _) ->
-          y . (<$ z) <$> S.mapStateT (usingSem k) (f e)
+        Left x ->
+          liftHandlerWithNat
+            (\m -> S.StateT $ \s' -> swap <$!> interpretInStateT f s' m)
+            k x
+        Right (Weaving e _ lwr ex) -> do
+          let z = mkInitState lwr
+          ex . (<$ z) <$> S.mapStateT (usingSem k) (f e)
 {-# INLINE interpretInStateT #-}
 
 
@@ -118,17 +133,16 @@ interpretInLazyStateT
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
-interpretInLazyStateT f s (Sem m) = Sem $ \k ->
-  fmap swap $ flip LS.runStateT s $ m $ \u ->
+interpretInLazyStateT f s (Sem sem) = Sem $ \k ->
+  fmap swap $ flip LS.runStateT s $ sem $ \u ->
     case decomp u of
-        Left x -> LS.StateT $ \s' ->
-          k . fmap swap
-            . weave (s', ())
-                    (uncurry $ interpretInLazyStateT f)
-                    (Just . snd)
-            $ x
-        Right (Weaving e z _ y _) ->
-          y . (<$ z) <$> LS.mapStateT (usingSem k) (f e)
+        Left x ->
+          liftHandlerWithNat
+            (\m -> LS.StateT $ \s' -> swap <$> interpretInLazyStateT f s' m)
+            k x
+        Right (Weaving e _ lwr ex) -> do
+          let z = mkInitState lwr
+          ex . (<$ z) <$> LS.mapStateT (usingSem k) (f e)
 {-# INLINE interpretInLazyStateT #-}
 
 
@@ -157,6 +171,10 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but for higher-order effects.
 --
+-- 'reinterpretNew' is /heavily recommended/ over this. Only use 'reinterpretH'
+-- if you need the additional power of the 'Tactical' environment -- that is,
+-- the ability to inspect and manipulate the underlying effectful state.
+--
 -- See the notes on 'Tactical' for how to use this function.
 reinterpretH
     :: forall e1 e2 r a
@@ -168,10 +186,12 @@ reinterpretH
 reinterpretH f sem = Sem $ \k -> runSem sem $ \u ->
   case decompCoerce u of
     Left x  -> k $ hoist (reinterpretH f) $ x
-    Right (Weaving e s d y v) -> do
-      fmap y $ usingSem k
-             $ runTactics s (raiseUnder . d) v (reinterpretH f . d)
-             $ f e
+    Right (Weaving e mkT lwr ex) -> do
+      let s = mkInitState lwr
+          Distrib d = mkDistrib mkT lwr
+      fmap ex $ usingSem k
+              $ runTactics s (raiseUnder . d) (reinterpretH f . d)
+              $ f e
 {-# INLINE[3] reinterpretH #-}
 -- TODO(sandy): Make this fuse in with 'stateful' directly.
 
@@ -196,6 +216,10 @@ reinterpret = firstOrder reinterpretH
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret2', but for higher-order effects.
 --
+-- 'reinterpret2New' is /heavily recommended/ over this. Only use 'reinterpret2H'
+-- if you need the additional power of the 'Tactical' environment -- that is,
+-- the ability to inspect and manipulate the underlying effectful state.
+--
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret2H
     :: forall e1 e2 e3 r a
@@ -207,10 +231,12 @@ reinterpret2H
 reinterpret2H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k $ weaken $ hoist (reinterpret2H f) $ x
-    Right (Weaving e s d y v) -> do
-      fmap y $ usingSem k
-             $ runTactics s (raiseUnder2 . d) v (reinterpret2H f . d)
-             $ f e
+    Right (Weaving e mkT lwr ex) -> do
+      let s = mkInitState lwr
+          Distrib d = mkDistrib mkT lwr
+      fmap ex $ usingSem k
+              $ runTactics s (raiseUnder2 . d) (reinterpret2H f . d)
+              $ f e
 {-# INLINE[3] reinterpret2H #-}
 
 
@@ -231,6 +257,10 @@ reinterpret2 = firstOrder reinterpret2H
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret3', but for higher-order effects.
 --
+-- 'reinterpret3New' is /heavily recommended/ over this. Only use 'reinterpret3H'
+-- if you need the additional power of the 'Tactical' environment -- that is,
+-- the ability to inspect and manipulate the underlying effectful state.
+--
 -- See the notes on 'Tactical' for how to use this function.
 reinterpret3H
     :: forall e1 e2 e3 e4 r a
@@ -242,10 +272,12 @@ reinterpret3H
 reinterpret3H f (Sem m) = Sem $ \k -> m $ \u ->
   case decompCoerce u of
     Left x  -> k . weaken . weaken . hoist (reinterpret3H f) $ x
-    Right (Weaving e s d y v) ->
-      fmap y $ usingSem k
-             $ runTactics s (raiseUnder3 . d) v (reinterpret3H f . d)
-             $ f e
+    Right (Weaving e mkT lwr ex) -> do
+      let s = mkInitState lwr
+          Distrib d = mkDistrib mkT lwr
+      fmap ex $ usingSem k
+              $ runTactics s (raiseUnder3 . d) (reinterpret3H f . d)
+              $ f e
 {-# INLINE[3] reinterpret3H #-}
 
 
@@ -283,6 +315,10 @@ intercept f = interceptH $ \(e :: e (Sem rInitial) x) ->
 
 ------------------------------------------------------------------------------
 -- | Like 'intercept', but for higher-order effects.
+--
+-- 'interceptNew' is /heavily recommended/ over this. Only use 'interceptH'
+-- if you need the additional power of the 'Tactical' environment -- that is,
+-- the ability to inspect and manipulate the underlying effectful state.
 --
 -- See the notes on 'Tactical' for how to use this function.
 interceptH
@@ -327,6 +363,11 @@ interceptUsing pr f = interceptUsingH pr $ \(e :: e (Sem rInitial) x) ->
 -- This is useful in conjunction with 'Polysemy.Membership.tryMembership'
 -- in order to conditionally perform 'interceptH'.
 --
+-- 'interceptUsingNew' is /heavily recommended/ over this. Only use
+-- 'interceptUsingH' if you need the additional power of the 'Tactical'
+-- environment -- that is, the ability to inspect and manipulate the underlying
+-- effectful state.
+--
 -- See the notes on 'Tactical' for how to use this function.
 --
 -- @since 1.3.0.0
@@ -343,10 +384,12 @@ interceptUsingH
     -> Sem r a
 interceptUsingH pr f (Sem m) = Sem $ \k -> m $ \u ->
   case prjUsing pr u of
-    Just (Weaving e s d y v) ->
-      fmap y $ usingSem k
-             $ runTactics s (raise . d) v (interceptUsingH pr f . d)
-             $ f e
+    Just (Weaving e mkT lwr ex) -> do
+      let s = mkInitState lwr
+          Distrib d = mkDistrib mkT lwr
+      fmap ex $ usingSem k
+              $ runTactics s (raise . d) (interceptUsingH pr f . d)
+              $ f e
     Nothing -> k $ hoist (interceptUsingH pr f) u
 {-# INLINE interceptUsingH #-}
 
@@ -363,8 +406,8 @@ rewrite
 rewrite f (Sem m) = Sem $ \k -> m $ \u ->
   k $ hoist (rewrite f) $ case decompCoerce u of
     Left x -> x
-    Right (Weaving e s d n y) ->
-      Union Here $ Weaving (f e) s d n y
+    Right (Weaving e mkT lwr ex) ->
+      Union Here $ Weaving (f e) mkT lwr ex
 
 
 ------------------------------------------------------------------------------
@@ -381,5 +424,151 @@ transform
 transform f (Sem m) = Sem $ \k -> m $ \u ->
   k $ hoist (transform f) $ case decomp u of
     Left g -> g
-    Right (Weaving e s wv ex ins) ->
-      injWeaving (Weaving (f e) s wv ex ins)
+    Right (Weaving e mkT lwr ex) ->
+      injWeaving (Weaving (f e) mkT lwr ex)
+
+
+-- | An effect for running monadic actions within a higher-order effect
+-- currently being interpreted.
+newtype RunH z (m :: * -> *) a where
+  RunH :: z a -> RunH z m a
+
+-- | Run a monadic action given by a higher-order effect that is currently
+-- being interpreted.
+--
+-- @since TODO
+runH :: Member (RunH z) r => z a -> Sem r a
+runH = send . RunH
+
+------------------------------------------------------------------------------
+-- | Like 'interpret', but for higher-order effects (i.e. those which make use
+-- of the @m@ parameter.)
+--
+-- This is significantly easier to use than 'interpretH' and its corresponding
+-- 'Tactical' environment.
+-- Because of this, 'interpretNew' and friends are /heavily recommended/ over
+-- 'interpretH' and friends /unless/ you need the extra power that the 'Tactical'
+-- environment provides -- the ability to inspect and manipulate the underlying
+-- effectful state.
+--
+-- Higher-order thunks within the effect to be interpreted can be run using
+-- 'runH'. For example:
+--
+-- @
+-- data Bind m a where
+--   Bind :: m a -> (a -> m b) -> Bind m b
+--
+-- runBind :: Sem (Bind ': r) a -> Sem r a
+-- runBind = 'interpretNew' \\case
+--   Bind ma f -> do
+--     a <- 'runH' ma
+--     b <- 'runH' (f a)
+--     return b
+-- @
+--
+-- @since TODO
+interpretNew :: forall e r a
+              . (forall z x. e z x -> Sem (RunH z ': r) x)
+             -> Sem (e ': r) a
+             -> Sem r a
+interpretNew h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
+  sem $ \u -> case decomp (hoist (interpretNew h) u) of
+    Left g -> k g
+    Right (Weaving e
+                 (mkT :: forall n x
+                       . Monad n
+                      => (forall y. Sem r y -> n y)
+                      -> z x -> t n x
+                 )
+                 lwr
+                 ex
+          ) ->
+      let
+          go1 :: forall x. Sem (RunH z ': r) x -> t m x
+          go1 = usingSem $ \u' -> case decomp u' of
+            Right (Weaving (RunH z) _ lwr' ex') ->
+              (ex' . (<$ mkInitState lwr')) <$> mkT (usingSem k) z
+            Left g -> liftHandlerWithNat go2 k g
+
+          go2 :: forall x. Sem (RunH z ': r) x -> t (Sem r) x
+          go2 = usingSem $ \u' -> case decomp (hoist go2 u') of
+            Right (Weaving (RunH z) _ lwr' ex') ->
+              (ex' . (<$ mkInitState lwr')) <$> mkT id z
+            Left g -> liftHandler liftSem g
+        in
+          fmap ex $ lwr $ go1 (h e)
+
+-- TODO (KingoftheHomeless): If performance matter, optimize the definitions
+-- below
+
+------------------------------------------------------------------------------
+-- | Like 'reinterpret', but for higher-order effects.
+--
+-- This is /heavily recommended/ over 'reinterpretH' unless you need
+-- the extra power that the 'Tactical' environment provides.
+--
+-- @since TODO
+reinterpretNew :: forall e1 e2 r a
+                . (forall z x. e1 z x -> Sem (RunH z ': e2 ': r) x)
+               -> Sem (e1 ': r) a
+               -> Sem (e2 ': r) a
+reinterpretNew h = interpretNew h . raiseUnder
+{-# INLINE reinterpretNew #-}
+
+------------------------------------------------------------------------------
+-- | Like 'reinterpret2', but for higher-order effects.
+--
+-- This is /heavily recommended/ over 'reinterpret2H' unless you need
+-- the extra power that the 'Tactical' environment provides.
+--
+-- @since TODO
+reinterpret2New :: forall e1 e2 e3 r a
+                 . (forall z x. e1 z x -> Sem (RunH z ': e2 ': e3 ': r) x)
+                -> Sem (e1 ': r) a
+                -> Sem (e2 ': e3 ': r) a
+reinterpret2New h = interpretNew h . raiseUnder2
+{-# INLINE reinterpret2New #-}
+
+------------------------------------------------------------------------------
+-- | Like 'reinterpret3', but for higher-order effects.
+--
+-- This is /heavily recommended/ over 'reinterpret3H' unless you need
+-- the extra power that the 'Tactical' environment provides.
+--
+-- @since TODO
+reinterpret3New :: forall e1 e2 e3 e4 r a
+                 . (forall z x. e1 z x -> Sem (RunH z ': e2 ': e3 ': e4 ': r) x)
+                -> Sem (e1 ': r) a
+                -> Sem (e2 ': e3 ': e4 ': r) a
+reinterpret3New h = interpretNew h . raiseUnder3 
+{-# INLINE reinterpret3New #-}
+
+------------------------------------------------------------------------------
+-- | Like 'intercept', but for higher-order effects.
+--
+-- This is /heavily recommended/ over 'interceptH' unless you need
+-- the extra power that the 'Tactical' environment provides.
+--
+-- @since TODO
+interceptNew :: forall e r a
+              . Member e r
+             => (forall z x. e z x -> Sem (RunH z ': r) x)
+             -> Sem r a
+             -> Sem r a
+interceptNew h = interpretNew h . expose
+{-# INLINE interceptNew #-}
+
+------------------------------------------------------------------------------
+-- | Like 'interceptUsing', but for higher-order effects.
+--
+-- This is /heavily recommended/ over 'interceptUsingH' unless you need
+-- the extra power that the 'Tactical' environment provides.
+--
+-- @since TODO
+interceptUsingNew :: forall e r a
+                   . ElemOf e r
+                  -> (forall z x. e z x -> Sem (RunH z ': r) x)
+                  -> Sem r a
+                  -> Sem r a
+interceptUsingNew pr h = interpretNew h . exposeUsing pr
+{-# INLINE interceptUsingNew #-}

@@ -68,7 +68,7 @@ import Polysemy.Internal.TH.Effect
 -- @since 1.2.0.0
 type ThroughWeavingToFinal m z a =
      forall f
-   . Functor f
+   . Traversable f
   => f ()
   -> (forall x. f (z x) -> m (f x))
   -> (forall x. f x -> Maybe x)
@@ -186,18 +186,17 @@ interpretFinal
        -- ^ A natural transformation from the handled effect to the final monad.
     -> Sem (e ': r) a
     -> Sem r a
-interpretFinal n =
+interpretFinal h =
   let
     go :: Sem (e ': r) x -> Sem r x
     go = hoistSem $ \u -> case decomp u of
-      Right (Weaving e s wv ex ins) ->
+      Right (Weaving e mkT lwr ex) ->
         injWeaving $
           Weaving
-            (WithWeavingToFinal (runStrategy (n e)))
-            s
-            (go . wv)
+            (WithWeavingToFinal (runStrategy (h e)))
+            (\n -> mkT (n . go))
+            lwr
             ex
-            ins
       Left g -> hoist go g
     {-# INLINE go #-}
   in
@@ -214,7 +213,10 @@ interpretFinal n =
 -- @since 1.2.0.0
 runFinal :: Monad m => Sem '[Final m] a -> m a
 runFinal = usingSem $ \u -> case extract u of
-  Weaving (WithWeavingToFinal wav) s wv ex ins ->
+  Weaving (WithWeavingToFinal wav) mkT lwr ex -> do
+    let s = mkInitState lwr
+        Distrib wv = mkDistrib mkT lwr
+        ins = mkInspector
     ex <$> wav s (runFinal . wv) ins
 {-# INLINE runFinal #-}
 
@@ -233,16 +235,15 @@ finalToFinal to from =
   let
     go :: Sem (Final m1 ': r) x -> Sem r x
     go = hoistSem $ \u -> case decomp u of
-      Right (Weaving (WithWeavingToFinal wav) s wv ex ins) ->
+      Right (Weaving (WithWeavingToFinal wav) mkT lwr ex) ->
         injWeaving $
           Weaving
             (WithWeavingToFinal $ \s' wv' ins' ->
               to $ wav s' (from . wv') ins'
             )
-            s
-            (go . wv)
+            (\n -> mkT (n . go))
+            lwr
             ex
-            ins
       Left g -> hoist go g
     {-# INLINE go #-}
   in

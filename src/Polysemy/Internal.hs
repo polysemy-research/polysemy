@@ -30,6 +30,8 @@ module Polysemy.Internal
   , Subsume (..)
   , subsume
   , subsumeUsing
+  , expose
+  , exposeUsing
   , Embed (..)
   , usingSem
   , liftSem
@@ -50,6 +52,7 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Functor.Identity
 import Data.Kind
+import Data.Type.Equality
 import Polysemy.Embed.Type
 import Polysemy.Fail.Type
 import Polysemy.Internal.Fixpoint
@@ -532,7 +535,39 @@ subsumeUsing pr =
   in
     go
 {-# INLINE subsumeUsing #-}
+------------------------------------------------------------------------------
+-- | Moves all uses of an effect @e@ within the argument computation
+-- to a new @e@ placed on top of the effect stack. Note that this does not
+-- consume the inner @e@.
+--
+-- This can be used to create interceptors out of interpreters.
+-- For example:
+--
+-- @
+-- 'Polysemy.intercept' k = 'Polysemy.interpret' k . 'expose'
+-- @
+--
+-- @since TODO
+expose :: Member e r => Sem r a -> Sem (e ': r) a
+expose = exposeUsing membership
+{-# INLINE expose #-}
 
+------------------------------------------------------------------------------
+-- | Given an explicit proof that @e@ exists in @r@, moves all uses of e@
+-- within the argument computation to a new @e@ placed on top of the effect
+-- stack. Note that this does not consume the inner @e@.
+--
+-- This is useful in conjunction with 'Polysemy.Internal.Union.tryMembership'
+-- and 'interpret'\/'interpretH' in order to conditionally perform
+-- 'intercept'-like operations.
+--
+-- @since TODO
+exposeUsing :: forall e r a. ElemOf e r -> Sem r a -> Sem (e ': r) a
+exposeUsing pr = hoistSem $ \(Union pr' wav) -> hoist (exposeUsing pr) $
+  case sameMember pr pr' of
+    Just Refl -> Union Here wav
+    _         -> Union (There pr') wav
+{-# INLINE exposeUsing #-}
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem'. This is used primarily via
@@ -575,9 +610,10 @@ run (Sem m) = runIdentity $ m absurdU
 runM :: Monad m => Sem '[Embed m] a -> m a
 runM (Sem m) = m $ \z ->
   case extract z of
-    Weaving e s _ f _ -> do
+    Weaving e _ lwr ex -> do
+      let s = mkInitState lwr
       a <- unEmbed e
-      pure $ f $ a <$ s
+      pure $ ex $ a <$ s
 {-# INLINE runM #-}
 
 

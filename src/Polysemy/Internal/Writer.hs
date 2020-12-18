@@ -7,7 +7,7 @@ import Control.Exception
 import Control.Monad
 import qualified Control.Monad.Trans.Writer.Lazy as Lazy
 
-import Data.Bifunctor (first)
+import Data.Tuple (swap)
 import Data.Semigroup
 
 import Polysemy
@@ -205,17 +205,11 @@ interpretViaLazyWriter f sem = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) 
   let
     go :: forall x. Sem (e ': r) x -> Lazy.WriterT o m x
     go = usingSem $ \u -> case decomp u of
-      Right (Weaving e s wv ex ins) -> f $ Weaving e s (go . wv) ex ins
-      Left g -> Lazy.WriterT $ do
-        ~(o, a) <- k $
-          weave
-            (mempty, ())
-            (\ ~(o, m) -> (fmap . first) (o <>) (interpretViaLazyWriter f m))
-            (Just . snd)
-            g
-        return (a, o)
+      Right (Weaving e mkT lwr ex) -> f $ Weaving e (\n -> mkT (n . go)) lwr ex
+      Left g ->
+        liftHandlerWithNat
+          (Lazy.WriterT . fmap swap . interpretViaLazyWriter f)
+          k g
     {-# INLINE go #-}
-  in do
-    ~(a,s) <- Lazy.runWriterT (go sem)
-    return (s, a)
+  in swap <$> Lazy.runWriterT (go sem)
 {-# INLINE interpretViaLazyWriter #-}

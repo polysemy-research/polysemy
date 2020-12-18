@@ -43,12 +43,6 @@ data Error e m a where
 
 makeSem ''Error
 
-
-hush :: Either e a -> Maybe a
-hush (Right a) = Just a
-hush (Left _) = Nothing
-
-
 ------------------------------------------------------------------------------
 -- | Upgrade an 'Either' into an 'Error' effect.
 --
@@ -152,16 +146,16 @@ note _ (Just a) = pure a
 {-# INLINABLE note #-}
 
 ------------------------------------------------------------------------------
--- | Similar to @'catch'@, but returns an @'Either'@ result which is (@'Right' a@) 
--- if no exception of type @e@ was @'throw'@n, or (@'Left' ex@) if an exception of type 
--- @e@ was @'throw'@n and its value is @ex@. 
+-- | Similar to @'catch'@, but returns an @'Either'@ result which is (@'Right' a@)
+-- if no exception of type @e@ was @'throw'@n, or (@'Left' ex@) if an exception of type
+-- @e@ was @'throw'@n and its value is @ex@.
 try :: Member (Error e) r => Sem r a -> Sem r (Either e a)
 try m = catch (Right <$> m) (return . Left)
 {-# INLINABLE try #-}
 
 ------------------------------------------------------------------------------
 -- | A variant of @'try'@ that takes an exception predicate to select which exceptions
--- are caught (c.f. @'catchJust'@). If the exception does not match the predicate, 
+-- are caught (c.f. @'catchJust'@). If the exception does not match the predicate,
 -- it is re-@'throw'@n.
 tryJust :: Member (Error e) r => (e -> Maybe b) -> Sem r a -> Sem r (Either b a)
 tryJust f m = do
@@ -174,10 +168,10 @@ tryJust f m = do
 {-# INLINABLE tryJust #-}
 
 ------------------------------------------------------------------------------
--- | The function @'catchJust'@ is like @'catch'@, but it takes an extra argument 
--- which is an exception predicate, a function which selects which type of exceptions 
+-- | The function @'catchJust'@ is like @'catch'@, but it takes an extra argument
+-- which is an exception predicate, a function which selects which type of exceptions
 -- we're interested in.
-catchJust :: Member (Error e) r 
+catchJust :: Member (Error e) r
           => (e -> Maybe b) -- ^ Predicate to select exceptions
           -> Sem r a  -- ^ Computation to run
           -> (b -> Sem r a) -- ^ Handler
@@ -197,22 +191,19 @@ runError
     -> Sem r (Either e a)
 runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
   case decomp u of
-    Left x -> E.ExceptT $ k $
-      weave (Right ())
-            (either (pure . Left) runError)
-            hush
-            x
-    Right (Weaving (Throw e) _ _ _ _) -> E.throwE e
-    Right (Weaving (Catch main handle) s d y _) ->
+    Left x ->
+      liftHandlerWithNat (E.ExceptT . runError) k x
+    Right (Weaving (Throw e) _ _ _) -> E.throwE e
+    Right (Weaving (Catch main handle) mkT lwr ex) ->
       E.ExceptT $ usingSem k $ do
-        ma <- runError $ d $ main <$ s
-        case ma of
-          Right a -> pure . Right $ y a
+        ea <- runError $ lwr $ mkT id main
+        case ea of
+          Right a -> pure . Right $ ex a
           Left e -> do
-            ma' <- runError $ d $ (<$ s) $ handle e
+            ma' <- runError $ lwr $ mkT id $ handle e
             case ma' of
               Left e' -> pure $ Left e'
-              Right a -> pure . Right $ y a
+              Right a -> pure . Right $ ex a
 {-# INLINE runError #-}
 
 ------------------------------------------------------------------------------
