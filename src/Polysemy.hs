@@ -133,7 +133,7 @@ module Polysemy
 
     -- * 'RunH'
     -- | When interpreting higher-order effects using 'interpretNew'
-    -- and friends, you can't execute higher-order "thunks" given my
+    -- and friends, you can't execute higher-order "thunks" given by
     -- the interpreted effect directly. Instead, these must be executed
     -- using 'runH'.
   , RunH

@@ -498,7 +498,7 @@ interpretNew h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
         in
           fmap ex $ lwr $ go1 (h e)
 
--- TODO (KingoftheHomeless): If performance matter, optimize the definitions
+-- TODO (KingoftheHomeless): If it matters, optimize the definitions
 -- below
 
 ------------------------------------------------------------------------------

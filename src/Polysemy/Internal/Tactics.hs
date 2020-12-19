@@ -60,7 +60,7 @@ import Polysemy.Internal.Union
 --
 -- The @f@ type here is existential and corresponds to "whatever
 -- state the other effects want to keep track of." @f@ is always
--- a 'Functor'.
+-- a 'Traversable'.
 --
 -- @alloc'@, @dealloc'@ and @use'@ are now in a form that can be
 -- easily consumed by your interpreter. At this point, simply bind
