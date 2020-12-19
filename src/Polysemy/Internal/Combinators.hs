@@ -48,13 +48,6 @@ import           Polysemy.Internal.CustomErrors
 import           Polysemy.Internal.Tactics
 import           Polysemy.Internal.Union
 
-
-------------------------------------------------------------------------------
--- | A lazier version of 'Data.Tuple.swap'.
-swap :: (a, b) -> (b, a)
-swap ~(a, b) = (b, a)
-
-
 firstOrder
     :: ((forall rInitial x. e (Sem rInitial) x ->
          Tactical e (Sem rInitial) r x) -> t)
@@ -117,7 +110,7 @@ interpretInStateT f s (Sem sem) = Sem $ \k ->
     case decomp u of
         Left x ->
           liftHandlerWithNat
-            (\m -> S.StateT $ \s' -> swap <$!> interpretInStateT f s' m)
+            (\m -> S.StateT $ \s' -> S.swap <$!> interpretInStateT f s' m)
             k x
         Right (Weaving e _ lwr ex) -> do
           let z = mkInitState lwr
@@ -134,11 +127,11 @@ interpretInLazyStateT
     -> Sem (e ': r) a
     -> Sem r (s, a)
 interpretInLazyStateT f s (Sem sem) = Sem $ \k ->
-  fmap swap $ flip LS.runStateT s $ sem $ \u ->
+  fmap S.swap $ flip LS.runStateT s $ sem $ \u ->
     case decomp u of
         Left x ->
           liftHandlerWithNat
-            (\m -> LS.StateT $ \s' -> swap <$> interpretInLazyStateT f s' m)
+            (\m -> LS.StateT $ \s' -> S.swap <$> interpretInLazyStateT f s' m)
             k x
         Right (Weaving e _ lwr ex) -> do
           let z = mkInitState lwr
@@ -164,7 +157,7 @@ lazilyStateful
     -> s
     -> Sem (e ': r) a
     -> Sem r (s, a)
-lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap swap . f e
+lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap S.swap . f e
 {-# INLINE[3] lazilyStateful #-}
 
 
@@ -495,8 +488,8 @@ interpretNew h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
             Right (Weaving (RunH z) _ lwr' ex') ->
               (ex' . (<$ mkInitState lwr')) <$> mkT id z
             Left g -> liftHandler liftSem g
-        in
-          fmap ex $ lwr $ go1 (h e)
+      in
+        fmap ex $ lwr $ go1 (h e)
 
 -- TODO (KingoftheHomeless): If it matters, optimize the definitions
 -- below
