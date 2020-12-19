@@ -9,6 +9,7 @@ module Polysemy.Membership
   -- * Using membership
   , subsumeUsing
   , interceptUsing
+  , interceptUsingNew
   , interceptUsingH
   ) where
 
