@@ -21,7 +21,7 @@ data Strategy m f n z a where
 -- is extremely similar.
 --
 -- @since 1.2.0.0
-type Strategic m n a = forall f. Functor f => Sem (WithStrategy m f n) (m (f a))
+type Strategic m n a = forall f. Traversable f => Sem (WithStrategy m f n) (m (f a))
 
 
 ------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ type WithStrategy m f n = '[Strategy m f n]
 -- 'Polysemy.Final.withWeavingToFinal'.
 --
 -- @since 1.2.0.0
-runStrategy :: Functor f
+runStrategy :: Traversable f
             => Sem '[Strategy m f n] a
             -> f ()
             -> (forall x. f (n x) -> m (f x))
