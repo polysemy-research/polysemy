@@ -1,8 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, QuantifiedConstraints, TupleSections #-}
 {-# OPTIONS_HADDOCK not-home #-}
 module Polysemy.Internal.WeaveClass
-  ( MonadTransControl(..)
-  , controlT
+  ( MonadTransWeave(..)
 
   , mkInitState
   , mkDistrib
@@ -26,14 +25,14 @@ import qualified Control.Monad.Trans.State.Lazy as LSt
 import qualified Control.Monad.Trans.State.Strict as SSt
 import qualified Control.Monad.Trans.Writer.Lazy as LWr
 
--- | A variant of the classic @MonadTransControl@ class from @monad-control@,
+-- | A variant of the classic @MonadTransWeave@ class from @monad-control@,
 -- but with a small number of changes to make it more suitable with Polysemy's
 -- internals.
 class ( MonadTrans t
       , forall z. Monad z => Monad (t z)
       , Traversable (StT t)
       )
-   => MonadTransControl t where
+   => MonadTransWeave t where
   type StT t :: * -> *
 
   hoistT :: (Monad m, Monad n)
@@ -42,17 +41,17 @@ class ( MonadTrans t
   hoistT n m = controlT $ \lower -> n (lower m)
   {-# INLINE hoistT #-}
 
+  controlT :: Monad m
+           => ((forall z x. Monad z => t z x -> z (StT t x)) -> m (StT t a))
+           -> t m a
+  controlT main = liftWith main >>= restoreT . pure
+  {-# INLINE controlT #-}
+
   liftWith :: Monad m
            => ((forall z x. Monad z => t z x -> z (StT t x)) -> m a)
            -> t m a
 
   restoreT :: Monad m => m (StT t a) -> t m a
-
-controlT :: (MonadTransControl t, Monad m)
-         => ((forall z x. Monad z => t z x -> z (StT t x)) -> m (StT t a))
-         -> t m a
-controlT main = liftWith main >>= restoreT . pure
-{-# INLINE controlT #-}
 
 newtype ComposeT t (u :: (* -> *) -> * -> *) m a = ComposeT {
     getComposeT :: t (u m) a
@@ -66,13 +65,18 @@ instance ( MonadTrans t
       => MonadTrans (ComposeT t u) where
   lift m = ComposeT (lift (lift m))
 
-instance ( MonadTransControl t
-         , MonadTransControl u
+instance ( MonadTransWeave t
+         , MonadTransWeave u
          )
-      => MonadTransControl (ComposeT t u) where
+      => MonadTransWeave (ComposeT t u) where
   type StT (ComposeT t u) = Compose (StT u) (StT t)
 
   hoistT n (ComposeT m) = ComposeT (hoistT (hoistT n) m)
+
+  controlT main = ComposeT $
+    controlT $ \lowerT ->
+    controlT $ \lowerU ->
+    getCompose <$> main (\(ComposeT m) -> Compose <$> lowerU (lowerT m))
 
   liftWith main = ComposeT $
     liftWith $ \lowerT ->
@@ -89,7 +93,7 @@ mkInitState :: Monad (t Identity)
 mkInitState lwr = runIdentity $ lwr (pure ())
 {-# INLINE mkInitState #-}
 
-mkDistrib :: (MonadTransControl t, Monad m)
+mkDistrib :: (MonadTransWeave t, Monad m)
           => (forall n x. Monad n => (forall y. m y -> n y) -> q x -> t n x)
           -> (forall z x. Monad z => t z x -> z (StT t x))
           -> Distrib (StT t) q m
@@ -100,7 +104,7 @@ mkInspector :: Foldable f => f a -> Maybe a
 mkInspector = foldr (const . Just) Nothing
 {-# INLINE mkInspector #-}
 
-instance MonadTransControl IdentityT where
+instance MonadTransWeave IdentityT where
   type StT IdentityT = Identity
   hoistT = (coerce :: (m x -> n x) -> IdentityT m x -> IdentityT n x)
 
@@ -108,10 +112,13 @@ instance MonadTransControl IdentityT where
 
   restoreT = IdentityT . fmap runIdentity
 
-instance MonadTransControl (LSt.StateT s) where
+instance MonadTransWeave (LSt.StateT s) where
   type StT (LSt.StateT s) = (,) s
 
   hoistT = LSt.mapStateT
+
+  controlT main = LSt.StateT $ \s ->
+    swap <$> main (\m -> swap <$> LSt.runStateT m s)
 
   liftWith main = LSt.StateT $ \s ->
         (, s)
@@ -119,10 +126,13 @@ instance MonadTransControl (LSt.StateT s) where
 
   restoreT m = LSt.StateT $ \_ -> swap <$> m
 
-instance MonadTransControl (SSt.StateT s) where
+instance MonadTransWeave (SSt.StateT s) where
   type StT (SSt.StateT s) = (,) s
 
   hoistT = SSt.mapStateT
+
+  controlT main = SSt.StateT $ \s ->
+    swap <$!> main (\m -> swap <$!> SSt.runStateT m s)
 
   liftWith main = SSt.StateT $ \s ->
         (, s)
@@ -130,29 +140,35 @@ instance MonadTransControl (SSt.StateT s) where
 
   restoreT m = SSt.StateT $ \_ -> swap <$!> m
 
-instance MonadTransControl (E.ExceptT e) where
+instance MonadTransWeave (E.ExceptT e) where
   type StT (E.ExceptT e) = Either e
 
   hoistT = E.mapExceptT
+
+  controlT main = E.ExceptT (main E.runExceptT)
 
   liftWith main = lift $ main E.runExceptT
 
   restoreT = E.ExceptT
 
-instance Monoid w => MonadTransControl (LWr.WriterT w) where
+instance Monoid w => MonadTransWeave (LWr.WriterT w) where
   type StT (LWr.WriterT w) = (,) w
 
   hoistT = LWr.mapWriterT
+
+  controlT main = LWr.WriterT (swap <$> main (fmap swap . LWr.runWriterT))
 
   liftWith main = lift $ main (fmap swap . LWr.runWriterT)
 
   restoreT m = LWr.WriterT (swap <$> m)
 
 
-instance MonadTransControl MaybeT where
+instance MonadTransWeave MaybeT where
   type StT MaybeT = Maybe
 
   hoistT = mapMaybeT
+
+  controlT main = MaybeT (main runMaybeT)
 
   liftWith main = lift $ main runMaybeT
 

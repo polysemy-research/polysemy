@@ -41,25 +41,15 @@ writerToEndoWriter
     :: (Monoid o, Member (Writer (Endo o)) r)
     => Sem (Writer o ': r) a
     -> Sem r a
-writerToEndoWriter = interpretH $ \case
-      Tell o   -> tell (Endo (o <>)) >>= pureT
+writerToEndoWriter = interpretNew $ \case
+      Tell o   -> tell (Endo (o <>))
       Listen m -> do
-        m' <- writerToEndoWriter <$> runT m
-        raise $ do
-          (o, fa) <- listen m'
-          return $ (,) (appEndo o mempty) <$> fa
-      Pass m -> do
-        ins <- getInspectorT
-        m'  <- writerToEndoWriter <$> runT m
-        raise $ pass $ do
-          t <- m'
-          let
-            f' =
-              maybe
-                id
-                (\(f, _) (Endo oo) -> let !o' = f (oo mempty) in Endo (o' <>))
-                (inspect ins t)
-          return (f', snd <$> t)
+        (o, a) <- listen (runH m)
+        return (appEndo o mempty, a)
+      Pass m -> pass $ do
+        (f, a) <- runH m
+        let f' (Endo oo) = let !o' = f (oo mempty) in Endo (o' <>)
+        return (f', a)
 {-# INLINE writerToEndoWriter #-}
 
 
@@ -76,37 +66,31 @@ runWriterSTMAction :: forall o r a
                          => (o -> STM ())
                          -> Sem (Writer o ': r) a
                          -> Sem r a
-runWriterSTMAction write = interpretH $ \case
-  Tell o -> do
-    t <- embedFinal $ atomically (write o)
-    pureT t
+runWriterSTMAction write = interpretNew $ \case
+  Tell o -> embedFinal $ atomically (write o)
   Listen m -> do
-    m' <- runT m
     -- Using 'withWeavingToFinal' instead of 'withStrategicToFinal'
     -- here allows us to avoid using two additional 'embedFinal's in
     -- order to create the TVars.
-    raise $ withWeavingToFinal $ \s wv _ -> mask $ \restore -> do
+    withWeavingToFinal $ \s wv _ -> mask $ \restore -> do
       -- See below to understand how this works
       tvar   <- newTVarIO mempty
       switch <- newTVarIO False
       fa     <-
-        restore (wv (runWriterSTMAction (writeListen tvar switch) m' <$ s))
+        restore (wv (runWriterSTMAction (writeListen tvar switch) (runH' m) <$ s))
           `onException` commitListen tvar switch
       o      <- commitListen tvar switch
-      return $ (fmap . fmap) (o, ) fa
+      return $ fmap (o, ) fa
   Pass m -> do
-    m'  <- runT m
-    ins <- getInspectorT
-    raise $ withWeavingToFinal $ \s wv ins' -> mask $ \restore -> do
+    withWeavingToFinal $ \s wv ins' -> mask $ \restore -> do
       -- See below to understand how this works
       tvar   <- newTVarIO mempty
       switch <- newTVarIO False
       t      <-
-        restore (wv (runWriterSTMAction (writePass tvar switch) m' <$ s))
+        restore (wv (runWriterSTMAction (writePass tvar switch) (runH' m) <$ s))
           `onException` commitPass tvar switch id
-      commitPass tvar switch
-        (maybe id fst $ ins' t >>= inspect ins)
-      return $ (fmap . fmap) snd t
+      commitPass tvar switch $ maybe id fst (ins' t)
+      return $ fmap snd t
 
   where
     {- KingoftheHomeless:

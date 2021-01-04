@@ -88,7 +88,7 @@ instance Functor (Union r mWoven) where
 
 data Weaving e mAfter resultType where
   Weaving
-    :: forall t e rInitial a resultType mAfter. (MonadTransControl t)
+    :: forall t e rInitial a resultType mAfter. (MonadTransWeave t)
     => {
         weaveEffect :: e (Sem rInitial) a
       -- ^ The original effect GADT originally lifted via
@@ -106,7 +106,7 @@ instance Functor (Weaving e m) where
 
 
 
-weave :: (MonadTransControl t, Monad n)
+weave :: (MonadTransWeave t, Monad n)
       => (forall x. m x -> t n x)
       -> (forall z x. Monad z => t z x -> z (StT t x))
       -> Union r m a
@@ -118,13 +118,13 @@ weave mkT' lwr' (Union pr (Weaving e mkT lwr ex)) =
                      (fmap ex . getCompose)
 {-# INLINE weave #-}
 
-liftHandler :: (MonadTransControl t, Monad m, Monad n)
+liftHandler :: (MonadTransWeave t, Monad m, Monad n)
             => (forall x. Union r m x -> n x)
             -> Union r (t m) a -> t n a
 liftHandler = liftHandlerWithNat id
 {-# INLINE liftHandler #-}
 
-liftHandlerWithNat :: (MonadTransControl t, Monad m, Monad n)
+liftHandlerWithNat :: (MonadTransWeave t, Monad m, Monad n)
                    => (forall x. q x -> t m x)
                    -> (forall x. Union r m x -> n x)
                    -> Union r q a -> t n a

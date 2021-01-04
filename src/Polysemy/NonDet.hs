@@ -59,12 +59,10 @@ nonDetToError :: Member (Error e) r
               => e
               -> Sem (NonDet ': r) a
               -> Sem r a
-nonDetToError (e :: e) = interpretH $ \case
+nonDetToError (e :: e) = interpretNew $ \case
   Empty -> throw e
   Choose left right -> do
-    left'  <- nonDetToError e <$> runT left
-    right' <- nonDetToError e <$> runT right
-    raise (left' `catch` \(_ :: e) -> right')
+    runH left `catch` \(_ :: e) -> runH right
 {-# INLINE nonDetToError #-}
 
 
@@ -106,7 +104,7 @@ instance Monad (NonDetC m) where
 instance MonadTrans NonDetC where
   lift m = NonDetC $ \c b -> m >>= (`c` b)
 
-instance MonadTransControl NonDetC where
+instance MonadTransWeave NonDetC where
   type StT NonDetC = []
 
   hoistT n nd = NonDetC $ \c b ->
