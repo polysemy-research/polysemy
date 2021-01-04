@@ -33,6 +33,7 @@ import           Data.Bifunctor (first)
 import           Data.Typeable
 import           Polysemy
 import           Polysemy.Final
+import           Polysemy.Interpretation
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
 
@@ -309,13 +310,12 @@ runErrorAsExc
     => (∀ x. Sem r x -> IO x)
     -> Sem (Error e ': r) a
     -> Sem r a
-runErrorAsExc lower = interpretH $ \case
+runErrorAsExc lower = interpretNew $ \case
   Throw e -> embed $ X.throwIO $ WrappedExc e
   Catch main handle -> do
-    is <- getInitialStateT
-    m  <- runT main
-    h  <- bindT handle
-    let runIt = lower . runErrorAsExc lower
-    embed $ X.catch (runIt m) $ \(se :: WrappedExc e) ->
-      runIt $ h $ unwrapExc se <$ is
+    Processor pr  <- getProcessorH
+    let runIt = lower . pr
+    ta <- embed $ X.catch (runIt main) $ \(se :: WrappedExc e) ->
+      runIt $ handle $ unwrapExc se
+    restoreH ta
 {-# INLINE runErrorAsExc #-}

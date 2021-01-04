@@ -15,4 +15,5 @@ module Polysemy.Membership
 
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
+import Polysemy.Internal.Interpretation
 import Polysemy.Internal.Union
