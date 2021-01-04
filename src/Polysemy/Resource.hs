@@ -22,6 +22,7 @@ import qualified Control.Exception as X
 import           Control.Monad
 import           Polysemy
 import           Polysemy.Final
+import           Polysemy.Interpretation
 
 
 ------------------------------------------------------------------------------

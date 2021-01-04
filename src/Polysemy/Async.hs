@@ -21,6 +21,7 @@ module Polysemy.Async
 import qualified Control.Concurrent.Async as A
 import           Polysemy
 import           Polysemy.Final
+import           Polysemy.Interpretation
 
 
 
@@ -72,16 +73,16 @@ asyncToIO
     => Sem (Async ': r) a
     -> Sem r a
 asyncToIO m = withLowerToIO $ \lower _ -> lower $
-  interpretH
+  interpretNew
     ( \case
-        Async a -> do
-          ma  <- runT a
-          ins <- getInspectorT
-          fa  <- embed $ A.async $ lower $ asyncToIO ma
-          pureT $ inspect ins <$> fa
+        Async ma -> do
+          Processor pr  <- getProcessorH'
+          fa  <- embed $ A.async $ lower $ asyncToIO (pr ma)
+          let ins = foldr (const . Just) Nothing
+          return (fmap ins fa)
 
-        Await a -> pureT =<< embed (A.wait a)
-        Cancel a -> pureT =<< embed (A.cancel a)
+        Await a -> embed (A.wait a)
+        Cancel a -> embed (A.cancel a)
     )  m
 {-# INLINE asyncToIO #-}
 
@@ -126,16 +127,16 @@ lowerAsync
        -- some combination of 'runM' and other interpreters composed via '.@'.
     -> Sem (Async ': r) a
     -> Sem r a
-lowerAsync lower m = interpretH
+lowerAsync lower m = interpretNew
     ( \case
-        Async a -> do
-          ma  <- runT a
-          ins <- getInspectorT
-          fa  <- embed $ A.async $ lower $ lowerAsync lower ma
-          pureT $ inspect ins <$> fa
+        Async ma -> do
+          Processor pr  <- getProcessorH
+          let ins = foldr (const . Just) Nothing
+          fa  <- embed $ A.async $ lower $ pr ma
+          return $ ins <$> fa
 
-        Await a -> pureT =<< embed (A.wait a)
-        Cancel a -> pureT =<< embed (A.cancel a)
+        Await a -> embed (A.wait a)
+        Cancel a -> embed (A.cancel a)
     )  m
 {-# INLINE lowerAsync #-}
 {-# DEPRECATED lowerAsync "Use 'asyncToIOFinal' instead" #-}

@@ -12,16 +12,6 @@ module Polysemy.Internal.Combinators
   , rewrite
   , transform
 
-    -- * Higher order
-  , RunH(..)
-  , runH
-
-  , interpretNew
-  , interceptNew
-  , reinterpretNew
-  , reinterpret2New
-  , reinterpret3New
-
     -- * Higher order with 'Tactical'
   , interpretH
   , interceptH
@@ -32,7 +22,6 @@ module Polysemy.Internal.Combinators
   -- * Conditional
   , interceptUsing
   , interceptUsingH
-  , interceptUsingNew
 
     -- * Statefulness
   , stateful
@@ -47,7 +36,6 @@ import           Polysemy.Internal
 import           Polysemy.Internal.CustomErrors
 import           Polysemy.Internal.Tactics
 import           Polysemy.Internal.Union
-import           Polysemy.Internal.InterpretNew
 
 firstOrder
     :: ((forall rInitial x. e (Sem rInitial) x ->
