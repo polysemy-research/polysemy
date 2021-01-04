@@ -37,11 +37,9 @@ asks f = f <$> ask
 ------------------------------------------------------------------------------
 -- | Run a 'Reader' effect with a constant value.
 runReader :: i -> Sem (Reader i ': r) a -> Sem r a
-runReader i = interpretH $ \case
-  Ask -> pureT i
-  Local f m -> do
-    mm <- runT m
-    raise $ runReader (f i) mm
+runReader i = interpretNew $ \case
+  Ask -> return i
+  Local f m -> runReader (f i) (runH' m)
 {-# INLINE runReader #-}
 
 

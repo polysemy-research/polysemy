@@ -217,21 +217,12 @@ mapError
   => (e1 -> e2)
   -> Sem (Error e1 ': r) a
   -> Sem r a
-mapError f = interpretH $ \case
+mapError f = interpretNew $ \case
   Throw e -> throw $ f e
-  Catch action handler -> do
-    a  <- runT action
-    h  <- bindT handler
-
-    mx <- raise $ runError a
-    case mx of
+  Catch action handler ->
+    runError (runH' action) >>= \case
       Right x -> pure x
-      Left e -> do
-        istate <- getInitialStateT
-        mx' <- raise $ runError $ h $ e <$ istate
-        case mx' of
-          Right x -> pure x
-          Left e' -> throw $ f e'
+      Left e  -> runH (handler e)
 {-# INLINE mapError #-}
 
 

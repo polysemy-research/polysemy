@@ -19,6 +19,7 @@ module Polysemy.Resource
   ) where
 
 import qualified Control.Exception as X
+import           Control.Monad
 import           Polysemy
 import           Polysemy.Final
 
@@ -182,34 +183,29 @@ runResource
     :: ∀ r a
      . Sem (Resource ': r) a
     -> Sem r a
-runResource = interpretH $ \case
+runResource = interpretNew $ \case
   Bracket alloc dealloc use -> do
-    a <- runT  alloc
-    d <- bindT dealloc
-    u <- bindT use
-
-    let run_it = raise . runResource
-    resource <- run_it a
-    result <- run_it $ u resource
-    _ <- run_it $ d resource
-    pure result
+    r  <- runH alloc
+    ta <- runExposeH (use r)
+    -- If "use" failed locally -- which we determine by inspecting
+    -- the effectful state -- then we run 'dealloc', discarding any
+    -- changes it does to the local state.
+    if null ta then do
+      _ <- runExposeH (dealloc r)
+      restoreH ta
+    else do
+    -- If "use" suceceeded, the we restore it and simply run dealloc as normal.
+      a <- restoreH ta
+      _ <- runH (dealloc r)
+      return a
 
   BracketOnError alloc dealloc use -> do
-    a <- runT  alloc
-    d <- bindT dealloc
-    u <- bindT use
-
-    let run_it = raise . runResource
-
-    resource <- run_it a
-    result <- run_it $ u resource
-
-    ins <- getInspectorT
-    case inspect ins result of
-      Just _ -> pure result
-      Nothing -> do
-        _ <- run_it $ d resource
-        pure result
+    r  <- runH  alloc
+    ta <- runExposeH (use r)
+    when (null ta) $ do
+      _ <- runExposeH (dealloc r)
+      return ()
+    restoreH ta
 {-# INLINE runResource #-}
 
 

@@ -66,23 +66,23 @@ runWriter
     :: Monoid o
     => Sem (Writer o ': r) a
     -> Sem r (o, a)
-runWriter = runState mempty . reinterpretH
+runWriter = runState mempty . reinterpretNew
   (\case
-      Tell o -> do
-        modify' (<> o) >>= pureT
+      Tell o -> modify' (<> o)
       Listen m -> do
-        mm <- runT m
-        -- TODO(sandy): this is stupid
-        (o, fa) <- raise $ runWriter mm
+        -- runExposeH' to prevent local failures from ruining our day
+        (o, ta) <- runWriter (runExposeH' m)
         modify' (<> o)
-        pure $ (o, ) <$> fa
+        a <- restoreH ta
+        return (o, a)
       Pass m -> do
-        mm <- runT m
-        (o, t) <- raise $ runWriter mm
-        ins <- getInspectorT
-        let f = maybe id fst (inspect ins t)
+        (o, t) <- runWriter (runExposeH' m)
+        -- Try to extract the modification function from the t.
+        -- If "m" failed, default to id.
+        let f = foldr (const . fst) id t
         modify' (<> f o)
-        pure $ snd <$> t
+        (_, a) <- restoreH t
+        return a
   )
 {-# INLINE runWriter #-}
 

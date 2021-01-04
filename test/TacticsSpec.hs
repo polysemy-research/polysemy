@@ -15,7 +15,7 @@ interpretTestE =
       bindTSimple f a
 
 spec :: Spec
-spec = parallel $ describe "runTH and bindTH" $ do
+spec = parallel $ describe "runTSimple and bindTSimple" $ do
   it "should act as expected" $ do
     r <- runM (interpretTestE (send (TestE (pure 5) (pure . (9 +)))))
     print r
