@@ -11,14 +11,6 @@
 [![Hackage](https://img.shields.io/hackage/v/polysemy-plugin.svg?logo=haskell&label=polysemy-plugin)](https://hackage.haskell.org/package/polysemy-plugin)
 [![Zulip chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://funprog.zulipchat.com/#narrow/stream/216942-Polysemy)
 
-## Dedication
-
-> The word 'good' has many meanings. For example, if a man were to shoot his
-> grandmother at a range of five hundred yards, I should call him a good shot,
-> but not necessarily a good man.
->
-> Gilbert K. Chesterton
-
 ## Overview
 
 `polysemy` is a library for writing high-power, low-boilerplate domain specific
