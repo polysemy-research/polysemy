@@ -2,7 +2,8 @@ name: Build Polysemy with Nix
 on:
   push:
     branches:
-      - nix-build
+      - "**"
+  pull_request:
 jobs:
   tests:
     runs-on: ubuntu-latest
