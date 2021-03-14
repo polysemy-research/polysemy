@@ -220,6 +220,50 @@ You're going to want to stick all of this into your `package.yaml` file.
     - TypeFamilies
 ```
 
+## Building with Nix
+
+The project provides a basic nix config for building in development.
+It is defined as a [flake] with backwards compatibility stubs in `default.nix` and `shell.nix`.
+
+To build the main library or plugin:
+
+```bash
+nix-build -A polysemy
+nix-build -A polysemy-plugin
+```
+
+Flake version:
+
+```bash
+nix build
+nix build '.#polysemy-plugin'
+```
+
+To inspect a dependency:
+
+```bash
+nix repl
+
+> p = import ./.
+> p.unagi-chan
+```
+
+To run a shell command with all dependencies in the environment:
+
+```bash
+nix-shell --pure
+nix-shell --pure --run 'cabal v2-haddock polysemy'
+nix-shell --pure --run ghcid
+```
+
+Flake version:
+
+```bash
+nix develop -i # just enter a shell
+nix develop -i -c cabal v2-haddock polysemy
+nix develop -i -c haskell-language-server-wrapper # start HLS for your IDE
+```
+
 ## *What about performance?* ([TL;DR](#tldr))
 
 Previous versions of this `README` mentioned **the library being**
@@ -311,3 +355,4 @@ implementation:
 [oleg:more]: http://okmij.org/ftp/Haskell/extensible/more.pdf
 [schrijvers:fusion]: https://people.cs.kuleuven.be/~tom.schrijvers/Research/papers/mpc2015.pdf
 [wu:scope]: https://www.cs.ox.ac.uk/people/nicolas.wu/papers/Scope.pdf
+[flake]: https://nixos.wiki/wiki/Flakes

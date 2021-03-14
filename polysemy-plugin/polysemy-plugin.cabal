@@ -1,10 +1,8 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 0e9b200907c62e6df486f7512ceffff92f0941cf55d6ef49a581324d50201d44
 
 name:           polysemy-plugin
 version:        0.2.5.2
@@ -51,14 +49,27 @@ library
       Paths_polysemy_plugin
   hs-source-dirs:
       src
-  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
+  default-extensions:
+      DataKinds
+      DeriveFunctor
+      FlexibleContexts
+      GADTs
+      LambdaCase
+      PolyKinds
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeOperators
+      TypeFamilies
+      UnicodeSyntax
   build-depends:
       base >=4.9 && <5
     , containers >=0.5 && <0.7
     , ghc >=8.4.4 && <9
     , ghc-tcplugins-extra >=0.3 && <0.5
     , polysemy >=1.3
-    , syb >=0.7 && <0.8
+    , syb ==0.7.*
     , transformers >=0.5.2.0 && <0.6
   default-language: Haskell2010
 
@@ -80,7 +91,20 @@ test-suite polysemy-plugin-test
       Build_doctests
   hs-source-dirs:
       test
-  default-extensions: DataKinds DeriveFunctor FlexibleContexts GADTs LambdaCase PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving TypeApplications TypeOperators TypeFamilies UnicodeSyntax
+  default-extensions:
+      DataKinds
+      DeriveFunctor
+      FlexibleContexts
+      GADTs
+      LambdaCase
+      PolyKinds
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeOperators
+      TypeFamilies
+      UnicodeSyntax
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -fplugin=Polysemy.Plugin
   build-tool-depends:
       hspec-discover:hspec-discover
@@ -95,7 +119,7 @@ test-suite polysemy-plugin-test
     , polysemy >=1.3.0.0
     , polysemy-plugin
     , should-not-typecheck >=2.1.0 && <3
-    , syb >=0.7 && <0.8
+    , syb ==0.7.*
     , transformers >=0.5.2.0 && <0.6
   if flag(corelint)
     ghc-options: -dcore-lint -dsuppress-all

@@ -1,0 +1,11 @@
+/*
+.*
+!*.cabal
+!*.nix
+!*.hs
+!LICENSE
+!/flake.lock
+!/nix/
+!/src/
+!/test/
+!/bench/
