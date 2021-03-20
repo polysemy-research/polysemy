@@ -1,6 +1,6 @@
 name:                polysemy-plugin
 version:             0.2.5.2
-github:              "isovector/polysemy"
+github:              "polysemy-research/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
 maintainer:          "sandy@sandymaguire.me"
