@@ -9,7 +9,6 @@ let
     polysemy-plugin = c2n "polysemy-plugin" ../polysemy-plugin;
     first-class-families =
       hackage "first-class-families" "0.8.0.1" "0h1rxbc7zsxrlhx5xcl58wjx3qi2wny8wb3sk7c1qnydf4ckcckz";
-    ghc-lib = hackage "ghc-lib" "0.20190204" "1i2zjlr30bxpabsm8f995x455v847gbpzczm2w4089fqmsnzpzfd";
     dump-core = hackage "dump-core" "0.1.3.2" "1mi8p736yn00z549pwnjv4ydwbs8mwg6dla3ly447c027nq8py6g";
     monadLib = hackage "monadLib" "3.10" "1v4ynjcb963s3lfw3v71qdzvld1mmz1faf8swhvicma5jbvwchy2";
   };
