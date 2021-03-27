@@ -12,6 +12,7 @@ module Polysemy
 
     -- * Type synonyms for user convenience
   , InterpreterFor
+  , InterpretersFor
 
     -- * Interoperating With Other Monads
     -- ** Embed
