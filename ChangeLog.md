@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+### Other Changes
+
+* Added interpreters for `AtomicState` that run in terms of `State`.
+
 ## 1.6.0.0 (2021-07-12)
 
 ### Breaking Changes
