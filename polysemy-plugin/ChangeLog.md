@@ -1,5 +1,10 @@
 # Changelog for polysemy-plugin
 
+## 0.3.0.0 (2021-03-30)
+
+### Breaking Changes
+* Dropped support for GHC 8.4
+
 ## 0.2.5.2 (2020-11-01)
 
 - Fixed crashes stemming from unused optimization passes

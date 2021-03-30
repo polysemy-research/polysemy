@@ -5,7 +5,7 @@ cabal-version: 2.0
 -- see: https://github.com/sol/hpack
 
 name:           polysemy-plugin
-version:        0.2.5.2
+version:        0.3.0.0
 synopsis:       Disambiguate obvious uses of effects.
 description:    Please see the README on GitHub at <https://github.com/isovector/polysemy/tree/master/polysemy-plugin#readme>
 category:       Polysemy

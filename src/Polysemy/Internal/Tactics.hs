@@ -159,7 +159,7 @@ runT na = do
 -- Instead of returning a 'Sem' action corresponding to the provided action,
 -- 'runTSimple' runs the action immediately.
 --
--- @since TODO
+-- @since 1.5.0.0
 runTSimple :: m a
               -- ^ The monadic action to lift. This is usually a parameter in your
               -- effect.
@@ -196,7 +196,7 @@ bindT f = send $ HoistInterpretation f
 -- Instead of returning a 'Sem' kleisli action corresponding to the
 -- provided kleisli action, 'bindTSimple' runs the kleisli action immediately.
 --
--- @since TODO
+-- @since 1.5.0.0
 bindTSimple
     :: forall m f r e a b
      . (a -> m b)

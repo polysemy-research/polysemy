@@ -55,7 +55,7 @@ makeSem ''Resource
 --
 -- cf. 'Control.Exception.bracket' and 'Control.Exception.bracket_'
 --
--- @since TODO
+-- @since 1.5.0.0
 bracket_
     :: Member Resource r
     => Sem r a -- ^ computation to run first

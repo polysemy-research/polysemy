@@ -1,7 +1,11 @@
 # Changelog for polysemy
 
+## 1.5.0.0 (2021-03-30)
 
-## Unreleased changes
+### Breaking Changes
+* Dropped support for GHC 8.4
+
+### Other Changes
 - Added `InterpretersFor` as a shorthand for interpreters consuming multiple effects
 - Added `runTSimple` and `bindTSimple`, which are simplified variants of `runT` and `bindT`
 

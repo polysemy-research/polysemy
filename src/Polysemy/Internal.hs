@@ -601,7 +601,7 @@ type InterpreterFor e r = ∀ a. Sem (e ': r) a -> Sem r a
 
 ------------------------------------------------------------------------------
 -- | Variant of 'InterpreterFor' that takes a list of effects.
--- @since (TODO)
+-- @since 1.5.0.0
 type InterpretersFor es r = ∀ a. Sem (Append es r) a -> Sem r a
 
 
