@@ -18,6 +18,9 @@ module Polysemy.AtomicState
   , runAtomicStateTVar
   , atomicStateToIO
   , atomicStateToState
+  , runAtomicStateViaState
+  , evalAtomicStateViaState
+  , execAtomicStateViaState
   ) where
 
 
@@ -170,3 +173,42 @@ atomicStateToState = interpret $ \case
     return a
   AtomicGet -> get
 {-# INLINE atomicStateToState #-}
+
+------------------------------------------------------------------------------
+-- | Run an 'AtomicState' with local state semantics, discarding
+-- the notion of atomicity, by transforming it into 'State' and running it
+-- with the provided initial state.
+--
+-- @since TODO
+runAtomicStateViaState :: s
+                       -> Sem (AtomicState s ': r) a
+                       -> Sem r (s, a)
+runAtomicStateViaState s =
+  runState s . atomicStateToState . raiseUnder
+{-# INLINE runAtomicStateViaState #-}
+
+------------------------------------------------------------------------------
+-- | Evaluate an 'AtomicState' with local state semantics, discarding
+-- the notion of atomicity, by transforming it into 'State' and running it
+-- with the provided initial state.
+--
+-- @since TODO
+evalAtomicStateViaState :: s
+                        -> Sem (AtomicState s ': r) a
+                        -> Sem r a
+evalAtomicStateViaState s =
+  evalState s . atomicStateToState . raiseUnder
+{-# INLINE evalAtomicStateViaState #-}
+
+------------------------------------------------------------------------------
+-- | Execute an 'AtomicState' with local state semantics, discarding
+-- the notion of atomicity, by transforming it into 'State' and running it
+-- with the provided initial state.
+--
+-- @since TODO
+execAtomicStateViaState :: s
+                        -> Sem (AtomicState s ': r) a
+                        -> Sem r s
+execAtomicStateViaState s =
+  execState s . atomicStateToState . raiseUnder
+{-# INLINE execAtomicStateViaState #-}
