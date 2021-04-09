@@ -1,5 +1,9 @@
 # Changelog for polysemy
 
+## Unreleased
+
+* Deprecate `traceToIO` and replace it with `traceToStdout` and `traceToStderr`
+
 ## 1.5.0.0 (2021-03-30)
 
 ### Breaking Changes
