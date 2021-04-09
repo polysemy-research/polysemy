@@ -8,6 +8,9 @@ module Polysemy.Trace
   , trace
 
     -- * Interpretations
+  , traceToHandle
+  , traceToStdout
+  , traceToStderr
   , traceToIO
   , runTraceList
   , ignoreTrace
@@ -19,6 +22,7 @@ module Polysemy.Trace
 
 import Polysemy
 import Polysemy.Output
+import System.IO (stdout, stderr, hPutStrLn, Handle)
 
 
 ------------------------------------------------------------------------------
@@ -30,13 +34,41 @@ makeSem ''Trace
 
 
 ------------------------------------------------------------------------------
+-- | Run a 'Trace' effect by printing the messages to the provided 'Handle'.
+--
+-- @since TODO
+traceToHandle :: Member (Embed IO) r => Handle -> Sem (Trace ': r) a -> Sem r a
+traceToHandle handle = interpret $ \case
+  Trace m -> embed $ hPutStrLn handle m
+{-# INLINE traceToHandle #-}
+
+
+------------------------------------------------------------------------------
+-- | Run a 'Trace' effect by printing the messages to stdout.
+--
+-- @since TODO
+traceToStdout :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
+traceToStdout = traceToHandle stdout
+{-# INLINE traceToStdout #-}
+
+
+------------------------------------------------------------------------------
+-- | Run a 'Trace' effect by printing the messages to stderr.
+--
+-- @since TODO
+traceToStderr :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
+traceToStderr = traceToHandle stderr
+{-# INLINE traceToStderr #-}
+
+
+------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by printing the messages to stdout.
 --
 -- @since 1.0.0.0
 traceToIO :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
-traceToIO = interpret $ \case
-  Trace m -> embed $ putStrLn m
+traceToIO = traceToStdout
 {-# INLINE traceToIO #-}
+{-# deprecated traceToIO "Use traceToStdout" #-}
 
 
 ------------------------------------------------------------------------------
