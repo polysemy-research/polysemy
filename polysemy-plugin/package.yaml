@@ -18,7 +18,7 @@ description:         Please see the README on GitHub at <https://github.com/isov
 
 dependencies:
 - base >= 4.9 && < 5
-- ghc >= 8.6.5 && < 9
+- ghc >= 8.6.5 && < 9.2
 - ghc-tcplugins-extra >= 0.3 && < 0.5
 - polysemy >= 1.3
 - syb >= 0.7 && < 0.8
@@ -64,7 +64,7 @@ tests:
     - hspec >= 2.6.0 && < 3
     - should-not-typecheck >= 2.1.0 && < 3
     - inspection-testing >= 0.4.2 && < 0.5
-    - doctest >= 0.16.0.1 && < 0.17
+    - doctest >= 0.16.0.1 && < 0.19
     generated-other-modules:
     - Build_doctests
 

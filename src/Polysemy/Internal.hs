@@ -267,7 +267,7 @@ instance Functor (Sem f) where
 
 
 instance Applicative (Sem f) where
-  pure a = Sem $ const $ pure a
+  pure a = Sem $ \_ -> pure a
   {-# INLINE pure #-}
 
   Sem f <*> Sem a = Sem $ \k -> f k <*> a k
