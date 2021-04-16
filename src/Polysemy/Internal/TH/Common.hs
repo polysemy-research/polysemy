@@ -215,7 +215,11 @@ missingEffArgs name = fail $ show
       )
   where
     base = capturableBase name
+#if MIN_VERSION_template_haskell(2,17,0)
+    args = flip PlainTV () . mkName <$> ["m", "a"]
+#else
     args = PlainTV . mkName <$> ["m", "a"]
+#endif
 
 notDataCon :: Name -> Q a
 notDataCon name = fail $ show
@@ -226,12 +230,20 @@ notDataCon name = fail $ show
 -- TH utilities --------------------------------------------------------------
 ------------------------------------------------------------------------------
 
+arrows :: Type -> Bool
+arrows = \case
+  ArrowT -> True
+#if MIN_VERSION_template_haskell(2,17,0)
+  AppT MulArrowT _ -> True
+#endif
+  _ -> False
+
 ------------------------------------------------------------------------------
 -- | Pattern constructing function type and matching on one that may contain
 -- type annotations on arrow itself.
 infixr 1 :->
 pattern (:->) :: Type -> Type -> Type
-pattern a :-> b <- (removeTyAnns -> ArrowT) `AppT` a `AppT` b where
+pattern a :-> b <- (arrows . removeTyAnns -> True) `AppT` a `AppT` b where
   a :-> b = ArrowT `AppT` a `AppT` b
 
 
@@ -249,8 +261,13 @@ capturableTVars = everywhere $ mkT $ \case
   VarT n          -> VarT $ capturableBase n
   ForallT bs cs t -> ForallT (goBndr <$> bs) (capturableTVars <$> cs) t
     where
+#if MIN_VERSION_template_haskell(2,17,0)
+      goBndr (PlainTV n flag) = PlainTV (capturableBase n) flag
+      goBndr (KindedTV n flag k) = KindedTV (capturableBase n) flag $ capturableTVars k
+#else
       goBndr (PlainTV n   ) = PlainTV $ capturableBase n
       goBndr (KindedTV n k) = KindedTV (capturableBase n) $ capturableTVars k
+#endif
   t -> t
 
 
@@ -274,8 +291,13 @@ simplifyKinds = everywhere $ mkT $ \case
   SigT t VarT{}   -> t
   ForallT bs cs t -> ForallT (goBndr <$> bs) (simplifyKinds <$> cs) t
     where
-      goBndr (KindedTV n StarT ) = PlainTV n
+#if MIN_VERSION_template_haskell(2,17,0)
+      goBndr (KindedTV n flag StarT) = PlainTV n flag
+      goBndr (KindedTV n flag VarT{}) = PlainTV n flag
+#else
+      goBndr (KindedTV n StarT) = PlainTV n
       goBndr (KindedTV n VarT{}) = PlainTV n
+#endif
       goBndr b = b
   t -> t
 

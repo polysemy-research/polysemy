@@ -59,7 +59,7 @@ firstOrder higher f = higher $ \(e :: e (Sem rInitial) x) ->
 -- transforming it into other effects inside of @r@.
 interpret
     :: FirstOrder e "interpret"
-    => (∀ x rInitial. e (Sem rInitial) x -> Sem r x)
+    => (∀ rInitial x. e (Sem rInitial) x -> Sem r x)
        -- ^ A natural transformation from the handled effect to other effects
        -- already in 'Sem'.
     -> Sem (e ': r) a
@@ -75,7 +75,7 @@ interpret = firstOrder interpretH
 --
 -- See the notes on 'Tactical' for how to use this function.
 interpretH
-    :: (∀ x rInitial . e (Sem rInitial) x -> Tactical e (Sem rInitial) r x)
+    :: (∀ rInitial x . e (Sem rInitial) x -> Tactical e (Sem rInitial) r x)
        -- ^ A natural transformation from the handled effect to other effects
        -- already in 'Sem'.
     -> Sem (e ': r) a
