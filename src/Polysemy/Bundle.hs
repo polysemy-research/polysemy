@@ -9,13 +9,13 @@ module Polysemy.Bundle
   , runBundle
   , subsumeBundle
     -- * Miscellaneous
-  , KnownList
   ) where
 
 import Polysemy
 import Polysemy.Internal
-import Polysemy.Internal.Bundle
 import Polysemy.Internal.Union
+import Polysemy.Internal.Bundle (subsumeMembership)
+import Polysemy.Internal.Sing (KnownList (singList))
 
 ------------------------------------------------------------------------------
 -- | An effect for collecting multiple effects into one effect.
@@ -58,8 +58,8 @@ runBundle
   -> Sem (Append r' r) a
 runBundle = hoistSem $ \u -> hoist runBundle $ case decomp u of
   Right (Weaving (Bundle pr e) s wv ex ins) ->
-    Union (extendMembership @_ @r pr) $ Weaving e s wv ex ins
-  Left g -> weakenList @r' @r g
+    Union (extendMembershipRight @r' @r pr) $ Weaving e s wv ex ins
+  Left g -> weakenList @r' @r (singList @r') g
 {-# INLINE runBundle #-}
 
 ------------------------------------------------------------------------------

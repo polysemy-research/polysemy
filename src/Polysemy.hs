@@ -35,6 +35,7 @@ module Polysemy
   , raise3Under
   , raise_
   , subsume_
+  , insertAt
 
     -- * Trivial Interpretation
   , subsume

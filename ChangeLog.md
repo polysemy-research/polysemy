@@ -4,6 +4,7 @@
 
 * Deprecate `traceToIO` and replace it with `traceToStdout` and `traceToStderr`
 * Support GHC 9.0.1
+* Added the combinator `insertAt`, which allows adding effects at a specified index into the effect stack
 
 ## 1.5.0.0 (2021-03-30)
 

@@ -39,7 +39,11 @@ module Polysemy.Internal.Union
   -- * Checking membership
   , KnownRow
   , tryMembership
-  ) where
+  , extendMembershipLeft
+  , extendMembershipRight
+  , injectMembership
+  , weakenList
+  , weakenMid) where
 
 import Control.Monad
 import Data.Functor.Compose
@@ -48,6 +52,7 @@ import Data.Kind
 import Data.Typeable
 import Polysemy.Internal.Kind
 import {-# SOURCE #-} Polysemy.Internal
+import Polysemy.Internal.Sing (SList (SEnd, SCons))
 
 #ifndef NO_ERROR_MESSAGES
 import Polysemy.Internal.CustomErrors
@@ -251,6 +256,41 @@ tryMembership :: forall e r. (Typeable e, KnownRow r) => Maybe (ElemOf e r)
 tryMembership = tryMembership' @r @e
 {-# INLINE tryMembership #-}
 
+
+------------------------------------------------------------------------------
+-- | Extends a proof that @e@ is an element of @r@ to a proof that @e@ is an
+-- element of the concatenation of the lists @l@ and @r@.
+-- @l@ must be specified as a singleton list proof.
+extendMembershipLeft :: forall l r e. SList l -> ElemOf e r -> ElemOf e (Append l r)
+extendMembershipLeft SEnd pr = pr
+extendMembershipLeft (SCons l) pr = There (extendMembershipLeft l pr)
+{-# INLINE extendMembershipLeft #-}
+
+
+------------------------------------------------------------------------------
+-- | Extends a proof that @e@ is an element of @l@ to a proof that @e@ is an
+-- element of the concatenation of the lists @l@ and @r@.
+extendMembershipRight :: forall l r e. ElemOf e l -> ElemOf e (Append l r)
+extendMembershipRight Here = Here
+extendMembershipRight (There e) = There (extendMembershipRight @_ @r e)
+{-# INLINE extendMembershipRight #-}
+
+
+------------------------------------------------------------------------------
+-- | Extends a proof that @e@ is an element of @left <> right@ to a proof that
+-- @e@ is an element of @left <> mid <> right@.
+-- Both @left@ and @right@ must be specified as singleton list proofs.
+injectMembership :: forall right e left mid
+                  . SList left
+                 -> SList mid
+                 -> ElemOf e (Append left right)
+                 -> ElemOf e (Append left (Append mid right))
+injectMembership SEnd sm pr = extendMembershipLeft sm pr
+injectMembership (SCons _) _ Here = Here
+injectMembership (SCons sl) sm (There pr) = There (injectMembership @right sl sm pr)
+{-# INLINE injectMembership #-}
+
+
 ------------------------------------------------------------------------------
 -- | Decompose a 'Union'. Either this union contains an effect @e@---the head
 -- of the @r@ list---or it doesn't.
@@ -282,11 +322,31 @@ absurdU = \case {}
 
 
 ------------------------------------------------------------------------------
--- | Weaken a 'Union' so it is capable of storing a new sort of effect.
+-- | Weaken a 'Union' so it is capable of storing a new sort of effect at the
+-- head.
 weaken :: forall e r m a. Union r m a -> Union (e ': r) m a
 weaken (Union pr a) = Union (There pr) a
 {-# INLINE weaken #-}
 
+
+------------------------------------------------------------------------------
+-- | Weaken a 'Union' so it is capable of storing a number of new effects at
+-- the head, specified as a singleton list proof.
+weakenList :: SList l -> Union r m a -> Union (Append l r) m a
+weakenList sl (Union pr e) = Union (extendMembershipLeft sl pr) e
+{-# INLINE weakenList #-}
+
+
+------------------------------------------------------------------------------
+-- | Weaken a 'Union' so it is capable of storing a number of new effects
+-- somewhere within the previous effect list.
+-- Both the prefix and the new effects are specified as singleton list proofs.
+weakenMid :: forall right m a left mid
+           . SList left -> SList mid
+          -> Union (Append left right) m a
+          -> Union (Append left (Append mid right)) m a
+weakenMid sl sm (Union pr e) = Union (injectMembership @right sl sm pr) e
+{-# INLINE weakenMid #-}
 
 
 ------------------------------------------------------------------------------

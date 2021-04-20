@@ -30,6 +30,7 @@ module Polysemy.Internal
   , Subsume (..)
   , subsume
   , subsumeUsing
+  , insertAt
   , Embed (..)
   , usingSem
   , liftSem
@@ -44,6 +45,8 @@ module Polysemy.Internal
 import Control.Applicative
 import Control.Monad
 #if __GLASGOW_HASKELL__ < 808
+
+
 import Control.Monad.Fail
 #endif
 import Control.Monad.Fix
@@ -53,10 +56,13 @@ import Data.Kind
 import Polysemy.Embed.Type
 import Polysemy.Fail.Type
 import Polysemy.Internal.Fixpoint
+import Polysemy.Internal.Index (InsertAtUnprovidedIndex, InsertAtIndex(insertAtIndex))
 import Polysemy.Internal.Kind
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
+import Type.Errors (WhenStuck)
+import Polysemy.Internal.Sing (ListOfLength (listOfLength))
 
 
 -- $setup
@@ -540,6 +546,32 @@ subsumeUsing pr =
     go
 {-# INLINE subsumeUsing #-}
 
+------------------------------------------------------------------------------
+-- | Introduce a set of effects into 'Sem' at the index @i@, before the effect
+-- that previously occupied that position. This is intended to be used with a
+-- type application:
+--
+-- @
+-- let
+--   sem1 :: Sem [e1, e2, e3, e4, e5] a
+--   sem1 = insertAt @2 (sem0 :: Sem [e1, e2, e5] a)
+-- @
+--
+-- @since 1.6.0.0
+insertAt
+  :: forall index inserted head oldTail tail old full a
+   . ( ListOfLength index head
+     , WhenStuck index InsertAtUnprovidedIndex
+     , old ~ Append head oldTail
+     , tail ~ Append inserted oldTail
+     , full ~ Append head tail
+     , InsertAtIndex index head tail oldTail full inserted)
+  => Sem old a
+  -> Sem full a
+insertAt = hoistSem $ \u -> hoist (insertAt @index @inserted @head @oldTail) $
+  weakenMid @oldTail (listOfLength @index @head) (insertAtIndex @Effect @index @head @tail @oldTail @full @inserted) u
+{-# INLINE insertAt #-}
+
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem'. This is used primarily via
@@ -586,11 +618,6 @@ runM (Sem m) = m $ \z ->
       a <- unEmbed e
       pure $ f $ a <$ s
 {-# INLINE runM #-}
-
-
-type family Append l r where
-  Append (a ': l) r = a ': (Append l r)
-  Append '[] r = r
 
 
 ------------------------------------------------------------------------------
