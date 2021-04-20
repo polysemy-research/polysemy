@@ -62,8 +62,10 @@ library
       Polysemy.Internal.CustomErrors.Redefined
       Polysemy.Internal.Fixpoint
       Polysemy.Internal.Forklift
+      Polysemy.Internal.Index
       Polysemy.Internal.Kind
       Polysemy.Internal.NonDet
+      Polysemy.Internal.Sing
       Polysemy.Internal.Strategy
       Polysemy.Internal.Tactics
       Polysemy.Internal.TH.Common

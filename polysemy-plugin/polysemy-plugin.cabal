@@ -80,6 +80,7 @@ test-suite polysemy-plugin-test
       BadSpec
       DoctestSpec
       ExampleSpec
+      InsertSpec
       LegitimateTypeErrorSpec
       MultipleVarsSpec
       PluginSpec
