@@ -307,6 +307,11 @@ instance (Member Fail r) => MonadFail (Sem r) where
   fail = send . Fail
   {-# INLINE fail #-}
 
+instance Semigroup a => Semigroup (Sem f a) where
+  (<>) = liftA2 (<>)
+
+instance Monoid a => Monoid (Sem f a) where
+  mempty = pure mempty
 
 ------------------------------------------------------------------------------
 -- | This instance will only lift 'IO' actions. If you want to lift into some
