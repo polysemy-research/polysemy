@@ -1,5 +1,9 @@
 # Changelog for polysemy-plugin
 
+## Unreleased
+
+* Support GHC 9.0.1
+
 ## 0.3.0.0 (2021-03-30)
 
 ### Breaking Changes

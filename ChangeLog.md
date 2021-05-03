@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Deprecate `traceToIO` and replace it with `traceToStdout` and `traceToStderr`
+* Support GHC 9.0.1
 
 ## 1.5.0.0 (2021-03-30)
 
