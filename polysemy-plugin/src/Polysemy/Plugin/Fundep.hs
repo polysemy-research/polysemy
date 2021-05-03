@@ -44,6 +44,14 @@ import qualified Data.Set as S
 import           Polysemy.Plugin.Fundep.Stuff
 import           Polysemy.Plugin.Fundep.Unification
 import           Polysemy.Plugin.Fundep.Utils
+#if __GLASGOW_HASKELL__ >= 900
+import           GHC.Tc.Types.Evidence
+import           GHC.Tc.Plugin (TcPluginM, tcPluginIO)
+import           GHC.Tc.Types
+import           GHC.Tc.Types.Constraint
+import           GHC.Tc.Solver.Monad hiding (tcLookupClass)
+import           GHC.Core.Type
+#else
 import           TcEvidence
 import           TcPluginM (TcPluginM, tcPluginIO)
 import           TcRnTypes
@@ -52,6 +60,7 @@ import           Constraint
 #endif
 import           TcSMonad hiding (tcLookupClass)
 import           Type
+#endif
 
 
 

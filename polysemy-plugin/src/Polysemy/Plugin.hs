@@ -63,7 +63,11 @@ module Polysemy.Plugin
 
 import Polysemy.Plugin.Fundep
 
+#if __GLASGOW_HASKELL__ >= 900
+import GHC.Plugins
+#else
 import GhcPlugins
+#endif
 
 ------------------------------------------------------------------------------
 plugin :: Plugin
