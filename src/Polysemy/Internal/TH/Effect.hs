@@ -108,7 +108,7 @@ makeSem_ :: Name -> Q [Dec]
 makeSem_ = genFreer False
 -- NOTE(makeSem_):
 -- This function uses an ugly hack to work --- it changes names in data
--- constructor's type to capturable ones. This allows user to provide them to
+-- constructor's type to capturable ones. This allows users to provide them to
 -- us from their signature through 'forall' with 'ScopedTypeVariables'
 -- enabled, so that we can compile liftings of constructors with ambiguous
 -- type arguments (see issue #48).

@@ -5,13 +5,20 @@ module Polysemy.Plugin.Fundep.Unification where
 import           Data.Bool
 import           Data.Function (on)
 import qualified Data.Set as S
-#if __GLASGOW_HASKELL__ >= 810
+#if __GLASGOW_HASKELL__ >= 900
+import           GHC.Tc.Types.Constraint
+#elif __GLASGOW_HASKELL__ >= 810
 import           Constraint
 #else
 import           TcRnTypes
 #endif
 
+#if __GLASGOW_HASKELL__ >= 900
+import           GHC.Core.Type
+#else
 import           Type
+#endif
+
 
 
 ------------------------------------------------------------------------------
