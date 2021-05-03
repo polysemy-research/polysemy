@@ -7,14 +7,23 @@ module Polysemy.Plugin.Fundep.Stuff
   ) where
 
 import Data.Kind (Type)
-import FastString (fsLit)
 import GHC (Name, Class, TyCon, mkModuleName)
 import GHC.TcPluginM.Extra (lookupModule, lookupName)
+#if __GLASGOW_HASKELL__ >= 900
+import GHC.Data.FastString (fsLit)
+import GHC.Types.Name.Occurrence (mkTcOcc)
+import GHC.Tc.Plugin (TcPluginM, tcLookupClass, tcLookupTyCon, unsafeTcPluginTcM)
+import GHC.Plugins (getDynFlags, unitState)
+import GHC.Unit.State (lookupModuleWithSuggestions, LookupResult (..))
+import GHC.Utils.Outputable (pprPanic, empty, text, (<+>), ($$))
+#else
+import FastString (fsLit)
 import OccName (mkTcOcc)
 import TcPluginM (TcPluginM, tcLookupClass, tcLookupTyCon, unsafeTcPluginTcM)
 import GhcPlugins (getDynFlags)
 import Packages (lookupModuleWithSuggestions, LookupResult (..))
 import Outputable (pprPanic, empty, text, (<+>), ($$))
+#endif
 
 
 
@@ -55,7 +64,14 @@ polysemyStuff = do
          $$ text "Probable fix: add `polysemy` to your cabal `build-depends`"
          $$ text "--------------------------------------------------------------------------------"
          $$ text ""
-  case lookupModuleWithSuggestions dflags (mkModuleName "Polysemy") Nothing of
+  case lookupModuleWithSuggestions
+#if __GLASGOW_HASKELL__ >= 900
+    (unitState dflags)
+#else
+    dflags
+#endif
+    (mkModuleName "Polysemy")
+    Nothing of
     LookupHidden _ _ -> error_msg
     LookupNotFound _ -> error_msg
 #if __GLASGOW_HASKELL__ >= 806
