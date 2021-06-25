@@ -7,3 +7,5 @@ core-html/
 dist-newstyle
 *.hi
 *.o
+/result
+/result-doc

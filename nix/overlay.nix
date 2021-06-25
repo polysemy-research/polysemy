@@ -10,7 +10,7 @@ let
     c2n = name: src: pkgs.haskell.lib.disableLibraryProfiling (self.callCabal2nix name (filter src) {});
     hackage = pkg: ver: sha256: self.callHackageDirect { inherit pkg ver sha256; } {};
   in {
-    polysemy = pkgs.haskell.lib.dontCheck (c2n "polysemy" ../.);
+    polysemy = c2n "polysemy" ../.;
     polysemy-plugin = c2n "polysemy-plugin" ../polysemy-plugin;
     first-class-families =
       hackage "first-class-families" "0.8.0.1" "0h1rxbc7zsxrlhx5xcl58wjx3qi2wny8wb3sk7c1qnydf4ckcckz";
