@@ -7,7 +7,7 @@ cabal-version: 2.0
 name:           polysemy-plugin
 version:        0.3.0.0
 synopsis:       Disambiguate obvious uses of effects.
-description:    Please see the README on GitHub at <https://github.com/isovector/polysemy/tree/master/polysemy-plugin#readme>
+description:    Please see the README on GitHub at <https://github.com/polysemy-research/polysemy/tree/master/polysemy-plugin#readme>
 category:       Polysemy
 homepage:       https://github.com/polysemy-research/polysemy#readme
 bug-reports:    https://github.com/polysemy-research/polysemy/issues

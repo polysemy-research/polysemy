@@ -14,7 +14,7 @@ extra-source-files:
 synopsis:            Disambiguate obvious uses of effects.
 category:            Polysemy
 
-description:         Please see the README on GitHub at <https://github.com/isovector/polysemy/tree/master/polysemy-plugin#readme>
+description:         Please see the README on GitHub at <https://github.com/polysemy-research/polysemy/tree/master/polysemy-plugin#readme>
 
 dependencies:
 - base >= 4.9 && < 5

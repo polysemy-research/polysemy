@@ -7,7 +7,7 @@ cabal-version: 2.0
 name:           polysemy
 version:        1.5.0.0
 synopsis:       Higher-order, low-boilerplate free monads.
-description:    Please see the README on GitHub at <https://github.com/isovector/polysemy#readme>
+description:    Please see the README on GitHub at <https://github.com/polysemy-research/polysemy#readme>
 category:       Language
 homepage:       https://github.com/polysemy-research/polysemy#readme
 bug-reports:    https://github.com/polysemy-research/polysemy/issues
