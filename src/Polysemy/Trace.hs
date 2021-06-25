@@ -36,7 +36,7 @@ makeSem ''Trace
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by printing the messages to the provided 'Handle'.
 --
--- @since TODO
+-- @since 1.6.0.0
 traceToHandle :: Member (Embed IO) r => Handle -> Sem (Trace ': r) a -> Sem r a
 traceToHandle handle = interpret $ \case
   Trace m -> embed $ hPutStrLn handle m
@@ -46,7 +46,7 @@ traceToHandle handle = interpret $ \case
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by printing the messages to stdout.
 --
--- @since TODO
+-- @since 1.6.0.0
 traceToStdout :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
 traceToStdout = traceToHandle stdout
 {-# INLINE traceToStdout #-}
@@ -55,7 +55,7 @@ traceToStdout = traceToHandle stdout
 ------------------------------------------------------------------------------
 -- | Run a 'Trace' effect by printing the messages to stderr.
 --
--- @since TODO
+-- @since 1.6.0.0
 traceToStderr :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
 traceToStderr = traceToHandle stderr
 {-# INLINE traceToStderr #-}
