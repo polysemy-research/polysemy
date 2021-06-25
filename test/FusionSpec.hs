@@ -36,7 +36,6 @@ spec :: Spec
 spec = parallel $ do
   describe "fusion" $ do
 -- #if __GLASGOW_HASKELL__ >= 807
---     -- TODO: Investigate why this test fails mysteriously on GHC < 8.6
 --     it "Union proofs should simplify" $ do
 --       shouldSucceed $(inspectTest $ 'countDown `hasNoType` ''SNat)
 -- #endif

@@ -313,11 +313,11 @@ instance (Member Fail r) => MonadFail (Sem r) where
   fail = send . Fail
   {-# INLINE fail #-}
 
--- | @since TODO
+-- | @since 1.6.0.0
 instance Semigroup a => Semigroup (Sem f a) where
   (<>) = liftA2 (<>)
 
--- | @since TODO
+-- | @since 1.6.0.0
 instance Monoid a => Monoid (Sem f a) where
   mempty = pure mempty
 

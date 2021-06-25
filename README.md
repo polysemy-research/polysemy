@@ -300,15 +300,15 @@ Luckily, the same person that uncovered this problems proposed a
 [solution](https://github.com/lexi-lambda/ghc-proposals/blob/delimited-continuation-primops/proposals/0000-delimited-continuation-primops.md) -
 set of primops that will allow interpretation of effects at runtime, with
 minimal overhead. It's not *zero-cost* as we hoped for with `polysemy` at
-first, but it should have negligible effect on performance in real life  and
+first, but it should have negligible effect on performance in real life and
 compared to current solutions, it should be much more predictable and even
 resolve some problems with behaviour of
 [specific effects](https://github.com/polysemy-research/polysemy/issues/246).
 You can try out experimental library that uses proposed features
 [here](https://github.com/hasura/eff).
 
-When it comes to `polysemy`, once GHC proposal lands, we consider option of
-switching to implementation based on it. This will probably require some
+When it comes to `polysemy`, once GHC proposal lands, we will consider the option of
+switching to an implementation based on it. This will probably require some
 breaking changes, but should resolve performance issues and maybe even make
 implementation of higher-order effects easier.
 

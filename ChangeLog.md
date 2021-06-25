@@ -2,9 +2,17 @@
 
 ## Unreleased
 
+## 1.6.0.0 (2021-07-12)
+
+### Breaking Changes
+
 * Deprecate `traceToIO` and replace it with `traceToStdout` and `traceToStderr`
 * Support GHC 9.0.1
+
+### Other Changes
+
 * Added the combinator `insertAt`, which allows adding effects at a specified index into the effect stack
+* Added `Semigroup` and `Monoid` for `Sem`
 
 ## 1.5.0.0 (2021-03-30)
 
