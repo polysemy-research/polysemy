@@ -16,7 +16,6 @@ let
       hackage "first-class-families" "0.8.0.1" "0h1rxbc7zsxrlhx5xcl58wjx3qi2wny8wb3sk7c1qnydf4ckcckz";
     dump-core = hackage "dump-core" "0.1.3.2" "1mi8p736yn00z549pwnjv4ydwbs8mwg6dla3ly447c027nq8py6g";
     monadLib = hackage "monadLib" "3.10" "1v4ynjcb963s3lfw3v71qdzvld1mmz1faf8swhvicma5jbvwchy2";
-    type-errors-pretty = pkgs.haskell.lib.doJailbreak super.type-errors-pretty;
   };
 
   pkgs = import nixpkgs { inherit system; };
