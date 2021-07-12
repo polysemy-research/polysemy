@@ -9,8 +9,8 @@ module Polysemy.Internal.Index where
 
 import GHC.TypeLits (Nat)
 import Type.Errors (TypeError, ErrorMessage(ShowType))
-import Type.Errors.Pretty (type (<>), type (%))
 
+import Polysemy.Internal.CustomErrors (type (<>), type (%))
 import Polysemy.Internal.Sing (SList (SEnd, SCons))
 
 ------------------------------------------------------------------------------
