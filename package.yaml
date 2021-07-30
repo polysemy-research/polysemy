@@ -31,12 +31,6 @@ dependencies:
 - type-errors >= 0.2.0.0
 - QuickCheck >= 2.11.3 && < 3
 
-custom-setup:
-  dependencies:
-    - base >= 4.9 && < 5
-    - Cabal
-    - cabal-doctest >=1.0.6 && <1.1
-
 default-extensions:
   - DataKinds
   - DeriveFunctor
