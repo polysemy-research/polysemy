@@ -76,7 +76,7 @@ Teletype effect:
 
 ```haskell
 {-# LANGUAGE TemplateHaskell, LambdaCase, BlockArguments, GADTs
-           , FlexibleContexts, TypeOperators, DataKinds, PolyKinds #-}
+           , FlexibleContexts, TypeOperators, DataKinds, PolyKinds, ScopedTypeVariables #-}
 
 import Polysemy
 import Polysemy.Input
