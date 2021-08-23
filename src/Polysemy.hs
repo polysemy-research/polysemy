@@ -8,7 +8,6 @@ module Polysemy
     -- * Running Sem
   , run
   , runM
-  , runFinal
 
     -- * Type synonyms for user convenience
   , InterpreterFor

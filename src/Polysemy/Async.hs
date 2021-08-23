@@ -75,9 +75,8 @@ asyncToIO
 asyncToIO m = withLowerToIO $ \lower _ -> lower $
   interpretNew
     ( \case
-        Async ma -> do
-          Processor pr  <- getProcessorH'
-          fa  <- embed $ A.async $ lower $ asyncToIO (pr ma)
+        Async ma -> liftWithH $ \lowerZ -> do
+          fa  <- embed $ A.async $ lower $ lowerZ $ asyncToIO $ runH' ma
           let ins = foldr (const . Just) Nothing
           return (fmap ins fa)
 
@@ -107,13 +106,11 @@ asyncToIO m = withLowerToIO $ \lower _ -> lower $
 asyncToIOFinal :: Member (Final IO) r
                => Sem (Async ': r) a
                -> Sem r a
-asyncToIOFinal = interpretFinal $ \case
-  Async m -> do
-    ins <- getInspectorS
-    m'  <- runS m
-    liftS $ A.async (inspect ins <$> m')
-  Await a -> liftS (A.wait a)
-  Cancel a -> liftS (A.cancel a)
+asyncToIOFinal = interpretFinal @IO $ \case
+  Async m -> liftWithS $ \lower -> do
+    fmap (foldr (const . Just) Nothing) <$> A.async (lower m)
+  Await a -> embed (A.wait a)
+  Cancel a -> embed (A.cancel a)
 {-# INLINE asyncToIOFinal #-}
 
 ------------------------------------------------------------------------------
@@ -129,10 +126,9 @@ lowerAsync
     -> Sem r a
 lowerAsync lower m = interpretNew
     ( \case
-        Async ma -> do
-          Processor pr  <- getProcessorH
+        Async ma -> liftWithH $ \lowerZ -> do
           let ins = foldr (const . Just) Nothing
-          fa  <- embed $ A.async $ lower $ pr ma
+          fa  <- embed $ A.async $ lower $ lowerZ $ runH ma
           return $ ins <$> fa
 
         Await a -> embed (A.wait a)

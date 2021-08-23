@@ -25,8 +25,8 @@ import qualified Control.Monad.Trans.State.Lazy as LSt
 import qualified Control.Monad.Trans.State.Strict as SSt
 import qualified Control.Monad.Trans.Writer.Lazy as LWr
 
--- | A variant of the classic @MonadTransWeave@ class from @monad-control@,
--- but with a small number of changes to make it more suitable with Polysemy's
+-- | A variant of the classic @MonadTransControl@ class from @monad-control@,
+-- but with a small number of changes to make it more suitable for Polysemy's
 -- internals.
 class ( MonadTrans t
       , forall z. Monad z => Monad (t z)
@@ -109,6 +109,8 @@ instance MonadTransWeave IdentityT where
   hoistT = (coerce :: (m x -> n x) -> IdentityT m x -> IdentityT n x)
 
   liftWith main = IdentityT (main (fmap Identity . runIdentityT))
+
+  controlT main = IdentityT (runIdentity <$> main (fmap Identity . runIdentityT))
 
   restoreT = IdentityT . fmap runIdentity
 

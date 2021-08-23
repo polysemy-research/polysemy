@@ -2,6 +2,7 @@
 {-# OPTIONS_HADDOCK not-home #-}
 module Polysemy.Internal.Interpretation where
 
+import           Control.Monad
 import           Polysemy.Internal
 import           Polysemy.Internal.WeaveClass
 import           Polysemy.Internal.Union
@@ -10,14 +11,32 @@ import           Polysemy.Internal.Kind
 
 newtype Processor z t r = Processor { getProcessor :: forall x. z x -> Sem r (t x) }
 
+
 -- | An effect for running monadic actions within a higher-order effect
 -- currently being interpreted.
 data RunH z t e r :: Effect where
-  RunH           :: forall z t e r m a. z a -> RunH z t e r m a
-  GetProcessorH  :: forall z t e r m. RunH z t e r m (Processor z t r)
-  GetProcessorH' :: forall z t e r m. RunH z t e r m (Processor z t (e ': r))
-  ExposeH        :: forall z t e r m a. m a -> RunH z t e r m (t a)
-  RestoreH       :: forall z t e r m a. t a -> RunH z t e r m a
+  RunH             :: forall z t e r m a
+                    . z a
+                   -> RunH z t e r m a
+  WithProcessorH   :: forall z t e r m a
+                    . ((forall x. z x -> Sem (e ': r) (t x)) -> a)
+                   -> RunH z t e r m a
+  WithInterpreterH :: forall z t e r m a
+                    . ((forall x. Sem (e ': r) x -> Sem r x) -> a)
+                   -> RunH z t e r m a
+  LiftWithH        :: forall z t e r m a
+                    . ((forall x. Sem (RunH z t e r ': r) x -> Sem r (t x)) -> a)
+                   -> RunH z t e r m a
+  RestoreH         :: forall z t e r m a
+                    . t a
+                   -> RunH z t e r m a
+
+propagate :: forall e r rInitial t e' r' a
+           . Member e r
+          => e (Sem rInitial) a
+          -> Sem (RunH (Sem rInitial) t e' r' ': r) a
+propagate e = liftSem $ hoist runH $ Union (There membership) (mkWeaving e)
+{-# INLINE propagate #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted, and recursively apply the current interpreter on it.
@@ -28,6 +47,23 @@ data RunH z t e r :: Effect where
 runH :: forall z t e r r' a. z a -> Sem (RunH z t e r ': r') a
 runH = send . RunH @z @t @e @r
 {-# INLINE runH #-}
+
+liftWithH :: forall z t e r r' a
+           . ((forall x. Sem (RunH z t e r ': r) x -> Sem r (t x)) -> Sem r' a)
+          -> Sem (RunH z t e r ': r') a
+liftWithH main = send (LiftWithH main) >>= raise
+{-# INLINE liftWithH #-}
+
+withInterpreterH :: forall z t e r r' a
+                  . ((forall x. Sem (e ': r) x -> Sem r x) -> Sem (RunH z t e r ': r') a)
+                 -> Sem (RunH z t e r ': r') a
+withInterpreterH main = join $ send (WithInterpreterH @z @t main)
+
+controlH :: forall z t e r r' a
+          . ((forall x. Sem (RunH z t e r ': r) x -> Sem r (t x)) -> Sem r' (t a))
+         -> Sem (RunH z t e r ': r') a
+controlH main = liftWithH main >>= restoreH @z @t @e @r
+{-# INLINE controlH #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted.
@@ -58,9 +94,9 @@ runH' z = runExposeH' z >>= raise . restoreH
 --
 -- @since TODO
 runExposeH :: forall z t e r a. z a -> Sem (RunH z t e r ': r) (t a)
-runExposeH z = do
+runExposeH z = withInterpreterH $ \n -> do
   Processor pr <- getProcessorH
-  raise (pr z)
+  raise (n (pr z))
 {-# INLINE runExposeH #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
@@ -76,7 +112,7 @@ runExposeH z = do
 -- @since TODO
 runExposeH' :: forall z t e r a. z a -> Sem (e ': RunH z t e r ': r) (t a)
 runExposeH' z = do
-  Processor pr <- raise getProcessorH'
+  Processor pr <- raise getProcessorH
   raiseUnder (pr z)
 {-# INLINE runExposeH' #-}
 
@@ -113,7 +149,6 @@ restoreH :: forall z t e r r' a. t a -> Sem (RunH z t e r ': r') a
 restoreH = send . RestoreH @z @_ @e @r
 {-# INLINE restoreH #-}
 
-
 -- | Reify the effectful state of the local effects of the argument.
 --
 -- @'runExposeH' m = 'exposeH' ('runH' m)@
@@ -123,8 +158,8 @@ restoreH = send . RestoreH @z @_ @e @r
 -- using 'runExposeH' and `runExposeH'` instead.
 --
 -- @since TODO
-exposeH :: forall z t e r r' a. Member (RunH z t e r) r' => Sem r' a -> Sem r' (t a)
-exposeH = send . ExposeH @z @_ @e @r
+exposeH :: forall z t e r a. Sem (RunH z t e r ': r) a -> Sem (RunH z t e r ': r) (t a)
+exposeH m = liftWithH $ \lower -> lower m
 {-# INLINE exposeH #-}
 
 -- | Retrieve a 'Processor': a function which can be used
@@ -134,22 +169,22 @@ exposeH = send . ExposeH @z @_ @e @r
 --
 -- The processor automatically recursively applies the current interpreter on
 -- monadic actions processed.
-getProcessorH :: forall z t e r r'. Sem (RunH z t e r ': r') (Processor z t r)
-getProcessorH = send (GetProcessorH @_ @_ @e)
+getProcessorH :: forall z t e r r'. Sem (RunH z t e r ': r') (Processor z t (e ': r))
+getProcessorH = send (WithProcessorH @_ @_ @e Processor)
 {-# INLINE getProcessorH #-}
 
 -- | Retrieve a 'Processor': a function which can be used
 -- to process a monadic action given by a higher-order effect that is currently
 -- being interpreted without immediately running it, turning it into a @'Sem' (e ': r)@ action
 -- that returns a reified effectful state.
-getProcessorH' :: forall z t e r r'. Sem (RunH z t e r ': r') (Processor z t (e ': r))
-getProcessorH' = send GetProcessorH'
-{-# INLINE getProcessorH' #-}
+-- getProcessorH' :: forall z t e r r'. Sem (RunH z t e r ': r') (Processor z t (e ': r))
+-- getProcessorH' = send GetProcessorH'
+-- {-# INLINE getProcessorH' #-}
 
 type EffHandlerH e r =
-     forall z t x
+     forall rInitial t x
    . Traversable t
-  => e z x -> Sem (RunH z t e r ': r) x
+  => e (Sem rInitial) x -> Sem (RunH (Sem rInitial) t e r ': r) x
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but for higher-order effects (i.e. those which make use
@@ -195,47 +230,43 @@ interpretNew h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
                  ex
           ) ->
       let
+          {-# SPECIALIZE INLINE commonHandler :: forall n x. Weaving (RunH z (StT t) e r) n x -> t m x #-}
+          {-# SPECIALIZE INLINE commonHandler :: forall n x. Weaving (RunH z (StT t) e r) n x -> t (Sem r) x #-}
+          commonHandler :: forall n b x. Monad b => Weaving (RunH z (StT t) e r) n x -> t b x
+          commonHandler (Weaving eff _ lwr' ex') = do
+            let run_it = fmap (ex' . (<$ mkInitState lwr'))
+            case eff of
+              RunH _ -> errorWithoutStackTrace "RunH not commonly handled"
+              WithInterpreterH main -> run_it $ return $ main $ interpretNew h
+              WithProcessorH main -> run_it $
+                liftWith $ \lower -> return $ main (lower . mkT id)
+              RestoreH t -> run_it $
+                restoreT (return t)
+              LiftWithH main -> run_it $ liftWith $ \lower -> return $
+                main (lower . go2)
+
           go1 :: forall x. Sem (RunH z (StT t) e r ': r) x -> t m x
           go1 = usingSem $ \u' -> case decomp u' of
             Left g -> liftHandlerWithNat go2 k g
-            Right (Weaving eff mkT' lwr' ex') -> do
-              let run_it = fmap (ex' . (<$ mkInitState lwr'))
+            Right wav@(Weaving eff _ lwr' ex') -> do
+              let run_it = (ex' . (<$ mkInitState lwr'))
               case eff of
-                RunH z -> run_it $
-                  mkT (usingSem k . interpretNew h) z
-                GetProcessorH -> run_it $
-                  liftWith $ \lower -> return $ Processor (lower . mkT (interpretNew h))
-                GetProcessorH' -> run_it $
-                  liftWith $ \lower -> return $ Processor (lower . mkT id)
-                RestoreH t -> run_it $
-                  restoreT (return t)
-                ExposeH m -> fmap ex' $ lwr' $ controlT $ \lower' -> do
-                  let m' = lower' (mkT' go1 m)
-                  liftWith $ \lower -> do
-                    t  <- lower m'
-                    lower' $ traverse (restoreT . return) t
+                RunH z -> run_it <$> mkT (usingSem k . interpretNew h) z
+                _      -> commonHandler wav
+          {-# INLINE go1 #-}
 
           go2 :: forall x. Sem (RunH z (StT t) e r ': r) x -> t (Sem r) x
           go2 = usingSem $ \u' -> case decomp u' of
             Left g -> liftHandlerWithNat go2 liftSem g
-            Right (Weaving eff mkT' lwr' ex') -> do
-              let run_it = fmap (ex' . (<$ mkInitState lwr'))
+            Right wav@(Weaving eff _ lwr' ex') -> do
+              let run_it = (ex' . (<$ mkInitState lwr'))
               case eff of
-                RunH z -> run_it $
-                  mkT (interpretNew h) z
-                GetProcessorH -> run_it $
-                  liftWith $ \lower -> return $ Processor (lower . mkT (interpretNew h))
-                GetProcessorH' -> run_it $
-                  liftWith $ \lower -> return $ Processor (lower . mkT id)
-                RestoreH t -> run_it $
-                  restoreT (return t)
-                ExposeH m -> fmap ex' $ lwr' $ controlT $ \lower' -> do
-                  let m' = lower' (mkT' go2 m)
-                  liftWith $ \lower -> do
-                    t  <- lower m'
-                    lower' $ traverse (restoreT . return) t
+                RunH z -> run_it <$> mkT (interpretNew h) z
+                _      -> commonHandler wav
+          {-# NOINLINE go2 #-}
       in
         fmap ex $ lwr $ go1 (h e)
+{-# INLINE interpretNew #-}
 
 -- TODO (KingoftheHomeless): If it matters, optimize the definitions
 -- below

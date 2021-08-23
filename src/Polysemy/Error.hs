@@ -129,10 +129,8 @@ fromExceptionSemVia
     -> Sem r a
     -> Sem r a
 fromExceptionSemVia f m = do
-  r <- withStrategicToFinal $ do
-    m' <- runS m
-    s  <- getInitialStateS
-    pure $ (fmap . fmap) Right m' `X.catch` \e -> (pure (Left e <$ s))
+  r <- controlF $ \lower ->
+    lower (fmap Right m) `X.catch` (lower . return . Left)
   case r of
     Left e -> throw $ f e
     Right a -> pure a
@@ -251,14 +249,10 @@ errorToIOFinal
        )
     => Sem (Error e ': r) a
     -> Sem r (Either e a)
-errorToIOFinal sem = withStrategicToFinal @IO $ do
-  m' <- runS (runErrorAsExcFinal sem)
-  s  <- getInitialStateS
-  pure $
-    either
-      ((<$ s) . Left . unwrapExc)
-      (fmap Right)
-    <$> X.try m'
+errorToIOFinal sem = controlF $ \lower -> do
+    lower (Right <$> runErrorAsExcFinal sem)
+  `X.catch` \(WrappedExc e) ->
+    lower $ return $ Left e
 {-# INLINE errorToIOFinal #-}
 
 runErrorAsExcFinal
@@ -269,13 +263,11 @@ runErrorAsExcFinal
     => Sem (Error e ': r) a
     -> Sem r a
 runErrorAsExcFinal = interpretFinal $ \case
-  Throw e   -> pure $ X.throwIO $ WrappedExc e
-  Catch m h -> do
-    m' <- runS m
-    h' <- bindS h
-    s  <- getInitialStateS
-    pure $ X.catch m' $ \(se :: WrappedExc e) ->
-      h' (unwrapExc se <$ s)
+  Throw e   -> embed $ X.throwIO $ WrappedExc e
+  Catch m h -> controlS $ \lower ->
+      lower m
+    `X.catch` \(WrappedExc e) ->
+      lower (h e)
 {-# INLINE runErrorAsExcFinal #-}
 
 ------------------------------------------------------------------------------
@@ -312,10 +304,8 @@ runErrorAsExc
     -> Sem r a
 runErrorAsExc lower = interpretNew $ \case
   Throw e -> embed $ X.throwIO $ WrappedExc e
-  Catch main handle -> do
-    Processor pr  <- getProcessorH
-    let runIt = lower . pr
-    ta <- embed $ X.catch (runIt main) $ \(se :: WrappedExc e) ->
+  Catch main handle -> controlH $ \lowerZ -> do
+    let runIt = lower . lowerZ . runH
+    embed $ X.catch (runIt main) $ \(se :: WrappedExc e) ->
       runIt $ handle $ unwrapExc se
-    restoreH ta
 {-# INLINE runErrorAsExc #-}

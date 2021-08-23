@@ -17,7 +17,6 @@ module Polysemy.Internal
   , sendUsing
   , embed
   , run
-  , runM
   , raise_
   , Raise (..)
   , raise
@@ -98,7 +97,7 @@ import Polysemy.Internal.Sing (ListOfLength (listOfLength))
 -- than 'Embed', but also less flexible to interpret.
 --
 -- A 'Sem' can be interpreted as a pure value (via 'run') or as any
--- traditional 'Monad' (via 'runM' or 'Polysemy.runFinal').
+-- traditional 'Monad' (via 'Polysemy.runM').
 -- Each effect @E@ comes equipped with some interpreters of the form:
 --
 -- @
@@ -653,6 +652,10 @@ runM (Sem m) = m $ \z ->
       a <- unEmbed e
       pure $ ex $ a <$ s
 {-# INLINE runM #-}
+
+type family Append l r where
+  Append (a ': l) r = a ': (Append l r)
+  Append '[] r = r
 
 
 ------------------------------------------------------------------------------

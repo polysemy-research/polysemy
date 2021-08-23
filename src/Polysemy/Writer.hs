@@ -112,7 +112,7 @@ runLazyWriter = interpretViaLazyWriter $ \(Weaving e mkT lwr ex) ->
       let m' = lwr $ mkT id m
       Lazy.pass $ do
         ft <- m'
-        let f = maybe id fst (mkInspector ft)
+        let f = foldr (const . fst) id ft
         return (ex $ snd <$> ft, f)
 {-# INLINE runLazyWriter #-}
 

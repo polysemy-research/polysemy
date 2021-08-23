@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, NondecreasingIndentation #-}
 
 module Polysemy.Resource
   ( -- * Effect
@@ -23,7 +23,6 @@ import           Control.Monad
 import           Polysemy
 import           Polysemy.Final
 import           Polysemy.Interpretation
-
 
 ------------------------------------------------------------------------------
 -- | An effect capable of providing 'X.bracket' semantics. Interpreters for this
@@ -113,32 +112,35 @@ resourceToIOFinal :: Member (Final IO) r
                   => Sem (Resource ': r) a
                   -> Sem r a
 resourceToIOFinal = interpretFinal $ \case
-  Bracket alloc dealloc use -> do
-    a <- runS  alloc
-    d <- bindS dealloc
-    u <- bindS use
-    pure $ X.bracket a d u
+  Bracket alloc dealloc use ->
+    controlS' $ \lower -> X.mask $ \restore -> lower $ do
+      a <- runS alloc
+      tb <- liftWithS $ \lower' ->
+              restore (lower' (use a))
+            `X.onException`
+              lower' (dealloc a)
+      case traverse (const Nothing) tb of
+        Just tVoid -> do
+          _ <- runS (dealloc a)
+          restoreS tVoid
+        Nothing -> do
+          b <- restoreS tb
+          _ <- runS (dealloc a)
+          return b
 
-  BracketOnError alloc dealloc use -> do
-    ins <- getInspectorS
-    a <- runS  alloc
-    d <- bindS dealloc
-    u <- bindS use
-    pure $
-      X.bracketOnError
-        a
-        d
-        (\x -> do
-          result <- u x
-          case inspect ins result of
-            Just _ -> pure result
-            Nothing -> do
-              _ <- d x
-              pure result
-        )
-
+  BracketOnError alloc dealloc use ->
+    controlS' $ \lower -> X.mask $ \restore -> lower $ do
+      a <- runS alloc
+      tb <- liftWithS $ \lower' ->
+              restore (lower' (use a))
+            `X.onException`
+              lower' (dealloc a)
+      case traverse (const Nothing) tb of
+        Just tVoid -> do
+          _ <- runS (dealloc a)
+          restoreS tVoid
+        Nothing -> restoreS tb
 {-# INLINE resourceToIOFinal #-}
-
 
 ------------------------------------------------------------------------------
 -- | Run a 'Resource' effect in terms of 'X.bracket'.
@@ -152,27 +154,31 @@ lowerResource
        -- some combination of 'runM' and other interpreters composed via '.@'.
     -> Sem (Resource ': r) a
     -> Sem r a
-lowerResource finish = interpretH $ \case
-  Bracket alloc dealloc use -> do
-    a <- runT  alloc
-    d <- bindT dealloc
-    u <- bindT use
+lowerResource finish = interpretNew $ \case
+  Bracket alloc dealloc use -> controlH $ \lower ->
+    embed $ X.mask $ \restore -> do
+    tr <- finish $ lower $ runH alloc
+    case traverse (const Nothing) tr of
+      Just tVoid -> return tVoid
+      Nothing -> do
+        tu <- restore (finish $ lower $ restoreH tr >>= \r -> (,) r <$> runH (use r))
+                `X.onException` finish (lower (restoreH tr >>= runH . dealloc))
+        case traverse (const Nothing) tu of
+          Just tVoid -> tVoid <$ (finish $ lower $ restoreH tr >>= runH . dealloc)
+          Nothing -> finish $ lower $ restoreH tu >>= \(r, u) -> u <$ runH (dealloc r)
 
-    let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ lowerResource
-
-    embed $ X.bracket (run_it a) (run_it . d) (run_it . u)
-
-  BracketOnError alloc dealloc use -> do
-    a <- runT  alloc
-    d <- bindT dealloc
-    u <- bindT use
-
-    let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ lowerResource
-
-    embed $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
-{-# INLINE lowerResource #-}
+  BracketOnError alloc dealloc use -> controlH $ \lower ->
+    embed $ X.mask $ \restore -> do
+    tr <- finish $ lower $ runH $ alloc
+    case traverse (const Nothing) tr of
+      Just tVoid -> return tVoid
+      Nothing -> do
+        tu <- restore (finish $ lower $ restoreH tr >>= runH . use)
+                `X.onException` finish (lower (restoreH tr >>= runH . dealloc))
+        case traverse (const Nothing) tu of
+          Just tVoid -> tVoid <$ (finish $ lower $ restoreH tr >>= runH . dealloc)
+          Nothing    -> return tu
+{-#     INLINE lowerResource #-}
 {-# DEPRECATED lowerResource "Use 'resourceToIOFinal' instead" #-}
 
 
@@ -195,7 +201,8 @@ runResource = interpretNew $ \case
       _ <- runExposeH (dealloc r)
       restoreH ta
     else do
-    -- If "use" suceceeded, the we restore it and simply run dealloc as normal.
+      -- If "use" succeeded, then the effectful state is restored and dealloc is
+      -- run as normal.
       a <- restoreH ta
       _ <- runH (dealloc r)
       return a

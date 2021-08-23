@@ -27,6 +27,7 @@ module Polysemy.Internal.Union
   , inj
   , injUsing
   , injWeaving
+  , mkWeaving
   , weaken
 
   -- * Using Unions
@@ -358,12 +359,17 @@ weakenMid sl sm (Union pr e) = Union (injectMembership @right sl sm pr) e
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
 inj :: forall e r rInitial a. Member e r => e (Sem rInitial) a -> Union r (Sem rInitial) a
-inj e = injWeaving $ Weaving
+inj = injWeaving . mkWeaving
+{-# INLINE inj #-}
+
+
+mkWeaving :: forall e rInitial a. e (Sem rInitial) a -> Weaving e (Sem rInitial) a
+mkWeaving e = Weaving
   e
   (coerce :: (Sem rInitial x -> n x) -> Sem rInitial x -> IdentityT n x)
   (fmap Identity . runIdentityT)
   runIdentity
-{-# INLINE inj #-}
+{-# INLINE mkWeaving #-}
 
 
 ------------------------------------------------------------------------------

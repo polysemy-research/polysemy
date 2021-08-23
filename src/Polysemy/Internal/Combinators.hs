@@ -379,6 +379,8 @@ interceptUsingH pr f (Sem m) = Sem $ \k -> m $ \u ->
 -- | Rewrite an effect @e1@ directly into @e2@, and put it on the top of the
 -- effect stack.
 --
+-- @'rewrite' n = 'interpretNew' ('propagate' . n)@
+--
 -- @since 1.2.3.0
 rewrite
     :: forall e1 e2 r a

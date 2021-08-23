@@ -42,21 +42,16 @@ writerToEndoWriter
     => Sem (Writer o ': r) a
     -> Sem r a
 writerToEndoWriter = interpretNew $ \case
-      Tell o   -> tell (Endo (o <>))
-      Listen m -> do
-        (o, a) <- listen (runH m)
-        return (appEndo o mempty, a)
-      Pass m -> pass $ do
-        (f, a) <- runH m
-        let f' (Endo oo) = let !o' = f (oo mempty) in Endo (o' <>)
-        return (f', a)
+  Tell o   -> tell (Endo (o <>))
+  Listen m -> do
+    (o, a) <- listen (runH m)
+    return (appEndo o mempty, a)
+  Pass m -> pass $ do
+    (f, a) <- runH m
+    let f' (Endo oo) = let !o' = f (oo mempty) in Endo (o' <>)
+    return (f', a)
 {-# INLINE writerToEndoWriter #-}
 
-
--- TODO(KingoftheHomeless): Make this mess more palatable
---
--- 'interpretFinal' is too weak for our purposes, so we
--- use 'interpretH' + 'withWeavingToFinal'.
 
 ------------------------------------------------------------------------------
 -- | A variant of 'Polysemy.Writer.runWriterTVar' where an 'STM' action is
@@ -68,29 +63,27 @@ runWriterSTMAction :: forall o r a
                          -> Sem r a
 runWriterSTMAction write = interpretNew $ \case
   Tell o -> embedFinal $ atomically (write o)
-  Listen m -> do
-    -- Using 'withWeavingToFinal' instead of 'withStrategicToFinal'
-    -- here allows us to avoid using two additional 'embedFinal's in
-    -- order to create the TVars.
-    withWeavingToFinal $ \s wv _ -> mask $ \restore -> do
-      -- See below to understand how this works
-      tvar   <- newTVarIO mempty
-      switch <- newTVarIO False
-      fa     <-
-        restore (wv (runWriterSTMAction (writeListen tvar switch) (runH' m) <$ s))
-          `onException` commitListen tvar switch
-      o      <- commitListen tvar switch
-      return $ fmap (o, ) fa
-  Pass m -> do
-    withWeavingToFinal $ \s wv ins' -> mask $ \restore -> do
-      -- See below to understand how this works
-      tvar   <- newTVarIO mempty
-      switch <- newTVarIO False
-      t      <-
-        restore (wv (runWriterSTMAction (writePass tvar switch) (runH' m) <$ s))
-          `onException` commitPass tvar switch id
-      commitPass tvar switch $ maybe id fst (ins' t)
-      return $ fmap snd t
+  Listen m -> controlF $ \lower -> mask $ \restore -> do
+    -- See below to understand how this works
+    tvar   <- newTVarIO mempty
+    switch <- newTVarIO False
+    fa     <-
+        restore
+          (lower (runWriterSTMAction (writeListen tvar switch) (runH' m)))
+      `onException`
+        commitListen tvar switch
+    o      <- commitListen tvar switch
+    return $ fmap (o, ) fa
+  Pass m -> controlF $ \lower -> mask $ \restore -> do
+    -- See below to understand how this works
+    tvar   <- newTVarIO mempty
+    switch <- newTVarIO False
+    t      <-
+        restore (lower (runWriterSTMAction (writePass tvar switch) (runH' m)))
+      `onException`
+        commitPass tvar switch id
+    commitPass tvar switch $ foldr (const . fst) id t
+    return $ fmap snd t
 
   where
     {- KingoftheHomeless:
@@ -107,7 +100,7 @@ runWriterSTMAction write = interpretNew $ \case
       ('commitListen' serves only as a (likely unneeded)
       safety measure.)
 
-      'commitListen'/'commitPass' is protected by 'mask'+'onException'.
+      'commitListen''/'commitPass' is protected by 'mask'+'onException'.
       Combine this with the fact that the 'withWeavingToFinal' can't be
       interrupted by pure errors emitted by effects (since these will be
       represented as part of the functorial state), and we

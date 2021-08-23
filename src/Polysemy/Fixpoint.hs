@@ -64,13 +64,9 @@ fixpointToFinal :: forall m r a
                  . (Member (Final m) r, MonadFix m)
                 => Sem (Fixpoint ': r) a
                 -> Sem r a
-fixpointToFinal = interpretFinal @m $
-  \(Fixpoint f) -> do
-    f'  <- bindS f
-    s   <- getInitialStateS
-    ins <- getInspectorS
-    pure $ mfix $ \fa -> f' $
-      fromMaybe (bomb "fixpointToFinal") (inspect ins fa) <$ s
+fixpointToFinal = interpretFinal @m $ \case
+  Fixpoint f -> controlS $ \lower ->
+    mfix $ lower . f . foldr const (bomb "fixpointToFinal")
 {-# INLINE fixpointToFinal #-}
 
 ------------------------------------------------------------------------------

@@ -123,7 +123,7 @@ class MakeLaw e r where
 instance MakeLaw e '[] where
   mkLaw = Law run
 
-instance MakeLaw e '[Embed IO] where
+instance MakeLaw e '[Final IO, Embed IO] where
   mkLaw = LawIO runM
 
 
