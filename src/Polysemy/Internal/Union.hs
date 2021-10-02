@@ -366,7 +366,7 @@ inj = injWeaving . mkWeaving
 mkWeaving :: forall e rInitial a. e (Sem rInitial) a -> Weaving e (Sem rInitial) a
 mkWeaving e = Weaving
   e
-  (coerce :: (Sem rInitial x -> n x) -> Sem rInitial x -> IdentityT n x)
+  (\ nt -> coerce nt)
   (fmap Identity . runIdentityT)
   runIdentity
 {-# INLINE mkWeaving #-}
@@ -379,7 +379,7 @@ injUsing :: forall e r rInitial a.
   ElemOf e r -> e (Sem rInitial) a -> Union r (Sem rInitial) a
 injUsing pr e = Union pr $ Weaving
   e
-  (coerce :: (Sem rInitial x -> n x) -> Sem rInitial x -> IdentityT n x)
+  (\ nt -> coerce nt)
   (fmap Identity . runIdentityT)
   runIdentity
 {-# INLINE injUsing #-}

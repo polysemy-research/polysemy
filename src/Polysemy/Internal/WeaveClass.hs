@@ -12,18 +12,16 @@ module Polysemy.Internal.WeaveClass
   ) where
 
 import Control.Monad
-import Data.Coerce
-import Data.Functor.Identity
-import Data.Functor.Compose
-import Data.Tuple
 import Control.Monad.Trans
+import qualified Control.Monad.Trans.Except as E
 import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Maybe
-
-import qualified Control.Monad.Trans.Except as E
 import qualified Control.Monad.Trans.State.Lazy as LSt
 import qualified Control.Monad.Trans.State.Strict as SSt
 import qualified Control.Monad.Trans.Writer.Lazy as LWr
+import Data.Functor.Compose
+import Data.Functor.Identity
+import Data.Tuple
 
 -- | A variant of the classic @MonadTransControl@ class from @monad-control@,
 -- but with a small number of changes to make it more suitable for Polysemy's
@@ -106,7 +104,7 @@ mkInspector = foldr (const . Just) Nothing
 
 instance MonadTransWeave IdentityT where
   type StT IdentityT = Identity
-  hoistT = (coerce :: (m x -> n x) -> IdentityT m x -> IdentityT n x)
+  hoistT nt = IdentityT . nt . runIdentityT
 
   liftWith main = IdentityT (main (fmap Identity . runIdentityT))
 
@@ -117,7 +115,7 @@ instance MonadTransWeave IdentityT where
 instance MonadTransWeave (LSt.StateT s) where
   type StT (LSt.StateT s) = (,) s
 
-  hoistT = LSt.mapStateT
+  hoistT nt = LSt.mapStateT nt
 
   controlT main = LSt.StateT $ \s ->
     swap <$> main (\m -> swap <$> LSt.runStateT m s)
@@ -131,7 +129,7 @@ instance MonadTransWeave (LSt.StateT s) where
 instance MonadTransWeave (SSt.StateT s) where
   type StT (SSt.StateT s) = (,) s
 
-  hoistT = SSt.mapStateT
+  hoistT nt = SSt.mapStateT nt
 
   controlT main = SSt.StateT $ \s ->
     swap <$!> main (\m -> swap <$!> SSt.runStateT m s)
@@ -145,7 +143,7 @@ instance MonadTransWeave (SSt.StateT s) where
 instance MonadTransWeave (E.ExceptT e) where
   type StT (E.ExceptT e) = Either e
 
-  hoistT = E.mapExceptT
+  hoistT nt = E.mapExceptT nt
 
   controlT main = E.ExceptT (main E.runExceptT)
 
@@ -156,7 +154,7 @@ instance MonadTransWeave (E.ExceptT e) where
 instance Monoid w => MonadTransWeave (LWr.WriterT w) where
   type StT (LWr.WriterT w) = (,) w
 
-  hoistT = LWr.mapWriterT
+  hoistT nt = LWr.mapWriterT nt
 
   controlT main = LWr.WriterT (swap <$> main (fmap swap . LWr.runWriterT))
 
@@ -168,7 +166,7 @@ instance Monoid w => MonadTransWeave (LWr.WriterT w) where
 instance MonadTransWeave MaybeT where
   type StT MaybeT = Maybe
 
-  hoistT = mapMaybeT
+  hoistT nt = mapMaybeT nt
 
   controlT main = MaybeT (main runMaybeT)
 
