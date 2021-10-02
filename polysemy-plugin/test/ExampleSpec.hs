@@ -34,7 +34,7 @@ program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
 
 foo :: IO (Either CustomException ())
 foo =
-    runFinal
+    runM
   . embedToFinal @IO
   . resourceToIOFinal
   . errorToIOFinal @CustomException

@@ -31,7 +31,7 @@ runFinalState s sm = mfix $ \ ~(s', _) ->
 test1 :: (String, (Int, ()))
 test1 =
     runIdentity
-  . runFinal
+  . runM
   . fixpointToFinal @Identity
   . runOutputMonoid (show @Int)
   . runFinalState 1
@@ -45,7 +45,7 @@ test1 =
 test2 :: Either [Int] [Int]
 test2 =
     runIdentity
-  . runFinal
+  . runM
   . fixpointToFinal @Identity
   . runError
   $ mdo
@@ -55,7 +55,7 @@ test2 =
 test3 :: Either () (Int, Int)
 test3 =
     runIdentity
-  . runFinal
+  . runM
   . fixpointToFinal @Identity
   . runError
   . runLazyState @Int 1
@@ -67,7 +67,7 @@ test3 =
 test4 :: (Int, Either () Int)
 test4 =
     runIdentity
-  . runFinal
+  . runM
   . fixpointToFinal @Identity
   . runLazyState @Int 1
   . runError

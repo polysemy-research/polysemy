@@ -152,7 +152,7 @@ runTest = pure
         . runError @()
 
 runTest2
-  :: Sem '[Error (), Resource, State [Char], Trace, Output String, Embed IO] a
+  :: Sem '[Error (), Resource, State [Char], Trace, Output String, Final IO, Embed IO] a
   -> IO ([String], ([Char], Either () a))
 runTest2 = runM
          . ignoreOutput
@@ -162,10 +162,9 @@ runTest2 = runM
          . runError @()
 
 runTest3
-  :: Sem '[Error (), Resource, State [Char], Trace, Output String, Embed IO, Final IO] a
+  :: Sem '[Error (), Resource, State [Char], Trace, Output String, Final IO, Embed IO] a
   -> IO ([String], ([Char], Either () a))
-runTest3 = runFinal
-         . embedToFinal
+runTest3 = runM
          . outputToIOMonoid (:[])
          . traceToOutput
          . stateToIO ""
@@ -196,7 +195,7 @@ testAllThree name k m = do
 testTheIOTwo
     :: String
     -> (([String], ([Char], Either () a)) -> Expectation)
-    -> (Sem '[Error (), Resource, State [Char], Trace, Output String, Embed IO] a)
+    -> (Sem '[Error (), Resource, State [Char], Trace, Output String, Final IO, Embed IO] a)
     -> Spec
 testTheIOTwo name k m = do
   describe name $ do

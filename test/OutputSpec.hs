@@ -48,7 +48,7 @@ spec = parallel $ do
     it "should commit writes of asynced computations" $
       let io = do
             ref <- newIORef ""
-            runFinal
+            runM
               . embedToFinal @IO
               . asyncToIOFinal
               . runOutputMonoidIORef ref (show @Int)
@@ -62,7 +62,7 @@ spec = parallel $ do
     it "should commit writes of asynced computations" $
       let io = do
             ref <- newTVarIO ""
-            runFinal
+            runM
               . embedToFinal @IO
               . asyncToIOFinal
               . runOutputMonoidTVar ref (show @Int)

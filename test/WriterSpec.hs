@@ -57,7 +57,7 @@ test3 = run . runWriter $ listen (tell "and hear")
 test4 :: IO (String, String)
 test4 = do
   tvar <- newTVarIO ""
-  (listened, _) <- runFinal . asyncToIOFinal . runWriterTVar tvar $ do
+  (listened, _) <- runM . asyncToIOFinal . runWriterTVar tvar $ do
     tell "message "
     listen $ do
       tell "has been"
@@ -70,7 +70,7 @@ test5 :: IO (String, String)
 test5 = do
   tvar <- newTVarIO ""
   lock <- newEmptyMVar
-  (listened, a) <- runFinal . asyncToIOFinal . runWriterTVar tvar $ do
+  (listened, a) <- runM . asyncToIOFinal . runWriterTVar tvar $ do
     tell "message "
     listen $ do
       tell "has been"
@@ -153,8 +153,8 @@ spec = do
 
     it "should commit writes of asyncs spawned inside a listen block even if \
        \the block failed for any reason." $ do
-      Right end1 <- runFinal . errorToIOFinal $ test6
-      Right end2 <- runFinal . runError $ test6
+      Right end1 <- runM . raiseUnder . errorToIOFinal $ test6
+      Right end2 <- runM . raiseUnder . runError $ test6
       end1 `shouldBe` "message has been received"
       end2 `shouldBe` "message has been received"
 

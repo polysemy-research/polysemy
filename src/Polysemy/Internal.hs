@@ -642,23 +642,6 @@ run (Sem m) = runIdentity $ m absurdU
 
 
 ------------------------------------------------------------------------------
--- | Lower a 'Sem' containing only a single lifted 'Monad' into that
--- monad.
-runM :: Monad m => Sem '[Embed m] a -> m a
-runM (Sem m) = m $ \z ->
-  case extract z of
-    Weaving e _ lwr ex -> do
-      let s = mkInitState lwr
-      a <- unEmbed e
-      pure $ ex $ a <$ s
-{-# INLINE runM #-}
-
-type family Append l r where
-  Append (a ': l) r = a ': (Append l r)
-  Append '[] r = r
-
-
-------------------------------------------------------------------------------
 -- | Type synonym for interpreters that consume an effect without changing the
 -- return value. Offered for user convenience.
 --

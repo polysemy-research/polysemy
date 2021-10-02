@@ -16,5 +16,5 @@ spec = parallel $ do
       property $ prop_lawfulState @'[] $ fmap snd . runLazyState @Int 0
 
     it "stateToIO should pass the laws" $
-      property $ prop_lawfulState @'[Embed IO] $ fmap snd . stateToIO @Int 0
+      property $ prop_lawfulState @'[Final IO, Embed IO] $ fmap snd . stateToIO @Int 0
 

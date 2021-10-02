@@ -42,7 +42,7 @@ follow (Node _ ref) = embed $ readIORef ref
 test1 :: IO (Either Int (String, Int, Maybe Int))
 test1 = do
   ref <- newIORef "abra"
-  runFinal
+  runM
     . embedToFinal @IO
     . runStateIORef ref -- Order of these interpreters don't matter
     . errorToIOFinal
@@ -64,7 +64,7 @@ test1 = do
 
 test2 :: IO ([String], Either () ())
 test2 =
-    runFinal
+    runM
   . runTraceList
   . errorToIOFinal
   . asyncToIOFinal
