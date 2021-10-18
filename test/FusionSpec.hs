@@ -15,13 +15,14 @@ module FusionSpec where
 
 import qualified Control.Monad.Trans.Except as E
 import qualified Control.Monad.Trans.State.Strict as S
-import           Polysemy.Error
-import           Polysemy.Internal
-import           Polysemy.Internal.Combinators
-import           Polysemy.Internal.Union
-import           Polysemy.State
-import           Test.Hspec
-import           Test.Inspection
+import Polysemy.Error
+import Polysemy.Internal
+import Polysemy.Internal.Combinators
+import Polysemy.Internal.Interpretation (reinterpret)
+import Polysemy.Internal.Union
+import Polysemy.State
+import Test.Hspec
+import Test.Inspection
 
 
 isSuccess :: Result -> Bool

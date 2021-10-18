@@ -73,7 +73,7 @@ asyncToIO
     => Sem (Async ': r) a
     -> Sem r a
 asyncToIO m = withLowerToIO $ \lower _ -> lower $
-  interpretNew
+  interpretH
     ( \case
         Async ma -> liftWithH $ \lowerZ -> do
           fa  <- embed $ A.async $ lower $ lowerZ $ asyncToIO $ runH' ma
@@ -124,7 +124,7 @@ lowerAsync
        -- some combination of 'runM' and other interpreters composed via '.@'.
     -> Sem (Async ': r) a
     -> Sem r a
-lowerAsync lower m = interpretNew
+lowerAsync lower m = interpretH
     ( \case
         Async ma -> liftWithH $ \lowerZ -> do
           let ins = foldr (const . Just) Nothing

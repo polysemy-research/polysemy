@@ -41,7 +41,7 @@ writerToEndoWriter
     :: (Monoid o, Member (Writer (Endo o)) r)
     => Sem (Writer o ': r) a
     -> Sem r a
-writerToEndoWriter = interpretNew $ \case
+writerToEndoWriter = interpretH $ \case
   Tell o   -> tell (Endo (o <>))
   Listen m -> do
     (o, a) <- listen (runH m)
@@ -61,7 +61,7 @@ runWriterSTMAction :: forall o r a
                          => (o -> STM ())
                          -> Sem (Writer o ': r) a
                          -> Sem r a
-runWriterSTMAction write = interpretNew $ \case
+runWriterSTMAction write = interpretH $ \case
   Tell o -> embedFinal $ atomically (write o)
   Listen m -> controlF $ \lower -> mask $ \restore -> do
     -- See below to understand how this works

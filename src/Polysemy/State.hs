@@ -28,14 +28,14 @@ module Polysemy.State
   , hoistStateIntoStateT
   ) where
 
-import           Control.Monad.ST
+import Control.Monad.ST
 import qualified Control.Monad.Trans.State as S
-import           Data.IORef
-import           Data.STRef
-import           Polysemy
-import           Polysemy.Internal
-import           Polysemy.Internal.Combinators
-import           Polysemy.Internal.Union
+import Data.IORef
+import Data.STRef
+import Polysemy
+import Polysemy.Internal
+import Polysemy.Internal.Combinators
+import Polysemy.Internal.Union
 
 
 ------------------------------------------------------------------------------
@@ -254,6 +254,7 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
 {-# INLINE hoistStateIntoStateT #-}
 
 
+-- TODO these don't fire anymore, unless `reinterpret` is inlined later
 {-# RULES "runState/reinterpret"
    forall s e (f :: forall m x. e m x -> Sem (State s ': r) x).
      runState s (reinterpret f e) = stateful (\x s' -> runState s' $ f x) s e

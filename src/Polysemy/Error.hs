@@ -216,7 +216,7 @@ mapError
   => (e1 -> e2)
   -> Sem (Error e1 ': r) a
   -> Sem r a
-mapError f = interpretNew $ \case
+mapError f = interpretH $ \case
   Throw e -> throw $ f e
   Catch action handler ->
     runError (runH' action) >>= \case
@@ -302,7 +302,7 @@ runErrorAsExc
     => (∀ x. Sem r x -> IO x)
     -> Sem (Error e ': r) a
     -> Sem r a
-runErrorAsExc lower = interpretNew $ \case
+runErrorAsExc lower = interpretH $ \case
   Throw e -> embed $ X.throwIO $ WrappedExc e
   Catch main handle -> controlH $ \lowerZ -> do
     let runIt = lower . lowerZ . runH

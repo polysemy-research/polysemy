@@ -109,13 +109,6 @@ module Polysemy
 
     -- * Combinators for Interpreting Higher-Order Effects
   , EffHandlerH
-  , interpretNew
-  , interceptNew
-  , reinterpretNew
-  , reinterpret2New
-  , reinterpret3New
-
-    -- * Combinators for Interpreting Higher-Order Effects using the 'Tactical' enviroment
   , interpretH
   , interceptH
   , reinterpretH
@@ -134,38 +127,18 @@ module Polysemy
   , (.@@)
 
     -- * 'RunH'
-    -- | When interpreting higher-order effects using 'interpretNew'
+    -- | When interpreting higher-order effects using 'interpretH'
     -- and friends, you can't execute higher-order \"thunks\" given by
     -- the interpreted effect directly. Instead, these must be executed
     -- using 'runH' or 'runH''.
     --
     -- These functions are enough for most purposes when using
-    -- 'interpretNew'. However, "Polysemy.Interpretation" offers
+    -- 'interpretH'. However, "Polysemy.Interpretation" offers
     -- additional, more complicated features which are occassionally
     -- needed.
   , RunH
   , runH
   , runH'
-
-    -- * Tactics
-    -- | Higher-order effects need to explicitly thread /other effects'/ state
-    -- through themselves. Tactics are a domain-specific language for describing
-    -- exactly how this threading should take place.
-    --
-    -- The first computation to be run should use 'runT', and subsequent
-    -- computations /in the same environment/ should use 'bindT'. Any
-    -- first-order constructors which appear in a higher-order context may use
-    -- 'pureT' to satisfy the typechecker.
-  , Tactical
-  , WithTactics
-  , getInitialStateT
-  , pureT
-  , runTSimple
-  , bindTSimple
-  , runT
-  , bindT
-  , getInspectorT
-  , Inspector (..)
 
   ) where
 
@@ -175,5 +148,4 @@ import Polysemy.Internal.Combinators
 import Polysemy.Internal.Interpretation
 import Polysemy.Internal.Forklift
 import Polysemy.Internal.Kind
-import Polysemy.Internal.Tactics
 import Polysemy.Internal.TH.Effect

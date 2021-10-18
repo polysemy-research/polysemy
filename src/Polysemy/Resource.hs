@@ -154,7 +154,7 @@ lowerResource
        -- some combination of 'runM' and other interpreters composed via '.@'.
     -> Sem (Resource ': r) a
     -> Sem r a
-lowerResource finish = interpretNew $ \case
+lowerResource finish = interpretH $ \case
   Bracket alloc dealloc use -> controlH $ \lower ->
     embed $ X.mask $ \restore -> do
     tr <- finish $ lower $ runH alloc
@@ -190,7 +190,7 @@ runResource
     :: ∀ r a
      . Sem (Resource ': r) a
     -> Sem r a
-runResource = interpretNew $ \case
+runResource = interpretH $ \case
   Bracket alloc dealloc use -> do
     r  <- runH alloc
     ta <- runExposeH (use r)
@@ -239,39 +239,41 @@ resourceToIO
      . Member (Embed IO) r
     => Sem (Resource ': r) a
     -> Sem r a
-resourceToIO = interpretH $ \case
-  Bracket a b c -> do
-    ma <- runT a
-    mb <- bindT b
-    mc <- bindT c
+resourceToIO =
+  undefined
+  -- interpretH $ \case
+  -- Bracket a b c -> do
+  --   ma <- runT a
+  --   mb <- bindT b
+  --   mc <- bindT c
 
-    withLowerToIO $ \lower finish -> do
-      let done :: Sem (Resource ': r) x -> IO x
-          done = lower . raise . resourceToIO
-      X.bracket
-          (done ma)
-          (\x -> done (mb x) >> finish)
-          (done . mc)
+  --   withLowerToIO $ \lower finish -> do
+  --     let done :: Sem (Resource ': r) x -> IO x
+  --         done = lower . raise . resourceToIO
+  --     X.bracket
+  --         (done ma)
+  --         (\x -> done (mb x) >> finish)
+  --         (done . mc)
 
-  BracketOnError a b c -> do
-    ins <- getInspectorT
-    ma <- runT a
-    mb <- bindT b
-    mc <- bindT c
+  -- BracketOnError a b c -> do
+  --   ins <- getInspectorT
+  --   ma <- runT a
+  --   mb <- bindT b
+  --   mc <- bindT c
 
-    withLowerToIO $ \lower finish -> do
-      let done :: Sem (Resource ': r) x -> IO x
-          done = lower . raise . resourceToIO
-      X.bracketOnError
-          (done ma)
-          (\x -> done (mb x) >> finish)
-          (\x -> do
-            result <- done $ mc x
-            case inspect ins result of
-              Just _ -> pure result
-              Nothing -> do
-                _ <- done $ mb x
-                pure result
-          )
+  --   withLowerToIO $ \lower finish -> do
+  --     let done :: Sem (Resource ': r) x -> IO x
+  --         done = lower . raise . resourceToIO
+  --     X.bracketOnError
+  --         (done ma)
+  --         (\x -> done (mb x) >> finish)
+  --         (\x -> do
+  --           result <- done $ mc x
+  --           case inspect ins result of
+  --             Just _ -> pure result
+  --             Nothing -> do
+  --               _ <- done $ mb x
+  --               pure result
+  --         )
 {-# INLINE resourceToIO #-}
 

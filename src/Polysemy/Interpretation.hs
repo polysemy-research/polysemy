@@ -1,4 +1,4 @@
--- | Tools for more advanced usages of 'Polysemy.interpretNew'
+-- | Tools for more advanced usages of 'Polysemy.interpretH'
 module Polysemy.Interpretation
   ( -- * Manipuluating effectful state
     runExposeH

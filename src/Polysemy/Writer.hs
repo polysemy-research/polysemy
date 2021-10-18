@@ -67,7 +67,7 @@ runWriter
     :: Monoid o
     => Sem (Writer o ': r) a
     -> Sem r (o, a)
-runWriter = runState mempty . reinterpretNew
+runWriter = runState mempty . reinterpretH
   (\case
       Tell o -> modify' (<> o)
       Listen m -> do

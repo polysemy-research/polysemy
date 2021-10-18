@@ -9,7 +9,6 @@ module Polysemy.Fixpoint
   ) where
 
 import Control.Monad.Fix
-import Data.Maybe
 
 import Polysemy
 import Polysemy.Final
@@ -68,46 +67,3 @@ fixpointToFinal = interpretFinal @m $ \case
   Fixpoint f -> controlS $ \lower ->
     mfix $ lower . f . foldr const (bomb "fixpointToFinal")
 {-# INLINE fixpointToFinal #-}
-
-------------------------------------------------------------------------------
--- | Run a 'Fixpoint' effect purely.
---
--- __Note__: 'runFixpoint' is subject to the same caveats as 'fixpointToFinal'.
-runFixpoint
-    :: (∀ x. Sem r x -> x)
-    -> Sem (Fixpoint ': r) a
-    -> Sem r a
-runFixpoint lower = interpretH $ \case
-  Fixpoint mf -> do
-    c   <- bindT mf
-    s   <- getInitialStateT
-    ins <- getInspectorT
-    pure $ fix $ \fa ->
-      lower . runFixpoint lower . c $
-        fromMaybe (bomb "runFixpoint") (inspect ins fa) <$ s
-{-# INLINE runFixpoint #-}
-{-# DEPRECATED runFixpoint "Use 'fixpointToFinal' together with \
-                           \'Data.Functor.Identity.Identity' instead" #-}
-
-
-------------------------------------------------------------------------------
--- | Run a 'Fixpoint' effect in terms of an underlying 'MonadFix' instance.
---
--- __Note__: 'runFixpointM' is subject to the same caveats as 'fixpointToFinal'.
-runFixpointM
-    :: ( MonadFix m
-       , Member (Embed m) r
-       )
-    => (∀ x. Sem r x -> m x)
-    -> Sem (Fixpoint ': r) a
-    -> Sem r a
-runFixpointM lower = interpretH $ \case
-  Fixpoint mf -> do
-    c   <- bindT mf
-    s   <- getInitialStateT
-    ins <- getInspectorT
-    embed $ mfix $ \fa ->
-      lower . runFixpointM lower . c $
-        fromMaybe (bomb "runFixpointM") (inspect ins fa) <$ s
-{-# INLINE runFixpointM #-}
-{-# DEPRECATED runFixpointM "Use 'fixpointToFinal' instead" #-}

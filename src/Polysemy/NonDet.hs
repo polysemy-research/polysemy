@@ -59,7 +59,7 @@ nonDetToError :: Member (Error e) r
               => e
               -> Sem (NonDet ': r) a
               -> Sem r a
-nonDetToError (e :: e) = interpretNew $ \case
+nonDetToError (e :: e) = interpretH $ \case
   Empty -> throw e
   Choose left right -> do
     runH left `catch` \(_ :: e) -> runH right

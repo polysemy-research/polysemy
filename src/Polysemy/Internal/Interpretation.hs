@@ -2,11 +2,12 @@
 {-# OPTIONS_HADDOCK not-home #-}
 module Polysemy.Internal.Interpretation where
 
-import           Control.Monad
-import           Polysemy.Internal
-import           Polysemy.Internal.WeaveClass
-import           Polysemy.Internal.Union
-import           Polysemy.Internal.Kind
+import Control.Monad
+
+import Polysemy.Internal
+import Polysemy.Internal.CustomErrors (FirstOrder)
+import Polysemy.Internal.Kind
+import Polysemy.Internal.Union
 
 
 newtype Processor z t r = Processor { getProcessor :: forall x. z x -> Sem r (t x) }
@@ -192,7 +193,7 @@ type EffHandlerH e r =
 --
 -- This is significantly easier to use than 'interpretH' and its corresponding
 -- 'Tactical' environment.
--- Because of this, 'interpretNew' and friends are /heavily recommended/ over
+-- Because of this, 'interpretH' and friends are /heavily recommended/ over
 -- 'interpretH' and friends /unless/ you need the extra power that the 'Tactical'
 -- environment provides -- the ability to inspect and manipulate the underlying
 -- effectful state.
@@ -205,7 +206,7 @@ type EffHandlerH e r =
 --   Bind :: m a -> (a -> m b) -> Bind m b
 --
 -- runBind :: Sem (Bind ': r) a -> Sem r a
--- runBind = 'interpretNew' \\case
+-- runBind = 'interpretH' \\case
 --   Bind ma f -> do
 --     a <- 'runH' ma
 --     b <- 'runH' (f a)
@@ -213,13 +214,13 @@ type EffHandlerH e r =
 -- @
 --
 -- @since TODO
-interpretNew :: forall e r a
+interpretH :: forall e r a
               . EffHandlerH e r
              -> Sem (e ': r) a
              -> Sem r a
-interpretNew h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
+interpretH h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
   sem $ \u -> case decomp u of
-    Left g -> k $ hoist (interpretNew h) g
+    Left g -> k $ hoist (interpretH h) g
     Right (Weaving e
                  (mkT :: forall n x
                        . Monad n
@@ -237,7 +238,7 @@ interpretNew h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
             let run_it = fmap (ex' . (<$ mkInitState lwr'))
             case eff of
               RunH _ -> errorWithoutStackTrace "RunH not commonly handled"
-              WithInterpreterH main -> run_it $ return $ main $ interpretNew h
+              WithInterpreterH main -> run_it $ return $ main $ interpretH h
               WithProcessorH main -> run_it $
                 liftWith $ \lower -> return $ main (lower . mkT id)
               RestoreH t -> run_it $
@@ -251,7 +252,7 @@ interpretNew h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
             Right wav@(Weaving eff _ lwr' ex') -> do
               let run_it = (ex' . (<$ mkInitState lwr'))
               case eff of
-                RunH z -> run_it <$> mkT (usingSem k . interpretNew h) z
+                RunH z -> run_it <$> mkT (usingSem k . interpretH h) z
                 _      -> commonHandler wav
           {-# INLINE go1 #-}
 
@@ -261,12 +262,26 @@ interpretNew h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
             Right wav@(Weaving eff _ lwr' ex') -> do
               let run_it = (ex' . (<$ mkInitState lwr'))
               case eff of
-                RunH z -> run_it <$> mkT (interpretNew h) z
+                RunH z -> run_it <$> mkT (interpretH h) z
                 _      -> commonHandler wav
           {-# NOINLINE go2 #-}
       in
         fmap ex $ lwr $ go1 (h e)
-{-# INLINE interpretNew #-}
+{-# INLINE interpretH #-}
+
+------------------------------------------------------------------------------
+-- | The simplest way to produce an effect handler. Interprets an effect @e@ by
+-- transforming it into other effects inside of @r@.
+--
+-- @since TODO
+interpret :: forall e r a
+              . FirstOrder e "interpret"
+             => (∀ rInitial x. e (Sem rInitial) x -> Sem r x)
+             -> Sem (e ': r) a
+             -> Sem r a
+interpret h =
+  interpretH (raise . h)
+{-# INLINE interpret #-}
 
 -- TODO (KingoftheHomeless): If it matters, optimize the definitions
 -- below
@@ -274,71 +289,133 @@ interpretNew h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but for higher-order effects.
 --
--- This is /heavily recommended/ over 'reinterpretH' unless you need
--- the extra power that the 'Tactical' environment provides.
---
 -- @since TODO
-reinterpretNew :: forall e1 e2 r a
+reinterpretH :: forall e1 e2 r a
                 . EffHandlerH e1 (e2 ': r)
                -> Sem (e1 ': r) a
                -> Sem (e2 ': r) a
-reinterpretNew h = interpretNew h . raiseUnder
-{-# INLINE reinterpretNew #-}
+reinterpretH h = interpretH h . raiseUnder
+{-# INLINE reinterpretH #-}
+
+------------------------------------------------------------------------------
+-- | Like 'interpret', but instead of removing the effect @e@, reencodes it in
+-- some new effect @f@. This function will fuse when followed by
+-- 'Polysemy.State.runState', meaning it's free to 'reinterpret' in terms of
+-- the 'Polysemy.State.State' effect and immediately run it.
+--
+-- @since TODO
+reinterpret :: forall e1 e2 r a
+              . FirstOrder e1 "reinterpret"
+             => (∀ rInitial x. e1 (Sem rInitial) x -> Sem (e2 ': r) x)
+             -> Sem (e1 ': r) a
+             -> Sem (e2 ': r) a
+reinterpret h =
+  reinterpretH (raise . h)
+{-# INLINE reinterpret #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret2', but for higher-order effects.
 --
--- This is /heavily recommended/ over 'reinterpret2H' unless you need
--- the extra power that the 'Tactical' environment provides.
---
 -- @since TODO
-reinterpret2New :: forall e1 e2 e3 r a
+reinterpret2H :: forall e1 e2 e3 r a
                  . EffHandlerH e1 (e2 ': e3 ': r)
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': r) a
-reinterpret2New h = interpretNew h . raiseUnder2
-{-# INLINE reinterpret2New #-}
+reinterpret2H h = interpretH h . raiseUnder2
+{-# INLINE reinterpret2H #-}
+
+------------------------------------------------------------------------------
+-- | Like 'reinterpret', but introduces /two/ intermediary effects.
+--
+-- @since TODO
+reinterpret2 :: forall e1 e2 e3 r a
+              . FirstOrder e1 "reinterpret2"
+             => (∀ rInitial x. e1 (Sem rInitial) x -> Sem (e2 ': e3 ': r) x)
+             -> Sem (e1 ': r) a
+             -> Sem (e2 ': e3 ': r) a
+reinterpret2 h =
+  reinterpret2H (raise . h)
+{-# INLINE reinterpret2 #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret3', but for higher-order effects.
 --
--- This is /heavily recommended/ over 'reinterpret3H' unless you need
--- the extra power that the 'Tactical' environment provides.
---
 -- @since TODO
-reinterpret3New :: forall e1 e2 e3 e4 r a
+reinterpret3H :: forall e1 e2 e3 e4 r a
                  . EffHandlerH e1 (e2 ': e3 ': e4 ': r)
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': e4 ': r) a
-reinterpret3New h = interpretNew h . raiseUnder3
-{-# INLINE reinterpret3New #-}
+reinterpret3H h = interpretH h . raiseUnder3
+{-# INLINE reinterpret3H #-}
+
+------------------------------------------------------------------------------
+-- | Like 'reinterpret', but introduces /three/ intermediary effects.
+--
+-- @since TODO
+reinterpret3 :: forall e1 e2 e3 e4 r a
+              . FirstOrder e1 "reinterpret3"
+             => (∀ rInitial x. e1 (Sem rInitial) x -> Sem (e2 ': e3 ': e4 ': r) x)
+             -> Sem (e1 ': r) a
+             -> Sem (e2 ': e3 ': e4 ': r) a
+reinterpret3 h =
+  reinterpret3H (raise . h)
+{-# INLINE reinterpret3 #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'intercept', but for higher-order effects.
 --
--- This is /heavily recommended/ over 'interceptH' unless you need
--- the extra power that the 'Tactical' environment provides.
---
 -- @since TODO
-interceptNew :: forall e r a
+intercept :: forall e r a
               . Member e r
              => EffHandlerH e r
              -> Sem r a
              -> Sem r a
-interceptNew h = interpretNew h . expose
-{-# INLINE interceptNew #-}
+intercept h = interpretH h . expose
+{-# INLINE intercept #-}
+
+------------------------------------------------------------------------------
+-- | Like 'interpret', but instead of handling the effect, allows responding to
+-- the effect while leaving it unhandled. This allows you, for example, to
+-- intercept other effects and insert logic around them.
+--
+-- @since TODO
+interceptH :: forall e r a
+              . FirstOrder e "intercept"
+             => Member e r
+             => (∀ rInitial x. e (Sem rInitial) x -> Sem r x)
+             -> Sem r a
+             -> Sem r a
+interceptH h =
+  intercept (raise . h)
+{-# INLINE interceptH #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'interceptUsing', but for higher-order effects.
 --
--- This is /heavily recommended/ over 'interceptUsingH' unless you need
--- the extra power that the 'Tactical' environment provides.
---
 -- @since TODO
-interceptUsingNew :: forall e r a
+interceptUsing :: forall e r a
                    . ElemOf e r
                   -> EffHandlerH e r
                   -> Sem r a
                   -> Sem r a
-interceptUsingNew pr h = interpretNew h . exposeUsing pr
-{-# INLINE interceptUsingNew #-}
+interceptUsing pr h = interpretH h . exposeUsing pr
+{-# INLINE interceptUsing #-}
+
+------------------------------------------------------------------------------
+-- | A variant of 'intercept' that accepts an explicit proof that the effect
+-- is in the effect stack rather then requiring a 'Member' constraint.
+--
+-- This is useful in conjunction with 'Polysemy.Membership.tryMembership'
+-- in order to conditionally perform 'intercept'.
+--
+-- @since TODO
+interceptUsingH :: forall e r a .
+                     FirstOrder e "interceptUsing"
+                  => Member e r
+                  => ElemOf e r
+                  -> (∀ rInitial x. e (Sem rInitial) x -> Sem r x)
+                  -> Sem r a
+                  -> Sem r a
+interceptUsingH pr h =
+  interceptUsing pr (raise . h)
+{-# INLINE interceptUsingH #-}

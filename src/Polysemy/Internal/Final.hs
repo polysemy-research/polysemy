@@ -44,9 +44,9 @@ module Polysemy.Internal.Final
 
 import Control.Monad.Trans
 import Polysemy.Internal
-import Polysemy.Internal.Combinators
 import Polysemy.Internal.Union
 import Polysemy.Internal.TH.Effect
+import Polysemy.Internal.Interpretation (interpret)
 
 -----------------------------------------------------------------------------
 -- | An effect for embedding higher-order actions in the final target monad
