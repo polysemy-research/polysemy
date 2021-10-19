@@ -8,16 +8,21 @@ import Polysemy
 import Polysemy.Async
 import Polysemy.State
 import Polysemy.Trace
+import Polysemy.Output
 import Test.Hspec
+import Data.IORef
 
 
 spec :: Spec
 spec = describe "async" $ do
   it "should thread state and not lock" $ do
-    (ts, (s, r)) <- runM
-                  . runTraceList
-                  . runState "hello"
-                  . asyncToIOFinal $ do
+    s_ref <- newIORef "hello"
+    ts_ref <- newIORef []
+    r <- runM
+            . runOutputSem @String (\x -> embed $ modifyIORef ts_ref (x :))
+            . traceToOutput
+            . runStateIORef s_ref
+            . asyncToIOFinal $ do
       let message :: Member Trace r => Int -> String -> Sem r ()
           message n msg = trace $ mconcat
             [ show n, "> ", msg ]
@@ -41,6 +46,8 @@ spec = describe "async" $ do
           embed $ putMVar lock2 ()
 
       await a1 <* put "final"
+    s <- readIORef s_ref
+    ts <- fmap reverse $ readIORef ts_ref
 
     ts `shouldContain` ["1> hello", "2> olleh", "1> pong"]
     s `shouldBe` "final"
