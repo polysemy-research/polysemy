@@ -15,7 +15,6 @@ module Polysemy.Resource
   , runResource
   , resourceToIOFinal
   , resourceToIO
-  , lowerResource
   ) where
 
 import qualified Control.Exception as X
@@ -141,45 +140,6 @@ resourceToIOFinal = interpretFinal $ \case
           restoreS tVoid
         Nothing -> restoreS tb
 {-# INLINE resourceToIOFinal #-}
-
-------------------------------------------------------------------------------
--- | Run a 'Resource' effect in terms of 'X.bracket'.
---
--- @since 1.0.0.0
-lowerResource
-    :: ∀ r a
-     . Member (Embed IO) r
-    => (∀ x. Sem r x -> IO x)
-       -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is likely
-       -- some combination of 'runM' and other interpreters composed via '.@'.
-    -> Sem (Resource ': r) a
-    -> Sem r a
-lowerResource finish = interpretH $ \case
-  Bracket alloc dealloc use -> controlH $ \lower ->
-    embed $ X.mask $ \restore -> do
-    tr <- finish $ lower $ runH alloc
-    case traverse (const Nothing) tr of
-      Just tVoid -> return tVoid
-      Nothing -> do
-        tu <- restore (finish $ lower $ restoreH tr >>= \r -> (,) r <$> runH (use r))
-                `X.onException` finish (lower (restoreH tr >>= runH . dealloc))
-        case traverse (const Nothing) tu of
-          Just tVoid -> tVoid <$ (finish $ lower $ restoreH tr >>= runH . dealloc)
-          Nothing -> finish $ lower $ restoreH tu >>= \(r, u) -> u <$ runH (dealloc r)
-
-  BracketOnError alloc dealloc use -> controlH $ \lower ->
-    embed $ X.mask $ \restore -> do
-    tr <- finish $ lower $ runH $ alloc
-    case traverse (const Nothing) tr of
-      Just tVoid -> return tVoid
-      Nothing -> do
-        tu <- restore (finish $ lower $ restoreH tr >>= runH . use)
-                `X.onException` finish (lower (restoreH tr >>= runH . dealloc))
-        case traverse (const Nothing) tu of
-          Just tVoid -> tVoid <$ (finish $ lower $ restoreH tr >>= runH . dealloc)
-          Nothing    -> return tu
-{-#     INLINE lowerResource #-}
-{-# DEPRECATED lowerResource "Use 'resourceToIOFinal' instead" #-}
 
 
 ------------------------------------------------------------------------------

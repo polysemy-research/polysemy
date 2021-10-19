@@ -23,7 +23,6 @@ module Polysemy.Error
   , runError
   , mapError
   , errorToIOFinal
-  , lowerError
   ) where
 
 import qualified Control.Exception as X
@@ -270,42 +269,3 @@ runErrorAsExcFinal = interpretFinal $ \case
       lower (h e)
 {-# INLINE runErrorAsExcFinal #-}
 
-------------------------------------------------------------------------------
--- | Run an 'Error' effect as an 'IO' 'X.Exception'. This interpretation is
--- significantly faster than 'runError', at the cost of being less flexible.
---
--- @since 1.0.0.0
-lowerError
-    :: ( Typeable e
-       , Member (Embed IO) r
-       )
-    => (∀ x. Sem r x -> IO x)
-       -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is
-       -- likely some combination of 'runM' and other interpreters composed via
-       -- '.@'.
-    -> Sem (Error e ': r) a
-    -> Sem r (Either e a)
-lowerError lower
-    = embed
-    . fmap (first unwrapExc)
-    . X.try
-    . (lower .@ runErrorAsExc)
-{-# INLINE lowerError #-}
-{-# DEPRECATED lowerError "Use 'errorToIOFinal' instead" #-}
-
-
--- TODO(sandy): Can we use the new withLowerToIO machinery for this?
-runErrorAsExc
-    :: forall e r a. ( Typeable e
-       , Member (Embed IO) r
-       )
-    => (∀ x. Sem r x -> IO x)
-    -> Sem (Error e ': r) a
-    -> Sem r a
-runErrorAsExc lower = interpretH $ \case
-  Throw e -> embed $ X.throwIO $ WrappedExc e
-  Catch main handle -> controlH $ \lowerZ -> do
-    let runIt = lower . lowerZ . runH
-    embed $ X.catch (runIt main) $ \(se :: WrappedExc e) ->
-      runIt $ handle $ unwrapExc se
-{-# INLINE runErrorAsExc #-}

@@ -15,7 +15,6 @@ module Polysemy.Async
     -- * Interpretations
   , asyncToIO
   , asyncToIOFinal
-  , lowerAsync
   ) where
 
 import qualified Control.Concurrent.Async as A
@@ -113,26 +112,3 @@ asyncToIOFinal = interpretFinal @IO $ \case
   Cancel a -> embed (A.cancel a)
 {-# INLINE asyncToIOFinal #-}
 
-------------------------------------------------------------------------------
--- | Run an 'Async' effect in terms of 'A.async'.
---
--- @since 1.0.0.0
-lowerAsync
-    :: Member (Embed IO) r
-    => (forall x. Sem r x -> IO x)
-       -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is likely
-       -- some combination of 'runM' and other interpreters composed via '.@'.
-    -> Sem (Async ': r) a
-    -> Sem r a
-lowerAsync lower m = interpretH
-    ( \case
-        Async ma -> liftWithH $ \lowerZ -> do
-          let ins = foldr (const . Just) Nothing
-          fa  <- embed $ A.async $ lower $ lowerZ $ runH ma
-          return $ ins <$> fa
-
-        Await a -> embed (A.wait a)
-        Cancel a -> embed (A.cancel a)
-    )  m
-{-# INLINE lowerAsync #-}
-{-# DEPRECATED lowerAsync "Use 'asyncToIOFinal' instead" #-}

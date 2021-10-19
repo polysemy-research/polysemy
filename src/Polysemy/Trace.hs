@@ -11,7 +11,6 @@ module Polysemy.Trace
   , traceToHandle
   , traceToStdout
   , traceToStderr
-  , traceToIO
   , runTraceList
   , ignoreTrace
   , traceToOutput
@@ -59,16 +58,6 @@ traceToStdout = traceToHandle stdout
 traceToStderr :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
 traceToStderr = traceToHandle stderr
 {-# INLINE traceToStderr #-}
-
-
-------------------------------------------------------------------------------
--- | Run a 'Trace' effect by printing the messages to stdout.
---
--- @since 1.0.0.0
-traceToIO :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
-traceToIO = traceToStdout
-{-# INLINE traceToIO #-}
-{-# deprecated traceToIO "Use traceToStdout" #-}
 
 
 ------------------------------------------------------------------------------
