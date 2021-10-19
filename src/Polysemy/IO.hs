@@ -3,14 +3,11 @@
 module Polysemy.IO
   ( -- * Interpretations
     embedToMonadIO
-  , lowerEmbedded
   ) where
 
 import Control.Monad.IO.Class
 import Polysemy
 import Polysemy.Embed
-import Polysemy.Internal
-import Polysemy.Internal.Union
 
 
 ------------------------------------------------------------------------------
@@ -44,29 +41,3 @@ embedToMonadIO
 embedToMonadIO = runEmbedded $ liftIO @m
 {-# INLINE embedToMonadIO #-}
 
-
-------------------------------------------------------------------------------
--- | Given some @'MonadIO' m@, interpret all @'Embed' m@ actions in that monad
--- at once. This is useful for interpreting effects like databases, which use
--- their own monad for describing actions.
---
--- This function creates a thread, and so should be compiled with @-threaded@.
---
--- @since 1.0.0.0
-lowerEmbedded
-    :: ( MonadIO m
-       , Member (Embed IO) r
-       )
-    => (forall x. m x -> IO x)  -- ^ The means of running this monad.
-    -> Sem (Embed m ': r) a
-    -> Sem r a
-lowerEmbedded run_m (Sem m) = withLowerToIO $ \lower _ ->
-  run_m $ m $ \u ->
-    case decomp u of
-      Left x -> liftIO
-              . lower
-              . liftSem
-              $ hoist (lowerEmbedded run_m) x
-
-      Right (Weaving (Embed wd) _ lwr ex) ->
-        ex <$> ((<$ mkInitState lwr) <$> wd)

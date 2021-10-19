@@ -13,14 +13,12 @@ module Polysemy.Async
   , sequenceConcurrently
 
     -- * Interpretations
-  , asyncToIO
   , asyncToIOFinal
   ) where
 
 import qualified Control.Concurrent.Async as A
 import           Polysemy
 import           Polysemy.Final
-import           Polysemy.Interpretation
 
 
 
@@ -48,41 +46,6 @@ sequenceConcurrently :: forall t r a. (Traversable t, Member Async r) =>
 sequenceConcurrently t = traverse async t >>= traverse await
 {-# INLINABLE sequenceConcurrently #-}
 
-------------------------------------------------------------------------------
--- | A more flexible --- though less performant ---
--- version of 'asyncToIOFinal'.
---
--- This function is capable of running 'Async' effects anywhere within an
--- effect stack, without relying on 'Final' to lower it into 'IO'.
--- Notably, this means that 'Polysemy.State.State' effects will be consistent
--- in the presence of 'Async'.
---
--- 'asyncToIO' is __unsafe__ if you're using 'await' inside higher-order actions
--- of other effects interpreted after 'Async'.
--- See <https://github.com/polysemy-research/polysemy/issues/205 Issue #205>.
---
--- Prefer 'asyncToIOFinal' unless you need to run pure, stateful interpreters
--- after the interpreter for 'Async'.
--- (Pure interpreters are interpreters that aren't expressed in terms of
--- another effect or monad; for example, 'Polysemy.State.runState'.)
---
--- @since 1.0.0.0
-asyncToIO
-    :: Member (Embed IO) r
-    => Sem (Async ': r) a
-    -> Sem r a
-asyncToIO m = withLowerToIO $ \lower _ -> lower $
-  interpretH
-    ( \case
-        Async ma -> liftWithH $ \lowerZ -> do
-          fa  <- embed $ A.async $ lower $ lowerZ $ asyncToIO $ runH' ma
-          let ins = foldr (const . Just) Nothing
-          return (fmap ins fa)
-
-        Await a -> embed (A.wait a)
-        Cancel a -> embed (A.cancel a)
-    )  m
-{-# INLINE asyncToIO #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Async' effect in terms of 'A.async' through final 'IO'.

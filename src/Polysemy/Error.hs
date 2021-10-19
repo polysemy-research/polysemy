@@ -28,11 +28,9 @@ module Polysemy.Error
 import qualified Control.Exception as X
 import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
-import           Data.Bifunctor (first)
 import           Data.Typeable
 import           Polysemy
 import           Polysemy.Final
-import           Polysemy.Interpretation
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
 
@@ -224,7 +222,7 @@ mapError f = interpretH $ \case
 {-# INLINE mapError #-}
 
 
-newtype WrappedExc e = WrappedExc { unwrapExc :: e }
+newtype WrappedExc e = WrappedExc { _unwrapExc :: e }
   deriving (Typeable)
 
 instance Typeable e => Show (WrappedExc e) where
