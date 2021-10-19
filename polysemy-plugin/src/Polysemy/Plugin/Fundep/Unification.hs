@@ -2,6 +2,8 @@
 
 module Polysemy.Plugin.Fundep.Unification where
 
+import qualified Data.Set as S
+import Data.Set (Set)
 import           Data.Bool
 import           Data.Function (on)
 import           Data.Maybe (isJust)
@@ -22,7 +24,6 @@ import           GHC.Core.Unify
 import           Type
 import           Unify
 #endif
-
 
 
 ------------------------------------------------------------------------------
