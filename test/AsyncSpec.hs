@@ -17,7 +17,7 @@ spec = describe "async" $ do
     (ts, (s, r)) <- runM
                   . runTraceList
                   . runState "hello"
-                  . asyncToIO $ do
+                  . asyncToIOFinal $ do
       let message :: Member Trace r => Int -> String -> Sem r ()
           message n msg = trace $ mconcat
             [ show n, "> ", msg ]
