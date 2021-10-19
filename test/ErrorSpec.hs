@@ -28,7 +28,7 @@ spec = parallel $ do
 
     it "should happen before Resource" $ do
       a <-
-        runM $ resourceToIO $ runError @MyExc $ do
+        runM $ resourceToIOFinal $ runError @MyExc $ do
           onException
             (fromException @MyExc $ do
               _ <- X.throwIO $ MyExc "hello"
