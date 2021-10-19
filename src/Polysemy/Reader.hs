@@ -21,7 +21,15 @@ import Polysemy.Input
 
 
 ------------------------------------------------------------------------------
--- | An effect corresponding to 'Control.Monad.Trans.Reader.ReaderT'.
+-- | The Polysemy port of 'Control.Monad.Trans.Reader.ReaderT'.
+-- __Note that this is probably not the effect you are looking for.__ You
+-- probably want 'Polysemy.Input.Input' instead, which is like 'Reader' but
+-- without 'local'.
+--
+-- If you are trying to emulate anything akin to the @ReaderT IO@ pattern, note
+-- that it is /not recommended/ in Polysemy. Instead, your experience will be
+-- much more joyful if you avoid @IO@ entirely and think deeply about the
+-- lawful chunks of your program that can be turned into effects.
 data Reader i m a where
   Ask   :: Reader i m i
   Local :: (i -> i) -> m a -> Reader i m a
