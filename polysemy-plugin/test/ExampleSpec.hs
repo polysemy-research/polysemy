@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module ExampleSpec where
 
