@@ -87,6 +87,8 @@ fundepPlugin = TcPlugin
   }
 
 
+------------------------------------------------------------------------------
+-- | Like 'PredType', but has an 'Ord' instance.
 newtype PredType' = PredType' { getPredType :: PredType }
 
 instance Eq PredType' where
@@ -120,21 +122,24 @@ getFindConstraints (findClass -> cls) cts = do
     , fcRow = r
     }
 
+
+------------------------------------------------------------------------------
+-- | Get evidence in scope that aren't the 'FindConstraint's.
 getExtraEvidence :: PolysemyStuff 'Things -> [Ct] -> [PredType]
 getExtraEvidence things cts = do
   CDictCan{cc_class = cls, cc_tyargs = as} <- cts
   guard $ cls /= findClass things
-  pure $ mkPredType cls as
+  pure $ mkAppTys (mkTyConTy $ classTyCon cls) as
 
 
 ------------------------------------------------------------------------------
--- | If there's only a single @Member@ in the same @r@ whose effect name
--- matches and could possibly unify, return its effect (including tyvars.)
+-- | If there's a unique given @Member@ that would cause the program to
+-- typecheck, use it.
 findMatchingEffectIfSingular
-    :: [PredType] -- ^ extra wanteds
-    -> Set PredType' -- ^ extra givens
-    -> FindConstraint
-    -> [FindConstraint]
+    :: [PredType]        -- ^ Extra wanteds
+    -> Set PredType'     -- ^ Extra givens
+    -> FindConstraint    -- ^ Goal
+    -> [FindConstraint]  -- ^ Member constraints
     -> TcM (Maybe Type)
 findMatchingEffectIfSingular
     extra_wanted
@@ -142,6 +147,7 @@ findMatchingEffectIfSingular
     (FindConstraint _ eff_name wanted r)
     ts =
   let skolems = S.fromList $ foldMap (tyCoVarsOfTypeWellScoped . fcEffect) ts
+      -- Which members unify with our current goal?
       results = do
         FindConstraint _ eff_name' eff' r' <- ts
         guard $ eqType eff_name eff_name'
@@ -150,19 +156,26 @@ findMatchingEffectIfSingular
         pure (eff', subst)
    in case results of
         [] -> pure Nothing
+        -- If there is a unique member which unifies, return it.
         [(a, _)] -> pure $ Just a
         _ ->
+          -- Otherwise, check if the extra wanteds give us enough information
+          -- to make a unique choice.
+          --
+          -- For example, if we're trying to solve @Member (State a) r@, with
+          -- candidates @Members (State Int, State String) r@ and can prove
+          -- that @Num a@, then we can uniquely choose @State Int@.
           fmap (singleListToJust . join) $ for results $ \(eff, subst) ->
-            fmap maybeToList $ do
+            fmap maybeToList $
               anyM (checkExtraEvidence extra_given subst) extra_wanted >>= \case
                 True -> pure $ Just eff
                 False -> pure Nothing
 
 
-mkPredType :: Class -> [Type] -> PredType
-mkPredType cl tys = mkAppTys (mkTyConTy $ classTyCon cl) tys
-
-
+------------------------------------------------------------------------------
+-- | @checkExtraEvidence givens subst c@ returns 'True' iff we can prove that
+-- the constraint @c@ holds under the substitution @subst@ in the context of
+-- @givens@.
 checkExtraEvidence :: Set PredType' -> TCvSubst -> PredType -> TcM Bool
 checkExtraEvidence givens subst = flip evalStateT givens . getInstance . substTy subst
 
@@ -189,6 +202,7 @@ mkWantedForce fc given = do
        )
   where
     wanted = fcEffect fc
+
 
 ------------------------------------------------------------------------------
 -- | Generate a wanted unification for the effect described by the
@@ -263,6 +277,10 @@ exactlyOneWantedForR wanteds
                $ OrdType . fcRow <$> wanteds
 
 
+------------------------------------------------------------------------------
+-- | Returns 'True' if we can prove the given 'PredType' has a (fully
+-- instantiated) instance. Uses 'StateT' to cache the results of any instances
+-- it needs to prove in service of the original goal.
 getInstance :: PredType -> StateT (Set PredType') TcM Bool
 getInstance predty = do
   givens <- get
