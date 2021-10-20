@@ -61,6 +61,13 @@ import           Constraint
 import           TcSMonad hiding (tcLookupClass)
 import           Type
 #endif
+import Class (Class)
+import Inst
+import InstEnv
+import GhcPlugins (idType, tyConClass_maybe)
+import TysPrim (alphaTys)
+import TcType (tcSplitPhiTy, tcSplitTyConApp)
+import MonadUtils (allM)
 
 
 
@@ -211,6 +218,31 @@ exactlyOneWantedForR wanteds
                . fmap (second (/= 1))
                . countLength
                $ OrdType . fcRow <$> wanteds
+
+
+getInstance :: Class -> [Type] -> TcM (Maybe (Class, PredType))
+getInstance cls tys = do
+  env <- tcGetInstEnvs
+  let (mres, _, _) = lookupInstEnv False env cls tys
+  case mres of
+    ((inst, mapps) : _) -> do
+      -- Get the instantiated type of the dictionary
+      let df = piResultTys (idType $ is_dfun inst) $ zipWith fromMaybe alphaTys mapps
+      -- pull off its resulting arguments
+      let (theta, df') = tcSplitPhiTy df
+      allM hasClassInstance theta >>= \case
+        True -> pure $ Just (cls, df')
+        False -> pure Nothing
+    _ -> pure Nothing
+
+
+hasClassInstance :: PredType -> TcM Bool
+hasClassInstance predty = do
+  let (con, apps) = tcSplitTyConApp predty
+  case tyConClass_maybe con of
+    Nothing -> pure False
+    Just cls -> fmap isJust $ getInstance cls apps
+
 
 
 solveFundep
