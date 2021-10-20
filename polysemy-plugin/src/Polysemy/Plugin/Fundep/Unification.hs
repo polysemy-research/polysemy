@@ -1,11 +1,11 @@
-{-# LANGUAGE CPP                       #-}
+{-# LANGUAGE CPP #-}
 
 module Polysemy.Plugin.Fundep.Unification where
 
-import qualified Data.Set as S
-import Data.Set (Set)
 import           Data.Bool
 import           Data.Function (on)
+import           Data.Maybe (isJust)
+import           Data.Set (Set)
 import qualified Data.Set as S
 #if __GLASGOW_HASKELL__ >= 900
 import           GHC.Tc.Types.Constraint
@@ -21,9 +21,6 @@ import           GHC.Core.Type
 import           Type
 #endif
 import Unify
-import GhcPlugins (pprTrace)
-import Outputable (ppr, empty)
-import Data.Maybe (isJust)
 
 
 
