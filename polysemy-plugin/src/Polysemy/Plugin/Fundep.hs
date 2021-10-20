@@ -111,8 +111,10 @@ findMatchingEffectIfSingular (FindConstraint _ eff_name wanted r) ts =
     FindConstraint _ eff_name' eff' r' <- ts
     guard $ eqType eff_name eff_name'
     guard $ eqType r r'
-    guard $ canUnifyRecursive FunctionDef wanted eff'
+    guard $ canUnify (FunctionDef skolems) wanted eff'
     pure eff'
+  where
+    skolems = S.fromList $ foldMap (tyCoVarsOfTypeWellScoped . fcEffect) ts
 
 
 ------------------------------------------------------------------------------
@@ -148,7 +150,7 @@ mkWanted
     -> Type  -- ^ The given effect.
     -> TcPluginM (Maybe (Unification, Ct))
 mkWanted fc solve_ctx given =
-  whenA (not (mustUnify solve_ctx) || canUnifyRecursive solve_ctx wanted given) $
+  whenA (not (mustUnify solve_ctx) || canUnify solve_ctx wanted given) $
     mkWantedForce fc given
   where
     wanted = fcEffect fc
@@ -250,3 +252,4 @@ solveFundep (ref, stuff) given _ wanted = do
   tcPluginIO $ modifyIORef ref $ S.union $ S.fromList unifications
 
   pure $ TcPluginOk (solveBogusError stuff wanted) new_wanteds
+
