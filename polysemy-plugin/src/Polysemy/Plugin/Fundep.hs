@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP                        #-}
-{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ViewPatterns               #-}
 
