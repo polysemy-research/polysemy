@@ -67,7 +67,8 @@ import InstEnv
 import GhcPlugins (idType, tyConClass_maybe)
 import TysPrim (alphaTys)
 import TcType (tcSplitPhiTy, tcSplitTyConApp)
-import MonadUtils (allM)
+import MonadUtils (allM, anyM)
+import Data.Traversable (for)
 
 
 
@@ -127,22 +128,29 @@ findMatchingEffectIfSingular
     :: [ExtraEvidence]
     -> FindConstraint
     -> [FindConstraint]
-    -> Maybe Type
+    -> TcM (Maybe Type)
 findMatchingEffectIfSingular extra (FindConstraint _ eff_name wanted r) ts =
   let skolems = S.fromList $ foldMap (tyCoVarsOfTypeWellScoped . fcEffect) ts
       results = do
         FindConstraint _ eff_name' eff' r' <- ts
         guard $ eqType eff_name eff_name'
         guard $ eqType r r'
-        guard $ canUnify (FunctionDef skolems) wanted eff'
-        pure eff'
+        subst <- maybeToList $ unify (FunctionDef skolems) wanted eff'
+        pure (eff', subst)
    in case results of
-        [] -> Nothing
-        [a] -> Just a
-        _ -> Nothing
+        [] -> pure Nothing
+        [(a, _)] -> pure $ Just a
+        _ ->
+          fmap (singleListToJust . join) $ for results $ \(eff, subst) ->
+            fmap maybeToList $ do
+              anyM (checkExtraEvidence subst) extra >>= \case
+                True -> pure $ Just eff
+                False -> pure Nothing
 
 
-
+checkExtraEvidence :: TCvSubst -> ExtraEvidence -> TcM Bool
+checkExtraEvidence subst (ExtraEvidence cl ty) = do
+  fmap isJust $ getInstance cl $ pure $ substTy subst ty
 
 
 ------------------------------------------------------------------------------
@@ -178,7 +186,7 @@ mkWanted
     -> Type  -- ^ The given effect.
     -> TcPluginM (Maybe (Unification, Ct))
 mkWanted fc solve_ctx given =
-  whenA (not (mustUnify solve_ctx) || canUnify solve_ctx wanted given) $
+  whenA (not (mustUnify solve_ctx) || isJust (unify solve_ctx wanted given)) $
     mkWantedForce fc given
   where
     wanted = fcEffect fc
@@ -282,7 +290,9 @@ solveFundep (ref, stuff) given _ wanted = do
 
   eqs <- forM wanted_finds $ \fc -> do
     let r  = fcRow fc
-    case findMatchingEffectIfSingular extra_evidence fc given_finds of
+    res <- unsafeTcPluginTcM
+         $ findMatchingEffectIfSingular extra_evidence fc given_finds
+    case res of
       -- We found a real given, therefore we are in the context of a function
       -- with an explicit @Member e r@ constraint. We also know it can
       -- be unified (although it may generate unsatisfiable constraints).
