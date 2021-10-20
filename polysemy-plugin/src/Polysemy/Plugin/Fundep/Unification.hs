@@ -17,10 +17,11 @@ import           TcRnTypes
 
 #if __GLASGOW_HASKELL__ >= 900
 import           GHC.Core.Type
+import           GHC.Core.Unify
 #else
 import           Type
+import           Unify
 #endif
-import Unify
 
 
 
