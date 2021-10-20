@@ -91,6 +91,11 @@ data FindConstraint = FindConstraint
   , fcRow        :: Type  -- ^ @r@
   }
 
+data ExtraEvidence = ExtraEvidence
+  { eeClass      :: Class
+  , eeType       :: Type
+  }
+
 
 ------------------------------------------------------------------------------
 -- | Given a list of constraints, filter out the 'FindConstraint's.
@@ -105,23 +110,39 @@ getFindConstraints (findClass -> cls) cts = do
     , fcRow = r
     }
 
+getExtraEvidence :: [Class] -> [Ct] -> [ExtraEvidence]
+getExtraEvidence clses cts = do
+  cd@CDictCan{cc_class = cls', cc_tyargs = [a]} <- cts
+  guard $ elem cls' clses
+  pure $ ExtraEvidence
+    { eeClass = cls'
+    , eeType = a
+    }
+
 
 ------------------------------------------------------------------------------
 -- | If there's only a single @Member@ in the same @r@ whose effect name
 -- matches and could possibly unify, return its effect (including tyvars.)
 findMatchingEffectIfSingular
-    :: FindConstraint
+    :: [ExtraEvidence]
+    -> FindConstraint
     -> [FindConstraint]
     -> Maybe Type
-findMatchingEffectIfSingular (FindConstraint _ eff_name wanted r) ts =
-  singleListToJust $ do
-    FindConstraint _ eff_name' eff' r' <- ts
-    guard $ eqType eff_name eff_name'
-    guard $ eqType r r'
-    guard $ canUnify (FunctionDef skolems) wanted eff'
-    pure eff'
-  where
-    skolems = S.fromList $ foldMap (tyCoVarsOfTypeWellScoped . fcEffect) ts
+findMatchingEffectIfSingular extra (FindConstraint _ eff_name wanted r) ts =
+  let skolems = S.fromList $ foldMap (tyCoVarsOfTypeWellScoped . fcEffect) ts
+      results = do
+        FindConstraint _ eff_name' eff' r' <- ts
+        guard $ eqType eff_name eff_name'
+        guard $ eqType r r'
+        guard $ canUnify (FunctionDef skolems) wanted eff'
+        pure eff'
+   in case results of
+        [] -> Nothing
+        [a] -> Just a
+        _ -> Nothing
+
+
+
 
 
 ------------------------------------------------------------------------------
@@ -257,10 +278,11 @@ solveFundep _ _ _ [] = pure $ TcPluginOk [] []
 solveFundep (ref, stuff) given _ wanted = do
   let wanted_finds = getFindConstraints stuff wanted
       given_finds  = getFindConstraints stuff given
+      extra_evidence = getExtraEvidence [numClass stuff] wanted
 
   eqs <- forM wanted_finds $ \fc -> do
     let r  = fcRow fc
-    case findMatchingEffectIfSingular fc given_finds of
+    case findMatchingEffectIfSingular extra_evidence fc given_finds of
       -- We found a real given, therefore we are in the context of a function
       -- with an explicit @Member e r@ constraint. We also know it can
       -- be unified (although it may generate unsatisfiable constraints).
