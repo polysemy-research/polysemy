@@ -1,7 +1,7 @@
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ViewPatterns               #-}
-{-# LANGUAGE CPP                        #-}
-{-# LANGUAGE DerivingStrategies #-}
 
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
@@ -54,7 +54,7 @@ import           GHC.Tc.Solver.Monad hiding (tcLookupClass)
 import           GHC.Core.Type
 #else
 import           TcEvidence
-import           TcPluginM (TcPluginM, tcPluginIO)
+import           TcPluginM (tcPluginIO)
 import           TcRnTypes
 #if __GLASGOW_HASKELL__ >= 810
 import           Constraint
@@ -71,8 +71,9 @@ import TcType (tcSplitPhiTy, tcSplitTyConApp)
 import MonadUtils (allM, anyM)
 import Data.Traversable (for)
 import Data.Function (on)
-import Outputable (Outputable)
-import Outputable
+import Data.Set (Set)
+import Control.Monad.Trans.State
+import Control.Monad.Trans.Class (lift)
 
 
 
@@ -87,7 +88,6 @@ fundepPlugin = TcPlugin
 
 
 newtype PredType' = PredType' { getPredType :: PredType }
-  deriving newtype Outputable
 
 instance Eq PredType' where
   (==) = ((== EQ) .) . compare
@@ -106,11 +106,6 @@ data FindConstraint = FindConstraint
   , fcRow        :: Type  -- ^ @r@
   }
 
-data ExtraEvidence = ExtraEvidence
-  { eeClass      :: Class
-  , eeType       :: [Type]
-  }
-
 
 ------------------------------------------------------------------------------
 -- | Given a list of constraints, filter out the 'FindConstraint's.
@@ -125,28 +120,25 @@ getFindConstraints (findClass -> cls) cts = do
     , fcRow = r
     }
 
-getExtraEvidence :: PolysemyStuff 'Things -> [Ct] -> [ExtraEvidence]
+getExtraEvidence :: PolysemyStuff 'Things -> [Ct] -> [PredType]
 getExtraEvidence things cts = do
-  cd@CDictCan{cc_class = cls', cc_tyargs = as} <- cts
-  guard $ cls' /= findClass things
-  pure $ ExtraEvidence
-    { eeClass = cls'
-    , eeType = as
-    }
+  CDictCan{cc_class = cls, cc_tyargs = as} <- cts
+  guard $ cls /= findClass things
+  pure $ mkPredType cls as
 
 
 ------------------------------------------------------------------------------
 -- | If there's only a single @Member@ in the same @r@ whose effect name
 -- matches and could possibly unify, return its effect (including tyvars.)
 findMatchingEffectIfSingular
-    :: [ExtraEvidence] -- ^ extra wanteds
-    -> [ExtraEvidence] -- ^ extra givens
+    :: [PredType] -- ^ extra wanteds
+    -> Set PredType' -- ^ extra givens
     -> FindConstraint
     -> [FindConstraint]
     -> TcM (Maybe Type)
 findMatchingEffectIfSingular
     extra_wanted
-    (fmap extraEvidenceToPredType -> extra_given)
+    extra_given
     (FindConstraint _ eff_name wanted r)
     ts =
   let skolems = S.fromList $ foldMap (tyCoVarsOfTypeWellScoped . fcEffect) ts
@@ -166,16 +158,13 @@ findMatchingEffectIfSingular
                 True -> pure $ Just eff
                 False -> pure Nothing
 
-extraEvidenceToPredType :: ExtraEvidence -> PredType
-extraEvidenceToPredType (ExtraEvidence cl tys) = mkPredType cl tys
 
 mkPredType :: Class -> [Type] -> PredType
 mkPredType cl tys = mkAppTys (mkTyConTy $ classTyCon cl) tys
 
 
-checkExtraEvidence :: [PredType] -> TCvSubst -> ExtraEvidence -> TcM Bool
-checkExtraEvidence givens subst (ExtraEvidence cl ty) = do
-  fmap isJust $ getInstance givens cl $ substTys subst ty
+checkExtraEvidence :: Set PredType' -> TCvSubst -> PredType -> TcM Bool
+checkExtraEvidence givens subst = flip evalStateT givens . getInstance . substTy subst
 
 
 ------------------------------------------------------------------------------
@@ -274,32 +263,31 @@ exactlyOneWantedForR wanteds
                $ OrdType . fcRow <$> wanteds
 
 
-getInstance :: [PredType] -> Class -> [Type] -> TcM (Maybe (Class, PredType))
-getInstance givens cls tys = do
-  case elem @[] (PredType' $ mkPredType cls tys) (coerce givens) of
-    True -> pure $ Just undefined -- pprPanic "found one" $ ppr $ mkPredType cls tys
+getInstance :: PredType -> StateT (Set PredType') TcM Bool
+getInstance predty = do
+  givens <- get
+  case S.member (PredType' predty) givens of
+    True -> pure True
     False -> do
-      env <- tcGetInstEnvs
-      let (mres, _, _) = lookupInstEnv False env cls tys
+      let (con, apps) = tcSplitTyConApp predty
+          Just cls = tyConClass_maybe con
+      env <- lift tcGetInstEnvs
+      let (mres, _, _) = lookupInstEnv False env cls apps
       case mres of
         ((inst, mapps) : _) -> do
           -- Get the instantiated type of the dictionary
-          let df = piResultTys (idType $ is_dfun inst) $ zipWith fromMaybe alphaTys mapps
+          let df = piResultTys (idType $ is_dfun inst)
+                 $ zipWith fromMaybe alphaTys mapps
           -- pull off its resulting arguments
-          let (theta, df') = tcSplitPhiTy df
-          allM (hasClassInstance givens) theta >>= \case
-            True -> pure $ Just (cls, df')
-            False -> pure Nothing
-        _ -> pure Nothing
-
-
-hasClassInstance :: [PredType] -> PredType -> TcM Bool
-hasClassInstance givens predty = do
-  let (con, apps) = tcSplitTyConApp predty
-  case tyConClass_maybe con of
-    Nothing -> pure False
-    Just cls -> fmap isJust $ getInstance givens cls apps
-
+          let (theta, _) = tcSplitPhiTy df
+          allM getInstance theta >>= \case
+            True -> do
+              -- Record that we can solve this instance, in case it's used
+              -- elsewhere
+              modify $ S.insert $ coerce predty
+              pure True
+            False -> pure False
+        _ -> pure False
 
 
 solveFundep
@@ -315,7 +303,7 @@ solveFundep (ref, stuff) given _ wanted = do
   let wanted_finds = getFindConstraints stuff wanted
       given_finds  = getFindConstraints stuff given
       extra_wanted = getExtraEvidence stuff wanted
-      extra_given = getExtraEvidence stuff given
+      extra_given = S.fromList $ coerce $ getExtraEvidence stuff given
 
   eqs <- forM wanted_finds $ \fc -> do
     let r  = fcRow fc
