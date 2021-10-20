@@ -36,7 +36,6 @@ data PolysemyStuff (l :: LookupState) = PolysemyStuff
   , semTyCon          :: ThingOf l TyCon
   , ifStuckTyCon      :: ThingOf l TyCon
   , locateEffectTyCon :: ThingOf l TyCon
-  , numClass          :: ThingOf l Class
   }
 
 
@@ -44,11 +43,10 @@ data PolysemyStuff (l :: LookupState) = PolysemyStuff
 -- | All of the things we need to lookup.
 polysemyStuffLocations :: PolysemyStuff 'Locations
 polysemyStuffLocations = PolysemyStuff
-  { findClass         = ("polysemy", "Polysemy.Internal.Union",                  "Find")
-  , semTyCon          = ("polysemy", "Polysemy.Internal",                        "Sem")
-  , ifStuckTyCon      = ("polysemy", "Polysemy.Internal.CustomErrors.Redefined", "IfStuck")
-  , locateEffectTyCon = ("polysemy", "Polysemy.Internal.Union",                  "LocateEffect")
-  , numClass          = ("base",     "GHC.Num",                                  "Num")
+  { findClass         = ("Polysemy.Internal.Union",                  "Find")
+  , semTyCon          = ("Polysemy.Internal",                        "Sem")
+  , ifStuckTyCon      = ("Polysemy.Internal.CustomErrors.Redefined", "IfStuck")
+  , locateEffectTyCon = ("Polysemy.Internal.Union",                  "LocateEffect")
   }
 
 
@@ -81,12 +79,11 @@ polysemyStuff = do
 #endif
     _                -> pure ()
 
-  let PolysemyStuff a b c d e = polysemyStuffLocations
+  let PolysemyStuff a b c d = polysemyStuffLocations
   PolysemyStuff <$> doLookup a
                 <*> doLookup b
                 <*> doLookup c
                 <*> doLookup d
-                <*> doLookup e
 
 
 ------------------------------------------------------------------------------
@@ -99,7 +96,7 @@ data LookupState
 ------------------------------------------------------------------------------
 -- | HKD indexed by the 'LookupState'; used by 'PolysemyStuff'.
 type family ThingOf (l :: LookupState) (a :: Type) :: Type where
-  ThingOf 'Locations _ = (String, String, String)
+  ThingOf 'Locations _ = (String, String)
   ThingOf 'Things    a = a
 
 
@@ -118,8 +115,8 @@ instance CanLookup TyCon where
 ------------------------------------------------------------------------------
 -- | Transform a @'ThingOf' 'Locations@ into a @'ThingOf' 'Things@.
 doLookup :: CanLookup a => ThingOf 'Locations a -> TcPluginM (ThingOf 'Things a)
-doLookup (mdl, mdname, name) = do
-  md <- lookupModule (mkModuleName mdname) $ fsLit mdl
+doLookup (mdname, name) = do
+  md <- lookupModule (mkModuleName mdname) $ fsLit "polysemy"
   nm <- lookupName md $ mkTcOcc name
   lookupStrategy nm
 
