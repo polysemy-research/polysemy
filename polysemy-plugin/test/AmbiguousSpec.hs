@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell             #-}
 {-# OPTIONS_GHC -fdefer-type-errors      #-}
+{-# OPTIONS_GHC -fno-warn-deferred-type-errors #-}
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module AmbiguousSpec where

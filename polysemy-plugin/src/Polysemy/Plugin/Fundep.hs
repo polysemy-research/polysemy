@@ -35,44 +35,54 @@
 module Polysemy.Plugin.Fundep (fundepPlugin) where
 
 import           Control.Monad
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.State
 import           Data.Bifunctor
 import           Data.Coerce
+import           Data.Function (on)
 import           Data.IORef
 import qualified Data.Map as M
 import           Data.Maybe
+import           Data.Set (Set)
 import qualified Data.Set as S
+import           Data.Traversable (for)
 import           Polysemy.Plugin.Fundep.Stuff
 import           Polysemy.Plugin.Fundep.Unification
 import           Polysemy.Plugin.Fundep.Utils
+
 #if __GLASGOW_HASKELL__ >= 900
+import           GHC.Builtin.Types.Prim (alphaTys)
+import           GHC.Plugins (idType, tyConClass_maybe)
 import           GHC.Tc.Types.Evidence
 import           GHC.Tc.Plugin (TcPluginM, tcPluginIO)
 import           GHC.Tc.Types
 import           GHC.Tc.Types.Constraint
+import           GHC.Tc.Utils.Env (tcGetInstEnvs)
+import           GHC.Tc.Utils.TcType (tcSplitPhiTy, tcSplitTyConApp)
 import           GHC.Tc.Solver.Monad hiding (tcLookupClass)
+import           GHC.Core.Class (Class, classTyCon)
+import           GHC.Core.InstEnv (lookupInstEnv, is_dfun)
 import           GHC.Core.Type
+import           GHC.Utils.Monad (allM, anyM)
+
 #else
-import           TcEvidence
-import           TcPluginM (tcPluginIO)
-import           TcRnTypes
 #if __GLASGOW_HASKELL__ >= 810
 import           Constraint
 #endif
+
+import           Class (Class, classTyCon)
+import           GhcPlugins (idType, tyConClass_maybe)
+import           Inst (tcGetInstEnvs)
+import           InstEnv (lookupInstEnv, is_dfun)
+import           MonadUtils (allM, anyM)
+import           TcEvidence
+import           TcPluginM (tcPluginIO)
+import           TcRnTypes
+import           TcType (tcSplitPhiTy, tcSplitTyConApp)
 import           TcSMonad hiding (tcLookupClass)
 import           Type
+import           TysPrim (alphaTys)
 #endif
-import Class (Class, classTyCon)
-import Inst
-import InstEnv
-import GhcPlugins (idType, tyConClass_maybe)
-import TysPrim (alphaTys)
-import TcType (tcSplitPhiTy, tcSplitTyConApp)
-import MonadUtils (allM, anyM)
-import Data.Traversable (for)
-import Data.Function (on)
-import Data.Set (Set)
-import Control.Monad.Trans.State
-import Control.Monad.Trans.Class (lift)
 
 
 
