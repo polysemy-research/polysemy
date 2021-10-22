@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.4.1.0 (2021-10-22)
+
+- The plugin can now use instances in scope to help solve ambiguous type
+    variables.
+
 ## 0.4.0.0 (2021-07-12)
 
 * Support GHC 9.0.1
