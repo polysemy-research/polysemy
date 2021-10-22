@@ -24,7 +24,6 @@ import           Unify
 #endif
 
 
-
 ------------------------------------------------------------------------------
 -- | The context in which we're attempting to solve a constraint.
 data SolveContext
@@ -55,12 +54,12 @@ mustUnify (InterpreterUse b) = b
 -- not allowed to unify with anything but themselves. This properly handles all
 -- cases in which we are unifying ambiguous [W] constraints (which are true
 -- type variables) against [G] constraints.
-canUnify
+unify
     :: SolveContext
     -> Type  -- ^ wanted
     -> Type  -- ^ given
-    -> Bool
-canUnify solve_ctx = (isJust .) . tryUnifyUnivarsButNotSkolems skolems
+    -> Maybe TCvSubst
+unify solve_ctx = tryUnifyUnivarsButNotSkolems skolems
   where
     skolems :: Set TyVar
     skolems =

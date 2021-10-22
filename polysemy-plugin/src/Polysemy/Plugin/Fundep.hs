@@ -1,6 +1,6 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ViewPatterns               #-}
-{-# LANGUAGE CPP                        #-}
 
 ------------------------------------------------------------------------------
 -- The MIT License (MIT)
@@ -35,31 +35,53 @@
 module Polysemy.Plugin.Fundep (fundepPlugin) where
 
 import           Control.Monad
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.State
 import           Data.Bifunctor
 import           Data.Coerce
+import           Data.Function (on)
 import           Data.IORef
 import qualified Data.Map as M
 import           Data.Maybe
+import           Data.Set (Set)
 import qualified Data.Set as S
+import           Data.Traversable (for)
 import           Polysemy.Plugin.Fundep.Stuff
 import           Polysemy.Plugin.Fundep.Unification
 import           Polysemy.Plugin.Fundep.Utils
+
 #if __GLASGOW_HASKELL__ >= 900
+import           GHC.Builtin.Types.Prim (alphaTys)
+import           GHC.Plugins (idType, tyConClass_maybe)
 import           GHC.Tc.Types.Evidence
 import           GHC.Tc.Plugin (TcPluginM, tcPluginIO)
 import           GHC.Tc.Types
 import           GHC.Tc.Types.Constraint
+import           GHC.Tc.Utils.Env (tcGetInstEnvs)
+import           GHC.Tc.Utils.TcType (tcSplitPhiTy, tcSplitTyConApp)
 import           GHC.Tc.Solver.Monad hiding (tcLookupClass)
+import           GHC.Core.Class (Class, classTyCon)
+import           GHC.Core.InstEnv (lookupInstEnv, is_dfun)
 import           GHC.Core.Type
+import           GHC.Utils.Monad (allM, anyM)
+
 #else
-import           TcEvidence
-import           TcPluginM (TcPluginM, tcPluginIO)
-import           TcRnTypes
 #if __GLASGOW_HASKELL__ >= 810
 import           Constraint
 #endif
+
+import           Class (Class, classTyCon)
+import           GhcPlugins (idType, tyConClass_maybe)
+import           Inst (tcGetInstEnvs)
+import           InstEnv (lookupInstEnv, is_dfun)
+import           MonadUtils (allM, anyM)
+import           TcEvidence
+import           TcPluginM (tcPluginIO)
+import           TcRnTypes
+import           TcType (tcSplitPhiTy, tcSplitTyConApp)
 import           TcSMonad hiding (tcLookupClass)
 import           Type
+import           TysPrim (alphaTys)
 #endif
 
 
@@ -72,6 +94,17 @@ fundepPlugin = TcPlugin
   , tcPluginSolve = solveFundep
   , tcPluginStop = const $ pure ()
   }
+
+
+------------------------------------------------------------------------------
+-- | Like 'PredType', but has an 'Ord' instance.
+newtype PredType' = PredType' { getPredType :: PredType }
+
+instance Eq PredType' where
+  (==) = ((== EQ) .) . compare
+
+instance Ord PredType' where
+  compare = nonDetCmpType `on` getPredType
 
 
 ------------------------------------------------------------------------------
@@ -100,21 +133,60 @@ getFindConstraints (findClass -> cls) cts = do
 
 
 ------------------------------------------------------------------------------
--- | If there's only a single @Member@ in the same @r@ whose effect name
--- matches and could possibly unify, return its effect (including tyvars.)
+-- | Get evidence in scope that aren't the 'FindConstraint's.
+getExtraEvidence :: PolysemyStuff 'Things -> [Ct] -> [PredType]
+getExtraEvidence things cts = do
+  CDictCan{cc_class = cls, cc_tyargs = as} <- cts
+  guard $ cls /= findClass things
+  pure $ mkAppTys (mkTyConTy $ classTyCon cls) as
+
+
+------------------------------------------------------------------------------
+-- | If there's a unique given @Member@ that would cause the program to
+-- typecheck, use it.
 findMatchingEffectIfSingular
-    :: FindConstraint
-    -> [FindConstraint]
-    -> Maybe Type
-findMatchingEffectIfSingular (FindConstraint _ eff_name wanted r) ts =
-  singleListToJust $ do
-    FindConstraint _ eff_name' eff' r' <- ts
-    guard $ eqType eff_name eff_name'
-    guard $ eqType r r'
-    guard $ canUnify (FunctionDef skolems) wanted eff'
-    pure eff'
-  where
-    skolems = S.fromList $ foldMap (tyCoVarsOfTypeWellScoped . fcEffect) ts
+    :: [PredType]        -- ^ Extra wanteds
+    -> Set PredType'     -- ^ Extra givens
+    -> FindConstraint    -- ^ Goal
+    -> [FindConstraint]  -- ^ Member constraints
+    -> TcM (Maybe Type)
+findMatchingEffectIfSingular
+    extra_wanted
+    extra_given
+    (FindConstraint _ eff_name wanted r)
+    ts =
+  let skolems = S.fromList $ foldMap (tyCoVarsOfTypeWellScoped . fcEffect) ts
+      -- Which members unify with our current goal?
+      results = do
+        FindConstraint _ eff_name' eff' r' <- ts
+        guard $ eqType eff_name eff_name'
+        guard $ eqType r r'
+        subst <- maybeToList $ unify (FunctionDef skolems) wanted eff'
+        pure (eff', subst)
+   in case results of
+        [] -> pure Nothing
+        -- If there is a unique member which unifies, return it.
+        [(a, _)] -> pure $ Just a
+        _ ->
+          -- Otherwise, check if the extra wanteds give us enough information
+          -- to make a unique choice.
+          --
+          -- For example, if we're trying to solve @Member (State a) r@, with
+          -- candidates @Members (State Int, State String) r@ and can prove
+          -- that @Num a@, then we can uniquely choose @State Int@.
+          fmap (singleListToJust . join) $ for results $ \(eff, subst) ->
+            fmap maybeToList $
+              anyM (checkExtraEvidence extra_given subst) extra_wanted >>= \case
+                True -> pure $ Just eff
+                False -> pure Nothing
+
+
+------------------------------------------------------------------------------
+-- | @checkExtraEvidence givens subst c@ returns 'True' iff we can prove that
+-- the constraint @c@ holds under the substitution @subst@ in the context of
+-- @givens@.
+checkExtraEvidence :: Set PredType' -> TCvSubst -> PredType -> TcM Bool
+checkExtraEvidence givens subst = flip evalStateT givens . getInstance . substTy subst
 
 
 ------------------------------------------------------------------------------
@@ -140,6 +212,7 @@ mkWantedForce fc given = do
   where
     wanted = fcEffect fc
 
+
 ------------------------------------------------------------------------------
 -- | Generate a wanted unification for the effect described by the
 -- 'FindConstraint' and the given effect --- if they can be unified in this
@@ -150,7 +223,7 @@ mkWanted
     -> Type  -- ^ The given effect.
     -> TcPluginM (Maybe (Unification, Ct))
 mkWanted fc solve_ctx given =
-  whenA (not (mustUnify solve_ctx) || canUnify solve_ctx wanted given) $
+  whenA (not (mustUnify solve_ctx) || isJust (unify solve_ctx wanted given)) $
     mkWantedForce fc given
   where
     wanted = fcEffect fc
@@ -213,6 +286,37 @@ exactlyOneWantedForR wanteds
                $ OrdType . fcRow <$> wanteds
 
 
+------------------------------------------------------------------------------
+-- | Returns 'True' if we can prove the given 'PredType' has a (fully
+-- instantiated) instance. Uses 'StateT' to cache the results of any instances
+-- it needs to prove in service of the original goal.
+getInstance :: PredType -> StateT (Set PredType') TcM Bool
+getInstance predty = do
+  givens <- get
+  case S.member (PredType' predty) givens of
+    True -> pure True
+    False -> do
+      let (con, apps) = tcSplitTyConApp predty
+          Just cls = tyConClass_maybe con
+      env <- lift tcGetInstEnvs
+      let (mres, _, _) = lookupInstEnv False env cls apps
+      case mres of
+        ((inst, mapps) : _) -> do
+          -- Get the instantiated type of the dictionary
+          let df = piResultTys (idType $ is_dfun inst)
+                 $ zipWith fromMaybe alphaTys mapps
+          -- pull off its resulting arguments
+          let (theta, _) = tcSplitPhiTy df
+          allM getInstance theta >>= \case
+            True -> do
+              -- Record that we can solve this instance, in case it's used
+              -- elsewhere
+              modify $ S.insert $ coerce predty
+              pure True
+            False -> pure False
+        _ -> pure False
+
+
 solveFundep
     :: ( IORef (S.Set Unification)
        , PolysemyStuff 'Things
@@ -225,10 +329,14 @@ solveFundep _ _ _ [] = pure $ TcPluginOk [] []
 solveFundep (ref, stuff) given _ wanted = do
   let wanted_finds = getFindConstraints stuff wanted
       given_finds  = getFindConstraints stuff given
+      extra_wanted = getExtraEvidence stuff wanted
+      extra_given = S.fromList $ coerce $ getExtraEvidence stuff given
 
   eqs <- forM wanted_finds $ \fc -> do
     let r  = fcRow fc
-    case findMatchingEffectIfSingular fc given_finds of
+    res <- unsafeTcPluginTcM
+         $ findMatchingEffectIfSingular extra_wanted extra_given fc given_finds
+    case res of
       -- We found a real given, therefore we are in the context of a function
       -- with an explicit @Member e r@ constraint. We also know it can
       -- be unified (although it may generate unsatisfiable constraints).
