@@ -60,7 +60,7 @@ import           GHC.Tc.Types.Constraint
 import           GHC.Tc.Utils.Env (tcGetInstEnvs)
 import           GHC.Tc.Utils.TcType (tcSplitPhiTy, tcSplitTyConApp)
 import           GHC.Tc.Solver.Monad hiding (tcLookupClass)
-import           GHC.Core.Class (Class, classTyCon)
+import           GHC.Core.Class (classTyCon)
 import           GHC.Core.InstEnv (lookupInstEnv, is_dfun)
 import           GHC.Core.Type
 import           GHC.Utils.Monad (allM, anyM)
@@ -70,7 +70,7 @@ import           GHC.Utils.Monad (allM, anyM)
 import           Constraint
 #endif
 
-import           Class (Class, classTyCon)
+import           Class (classTyCon)
 import           GhcPlugins (idType, tyConClass_maybe)
 import           Inst (tcGetInstEnvs)
 import           InstEnv (lookupInstEnv, is_dfun)
@@ -263,7 +263,17 @@ solveBogusError stuff wanteds = do
   (idx, [_, _, r]) <- splitTyConApp_list expr
   guard $ idx == locateEffectTyCon stuff
   guard $ elem @[] (OrdType r) $ coerce bogus
-  pure (error "bogus proof for stuck type family", ct)
+  pure (error $ unlines
+          [ "Bogus proof for stuck type family."
+          , ""
+          , "This means there's a type error in your program, but the fact that"
+          , "you're seeing this message is a bug in `polysemy-plugin`."
+          , ""
+          , "Please file a bug at https://github.com/polysemy-research/polysemy"
+          , "with a minimal reproduction for how you managed to get this error."
+          ]
+       , ct
+       )
 
 
 ------------------------------------------------------------------------------

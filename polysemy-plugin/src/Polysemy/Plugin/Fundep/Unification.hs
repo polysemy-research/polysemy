@@ -4,7 +4,6 @@ module Polysemy.Plugin.Fundep.Unification where
 
 import           Data.Bool
 import           Data.Function (on)
-import           Data.Maybe (isJust)
 import           Data.Set (Set)
 import qualified Data.Set as S
 #if __GLASGOW_HASKELL__ >= 900
