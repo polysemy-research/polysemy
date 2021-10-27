@@ -78,9 +78,9 @@ instance Functor (Union r mWoven) where
 
 data Weaving e mAfter resultType where
   Weaving
-    :: forall f e rInitial a resultType mAfter. (Functor f)
+    :: forall f e mBefore a resultType mAfter. (Functor f)
     => {
-      weaveEffect :: e (Sem rInitial) a
+      weaveEffect :: e mBefore a
       -- ^ The original effect GADT originally lifted via
       -- 'Polysemy.Internal.send'.
       -- ^ @rInitial@ is the effect row that was in scope when this 'Weaving'
@@ -89,7 +89,7 @@ data Weaving e mAfter resultType where
       -- ^ A piece of state that other effects' interpreters have already
       -- woven through this 'Weaving'. @f@ is a 'Functor', so you can always
       -- 'fmap' into this thing.
-      , weaveDistrib :: forall x. f (Sem rInitial x) -> mAfter (f x)
+      , weaveDistrib :: forall x. f (mBefore x) -> mAfter (f x)
       -- ^ Distribute @f@ by transforming @Sem rInitial@ into @mAfter@. This is
       -- usually of the form @f ('Polysemy.Sem' (Some ': Effects ': r) x) ->
       --   Sem r (f x)@
