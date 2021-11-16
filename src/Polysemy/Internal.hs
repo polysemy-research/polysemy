@@ -11,7 +11,6 @@
 module Polysemy.Internal
   ( Sem (..)
   , Member
-  , MemberWithError
   , Members
   , send
   , sendUsing
