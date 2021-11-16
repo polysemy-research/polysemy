@@ -195,12 +195,6 @@ makes the helpful suggestion:
       $ \case
 ```
 
-Likewise it will give you tips on what to do if you forget a `TypeApplication`
-or forget to handle an effect.
-
-Don't like helpful errors? That's OK too - just flip the `error-messages`
-flag and enjoy the raw, unadulterated fury of the typesystem.
-
 ## Necessary Language Extensions
 
 You're going to want to stick all of this into your `package.yaml` file.
