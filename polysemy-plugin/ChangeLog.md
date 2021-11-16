@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.4.2.0 (2021-11-16)
+
+- Support for `polysemy-1.7.0.0`
+
 ## 0.4.1.0 (2021-10-22)
 
 - The plugin can now use instances in scope to help solve ambiguous type

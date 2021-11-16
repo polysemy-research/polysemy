@@ -5,7 +5,7 @@ cabal-version: 2.0
 -- see: https://github.com/sol/hpack
 
 name:           polysemy
-version:        1.6.0.0
+version:        1.7.0.0
 synopsis:       Higher-order, low-boilerplate free monads.
 description:    Please see the README on GitHub at <https://github.com/polysemy-research/polysemy#readme>
 category:       Language
@@ -13,7 +13,7 @@ homepage:       https://github.com/polysemy-research/polysemy#readme
 bug-reports:    https://github.com/polysemy-research/polysemy/issues
 author:         Sandy Maguire
 maintainer:     sandy@sandymaguire.me
-copyright:      2019 Sandy Maguire
+copyright:      2019-2021 Sandy Maguire
 license:        BSD3
 license-file:   LICENSE
 build-type:     Custom

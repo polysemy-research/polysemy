@@ -179,7 +179,8 @@ atomicStateToState = interpret $ \case
 -- the notion of atomicity, by transforming it into 'State' and running it
 -- with the provided initial state.
 --
--- @since TODO
+--
+-- @since v1.7.0.0
 runAtomicStateViaState :: s
                        -> Sem (AtomicState s ': r) a
                        -> Sem r (s, a)
@@ -192,7 +193,7 @@ runAtomicStateViaState s =
 -- the notion of atomicity, by transforming it into 'State' and running it
 -- with the provided initial state.
 --
--- @since TODO
+-- @since v1.7.0.0
 evalAtomicStateViaState :: s
                         -> Sem (AtomicState s ': r) a
                         -> Sem r a
@@ -205,7 +206,7 @@ evalAtomicStateViaState s =
 -- the notion of atomicity, by transforming it into 'State' and running it
 -- with the provided initial state.
 --
--- @since TODO
+-- @since v1.7.0.0
 execAtomicStateViaState :: s
                         -> Sem (AtomicState s ': r) a
                         -> Sem r s

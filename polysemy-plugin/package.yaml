@@ -1,5 +1,5 @@
 name:                polysemy-plugin
-version:             0.4.1.0
+version:             0.4.2.0
 github:              "polysemy-research/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -20,7 +20,7 @@ dependencies:
 - base >= 4.9 && < 5
 - ghc >= 8.6.5 && < 10
 - ghc-tcplugins-extra >= 0.3 && < 0.5
-- polysemy >= 1.3
+- polysemy >= 1.7
 - syb >= 0.7 && < 0.8
 - transformers >= 0.5.2.0 && < 0.6
 - containers >= 0.5 && < 0.7
