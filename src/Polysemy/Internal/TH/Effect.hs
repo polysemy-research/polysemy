@@ -32,7 +32,6 @@ module Polysemy.Internal.TH.Effect
 import Control.Monad
 import Language.Haskell.TH
 import Language.Haskell.TH.Datatype
-import Polysemy.Internal.CustomErrors (DefiningModule)
 import Polysemy.Internal.TH.Common
 
 
@@ -123,20 +122,11 @@ makeSem_ = genFreer False
 genFreer :: Bool -> Name -> Q [Dec]
 genFreer should_mk_sigs type_name = do
   checkExtensions [ScopedTypeVariables, FlexibleContexts, DataKinds]
-  (dt_name, cl_infos) <- getEffectMetadata type_name
-  tyfams_on  <- isExtEnabled TypeFamilies
-  def_mod_fi <- sequence [ tySynInstDCompat
-                             ''DefiningModule
-                             Nothing
-                             [pure $ ConT dt_name]
-                             (LitT . StrTyLit . loc_module <$> location)
-                         | tyfams_on
-                         ]
+  cl_infos <- getEffectMetadata type_name
   decs <- traverse (genDec should_mk_sigs) cl_infos
 
   let sigs = if should_mk_sigs then genSig <$> cl_infos else []
-
-  pure $ join $ def_mod_fi : sigs ++ decs
+  pure $ join $ sigs ++ decs
 
 
 ------------------------------------------------------------------------------

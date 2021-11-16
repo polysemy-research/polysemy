@@ -33,7 +33,7 @@ import           Language.Haskell.TH
 import           Language.Haskell.TH.Datatype
 import           Language.Haskell.TH.PprLib
 import           Polysemy.Internal (Sem, send)
-import           Polysemy.Internal.Union (MemberWithError)
+import           Polysemy.Internal.Union (Member)
 
 #if __GLASGOW_HASKELL__ >= 804
 import           Prelude hiding ((<>))
@@ -71,11 +71,11 @@ data ConLiftInfo = CLInfo
 ------------------------------------------------------------------------------
 -- | Given an name of datatype or some of it's constructors/fields, return
 -- datatype's name together with info about it's constructors.
-getEffectMetadata :: Name -> Q (Name, [ConLiftInfo])
+getEffectMetadata :: Name -> Q [ConLiftInfo]
 getEffectMetadata type_name = do
   dt_info  <- reifyDatatype type_name
   cl_infos <- traverse makeCLInfo $ constructorName <$> datatypeCons dt_info
-  pure (datatypeName dt_info, cl_infos)
+  pure cl_infos
 
 
 ------------------------------------------------------------------------------
@@ -157,7 +157,7 @@ makeMemberConstraint r cli = makeMemberConstraint' r $ makeEffectType cli
 -- | @'makeMemberConstraint'' r type@ will produce a @Member type r@
 -- constraint.
 makeMemberConstraint' :: Name -> Type -> Pred
-makeMemberConstraint' r eff = classPred ''MemberWithError [eff, VarT r]
+makeMemberConstraint' r eff = classPred ''Member [eff, VarT r]
 
 
 ------------------------------------------------------------------------------
