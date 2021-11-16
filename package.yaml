@@ -1,10 +1,10 @@
 name:                polysemy
-version:             1.6.0.0
+version:             1.7.0.0
 github:              "polysemy-research/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
 maintainer:          "sandy@sandymaguire.me"
-copyright:           "2019 Sandy Maguire"
+copyright:           "2019-2021 Sandy Maguire"
 build-type:          Custom
 
 extra-source-files:

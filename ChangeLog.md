@@ -6,7 +6,25 @@
 
 ### Other Changes
 
+
+## 1.7.0.0 (2021-11-16)
+
+### Breaking Changes
+
 * Added interpreters for `AtomicState` that run in terms of `State`.
+* Removed `MemberWithError`
+* Removed `DefiningModule`
+
+### Other Changes
+
+* The internal `ElemOf` proof is now implemented as an unsafe integer,
+    significantly cutting down on generated core.
+* Polysemy no longer emits custom type errors for ambiguous effect actions.
+    These have long been rendered moot by `polysemy-plugin`, and the cases that
+    they still exist are usually overeager (and wrong.)
+* As a result, the core produced by `polysemy` is significantly smaller.
+    Programs should see a reduction of ~20% in terms and types, and ~60% in
+    coercions.
 
 ## 1.6.0.0 (2021-07-12)
 
@@ -44,7 +62,7 @@
   ([#337](https://github.com/polysemy-research/polysemy/pull/337), [#382](https://github.com/polysemy-research/polysemy/pull/382))
 - Restrict the existentially quantified monad in a `Weaving` to `Sem r`
   ([#333](https://github.com/polysemy-research/polysemy/pull/333), thanks to @A1kmm)
-- Added `raise2Under` and `raise3Under` 
+- Added `raise2Under` and `raise3Under`
   ([#369](https://github.com/polysemy-research/polysemy/pull/369))
 - Added `Raise` and `Subsume`
   ([#370](https://github.com/polysemy-research/polysemy/pull/370))
