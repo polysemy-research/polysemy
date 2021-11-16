@@ -6,13 +6,13 @@
 {-# LANGUAGE FunctionalDependencies  #-}
 {-# LANGUAGE InstanceSigs            #-}
 {-# LANGUAGE MultiParamTypeClasses   #-}
+{-# LANGUAGE PatternSynonyms         #-}
+{-# LANGUAGE RoleAnnotations         #-}
 {-# LANGUAGE StrictData              #-}
 {-# LANGUAGE TypeFamilies            #-}
 {-# LANGUAGE UndecidableInstances    #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE ViewPatterns            #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
