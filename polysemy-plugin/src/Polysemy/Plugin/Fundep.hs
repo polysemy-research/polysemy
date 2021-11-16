@@ -122,7 +122,7 @@ data FindConstraint = FindConstraint
 -- | Given a list of constraints, filter out the 'FindConstraint's.
 getFindConstraints :: PolysemyStuff 'Things -> [Ct] -> [FindConstraint]
 getFindConstraints (findClass -> cls) cts = do
-  cd@CDictCan{cc_class = cls', cc_tyargs = [_, eff, r]} <- cts
+  cd@CDictCan{cc_class = cls', cc_tyargs = [eff, r]} <- cts
   guard $ cls == cls'
   pure $ FindConstraint
     { fcLoc = ctLoc cd
@@ -230,53 +230,6 @@ mkWanted fc solve_ctx given =
 
 
 ------------------------------------------------------------------------------
--- | Given a list of 'Ct's, find any that are of the form
--- @[Irred] Sem r a ~ Something@, and return their @r@s.
-getBogusRs :: PolysemyStuff 'Things -> [Ct] -> [Type]
-getBogusRs stuff wanteds = do
-  CIrredCan ct _ <- wanteds
-  (_, [_, _, a, b]) <- pure . splitAppTys $ ctev_pred ct
-  maybeToList (extractRowFromSem stuff a)
-    ++ maybeToList (extractRowFromSem stuff b)
-
-
-------------------------------------------------------------------------------
--- | Take the @r@ out of @Sem r a@.
-extractRowFromSem :: PolysemyStuff 'Things -> Type -> Maybe Type
-extractRowFromSem (semTyCon -> sem) ty = do
-  (tycon, [r, _]) <- splitTyConApp_maybe ty
-  guard $ tycon == sem
-  pure r
-
-
-------------------------------------------------------------------------------
--- | Given a list of bogus @r@s, and the wanted constraints, produce bogus
--- evidence terms that will prevent @IfStuck (LocateEffect _ r) _ _@ error messsages.
-solveBogusError :: PolysemyStuff 'Things -> [Ct] -> [(EvTerm, Ct)]
-solveBogusError stuff wanteds = do
-  let splitTyConApp_list = maybeToList  . splitTyConApp_maybe
-
-  let bogus = getBogusRs stuff wanteds
-  ct@(CIrredCan ce _) <- wanteds
-  (stuck, [_, _, expr, _, _]) <- splitTyConApp_list $ ctev_pred ce
-  guard $ stuck == ifStuckTyCon stuff
-  (idx, [_, _, r]) <- splitTyConApp_list expr
-  guard $ idx == locateEffectTyCon stuff
-  guard $ elem @[] (OrdType r) $ coerce bogus
-  pure (error $ unlines
-          [ "Bogus proof for stuck type family."
-          , ""
-          , "This means there's a type error in your program, but the fact that"
-          , "you're seeing this message is a bug in `polysemy-plugin`."
-          , ""
-          , "Please file a bug at https://github.com/polysemy-research/polysemy"
-          , "with a minimal reproduction for how you managed to get this error."
-          ]
-       , ct
-       )
-
-
-------------------------------------------------------------------------------
 -- | Determine if there is exactly one wanted find for the @r@ in question.
 exactlyOneWantedForR
     :: [FindConstraint]  -- ^ Wanted finds
@@ -369,5 +322,5 @@ solveFundep (ref, stuff) given _ wanted = do
   let (unifications, new_wanteds) = unzipNewWanteds already_emitted $ catMaybes eqs
   tcPluginIO $ modifyIORef ref $ S.union $ S.fromList unifications
 
-  pure $ TcPluginOk (solveBogusError stuff wanted) new_wanteds
+  pure $ TcPluginOk [] new_wanteds
 

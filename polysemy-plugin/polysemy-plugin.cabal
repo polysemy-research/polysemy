@@ -78,7 +78,6 @@ test-suite polysemy-plugin-test
   main-is: Main.hs
   other-modules:
       AmbiguousSpec
-      BadSpec
       DoctestSpec
       ExampleSpec
       InsertSpec

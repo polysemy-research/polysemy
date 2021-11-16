@@ -1,9 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-{-# OPTIONS_GHC -fdefer-type-errors            #-}
-{-# OPTIONS_GHC -fno-warn-deferred-type-errors #-}
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin       #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module AmbiguousSpec where
 
@@ -38,12 +36,6 @@ uniquelyB = put $ mptc False
 uniquelyIO :: Members '[Embed IO, Embed Identity] r => Sem r ()
 uniquelyIO = embed $ liftIO $ pure ()
 
-ambiguous1 :: Members '[State (Sum Int), State String] r => Sem r ()
-ambiguous1 = put mempty
-
-ambiguous2 :: (Num String, Members '[State Int, State String] r) => Sem r ()
-ambiguous2 = put 10
-
 
 spec :: Spec
 spec = describe "example" $ do
@@ -66,10 +58,4 @@ spec = describe "example" $ do
   it "should run uniquelyIO" $ do
     z <- runM . runEmbedded @Identity (pure . runIdentity) $ uniquelyIO
     z `shouldBe` ()
-
-  it "should not typecheck ambiguous1" $ do
-    shouldNotTypecheck ambiguous1
-
-  it "should not typecheck ambiguous2" $ do
-    shouldNotTypecheck ambiguous2
 

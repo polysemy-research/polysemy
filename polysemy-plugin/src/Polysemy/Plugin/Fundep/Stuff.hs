@@ -15,14 +15,14 @@ import GHC.Types.Name.Occurrence (mkTcOcc)
 import GHC.Tc.Plugin (TcPluginM, tcLookupClass, tcLookupTyCon, unsafeTcPluginTcM)
 import GHC.Plugins (getDynFlags, unitState)
 import GHC.Unit.State (lookupModuleWithSuggestions, LookupResult (..))
-import GHC.Utils.Outputable (pprPanic, empty, text, (<+>), ($$))
+import GHC.Utils.Outputable (pprPanic, text, (<+>), ($$))
 #else
 import FastString (fsLit)
 import OccName (mkTcOcc)
 import TcPluginM (TcPluginM, tcLookupClass, tcLookupTyCon, unsafeTcPluginTcM)
 import GhcPlugins (getDynFlags)
 import Packages (lookupModuleWithSuggestions, LookupResult (..))
-import Outputable (pprPanic, empty, text, (<+>), ($$))
+import Outputable (pprPanic, text, (<+>), ($$))
 #endif
 
 
@@ -34,8 +34,6 @@ import Outputable (pprPanic, empty, text, (<+>), ($$))
 data PolysemyStuff (l :: LookupState) = PolysemyStuff
   { findClass         :: ThingOf l Class
   , semTyCon          :: ThingOf l TyCon
-  , ifStuckTyCon      :: ThingOf l TyCon
-  , locateEffectTyCon :: ThingOf l TyCon
   }
 
 
@@ -43,10 +41,8 @@ data PolysemyStuff (l :: LookupState) = PolysemyStuff
 -- | All of the things we need to lookup.
 polysemyStuffLocations :: PolysemyStuff 'Locations
 polysemyStuffLocations = PolysemyStuff
-  { findClass         = ("Polysemy.Internal.Union",                  "Find")
-  , semTyCon          = ("Polysemy.Internal",                        "Sem")
-  , ifStuckTyCon      = ("Polysemy.Internal.CustomErrors.Redefined", "IfStuck")
-  , locateEffectTyCon = ("Polysemy.Internal.Union",                  "LocateEffect")
+  { findClass = ("Polysemy.Internal.Union", "Member")
+  , semTyCon  = ("Polysemy.Internal",       "Sem")
   }
 
 
@@ -79,11 +75,9 @@ polysemyStuff = do
 #endif
     _                -> pure ()
 
-  let PolysemyStuff a b c d = polysemyStuffLocations
+  let PolysemyStuff a b = polysemyStuffLocations
   PolysemyStuff <$> doLookup a
                 <*> doLookup b
-                <*> doLookup c
-                <*> doLookup d
 
 
 ------------------------------------------------------------------------------
