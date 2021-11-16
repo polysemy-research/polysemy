@@ -71,11 +71,11 @@ data ConLiftInfo = CLInfo
 ------------------------------------------------------------------------------
 -- | Given an name of datatype or some of it's constructors/fields, return
 -- datatype's name together with info about it's constructors.
-getEffectMetadata :: Name -> Q (Name, [ConLiftInfo])
+getEffectMetadata :: Name -> Q [ConLiftInfo]
 getEffectMetadata type_name = do
   dt_info  <- reifyDatatype type_name
   cl_infos <- traverse makeCLInfo $ constructorName <$> datatypeCons dt_info
-  pure (datatypeName dt_info, cl_infos)
+  pure cl_infos
 
 
 ------------------------------------------------------------------------------

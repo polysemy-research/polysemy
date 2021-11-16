@@ -7,12 +7,8 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
 module Polysemy.Internal.CustomErrors
-  ( AmbiguousSend
-  , WhenStuck
+  ( WhenStuck
   , FirstOrder
-  , UnhandledEffect
-  , DefiningModule
-  , DefiningModuleForEffect
   , type (<>)
   , type (%)
   ) where
@@ -24,18 +20,6 @@ import Polysemy.Internal.Kind
 import Polysemy.Internal.CustomErrors.Redefined
 import Type.Errors hiding (IfStuck, WhenStuck, UnlessStuck)
 
-
-------------------------------------------------------------------------------
--- | The module this effect was originally defined in. This type family is used
--- only for providing better error messages.
---
--- Calls to 'Polysemy.Internal.TH.Effect.makeSem' will automatically give
--- instances of 'DefiningModule'.
-type family DefiningModule (t :: k) :: Symbol
-
-type family DefiningModuleForEffect (e :: k) :: Symbol where
-  DefiningModuleForEffect (e a) = DefiningModuleForEffect e
-  DefiningModuleForEffect e     = DefiningModule e
 
 -- These are taken from type-errors-pretty because it's not in stackage for 9.0.1
 -- See https://github.com/polysemy-research/polysemy/issues/401
@@ -77,51 +61,6 @@ type family ShowRQuoted (rstate :: EffectRowCtor) (r :: EffectRow) :: ErrorMessa
   ShowRQuoted 'ConsR  r = ShowTypeBracketed r
 
 
-type AmbigousEffectMessage (rstate :: EffectRowCtor)
-                           (r :: EffectRow)
-                           (e :: k)
-                           (t :: Effect)
-                           (vs :: [Type])
-  = "Ambiguous use of effect '" <> e <> "'"
-  % "Possible fix:"
-  % "  add (Member (" <> t <> ") " <> ShowRQuoted rstate r <> ") to the context of "
-  % "    the type signature"
-  % "If you already have the constraint you want, instead"
-  % "  add a type application to specify"
-  % "    " <> PrettyPrintList vs <> " directly, or activate polysemy-plugin which"
-  % "      can usually infer the type correctly."
-
-type AmbiguousSend e r =
-      (IfStuck r
-        (AmbiguousSendError 'TyVarR r e)
-        (Pure (AmbiguousSendError (UnstuckRState r) r e)))
-
-
-type family AmbiguousSendError rstate r e where
-  AmbiguousSendError rstate r (e a b c d f) =
-    TypeError (AmbigousEffectMessage rstate r e (e a b c d f) '[a, b c d f])
-
-  AmbiguousSendError rstate r (e a b c d) =
-    TypeError (AmbigousEffectMessage rstate r e (e a b c d) '[a, b c d])
-
-  AmbiguousSendError rstate r (e a b c) =
-    TypeError (AmbigousEffectMessage rstate r e (e a b c) '[a, b c])
-
-  AmbiguousSendError rstate r (e a b) =
-    TypeError (AmbigousEffectMessage rstate r e (e a b) '[a, b])
-
-  AmbiguousSendError rstate r (e a) =
-    TypeError (AmbigousEffectMessage rstate r e (e a) '[a])
-
-  AmbiguousSendError rstate r e =
-    TypeError
-        ( "Could not deduce: (Member " <>  e <> " " <> ShowRQuoted rstate r <> ") "
-        % "Fix:"
-        % "  add (Member " <>  e <> " " <> r <> ") to the context of"
-        % "    the type signature"
-        )
-
-
 data FirstOrderErrorFcf :: k -> Symbol -> Exp Constraint
 type instance Eval (FirstOrderErrorFcf e fn) = $(te[t|
     UnlessPhantom
@@ -136,24 +75,6 @@ type instance Eval (FirstOrderErrorFcf e fn) = $(te[t|
 -- | This constraint gives helpful error messages if you attempt to use a
 -- first-order combinator with a higher-order type.
 type FirstOrder (e :: Effect) fn = UnlessStuck e (FirstOrderErrorFcf e fn)
-
-
-------------------------------------------------------------------------------
--- | Unhandled effects
-type UnhandledEffectMsg e
-  = "Unhandled effect '" <> e <> "'"
-  % "Probable fix:"
-  % "  add an interpretation for '" <> e <> "'"
-
-type CheckDocumentation e
-  = "  If you are looking for inspiration, try consulting"
-  % "    the documentation for module '" <> DefiningModuleForEffect e <> "'"
-
-type family UnhandledEffect e where
-  UnhandledEffect e =
-    IfStuck (DefiningModule e)
-            (TypeError (UnhandledEffectMsg e))
-            (DoError (UnhandledEffectMsg e ':$$: CheckDocumentation e))
 
 
 data DoError :: ErrorMessage -> Exp k
