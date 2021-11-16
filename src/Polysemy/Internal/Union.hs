@@ -6,10 +6,13 @@
 {-# LANGUAGE FunctionalDependencies  #-}
 {-# LANGUAGE InstanceSigs            #-}
 {-# LANGUAGE MultiParamTypeClasses   #-}
+{-# LANGUAGE PatternSynonyms         #-}
+{-# LANGUAGE RoleAnnotations         #-}
 {-# LANGUAGE StrictData              #-}
 {-# LANGUAGE TypeFamilies            #-}
 {-# LANGUAGE UndecidableInstances    #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns            #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -33,7 +36,7 @@ module Polysemy.Internal.Union
   , absurdU
   , decompCoerce
   -- * Witnesses
-  , ElemOf (..)
+  , ElemOf (Here, There)
   , membership
   , sameMember
   -- * Checking membership
@@ -53,6 +56,7 @@ import Data.Typeable
 import Polysemy.Internal.Kind
 import {-# SOURCE #-} Polysemy.Internal
 import Polysemy.Internal.Sing (SList (SEnd, SCons))
+import Unsafe.Coerce (unsafeCoerce)
 
 #ifndef NO_ERROR_MESSAGES
 import Polysemy.Internal.CustomErrors
@@ -177,11 +181,36 @@ type MemberNoError e r =
 -- into @r@ by using 'Polysemy.Internal.subsumeUsing'.
 --
 -- @since 1.3.0.0
-data ElemOf e r where
-  -- | @e@ is located at the head of the list.
-  Here  :: ElemOf e (e ': r)
-  -- | @e@ is located somewhere in the tail of the list.
-  There :: ElemOf e r -> ElemOf e (e' ': r)
+type role ElemOf nominal nominal
+newtype ElemOf (e :: k) (r :: [k]) = UnsafeMkElemOf Int
+
+data MatchHere e r where
+  MHYes :: MatchHere e (e ': r)
+  MHNo  :: MatchHere e r
+
+data MatchThere e r where
+  MTYes :: ElemOf e r -> MatchThere e (e' ': r)
+  MTNo  :: MatchThere e r
+
+matchHere :: forall e r. ElemOf e r -> MatchHere e r
+matchHere (UnsafeMkElemOf 0) = unsafeCoerce $ MHYes
+matchHere _ = MHNo
+
+matchThere :: forall e r. ElemOf e r -> MatchThere e r
+matchThere (UnsafeMkElemOf 0) = MTNo
+matchThere (UnsafeMkElemOf e) = unsafeCoerce $ MTYes $ UnsafeMkElemOf $ e - 1
+
+pattern Here :: () => (r ~ (e ': r')) => ElemOf e r
+pattern Here <- (matchHere -> MHYes)
+  where
+    Here = UnsafeMkElemOf 0
+
+pattern There :: () => (r' ~ (e' ': r)) => ElemOf e r -> ElemOf e r'
+pattern There e <- (matchThere -> MTYes e)
+  where
+    There (UnsafeMkElemOf e) = UnsafeMkElemOf $ e + 1
+
+{-# COMPLETE Here, There #-}
 
 ------------------------------------------------------------------------------
 -- | Checks if two membership proofs are equal. If they are, then that means
@@ -305,20 +334,14 @@ decomp (Union p a) =
 -- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> Weaving e m a
 extract (Union Here a)   = a
-#if __GLASGOW_HASKELL__ < 808
-extract (Union (There g) _) = case g of {}
-#endif
+extract (Union (There _) _) = error "Unsafe use of UnsafeMkElemOf"
 {-# INLINE extract #-}
 
 
 ------------------------------------------------------------------------------
 -- | An empty union contains nothing, so this function is uncallable.
 absurdU :: Union '[] m a -> b
-#if __GLASGOW_HASKELL__ < 808
-absurdU (Union pr _) = case pr of {}
-#else
-absurdU = \case {}
-#endif
+absurdU (Union _ _) = error "Unsafe use of UnsafeMkElemOf"
 
 
 ------------------------------------------------------------------------------
