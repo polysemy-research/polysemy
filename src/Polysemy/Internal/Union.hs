@@ -142,6 +142,10 @@ hoist f' (Union w (Weaving e s nt f v)) =
 --
 -- @since 1.2.3.0
 type MemberWithError = Member
+{-# DEPRECATED
+    MemberWithError
+    "Polysemy no longer uses custom type errors for Member constraints. Use Member instead."
+    #-}
 
 ------------------------------------------------------------------------------
 -- | A proof that @e@ is an element of @r@.
