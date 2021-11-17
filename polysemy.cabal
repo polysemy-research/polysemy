@@ -4,7 +4,7 @@ cabal-version: 2.0
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 296ffb3e340f4324417e4d774a6aad757fa372fe33fd4551b4321bab6ff6564c
+-- hash: c7deee2612c61309992251d5b91bce1ab04bd0db127fd24ac9ce109d52733078
 
 name:           polysemy
 version:        1.6.0.0
@@ -52,6 +52,7 @@ library
       Polysemy.Embed
       Polysemy.Embed.Type
       Polysemy.Error
+      Polysemy.Exceptional
       Polysemy.Fail
       Polysemy.Fail.Type
       Polysemy.Fatal

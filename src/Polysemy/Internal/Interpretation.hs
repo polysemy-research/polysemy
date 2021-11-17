@@ -182,10 +182,13 @@ getProcessorH = send (WithProcessorH @_ @_ @e Processor)
 -- getProcessorH' = send GetProcessorH'
 -- {-# INLINE getProcessorH' #-}
 
+type Tactical z e r r' a =
+      forall t
+    . Traversable t
+  => Sem (RunH z t e r ': r') a
+
 type EffHandlerH e r =
-     forall rInitial t x
-   . Traversable t
-  => e (Sem rInitial) x -> Sem (RunH (Sem rInitial) t e r ': r) x
+     forall rInitial x. e (Sem rInitial) x -> Tactical (Sem rInitial) e r r x
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but for higher-order effects (i.e. those which make use
@@ -269,6 +272,48 @@ interpretH h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
         fmap ex $ lwr $ go1 (h e)
 {-# INLINE interpretH #-}
 
+interpretH :: forall e r a
+              . (   forall rInitial t x
+                  . Traversable t
+                 => e (Sem rInitial) x
+                 -> Sem (RunH (Sem rInitial) t e r ': r) x
+                )
+             -> Sem (e ': r) a
+             -> Sem r a
+interpretH h = usingSem $ \u ->
+  case decomp u of
+    Left g -> hoist (interpretH h) g
+    Right (Weaving
+            e
+            (mkT :: forall n x
+                    . Monad n
+                 => (forall y. Sem (e ': r) y -> n y)
+                 -> z x -> t n x
+            )
+            lwr
+            ex
+          ) ->
+      let
+          go :: forall x. Sem (RunH z (StT t) e r ': r) x -> t (Sem r) x
+          go = usingSem $ \u' -> case decomp u' of
+            Left g ->
+              -- Union r (Sem (RunH z (StT t) e r ': r)) x
+              -- Union r (t (Sem r)) x
+              liftHandlerWithNat go liftSem g
+            Right wav@(Weaving eff _ lwr' ex') -> do
+              let run_it = (ex' . (<$ mkInitState lwr'))
+              case eff of
+                RunH z -> run_it <$> mkT (interpretH h) z
+                WithInterpreterH main -> run_it $ return $ main $ interpretH h
+                WithProcessorH main -> run_it $
+                  liftWith $ \lower -> return $ main (lower . mkT id)
+                RestoreH t -> run_it $ restoreT (return t)
+                LiftWithH main -> run_it $ liftWith $ \lower ->
+                  return $ main (lower . go)
+          {-# NOINLINE go2 #-}
+      in
+        fmap ex $ lwr $ go (h e)
+{-# INLINE interpretH #-}
 ------------------------------------------------------------------------------
 -- | The simplest way to produce an effect handler. Interprets an effect @e@ by
 -- transforming it into other effects inside of @r@.

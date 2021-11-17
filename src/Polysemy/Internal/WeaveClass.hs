@@ -33,6 +33,9 @@ class ( MonadTrans t
    => MonadTransWeave t where
   type StT t :: * -> *
 
+  -- inspect :: Foldable f => f a -> Maybe a
+  -- inspect = foldr (const . Just) Nothing
+
   hoistT :: (Monad m, Monad n)
          => (forall x. m x -> n x)
          -> t m a -> t n a
