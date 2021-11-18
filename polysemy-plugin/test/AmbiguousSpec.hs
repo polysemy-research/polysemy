@@ -1,8 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
-
 module AmbiguousSpec where
 
 import Control.Monad.IO.Class (liftIO)
@@ -10,7 +8,9 @@ import Data.Functor.Identity
 import Data.Monoid
 import Polysemy
 import Polysemy.Embed (runEmbedded)
+import Polysemy.Error (Error, runError)
 import Polysemy.State
+import Polysemy.Tagged (Tagged, tag)
 import Test.Hspec
 import Test.ShouldNotTypecheck
 
@@ -36,6 +36,12 @@ uniquelyB = put $ mptc False
 uniquelyIO :: Members '[Embed IO, Embed Identity] r => Sem r ()
 uniquelyIO = embed $ liftIO $ pure ()
 
+uniquelyState' :: ∀ r . Members [Error (), State ()] r => Sem r ()
+uniquelyState' = pure ()
+
+uniquelyState :: ∀ r . Member (Tagged () (State ())) r => Sem r (Either () ())
+uniquelyState = runError (tag @() uniquelyState')
+-- uniquelyState = runError (tag @() (uniquelyState' @(State () : Error () : r)))
 
 spec :: Spec
 spec = describe "example" $ do
