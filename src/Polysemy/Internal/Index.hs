@@ -2,16 +2,17 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE CPP #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
 module Polysemy.Internal.Index where
 
 import GHC.TypeLits (Nat)
-import Type.Errors (TypeError, ErrorMessage(ShowType))
+import Type.Errors (ErrorMessage (ShowType), TypeError)
 
-import Polysemy.Internal.CustomErrors (type (<>), type (%))
-import Polysemy.Internal.Sing (SList (SEnd, SCons))
+import Polysemy.Internal.CustomErrors (type (%), type (<>))
+import Polysemy.Internal.Sing (SList (SCons, SEnd))
 
 ------------------------------------------------------------------------------
 -- | Infer a partition of the result type @full@ so that for the fixed segments
@@ -31,9 +32,16 @@ instance {-# INCOHERENT #-} (
     insertAtIndex = SCons (insertAtIndex @_ @index @head @tail @oldTail @full)
     {-# INLINE insertAtIndex #-}
 
+-- Broken on 9.2.
+-- It appears that instance matching is done with an abstract value for @oldTail@, thus not matching the correct
+-- instance and finding only this one, causing a false positive for the @TypeError@.
+#if __GLASGOW_HASKELL__ < 902
+
 instance {-# INCOHERENT #-} TypeError (InsertAtFailure index oldTail head full)
        => InsertAtIndex index head tail oldTail full inserted where
   insertAtIndex = error "unreachable"
+
+#endif
 
 type family InsertAtUnprovidedIndex where
   InsertAtUnprovidedIndex = TypeError (
