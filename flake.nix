@@ -16,6 +16,7 @@
     ghc884 = hsPkgs unstable "ghc884";
     ghc8104 = hsPkgs unstable "ghc8104";
     ghc901 = hsPkgs unstable "ghc901";
+    ghc921 = hsPkgs unstable "ghc921";
 
     packages = {
       inherit (ghc8104) polysemy polysemy-plugin;
@@ -27,6 +28,8 @@
       polysemy-plugin-8104 = ghc8104.polysemy-plugin;
       polysemy-901 = ghc901.polysemy;
       polysemy-plugin-901 = ghc901.polysemy-plugin;
+      polysemy-921 = ghc921.polysemy;
+      polysemy-plugin-921 = ghc921.polysemy-plugin;
     };
   in {
     inherit packages;
