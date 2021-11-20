@@ -13,9 +13,16 @@ import GHC.TcPluginM.Extra (lookupModule, lookupName)
 import GHC.Data.FastString (fsLit)
 import GHC.Types.Name.Occurrence (mkTcOcc)
 import GHC.Tc.Plugin (TcPluginM, tcLookupClass, tcLookupTyCon, unsafeTcPluginTcM)
-import GHC.Plugins (getDynFlags, unitState)
+import GHC.Plugins (getDynFlags)
 import GHC.Unit.State (lookupModuleWithSuggestions, LookupResult (..))
-import GHC.Utils.Outputable (pprPanic, text, (<+>), ($$))
+import GHC.Utils.Outputable (text, (<+>), ($$))
+#if __GLASGOW_HASKELL__ >= 920
+import GHC.Utils.Panic (pprPanic)
+import GHC.Driver.Env (hsc_units)
+#else
+import GHC.Plugins (unitState)
+import GHC.Utils.Outputtable(pprPanic)
+#endif
 #else
 import FastString (fsLit)
 import OccName (mkTcOcc)
@@ -45,13 +52,27 @@ polysemyStuffLocations = PolysemyStuff
   , semTyCon  = ("Polysemy.Internal",       "Sem")
   }
 
+------------------------------------------------------------------------------
+-- | GHC-version-dependent access of the UnitState
+getUnitState :: TcPluginM UnitState
+getUnitState = do
+  #if __GLASGOW_HASKELL >= 920
+  topState <- getTopEnv
+  return (hsc_units topState)
+  #else
+  dflags <- unsafeTcPluginTcM getDynFlags
+  return (unitState dflags)
+  #endif
 
 ------------------------------------------------------------------------------
 -- | Lookup all of the 'PolysemyStuff'.
 polysemyStuff :: TcPluginM (PolysemyStuff 'Things)
 polysemyStuff = do
+  #if __GLASGOW_HASKELL__ >= 900
+  theUnitState <- getUnitState
+  #else
   dflags <- unsafeTcPluginTcM getDynFlags
-
+  #endif
   let error_msg = pprPanic "polysemy-plugin"
           $ text ""
          $$ text "--------------------------------------------------------------------------------"
@@ -62,7 +83,7 @@ polysemyStuff = do
          $$ text ""
   case lookupModuleWithSuggestions
 #if __GLASGOW_HASKELL__ >= 900
-    (unitState dflags)
+    theUnitState
 #else
     dflags
 #endif
