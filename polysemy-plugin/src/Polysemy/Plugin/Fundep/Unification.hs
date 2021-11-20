@@ -6,6 +6,7 @@ import           Data.Bool
 import           Data.Function (on)
 import           Data.Set (Set)
 import qualified Data.Set as S
+
 #if __GLASGOW_HASKELL__ >= 900
 import           GHC.Tc.Types.Constraint
 #elif __GLASGOW_HASKELL__ >= 810
@@ -72,16 +73,22 @@ unify solve_ctx = tryUnifyUnivarsButNotSkolems skolems
         InterpreterUse _ s -> s
         FunctionDef s      -> s
 
+#if __GLASGOW_HASKELL__ >= 902
+#define BINDME (const BindMe)
+#define APART (const Apart)
+#else
+#define BINDME BindMe
+#define APART Skolem
+#endif
 
 tryUnifyUnivarsButNotSkolems :: Set TyVar -> Type -> Type -> Maybe TCvSubst
 tryUnifyUnivarsButNotSkolems skolems goal inst =
   case tcUnifyTysFG
-         (bool BindMe Skolem . flip S.member skolems)
+         (bool BINDME APART . flip S.member skolems)
          [inst]
          [goal] of
     Unifiable subst -> pure subst
     _               -> Nothing
-
 
 ------------------------------------------------------------------------------
 -- | A wrapper for two types that we want to say have been unified.

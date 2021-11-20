@@ -36,31 +36,6 @@ infixr 4 %
 type family (%) (t :: k1) (b :: k2) :: ErrorMessage where
     t % b = ToErrorMessage t ':$$: ToErrorMessage b
 
--- TODO(sandy): Put in type-errors
-type ShowTypeBracketed t = "(" <> t <> ")"
-
-
-------------------------------------------------------------------------------
--- | The constructor of the effect row --- it's either completely polymorphic,
--- a nil, or a cons.
-data EffectRowCtor = TyVarR | NilR | ConsR
-
-
-------------------------------------------------------------------------------
--- | Given that @r@ isn't stuck, determine which constructor it has.
-type family UnstuckRState (r :: EffectRow) :: EffectRowCtor where
-  UnstuckRState '[]      = 'NilR
-  UnstuckRState (_ ': _) = 'ConsR
-
-
-------------------------------------------------------------------------------
--- | Put brackets around @r@ if it's a cons.
-type family ShowRQuoted (rstate :: EffectRowCtor) (r :: EffectRow) :: ErrorMessage where
-  ShowRQuoted 'TyVarR r = 'ShowType r
-  ShowRQuoted 'NilR   r = 'ShowType r
-  ShowRQuoted 'ConsR  r = ShowTypeBracketed r
-
-
 data FirstOrderErrorFcf :: k -> Symbol -> Exp Constraint
 type instance Eval (FirstOrderErrorFcf e fn) = $(te[t|
     UnlessPhantom

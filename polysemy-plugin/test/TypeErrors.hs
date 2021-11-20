@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# LANGUAGE CPP #-}
 
 module TypeErrors where
 
@@ -38,6 +39,8 @@ missingFmap = ()
 -- ...
 insertAtUnprovidedIndex = ()
 
+#if __GLASGOW_HASKELL__ < 902
+
 --------------------------------------------------------------------------------
 -- |
 -- >>> :{
@@ -74,3 +77,5 @@ insertAtWrongIndex = ()
 -- ...e1 : State s : e3 : Reader i : e4 : r
 -- ...
 insertAtAndRaiseWrongIndex = ()
+
+#endif
