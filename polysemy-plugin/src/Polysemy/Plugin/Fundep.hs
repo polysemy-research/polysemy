@@ -1,5 +1,7 @@
 {-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ViewPatterns               #-}
 
 ------------------------------------------------------------------------------
@@ -52,13 +54,13 @@ import           Polysemy.Plugin.Fundep.Utils
 
 #if __GLASGOW_HASKELL__ >= 900
 import           GHC.Builtin.Types.Prim (alphaTys)
-import           GHC.Plugins (idType, tyConClass_maybe)
+import           GHC.Plugins (idType, tyConClass_maybe, ppr, Outputable, sep, text, (<+>), parens)
 import           GHC.Tc.Types.Evidence
 import           GHC.Tc.Plugin (TcPluginM, tcPluginIO)
 import           GHC.Tc.Types
 import           GHC.Tc.Types.Constraint
 import           GHC.Tc.Utils.Env (tcGetInstEnvs)
-import           GHC.Tc.Utils.TcType (tcSplitPhiTy, tcSplitTyConApp)
+import           GHC.Tc.Utils.TcType (tcSplitPhiTy, tcSplitTyConApp, tcGetTyVar_maybe, tcSplitAppTy_maybe)
 import           GHC.Tc.Solver.Monad hiding (tcLookupClass)
 import           GHC.Core.Class (classTyCon)
 import           GHC.Core.InstEnv (lookupInstEnv, is_dfun)
@@ -71,14 +73,14 @@ import           Constraint
 #endif
 
 import           Class (classTyCon)
-import           GhcPlugins (idType, tyConClass_maybe)
+import           GhcPlugins (idType, tyConClass_maybe, ppr, Outputable, sep, text, (<+>), parens)
 import           Inst (tcGetInstEnvs)
 import           InstEnv (lookupInstEnv, is_dfun)
 import           MonadUtils (allM, anyM)
 import           TcEvidence
 import           TcPluginM (tcPluginIO)
 import           TcRnTypes
-import           TcType (tcSplitPhiTy, tcSplitTyConApp)
+import           TcType (tcSplitPhiTy, tcSplitTyConApp, tcGetTyVar_maybe, tcSplitAppTy_maybe)
 import           TcSMonad hiding (tcLookupClass)
 import           Type
 import           TysPrim (alphaTys)
@@ -99,6 +101,7 @@ fundepPlugin = TcPlugin
 ------------------------------------------------------------------------------
 -- | Like 'PredType', but has an 'Ord' instance.
 newtype PredType' = PredType' { getPredType :: PredType }
+  deriving newtype Outputable
 
 instance Eq PredType' where
   (==) = ((== EQ) .) . compare
@@ -116,6 +119,13 @@ data FindConstraint = FindConstraint
   , fcEffect     :: Type  -- ^ @State s@
   , fcRow        :: Type  -- ^ @r@
   }
+
+instance Outputable FindConstraint where
+  ppr FindConstraint{..} = parens $ sep
+    [ text "effect name = " <+> ppr fcEffectName
+    , text "effect = " <+> ppr fcEffect
+    , text "row = " <+> ppr fcRow
+    ]
 
 
 ------------------------------------------------------------------------------
@@ -214,6 +224,18 @@ mkWantedForce fc given = do
 
 
 ------------------------------------------------------------------------------
+-- | It's very important that we don't try to unify entire effects when we're
+-- in interpreter mode. It's OK to unify @T x ~ T y@, but never @e ~ T y@. This
+-- function takes then "given" of an interpreter, and produces a singleton
+-- skolem set iff the outermost effect to be unified is a tyvar.
+skolemsForInterpreter :: Type -> Set TyVar
+skolemsForInterpreter ty =
+  case tcSplitAppTy_maybe ty of
+    Just (tcGetTyVar_maybe -> Just skolem, _) -> S.singleton skolem
+    _ -> maybe mempty S.singleton $ tcGetTyVar_maybe ty
+
+
+------------------------------------------------------------------------------
 -- | Generate a wanted unification for the effect described by the
 -- 'FindConstraint' and the given effect --- if they can be unified in this
 -- context.
@@ -222,7 +244,7 @@ mkWanted
     -> SolveContext
     -> Type  -- ^ The given effect.
     -> TcPluginM (Maybe (Unification, Ct))
-mkWanted fc solve_ctx given =
+mkWanted fc solve_ctx given = do
   whenA (not (mustUnify solve_ctx) || isJust (unify solve_ctx wanted given)) $
     mkWantedForce fc given
   where
@@ -312,8 +334,10 @@ solveFundep (ref, stuff) given _ wanted = do
         case splitAppTys r of
           (_, [_, eff', _]) ->
             mkWanted fc
-                     (InterpreterUse $ exactlyOneWantedForR wanted_finds r)
-                     eff'
+              (InterpreterUse
+                (exactlyOneWantedForR wanted_finds r)
+                (skolemsForInterpreter eff'))
+              eff'
           _ -> pure Nothing
 
   -- We only want to emit a unification wanted once, otherwise a type error can

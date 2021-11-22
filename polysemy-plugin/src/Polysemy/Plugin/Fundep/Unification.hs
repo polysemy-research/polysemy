@@ -17,9 +17,11 @@ import           TcRnTypes
 #if __GLASGOW_HASKELL__ >= 900
 import           GHC.Core.Type
 import           GHC.Core.Unify
+import           GHC.Plugins (Outputable, ppr, parens, text, (<+>))
 #else
 import           Type
 import           Unify
+import           GhcPlugins (Outputable, ppr, parens, text, (<+>))
 #endif
 
 
@@ -32,8 +34,12 @@ data SolveContext
     -- | In the context of running an interpreter. The 'Bool' corresponds to
     -- whether we are only trying to solve a single 'Member' constraint right
     -- now. If so, we *must* produce a unification wanted.
-  | InterpreterUse Bool
+  | InterpreterUse Bool (Set TyVar)
   deriving (Eq, Ord)
+
+instance Outputable SolveContext where
+  ppr (FunctionDef s) = parens $ text "FunctionDef" <+> ppr s
+  ppr (InterpreterUse s ty) = parens $ text "InterpreterUse" <+> ppr s <+> ppr ty
 
 
 ------------------------------------------------------------------------------
@@ -43,7 +49,7 @@ data SolveContext
 -- r s@, we should unify @s ~ Int@.
 mustUnify :: SolveContext -> Bool
 mustUnify (FunctionDef _) = True
-mustUnify (InterpreterUse b) = b
+mustUnify (InterpreterUse b _) = b
 
 
 ------------------------------------------------------------------------------
@@ -63,8 +69,8 @@ unify solve_ctx = tryUnifyUnivarsButNotSkolems skolems
     skolems :: Set TyVar
     skolems =
       case solve_ctx of
-        InterpreterUse _ -> mempty
-        FunctionDef s    -> s
+        InterpreterUse _ s -> s
+        FunctionDef s      -> s
 
 
 tryUnifyUnivarsButNotSkolems :: Set TyVar -> Type -> Type -> Maybe TCvSubst
