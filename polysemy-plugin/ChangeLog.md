@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.4.1.1 (2021-11-23)
+
+- Fixed a regression introduced in 0.4.1.0 where polymorphic uses of
+    interpreters could confuse the plugin.
+
 ## 0.4.1.0 (2021-10-22)
 
 - The plugin can now use instances in scope to help solve ambiguous type
