@@ -6,6 +6,11 @@
 
 ### Other Changes
 
+## 1.7.1.0 (2021-11-23)
+
+### Other Changes
+
+* Support GHC 9.2.1
 
 ## 1.7.0.0 (2021-11-16)
 
