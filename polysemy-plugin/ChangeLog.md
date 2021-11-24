@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.4.3.0 (2021-11-23)
+
+* Support GHC 9.2.1
 * Fix a regression that prevented disambiguation in some cases.
 
 ## 0.4.2.0 (2021-11-16)
