@@ -590,6 +590,8 @@ insertAt = hoistSem $ \u -> hoist (insertAt @index @inserted @head @oldTail) $
 -- @
 --
 -- 'Polysemy.makeSem' allows you to eliminate this boilerplate.
+--
+-- @since TODO
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}
