@@ -56,7 +56,6 @@ library
       Polysemy.Internal.CustomErrors
       Polysemy.Internal.CustomErrors.Redefined
       Polysemy.Internal.Fixpoint
-      Polysemy.Internal.Forklift
       Polysemy.Internal.Index
       Polysemy.Internal.Kind
       Polysemy.Internal.NonDet
@@ -134,7 +133,6 @@ test-suite polysemy-test
   main-is: Main.hs
   other-modules:
       AlternativeSpec
-      AsyncSpec
       BracketSpec
       DoctestSpec
       ErrorSpec
