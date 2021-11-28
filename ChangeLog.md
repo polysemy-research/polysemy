@@ -5,8 +5,16 @@
 ### Breaking Changes
 
 - Removed `Polysemy.Law`
+- Removed `withLowerToIO` from `Polysemy`. Use `withWeavingToFinal` instead.
+- Removed `asyncToIO` and `lowerAsync` `from Polysemy.Async`. Use
+    `asyncToIOFinal` instead.
+- Removed `lowerEmbedded` from `Polysemy.IO`. Use `embedToMonadIO` instead.
+- Removed `resourceToIO` and `lowerResource` from `Polysemy.Resource`. Use
+    `resourceToIOFinal` instead.
 
 ### Other Changes
+
+- Exposed `send` from `Polysemy`.
 
 ## 1.7.1.0 (2021-11-23)
 
