@@ -67,14 +67,12 @@ library
       Polysemy.Internal.Union
       Polysemy.Internal.Writer
       Polysemy.IO
-      Polysemy.Law
       Polysemy.Membership
       Polysemy.NonDet
       Polysemy.Output
       Polysemy.Reader
       Polysemy.Resource
       Polysemy.State
-      Polysemy.State.Law
       Polysemy.Tagged
       Polysemy.Trace
       Polysemy.View
@@ -102,8 +100,7 @@ library
       UnicodeSyntax
   ghc-options: -Wall
   build-depends:
-      QuickCheck >=2.11.3 && <3
-    , async >=2.2 && <3
+      async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , first-class-families >=0.5.0.0 && <0.9
@@ -144,7 +141,6 @@ test-suite polysemy-test
       InspectorSpec
       InterceptSpec
       KnownRowSpec
-      LawsSpec
       OutputSpec
       TacticsSpec
       ThEffectSpec
@@ -175,8 +171,7 @@ test-suite polysemy-test
   build-tool-depends:
       hspec-discover:hspec-discover >=2.0
   build-depends:
-      QuickCheck >=2.11.3 && <3
-    , async >=2.2 && <3
+      async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , doctest >=0.16.0.1 && <0.19
@@ -221,8 +216,7 @@ benchmark polysemy-bench
       TypeFamilies
       UnicodeSyntax
   build-depends:
-      QuickCheck >=2.11.3 && <3
-    , async >=2.2 && <3
+      async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
     , criterion

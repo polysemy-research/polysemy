@@ -4,6 +4,8 @@
 
 ### Breaking Changes
 
+- Removed `Polysemy.Law`
+
 ### Other Changes
 
 ## 1.7.1.0 (2021-11-23)

@@ -573,8 +573,25 @@ insertAt = hoistSem $ \u -> hoist (insertAt @index @inserted @head @oldTail) $
 
 
 ------------------------------------------------------------------------------
--- | Embed an effect into a 'Sem'. This is used primarily via
--- 'Polysemy.makeSem' to implement smart constructors.
+-- | Execute an action of an effect.
+--
+-- This is primarily used to create methods for actions of effects:
+--
+-- @
+-- data FooBar m a where
+--   Foo :: String -> m a -> FooBar m a
+--   Bar :: FooBar m Int
+--
+-- foo :: Member FooBar r => String -> Sem r a -> Sem r a
+-- foo s m = send (Foo s m)
+--
+-- bar :: Member FooBar r => Sem r Int
+-- bar = send Bar
+-- @
+--
+-- 'Polysemy.makeSem' allows you to eliminate this boilerplate.
+--
+-- @since TODO
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}
