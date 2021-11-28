@@ -68,6 +68,11 @@ module Polysemy
     -- readLine  :: 'Member' Console r => 'Sem' r String
     -- @
     --
+    -- Each of these generated definitions make use of 'send' in order to perform
+    -- the corresponding action of the effect. If you don't want to use
+    -- Template Haskell, you can write the necessary boilerplate yourself by
+    -- using 'send' directly.
+    --
     -- Effects which don't make use of the @m@ parameter are known as
     -- "first-order effects."
 
@@ -95,6 +100,7 @@ module Polysemy
     -- @
     --
     -- As you see, in the smart constructors, the @m@ parameter has become @'Sem' r@.
+  , send
   , makeSem
   , makeSem_
 
