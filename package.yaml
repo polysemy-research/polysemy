@@ -29,7 +29,6 @@ dependencies:
 - unagi-chan >= 0.4.0.0 && < 0.5
 - async >= 2.2 && < 3
 - type-errors >= 0.2.0.0
-- QuickCheck >= 2.11.3 && < 3
 
 custom-setup:
   dependencies:

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Removed `Polysemy.Law`
+
 ### Breaking Changes
 
 ### Other Changes
