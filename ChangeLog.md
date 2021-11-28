@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-- Removed `Polysemy.Law`
-
 ### Breaking Changes
+
+- Removed `Polysemy.Law`
 
 ### Other Changes
 
