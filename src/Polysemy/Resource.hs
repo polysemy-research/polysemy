@@ -14,7 +14,6 @@ module Polysemy.Resource
     -- * Interpretations
   , runResource
   , resourceToIOFinal
-  , lowerResource
   ) where
 
 import qualified Control.Exception as X
@@ -135,42 +134,6 @@ resourceToIOFinal = interpretFinal $ \case
         )
 
 {-# INLINE resourceToIOFinal #-}
-
-
-------------------------------------------------------------------------------
--- | Run a 'Resource' effect in terms of 'X.bracket'.
---
--- @since 1.0.0.0
-lowerResource
-    :: ∀ r a
-     . Member (Embed IO) r
-    => (∀ x. Sem r x -> IO x)
-       -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is likely
-       -- some combination of 'runM' and other interpreters composed via '.@'.
-    -> Sem (Resource ': r) a
-    -> Sem r a
-lowerResource finish = interpretH $ \case
-  Bracket alloc dealloc use -> do
-    a <- runT  alloc
-    d <- bindT dealloc
-    u <- bindT use
-
-    let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ lowerResource
-
-    embed $ X.bracket (run_it a) (run_it . d) (run_it . u)
-
-  BracketOnError alloc dealloc use -> do
-    a <- runT  alloc
-    d <- bindT dealloc
-    u <- bindT use
-
-    let run_it :: Sem (Resource ': r) x -> IO x
-        run_it = finish .@ lowerResource
-
-    embed $ X.bracketOnError (run_it a) (run_it . d) (run_it . u)
-{-# INLINE lowerResource #-}
-{-# DEPRECATED lowerResource "Use 'resourceToIOFinal' instead" #-}
 
 
 ------------------------------------------------------------------------------
