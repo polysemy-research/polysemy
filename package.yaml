@@ -100,13 +100,3 @@ tests:
     generated-other-modules:
     - Build_doctests
 
-benchmarks:
-  polysemy-bench:
-    source-dirs: bench
-    main: countDown.hs
-    dependencies:
-    - criterion
-    - free
-    - freer-simple
-    - mtl
-    - polysemy
