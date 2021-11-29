@@ -13,6 +13,8 @@
 - Removed `lowerError` from `Polysemy.Error`. Use `errorToIOFinal` instead.
 - Removed `resourceToIO` and `lowerResource` from `Polysemy.Resource`. Use
     `resourceToIOFinal` instead.
+- Removed `runFixpoint` and `runFixpointM` from `Polysemy.Fixpoint`. Use
+    `fixpointToFinal` instead.
 
 ### Other Changes
 
