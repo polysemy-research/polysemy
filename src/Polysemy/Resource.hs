@@ -94,16 +94,6 @@ onException act end = bracketOnError (pure ()) (const end) (const act)
 -- will have local state semantics in regards to 'Resource' effects
 -- interpreted this way. See 'Final'.
 --
--- Notably, unlike 'resourceToIO', this is not consistent with
--- 'Polysemy.State.State' unless 'Polysemy.State.runStateInIORef' is used.
--- State that seems like it should be threaded globally throughout 'bracket's
--- /will not be./
---
--- Use 'resourceToIO' instead if you need to run
--- pure, stateful interpreters after the interpreter for 'Resource'.
--- (Pure interpreters are interpreters that aren't expressed in terms of
--- another effect or monad; for example, 'Polysemy.State.runState'.)
---
 -- @since 1.2.0.0
 resourceToIOFinal :: Member (Final IO) r
                   => Sem (Resource ': r) a
