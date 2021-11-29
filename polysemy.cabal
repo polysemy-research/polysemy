@@ -138,7 +138,6 @@ test-suite polysemy-test
       FixpointSpec
       FusionSpec
       HigherOrderSpec
-      InspectorSpec
       InterceptSpec
       KnownRowSpec
       OutputSpec
