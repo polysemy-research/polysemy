@@ -76,7 +76,6 @@ library
       Polysemy.State
       Polysemy.Tagged
       Polysemy.Trace
-      Polysemy.View
       Polysemy.Writer
   other-modules:
       Polysemy.Internal.PluginLookup
@@ -147,7 +146,6 @@ test-suite polysemy-test
       TacticsSpec
       ThEffectSpec
       TypeErrors
-      ViewSpec
       WriterSpec
       Paths_polysemy
       Build_doctests

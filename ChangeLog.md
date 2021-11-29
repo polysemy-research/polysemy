@@ -4,6 +4,7 @@
 
 ### Breaking Changes
 
+- Removed `Polysemy.View`
 - Removed `Polysemy.Law`
 
 ### Other Changes
