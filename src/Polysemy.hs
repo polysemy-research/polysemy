@@ -120,16 +120,9 @@ module Polysemy
   , reinterpret2H
   , reinterpret3H
 
-    -- * Combinators for Interpreting Directly to IO
-  , withLowerToIO
-
     -- * Kind Synonyms
   , Effect
   , EffectRow
-
-    -- * Composing IO-based Interpreters
-  , (.@)
-  , (.@@)
 
     -- * Tactics
     -- | Higher-order effects need to explicitly thread /other effects'/ state
@@ -155,7 +148,6 @@ module Polysemy
 import Polysemy.Final
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
-import Polysemy.Internal.Forklift
 import Polysemy.Internal.Kind
 import Polysemy.Internal.Tactics
 import Polysemy.Internal.TH.Effect

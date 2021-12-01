@@ -6,8 +6,20 @@
 
 - Removed `Polysemy.View`
 - Removed `Polysemy.Law`
+- Removed `(@)` and `(@@)` from `Polysemy`
+- Removed `withLowerToIO` from `Polysemy`. Use `withWeavingToFinal` instead.
+- Removed `asyncToIO` and `lowerAsync` from `Polysemy.Async`. Use
+    `asyncToIOFinal` instead.
+- Removed `lowerEmbedded` from `Polysemy.IO`. Use `embedToMonadIO` instead.
+- Removed `lowerError` from `Polysemy.Error`. Use `errorToIOFinal` instead.
+- Removed `resourceToIO` and `lowerResource` from `Polysemy.Resource`. Use
+    `resourceToIOFinal` instead.
+- Removed `runFixpoint` and `runFixpointM` from `Polysemy.Fixpoint`. Use
+    `fixpointToFinal` instead.
 
 ### Other Changes
+
+- Exposed `send` from `Polysemy`.
 
 ## 1.7.1.0 (2021-11-23)
 

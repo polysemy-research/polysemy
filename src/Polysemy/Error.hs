@@ -23,13 +23,11 @@ module Polysemy.Error
   , runError
   , mapError
   , errorToIOFinal
-  , lowerError
   ) where
 
 import qualified Control.Exception as X
 import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
-import           Data.Bifunctor (first)
 import           Data.Typeable
 import           Polysemy
 import           Polysemy.Final
@@ -152,16 +150,16 @@ note _ (Just a) = pure a
 {-# INLINABLE note #-}
 
 ------------------------------------------------------------------------------
--- | Similar to @'catch'@, but returns an @'Either'@ result which is (@'Right' a@) 
--- if no exception of type @e@ was @'throw'@n, or (@'Left' ex@) if an exception of type 
--- @e@ was @'throw'@n and its value is @ex@. 
+-- | Similar to @'catch'@, but returns an @'Either'@ result which is (@'Right' a@)
+-- if no exception of type @e@ was @'throw'@n, or (@'Left' ex@) if an exception of type
+-- @e@ was @'throw'@n and its value is @ex@.
 try :: Member (Error e) r => Sem r a -> Sem r (Either e a)
 try m = catch (Right <$> m) (return . Left)
 {-# INLINABLE try #-}
 
 ------------------------------------------------------------------------------
 -- | A variant of @'try'@ that takes an exception predicate to select which exceptions
--- are caught (c.f. @'catchJust'@). If the exception does not match the predicate, 
+-- are caught (c.f. @'catchJust'@). If the exception does not match the predicate,
 -- it is re-@'throw'@n.
 tryJust :: Member (Error e) r => (e -> Maybe b) -> Sem r a -> Sem r (Either b a)
 tryJust f m = do
@@ -174,10 +172,10 @@ tryJust f m = do
 {-# INLINABLE tryJust #-}
 
 ------------------------------------------------------------------------------
--- | The function @'catchJust'@ is like @'catch'@, but it takes an extra argument 
--- which is an exception predicate, a function which selects which type of exceptions 
+-- | The function @'catchJust'@ is like @'catch'@, but it takes an extra argument
+-- which is an exception predicate, a function which selects which type of exceptions
 -- we're interested in.
-catchJust :: Member (Error e) r 
+catchJust :: Member (Error e) r
           => (e -> Maybe b) -- ^ Predicate to select exceptions
           -> Sem r a  -- ^ Computation to run
           -> (b -> Sem r a) -- ^ Handler
@@ -295,45 +293,3 @@ runErrorAsExcFinal = interpretFinal $ \case
       h' (unwrapExc se <$ s)
 {-# INLINE runErrorAsExcFinal #-}
 
-------------------------------------------------------------------------------
--- | Run an 'Error' effect as an 'IO' 'X.Exception'. This interpretation is
--- significantly faster than 'runError', at the cost of being less flexible.
---
--- @since 1.0.0.0
-lowerError
-    :: ( Typeable e
-       , Member (Embed IO) r
-       )
-    => (∀ x. Sem r x -> IO x)
-       -- ^ Strategy for lowering a 'Sem' action down to 'IO'. This is
-       -- likely some combination of 'runM' and other interpreters composed via
-       -- '.@'.
-    -> Sem (Error e ': r) a
-    -> Sem r (Either e a)
-lowerError lower
-    = embed
-    . fmap (first unwrapExc)
-    . X.try
-    . (lower .@ runErrorAsExc)
-{-# INLINE lowerError #-}
-{-# DEPRECATED lowerError "Use 'errorToIOFinal' instead" #-}
-
-
--- TODO(sandy): Can we use the new withLowerToIO machinery for this?
-runErrorAsExc
-    :: forall e r a. ( Typeable e
-       , Member (Embed IO) r
-       )
-    => (∀ x. Sem r x -> IO x)
-    -> Sem (Error e ': r) a
-    -> Sem r a
-runErrorAsExc lower = interpretH $ \case
-  Throw e -> embed $ X.throwIO $ WrappedExc e
-  Catch main handle -> do
-    is <- getInitialStateT
-    m  <- runT main
-    h  <- bindT handle
-    let runIt = lower . runErrorAsExc lower
-    embed $ X.catch (runIt m) $ \(se :: WrappedExc e) ->
-      runIt $ h $ unwrapExc se <$ is
-{-# INLINE runErrorAsExc #-}

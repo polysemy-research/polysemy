@@ -45,18 +45,3 @@ interpretBadFirstOrder = ()
 -- ...
 tooFewArgumentsReinterpret = ()
 
-
---------------------------------------------------------------------------------
--- |
--- >>> :{
--- let foo :: Member Resource r => Sem r ()
---     foo = undefined
---  in runM $ lowerResource foo
--- :}
--- ...
--- ... Couldn't match expected type...
--- ... with actual type...
--- ... Probable cause: ... is applied to too few arguments
--- ...
-missingArgumentToRunResourceInIO = ()
-
