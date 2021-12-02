@@ -1,6 +1,6 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.34.5.
 --
 -- see: https://github.com/sol/hpack
 
@@ -59,6 +59,7 @@ library
       Polysemy.Internal.Index
       Polysemy.Internal.Kind
       Polysemy.Internal.NonDet
+      Polysemy.Internal.Scoped
       Polysemy.Internal.Sing
       Polysemy.Internal.Strategy
       Polysemy.Internal.Tactics
@@ -72,6 +73,7 @@ library
       Polysemy.Output
       Polysemy.Reader
       Polysemy.Resource
+      Polysemy.Scoped
       Polysemy.State
       Polysemy.Tagged
       Polysemy.Trace
@@ -84,6 +86,7 @@ library
   hs-source-dirs:
       src
   default-extensions:
+      BlockArguments
       DataKinds
       DeriveFunctor
       FlexibleContexts
@@ -151,6 +154,7 @@ test-suite polysemy-test
   hs-source-dirs:
       test
   default-extensions:
+      BlockArguments
       DataKinds
       DeriveFunctor
       FlexibleContexts
