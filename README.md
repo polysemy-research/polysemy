@@ -57,9 +57,12 @@ Or by adding `-fplugin=Polysemy.Plugin` to your `package.yaml`/`.cabal` file `gh
 
 - Raghu Kaippully wrote a beginner friendly
   [tutorial](https://haskell-explained.gitlab.io/blog/posts/2019/07/28/polysemy-is-cool-part-1/index.html).
+- Sandy Maguire, the author, wrote a post about
+  [Porting to Polysemy](https://reasonablypolymorphic.com/blog/porting-to-polysemy/)
+  from transformers/MTL-style monads.
 - Paweł Szulc gave a [great talk](https://youtu.be/idU7GdlfP9Q?t=1394) on how
   to start thinking about polysemy.
-- Sandy Maguire, the author, gave a talk on some of the
+- Sandy Maguire gave a talk on some of the
   [performance implementation](https://www.youtube.com/watch?v=-dHFOjcK6pA)
 - He has also written
   [some](http://reasonablypolymorphic.com/blog/freer-higher-order-effects/)
