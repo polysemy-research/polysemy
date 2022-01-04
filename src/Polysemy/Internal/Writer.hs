@@ -148,8 +148,8 @@ runWriterSTMAction write = interpretH $ \case
                 -> o
                 -> STM ()
     writeListen tvar switch = \o -> do
-      alreadyCommited <- readTVar switch
-      unless alreadyCommited $ do
+      alreadyCommitted <- readTVar switch
+      unless alreadyCommitted $ do
         s <- readTVar tvar
         writeTVar tvar $! s <> o
       write o
@@ -184,8 +184,8 @@ runWriterSTMAction write = interpretH $ \case
       o <- readTVar tvar
       let !o' = f o
       -- Likely redundant, but doesn't hurt.
-      alreadyCommited <- readTVar switch
-      unless alreadyCommited $
+      alreadyCommitted <- readTVar switch
+      unless alreadyCommitted $
         write o'
       writeTVar switch True
     {-# INLINE commitPass #-}
