@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP, TemplateHaskell #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -31,6 +31,9 @@ module Polysemy.Internal.TH.Effect
 
 import Control.Monad
 import Language.Haskell.TH
+#if __GLASGOW_HASKELL__ >= 902
+import Language.Haskell.TH.Syntax (addModFinalizer)
+#endif
 import Language.Haskell.TH.Datatype
 import Polysemy.Internal.TH.Common
 
@@ -152,7 +155,10 @@ genSig cli
 genDec :: Bool -> ConLiftInfo -> Q [Dec]
 genDec should_mk_sigs cli = do
   let fun_args_names = fst <$> cliFunArgs cli
-
+#if __GLASGOW_HASKELL__ >= 902
+  doc <- getDoc $ DeclDoc $ cliConName cli
+  maybe (pure ()) (addModFinalizer . putDoc (DeclDoc $ cliFunName cli)) doc
+#endif
   pure
     [ PragmaD $ InlineP (cliFunName cli) Inlinable ConLike AllPhases
     , FunD (cliFunName cli)
