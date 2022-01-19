@@ -16,6 +16,8 @@
     `resourceToIOFinal` instead.
 - Removed `runFixpoint` and `runFixpointM` from `Polysemy.Fixpoint`. Use
     `fixpointToFinal` instead.
+- Changed semantics of `errorToIOFinal` so that it no longer catches errors
+  from other handlers of the same type.
 
 ### Other Changes
 

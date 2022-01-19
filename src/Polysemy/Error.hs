@@ -25,14 +25,16 @@ module Polysemy.Error
   , errorToIOFinal
   ) where
 
-import qualified Control.Exception as X
+import qualified Control.Exception          as X
 import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
-import           Data.Typeable
+import           Data.Unique                (Unique, hashUnique, newUnique)
+import           GHC.Exts                   (Any)
 import           Polysemy
 import           Polysemy.Final
 import           Polysemy.Internal
 import           Polysemy.Internal.Union
+import           Unsafe.Coerce              (unsafeCoerce)
 
 
 data Error e m a where
@@ -44,7 +46,7 @@ makeSem ''Error
 
 hush :: Either e a -> Maybe a
 hush (Right a) = Just a
-hush (Left _) = Nothing
+hush (Left _)  = Nothing
 
 
 ------------------------------------------------------------------------------
@@ -55,7 +57,7 @@ fromEither
     :: Member (Error e) r
     => Either e a
     -> Sem r a
-fromEither (Left e) = throw e
+fromEither (Left e)  = throw e
 fromEither (Right a) = pure a
 {-# INLINABLE fromEither #-}
 
@@ -103,7 +105,7 @@ fromExceptionVia
 fromExceptionVia f m = do
   r <- embed $ X.try m
   case r of
-    Left e -> throw $ f e
+    Left e  -> throw $ f e
     Right a -> pure a
 {-# INLINABLE fromExceptionVia #-}
 
@@ -137,7 +139,7 @@ fromExceptionSemVia f m = do
     s  <- getInitialStateS
     pure $ (fmap . fmap) Right m' `X.catch` \e -> (pure (Left e <$ s))
   case r of
-    Left e -> throw $ f e
+    Left e  -> throw $ f e
     Right a -> pure a
 {-# INLINABLE fromExceptionSemVia #-}
 
@@ -168,7 +170,7 @@ tryJust f m = do
       Right v -> return (Right v)
       Left e -> case f e of
                   Nothing -> throw e
-                  Just b -> return $ Left b
+                  Just b  -> return $ Left b
 {-# INLINABLE tryJust #-}
 
 ------------------------------------------------------------------------------
@@ -184,7 +186,7 @@ catchJust ef m bf = catch m handler
   where
       handler e = case ef e of
                     Nothing -> throw e
-                    Just b -> bf b
+                    Just b  -> bf b
 {-# INLINABLE catchJust #-}
 
 ------------------------------------------------------------------------------
@@ -242,14 +244,24 @@ mapError f = interpretH $ \case
 {-# INLINE mapError #-}
 
 
-newtype WrappedExc e = WrappedExc { unwrapExc :: e }
-  deriving (Typeable)
+data WrappedExc = WrappedExc !Unique Any
 
-instance Typeable e => Show (WrappedExc e) where
-  show = mappend "WrappedExc: " . show . typeRep
+instance Show WrappedExc where
+  show (WrappedExc uid _) =
+    "errorToIOFinal: Escaped opaque exception. Unique hash is: " <>
+    show (hashUnique uid) <> "This should only happen if the computation that " <>
+    "threw the exception was somehow invoked outside of the argument of 'errorToIOFinal'; " <>
+    "for example, if you 'async' an exceptional computation inside of the argument " <>
+    "provided to 'errorToIOFinal', and then 'await' on it *outside* of the argument " <>
+    "provided to 'errorToIOFinal'. If that or any similar shenanigans seems unlikely, " <>
+    "please open an issue on the GitHub repository."
 
-instance (Typeable e) => X.Exception (WrappedExc e)
+instance X.Exception WrappedExc
 
+catchWithUid :: forall e a. Unique -> IO a -> (e -> IO a) -> IO a
+catchWithUid uid m h = X.catch m $ \exc@(WrappedExc uid' e) ->
+  if uid == uid' then h (unsafeCoerce e) else X.throwIO exc
+{-# INLINE catchWithUid #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Error' effect as an 'IO' 'X.Exception' through final 'IO'. This
@@ -261,35 +273,31 @@ instance (Typeable e) => X.Exception (WrappedExc e)
 --
 -- @since 1.2.0.0
 errorToIOFinal
-    :: ( Typeable e
-       , Member (Final IO) r
+    :: forall e r a
+    .  ( Member (Final IO) r
        )
     => Sem (Error e ': r) a
     -> Sem r (Either e a)
 errorToIOFinal sem = withStrategicToFinal @IO $ do
-  m' <- runS (runErrorAsExcFinal sem)
+  m' <- bindS (`runErrorAsExcFinal` sem)
   s  <- getInitialStateS
-  pure $
-    either
-      ((<$ s) . Left . unwrapExc)
-      (fmap Right)
-    <$> X.try m'
+  pure $ do
+    uid <- newUnique
+    catchWithUid @e uid (fmap Right <$> m' (uid <$ s)) (pure . (<$ s) . Left)
 {-# INLINE errorToIOFinal #-}
 
 runErrorAsExcFinal
     :: forall e r a
-    .  ( Typeable e
-       , Member (Final IO) r
+    .  ( Member (Final IO) r
        )
-    => Sem (Error e ': r) a
+    => Unique
+    -> Sem (Error e ': r) a
     -> Sem r a
-runErrorAsExcFinal = interpretFinal $ \case
-  Throw e   -> pure $ X.throwIO $ WrappedExc e
+runErrorAsExcFinal uid = interpretFinal $ \case
+  Throw e   -> pure $ X.throwIO $ WrappedExc uid (unsafeCoerce e)
   Catch m h -> do
     m' <- runS m
     h' <- bindS h
     s  <- getInitialStateS
-    pure $ X.catch m' $ \(se :: WrappedExc e) ->
-      h' (unwrapExc se <$ s)
+    pure $ catchWithUid uid m' $ \e -> h' (e <$ s)
 {-# INLINE runErrorAsExcFinal #-}
-
