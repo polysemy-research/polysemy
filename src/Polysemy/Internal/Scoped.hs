@@ -14,9 +14,10 @@ import Polysemy.Internal.Combinators (transform)
 -- This requires the interpreter for @effect@ to be parameterized by @resource@ and constructed for every program using
 -- @Scoped@ separately.
 --
--- An application for this is 'Polysemy.Conc.Events', in which each program using the effect 'Polysemy.Conc.Consume' is
--- interpreted with its own copy of the event channel; or a database transaction, in which a transaction handle is
--- created for the wrapped program and passed to the interpreter for the database effect.
+-- An application for this is @Polysemy.Conc.Events@ from <https://hackage.haskell.org/package/polysemy-conc>,
+-- in which each program using the effect @Polysemy.Conc.Consume@ is interpreted with its own copy of the event channel;
+-- or a database transaction, in which a transaction handle is created for the wrapped program and passed
+-- to the interpreter for the database effect.
 --
 -- For a longer exposition, see <https://www.tweag.io/blog/2022-01-05-polysemy-scoped/>.
 --
