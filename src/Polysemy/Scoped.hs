@@ -21,9 +21,12 @@ import Polysemy.Internal.Tactics (Tactical, runTactics)
 -- |Interpreter for 'Scoped', taking a @resource@ allocation function and a parameterized interpreter for the plain
 -- @effect@.
 --
+-- >>> runScoped withResource scopedInterpreter
+--
 -- @withResource@ is a callback function, allowing the user to acquire the resource for each program from other effects.
 --
 -- @scopedInterpreter@ is a regular interpreter that is called with the @resource@ argument produced by @scope@.
+--
 -- /Note/: This function will be called for each action in the program, so if the interpreter allocates any resources,
 -- they will be scoped to a single action. Move them to @withResource@ instead.
 runScoped ::
