@@ -18,6 +18,8 @@ import Polysemy.Internal.Combinators (transform)
 -- interpreted with its own copy of the event channel; or a database transaction, in which a transaction handle is
 -- created for the wrapped program and passed to the interpreter for the database effect.
 --
+-- For a longer exposition, see <https://www.tweag.io/blog/2022-01-05-polysemy-scoped/>.
+--
 -- Resource creation is performed by the function passed to 'Polysemy.Scoped.runScoped'.
 --
 -- The constructors are not intended to be used directly; the smart constructor 'scoped' is used like a local
