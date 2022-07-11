@@ -280,26 +280,28 @@ getInstance predty = do
   givens <- get
   case S.member (PredType' predty) givens of
     True -> pure True
-    False -> do
+    False ->
       let (con, apps) = tcSplitTyConApp predty
-          Just cls = tyConClass_maybe con
-      env <- lift tcGetInstEnvs
-      let (mres, _, _) = lookupInstEnv False env cls apps
-      case mres of
-        ((inst, mapps) : _) -> do
-          -- Get the instantiated type of the dictionary
-          let df = piResultTys (idType $ is_dfun inst)
-                 $ zipWith fromMaybe alphaTys mapps
-          -- pull off its resulting arguments
-          let (theta, _) = tcSplitPhiTy df
-          allM getInstance theta >>= \case
-            True -> do
-              -- Record that we can solve this instance, in case it's used
-              -- elsewhere
-              modify $ S.insert $ coerce predty
-              pure True
-            False -> pure False
-        _ -> pure False
+      in case tyConClass_maybe con of
+        Nothing -> pure False
+        Just cls -> do
+          env <- lift tcGetInstEnvs
+          let (mres, _, _) = lookupInstEnv False env cls apps
+          case mres of
+            ((inst, mapps) : _) -> do
+              -- Get the instantiated type of the dictionary
+              let df = piResultTys (idType $ is_dfun inst)
+                    $ zipWith fromMaybe alphaTys mapps
+              -- pull off its resulting arguments
+              let (theta, _) = tcSplitPhiTy df
+              allM getInstance theta >>= \case
+                True -> do
+                  -- Record that we can solve this instance, in case it's used
+                  -- elsewhere
+                  modify $ S.insert $ coerce predty
+                  pure True
+                False -> pure False
+            _ -> pure False
 
 
 solveFundep
