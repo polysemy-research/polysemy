@@ -178,7 +178,7 @@ test-suite polysemy-test
     , doctest >=0.16.0.1 && <0.20
     , first-class-families >=0.5.0.0 && <0.9
     , hspec >=2.6.0 && <3
-    , inspection-testing >=0.4.2 && <0.5
+    , inspection-testing >=0.4.2 && <0.6
     , mtl >=2.2.2 && <3
     , polysemy
     , stm ==2.*
