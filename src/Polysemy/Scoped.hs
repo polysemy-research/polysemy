@@ -1,3 +1,5 @@
+{-# language AllowAmbiguousTypes #-}
+
 module Polysemy.Scoped (
   -- * Effect
   Scoped,
@@ -12,15 +14,19 @@ module Polysemy.Scoped (
   interpretScopedH',
   interpretScoped,
   interpretScopedAs,
+  interpretScopedWithH,
+  interpretScopedWith,
+  interpretScopedWith_,
   runScoped,
   runScopedAs,
 ) where
 
-import Polysemy.Internal (InterpreterFor, Sem, liftSem, raise)
+import Polysemy.Internal (InterpreterFor, Sem, liftSem, raise, Append, insertAt)
 import Polysemy.Internal.Combinators (interpretH)
 import Polysemy.Internal.Scoped (Scoped (InScope, Run), interpretWeaving, rescope, scoped, scoped_)
 import Polysemy.Internal.Tactics (Tactical, runTactics, runTSimple, liftT)
 import Polysemy.Internal.Union (Weaving (Weaving), injWeaving)
+import Polysemy.Internal.Index (InsertAtIndex)
 
 -- |Interpreter for 'Scoped', taking a @resource@ allocation function and a parameterized handler for the plain
 -- @effect@.
@@ -82,6 +88,74 @@ interpretScopedAs ::
   InterpreterFor (Scoped param resource effect) r
 interpretScopedAs resource =
   interpretScoped \ p use -> use =<< resource p
+{-# inline interpretScopedAs #-}
+
+-- |Higher-order interpreter for 'Scoped' that allows the handler to use additional effects that are interpreted by the
+-- resource allocator.
+--
+-- /Note/: It is necessary to specify the list of local interpreters with a type application; GHC won't be able to
+-- figure them out from the type of @withResource@:
+--
+-- > interpretScopedWithH @[AtomicState Int, Reader Bool] withResource \ _ -> \case
+-- >   SomeAction -> atomicPut . (> 0) =<< ask
+interpretScopedWithH ::
+  ∀ extra param resource effect r r1 .
+  r1 ~ (Append extra r) =>
+  InsertAtIndex 0 '[] r1 r r1 extra =>
+  InsertAtIndex 1 '[Scoped param resource effect] r1 r (Scoped param resource effect : r1) extra =>
+  (∀ x . param -> (resource -> Sem r1 x) -> Sem r x) ->
+  (∀ r0 x . resource -> effect (Sem r0) x -> Tactical effect (Sem r0) r1 x) ->
+  InterpreterFor (Scoped param resource effect) r
+interpretScopedWithH withResource scopedHandler =
+  interpretWeaving \case
+    Weaving (InScope param main) s wv ex _ ->
+      ex <$> withResource param \ resource -> inScope (insertAt @1 @extra (wv (main resource <$ s)))
+    _ ->
+      error "top level Run"
+  where
+    inScope :: InterpreterFor (Scoped param resource effect) r1
+    inScope =
+      interpretWeaving \case
+        Weaving (InScope param main) s wv ex _ ->
+          insertAt @0 @extra (ex <$> withResource param \ resource -> inScope (wv (main resource <$ s)))
+        Weaving (Run resource act) s wv ex ins ->
+          ex <$> runTactics s (raise . inScope . wv) ins (inScope . wv) (scopedHandler resource act)
+{-# inline interpretScopedWithH #-}
+
+-- |Interpreter for 'Scoped' that allows the handler to use additional effects that are interpreted by the resource
+-- allocator.
+--
+-- See the /Note/ on 'interpretScopedWithH'.
+interpretScopedWith ::
+  ∀ extra param resource effect r r1 .
+  r1 ~ (Append extra r) =>
+  InsertAtIndex 0 '[] r1 r r1 extra =>
+  InsertAtIndex 1 '[Scoped param resource effect] r1 r (Scoped param resource effect : r1) extra =>
+  (∀ x . param -> (resource -> Sem r1 x) -> Sem r x) ->
+  (∀ m x . resource -> effect m x -> Sem r1 x) ->
+  InterpreterFor (Scoped param resource effect) r
+interpretScopedWith withResource scopedHandler =
+  interpretScopedWithH @extra withResource \ r e -> liftT (scopedHandler r e)
+{-# inline interpretScopedWith #-}
+
+-- |Interpreter for 'Scoped' that allows the handler to use additional effects that are interpreted by the resource
+-- allocator.
+--
+-- In this variant, no resource is used and the allocator is a plain interpreter.
+-- This is useful for scopes that only need local effects, but no resources in the handler.
+--
+-- See the /Note/ on 'interpretScopedWithH'.
+interpretScopedWith_ ::
+  ∀ extra param effect r r1 .
+  r1 ~ (Append extra r) =>
+  InsertAtIndex 0 '[] r1 r r1 extra =>
+  InsertAtIndex 1 '[Scoped param () effect] r1 r (Scoped param () effect : r1) extra =>
+  (∀ x . param -> Sem r1 x -> Sem r x) ->
+  (∀ m x . effect m x -> Sem r1 x) ->
+  InterpreterFor (Scoped param () effect) r
+interpretScopedWith_ withResource scopedHandler =
+  interpretScopedWithH @extra (\ p f -> withResource p (f ())) \ () e -> liftT (scopedHandler e)
+{-# inline interpretScopedWith_ #-}
 
 -- |Interpreter for 'Scoped', taking a @resource@ allocation function and a parameterized interpreter for the plain
 -- @effect@.
