@@ -18,8 +18,8 @@
       "865" = hsPkgs nixpkgs_2009 "ghc865";
       "884" = hsPkgs nixpkgs_2105 "ghc884";
       "8107" = hsPkgs unstable "ghc8107";
-      "901" = hsPkgs unstable "ghc901";
-      "921" = hsPkgs unstable "ghc921";
+      "902" = hsPkgs unstable "ghc902";
+      "924" = hsPkgs unstable "ghc924";
     };
 
     mkPackages = version: {
@@ -27,8 +27,12 @@
       "polysemy-plugin-${version}" = ghcs.${version}.polysemy-plugin;
     };
 
-    packages =
-      foldl' (l: r: l // r) { inherit (ghcs."8107") polysemy polysemy-plugin; } (map mkPackages (attrNames ghcs));
+    defaultPackages = {
+      inherit (ghcs."902") polysemy polysemy-plugin;
+      default = ghcs."902".polysemy;
+    };
+
+    packages = foldl' (l: r: l // r) defaultPackages (map mkPackages (attrNames ghcs));
 
     mkDevShell = extra: ghc: ghc.shellFor {
       packages = p: [p.polysemy p.polysemy-plugin];
@@ -38,14 +42,12 @@
       withHoogle = extra;
     };
 
-    devShells = mapAttrs' (n: g: nameValuePair "ghc${n}" (mkDevShell (n != "921") g)) ghcs;
+    devShells = mapAttrs' (n: g: nameValuePair "ghc${n}" (mkDevShell (n != "924") g)) ghcs;
 
   in {
-    inherit packages devShells;
+    inherit packages;
 
-    defaultPackage = packages.polysemy;
-
-    devShell = devShells.ghc8107;
+    devShells = devShells // { default = devShells.ghc902; };
 
     checks = packages;
   });
