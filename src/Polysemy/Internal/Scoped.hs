@@ -25,26 +25,69 @@ import Polysemy.Internal.Combinators (transform)
 --
 -- The constructors are not intended to be used directly; the smart constructor 'scoped' is used like a local
 -- interpreter for @effect@.
-data Scoped (resource :: Type) (effect :: Effect) :: Effect where
-  Run :: ∀ resource effect m a . resource -> effect m a -> Scoped resource effect m a
-  InScope :: ∀ resource effect m a . (resource -> m a) -> Scoped resource effect m a
+-- 'scoped' takes an argument of type @param@, which will be passed through to the interpreter, to be used by the
+-- resource allocation function.
+data Scoped (param :: Type) (resource :: Type) (effect :: Effect) :: Effect where
+  Run :: ∀ param resource effect m a . resource -> effect m a -> Scoped param resource effect m a
+  InScope :: ∀ param resource effect m a . param -> (resource -> m a) -> Scoped param resource effect m a
+
+-- |A convenience alias for a scope without parameters.
+type Scoped_ resource effect =
+  Scoped () resource effect
 
 -- |Constructor for 'Scoped', taking a nested program and transforming all instances of @effect@ to
--- @Scoped resource effect@.
+-- @'Scoped' param resource effect@ and wrapping the result with 'InScope'.
+--
+-- This allows the effective interpreter to bracket the nested program with a resource from a distance.
+--
+-- The value @param@ is passed to the interpreter.
 scoped ::
-  ∀ resource effect r .
-  Member (Scoped resource effect) r =>
+  ∀ param resource effect r .
+  Member (Scoped param resource effect) r =>
+  param ->
   InterpreterFor effect r
-scoped main =
-  send $ InScope @resource @effect \ resource ->
-    transform @effect (Run resource) main
+scoped param main =
+  send $ InScope @param @resource @effect param \ resource ->
+    transform @effect (Run @param resource) main
+{-# inline scoped #-}
+
+-- |Constructor for 'Scoped_', taking a nested program and transforming all instances of @effect@ to
+-- @'Scoped_' resource effect@ and wrapping the result with 'InScope'.
+--
+-- This allows the effective interpreter to bracket the nested program with a resource from a distance.
+scoped_ ::
+  ∀ resource effect r .
+  Member (Scoped_ resource effect) r =>
+  InterpreterFor effect r
+scoped_ =
+  scoped @() @resource ()
+{-# inline scoped_ #-}
+
+-- |Transform the parameters of a 'Scoped' program.
+--
+-- This allows incremental additions to the data passed to the interpreter, for example to create an API that permits
+-- different ways of running an effect with some fundamental parameters being supplied at scope creation and some
+-- optional or specific parameters being selected by the user downstream.
+rescope ::
+  ∀ param0 param1 resource effect r .
+  Member (Scoped param1 resource effect) r =>
+  (param0 -> param1) ->
+  InterpreterFor (Scoped param0 resource effect) r
+rescope fp =
+  transform \case
+    Run res e ->
+      Run @param1 res e
+    InScope p main ->
+      InScope (fp p) main
+{-# inline rescope #-}
 
 -- |Helper for @runScoped@.
-interpretH' ::
+interpretWeaving ::
   ∀ e r .
   (∀ x . Weaving e (Sem (e : r)) x -> Sem r x) ->
   InterpreterFor e r
-interpretH' h (Sem m) =
+interpretWeaving h (Sem m) =
   Sem \ k -> m $ decomp >>> \case
     Right wav -> runSem (h wav) k
-    Left g -> k $ hoist (interpretH' h) g
+    Left g -> k $ hoist (interpretWeaving h) g
+{-# inline interpretWeaving #-}
