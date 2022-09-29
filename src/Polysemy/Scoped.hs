@@ -92,7 +92,7 @@ interpretScopedAs resource =
 --
 -- @scopedInterpreter@ is a regular interpreter that is called with the @resource@ argument produced by @scope@.
 -- This is mostly useful if you want to reuse an interpreter that you cannot easily rewrite (like from another library).
--- If you have full control over the implementation, 'interpreterScoped' should be preferred.
+-- If you have full control over the implementation, 'interpreteScoped' should be preferred.
 --
 -- /Note/: This function will be called for each action in the program, so if the interpreter allocates any resources,
 -- they will be scoped to a single action. Move them to @withResource@ instead.
