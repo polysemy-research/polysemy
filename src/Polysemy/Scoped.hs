@@ -25,7 +25,7 @@ import Polysemy.Internal.Union (Weaving (Weaving), injWeaving)
 -- |Interpreter for 'Scoped', taking a @resource@ allocation function and a parameterized handler for the plain
 -- @effect@.
 --
--- >>> runScoped withResource scopedHandler
+-- >>> interpretScopedH withResource scopedHandler
 --
 -- @withResource@ is a callback function, allowing the user to acquire the resource for each program wrapped by 'scoped'
 -- using other effects, with an additional argument that contains the call site parameter passed to 'scoped'.
