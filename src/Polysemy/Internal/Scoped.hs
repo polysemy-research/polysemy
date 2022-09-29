@@ -3,12 +3,13 @@
 
 module Polysemy.Internal.Scoped where
 
-import Polysemy.Internal (send, Member, InterpreterFor, Sem(Sem), runSem)
-import Data.Kind (Type)
-import Polysemy.Internal.Kind (Effect)
-import Polysemy.Internal.Union (Weaving, hoist, decomp)
 import Control.Arrow ((>>>))
+import Data.Kind (Type)
+
+import Polysemy.Internal (InterpreterFor, Member, Sem (Sem), runSem, send)
 import Polysemy.Internal.Combinators (transform)
+import Polysemy.Internal.Kind (Effect)
+import Polysemy.Internal.Union (Weaving, decomp, hoist)
 
 -- |@Scoped@ transforms a program so that @effect@ is associated with a @resource@ within that program.
 -- This requires the interpreter for @effect@ to be parameterized by @resource@ and constructed for every program using
@@ -21,12 +22,79 @@ import Polysemy.Internal.Combinators (transform)
 --
 -- For a longer exposition, see <https://www.tweag.io/blog/2022-01-05-polysemy-scoped/>.
 --
--- Resource creation is performed by the function passed to 'Polysemy.Scoped.runScoped'.
+-- Resource allocation is performed by a function passed to 'Polysemy.Scoped.interpretScoped'.
 --
 -- The constructors are not intended to be used directly; the smart constructor 'scoped' is used like a local
 -- interpreter for @effect@.
 -- 'scoped' takes an argument of type @param@, which will be passed through to the interpreter, to be used by the
 -- resource allocation function.
+--
+-- As an example, imagine an effect for writing lines to a file:
+--
+-- > data Write :: Effect where Write :: Text -> Write m ()
+-- > makeSem ''Write
+--
+-- If we now have the following requirements:
+--
+-- 1. The file should be opened and closed right before and after the part of the program in which we write lines
+-- 2. The file name should be specifiable at the point in the program where writing begins
+-- 3. We don't want to commit to IO, lines should be stored in memory when running tests
+--
+-- Then we can take advantage of 'Scoped' to write this program:
+--
+-- > prog :: Member (Scoped FilePath resource Write) r => Sem r ()
+-- > prog = do
+-- >   scoped "file1.txt" do
+-- >     write "line 1"
+-- >     write "line 2"
+-- >   scoped "file2.txt" do
+-- >     write "line 1"
+-- >     write "line 2"
+--
+-- Here 'scoped' creates a prompt for an interpreter to start allocating a resource for @"file1.txt"@ and handling
+-- @Write@ actions using that resource.
+-- When the 'scoped' block ends, the resource should be freed.
+--
+-- The interpreter may look like this:
+--
+-- > interpretWriteFile :: Member (Embed IO) => InterpreterFor (Scoped FilePath Handle Write) r
+-- > interpretWriteFile =
+-- >   interpretScoped (\ name use -> bracket (openFile name WriteMode) hClose use) \ handle -> \case
+-- >     Write line -> embed (Text.hPutStrLn handle line)
+--
+-- Essentially, the @bracket@ is executed at the point where @scoped@ was called, wrapping the following block.
+-- When the second @scoped@ is executed, another call to @bracket@ is performed.
+--
+-- The effect of this is that the operation that uses @Embed IO@ was moved from the call site to the interpreter, while
+-- the interpreter may be executed at the outermost layer of the app.
+--
+-- This makes it possible to use an in-memory interpreter for testing:
+--
+-- > interpretWriteMap :: Member (Output (FilePath, Text)) r => InterpreterFor (Scoped FilePath FilePath Write) r
+-- > interpretWriteMap =
+-- >   interpretScoped (\ name use -> use name) \ name -> \case
+-- >     Write line -> output (name, line)
+--
+-- Here we simply pass the name to the interpreter in the resource allocation function.
+-- Note how the type of the effect changed, with the @resource@ parameter being instantiated as @FilePath@ instead of
+-- @Handle@.
+-- @resource@ should always stay polymorphic until a concrete type is chosen by an interpreter.
+--
+-- Now imagine that we drop requirement 2 from the initial list – we still want the file to be opened and closed as
+-- late/early as possible, but the file name is globally fixed.
+-- For this case, the @param@ type is unused, and the API provides some convenience aliases to make your code more
+-- concise:
+--
+-- > prog :: Member (Scoped_ resource Write) r => Sem r ()
+-- > prog = do
+-- >   scoped_ do
+-- >     write "line 1"
+-- >     write "line 2"
+-- >   scoped_ do
+-- >     write "line 1"
+-- >     write "line 2"
+--
+-- The type 'Scoped_' and the constructor 'scoped_' simply fix @param@ to @()@.
 data Scoped (param :: Type) (resource :: Type) (effect :: Effect) :: Effect where
   Run :: ∀ param resource effect m a . resource -> effect m a -> Scoped param resource effect m a
   InScope :: ∀ param resource effect m a . param -> (resource -> m a) -> Scoped param resource effect m a
@@ -36,11 +104,9 @@ type Scoped_ resource effect =
   Scoped () resource effect
 
 -- |Constructor for 'Scoped', taking a nested program and transforming all instances of @effect@ to
--- @'Scoped' param resource effect@ and wrapping the result with 'InScope'.
+-- @'Scoped' param resource effect@.
 --
--- This allows the effective interpreter to bracket the nested program with a resource from a distance.
---
--- The value @param@ is passed to the interpreter.
+-- Please consult the documentation of 'Scoped' for details and examples.
 scoped ::
   ∀ param resource effect r .
   Member (Scoped param resource effect) r =>
@@ -52,9 +118,9 @@ scoped param main =
 {-# inline scoped #-}
 
 -- |Constructor for 'Scoped_', taking a nested program and transforming all instances of @effect@ to
--- @'Scoped_' resource effect@ and wrapping the result with 'InScope'.
+-- @'Scoped_' resource effect@.
 --
--- This allows the effective interpreter to bracket the nested program with a resource from a distance.
+-- Please consult the documentation of 'Scoped' for details and examples.
 scoped_ ::
   ∀ resource effect r .
   Member (Scoped_ resource effect) r =>
