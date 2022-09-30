@@ -96,8 +96,10 @@ interpretScopedAs resource =
 -- /Note/: It is necessary to specify the list of local interpreters with a type application; GHC won't be able to
 -- figure them out from the type of @withResource@:
 --
--- > interpretScopedWithH @[AtomicState Int, Reader Bool] withResource \ _ -> \case
--- >   SomeAction -> atomicPut . (> 0) =<< ask
+-- > interpretScopedWithH @[State Bool, Reader Int] withResource \ _ -> \case
+-- >   SomeAction -> put . (> 0) =<< ask
+-- > where
+-- >   withResource param use = runState False (runReader 5 (use ()))
 interpretScopedWithH ::
   ∀ extra param resource effect r r1 .
   r1 ~ (Append extra r) =>
