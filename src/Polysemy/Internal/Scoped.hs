@@ -59,8 +59,10 @@ import Polysemy.Internal.Union (Weaving, decomp, hoist)
 --
 -- > interpretWriteFile :: Member (Embed IO) => InterpreterFor (Scoped FilePath Handle Write) r
 -- > interpretWriteFile =
--- >   interpretScoped (\ name use -> bracket (openFile name WriteMode) hClose use) \ handle -> \case
--- >     Write line -> embed (Text.hPutStrLn handle line)
+-- >   interpretScoped allocator handler
+-- >   where
+-- >     allocator name use = bracket (openFile name WriteMode) hClose use
+-- >     handler fileHandle (Write line) = embed (Text.hPutStrLn fileHandle line)
 --
 -- Essentially, the @bracket@ is executed at the point where @scoped@ was called, wrapping the following block.
 -- When the second @scoped@ is executed, another call to @bracket@ is performed.
