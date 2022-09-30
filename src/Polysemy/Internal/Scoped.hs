@@ -72,8 +72,8 @@ import Polysemy.Internal.Union (Weaving, decomp, hoist)
 --
 -- This makes it possible to use an in-memory interpreter for testing:
 --
--- > interpretWriteMap :: Member (Output (FilePath, Text)) r => InterpreterFor (Scoped FilePath FilePath Write) r
--- > interpretWriteMap =
+-- > interpretWriteOutput :: Member (Output (FilePath, Text)) r => InterpreterFor (Scoped FilePath FilePath Write) r
+-- > interpretWriteOutput =
 -- >   interpretScoped (\ name use -> use name) \ name -> \case
 -- >     Write line -> output (name, line)
 --
