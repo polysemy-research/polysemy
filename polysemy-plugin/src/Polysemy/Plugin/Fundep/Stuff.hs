@@ -20,6 +20,9 @@ import GHC.Utils.Outputable (text, (<+>), ($$))
 import GHC.Tc.Plugin (getTopEnv)
 import GHC.Utils.Panic (pprPanic)
 import GHC.Driver.Env (hsc_units)
+#if __GLASGOW_HASKELL__ >= 904
+import GHC.Types.PkgQual (PkgQual(NoPkgQual))
+#endif
 #else
 import GHC.Plugins (unitState)
 import GHC.Utils.Outputable(pprPanic)
@@ -91,7 +94,12 @@ polysemyStuff = do
     dflags
 #endif
     (mkModuleName "Polysemy")
-    Nothing of
+#if __GLASGOW_HASKELL__ >= 904    
+    NoPkgQual
+#else
+    Nothing 
+#endif
+    of
     LookupHidden _ _ -> error_msg
     LookupNotFound _ -> error_msg
 #if __GLASGOW_HASKELL__ >= 806
