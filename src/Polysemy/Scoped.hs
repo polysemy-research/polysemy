@@ -28,21 +28,21 @@ import Polysemy.Internal.Combinators
 import Polysemy.Internal.Scoped
 import Polysemy.Internal.Tactics
 
--- | Interpreter for 'Scoped', taking a @resource@ allocation function and a
--- parameterized handler for the plain @effect@.
+-- | Construct an interpreter for a higher-order effect wrapped in a 'Scoped',
+-- given a resource allocation function and a parameterized handler for the
+-- plain effect.
 --
--- >>> interpretScopedH withResource scopedHandler
---
--- @withResource@ is a callback function, allowing the user to acquire the
--- resource for each program wrapped by 'scoped' using other effects, with an
--- additional argument that contains the call site parameter passed to 'scoped'.
---
--- @scopedHandler@ is a handler like the one expected by 'interpretH' with an
--- additional parameter that contains the @resource@ allocated by
--- @withResource@.
+-- This combinator is analogous to 'interpretH' in that it allows the handler to
+-- use the 'Tactical' environment and transforms the effect into other effects
+-- on the stack.
 interpretScopedH ::
   ∀ param resource effect r .
+  -- | A callback function that allows the user to acquire a resource for each
+  -- computation wrapped by 'scoped' using other effects, with an additional
+  -- argument that contains the call site parameter passed to 'scoped'.
   (∀ x . param -> (resource -> Sem r x) -> Sem r x) ->
+  -- | A handler like the one expected by 'interpretH' with an additional
+  -- parameter that contains the @resource@ allocated by the first argument.
   (∀ r0 x . resource -> effect (Sem r0) x -> Tactical effect (Sem r0) r x) ->
   InterpreterFor (Scoped param resource effect) r
 interpretScopedH withResource scopedHandler =
@@ -158,7 +158,7 @@ interpretScopedWithH withResource scopedHandler =
           (injectMembership
            (singList @'[Scoped param resource effect])
            (singList @extra)) $ wv (main resource <$ s)
-    Weaving (Run resource act) s wv ex ins ->
+    _ ->
       errorWithoutStackTrace "top level Run"
   where
     inScope :: InterpreterFor (Scoped param resource effect) r1
@@ -173,17 +173,21 @@ interpretScopedWithH withResource scopedHandler =
             (scopedHandler resource act)
 {-# inline interpretScopedWithH #-}
 
--- | Interpreter for 'Scoped' that allows the handler to use additional effects
--- that are interpreted by the resource allocator.
+-- | First-order variant of 'interpretScopedWithH'.
 --
 -- /Note/: It is necessary to specify the list of local interpreters with a type
 -- application; GHC won't be able to figure them out from the type of
 -- @withResource@:
 --
--- > interpretScopedWith @[State Bool, Reader Int] withResource \ _ -> \case
--- >   SomeAction -> put . (> 0) =<< ask
--- > where
--- >   withResource param use = runState False (runReader 5 (use ()))
+-- > data SomeAction :: Effect where
+-- >   SomeAction :: SomeAction m ()
+-- >
+-- > foo :: InterpreterFor (Scoped () () SomeAction) r
+-- > foo =
+-- >   interpretScopedWith @[Reader Int, State Bool] localEffects \ () -> \case
+-- >     SomeAction -> put . (> 0) =<< ask @Int
+-- >   where
+-- >     localEffects () use = evalState False (runReader 5 (use ()))
 interpretScopedWith ::
   ∀ extra param resource effect r r1 .
   (r1 ~ Append extra r, KnownList extra) =>
@@ -194,12 +198,10 @@ interpretScopedWith withResource scopedHandler =
   interpretScopedWithH @extra withResource \ r e -> liftT (scopedHandler r e)
 {-# inline interpretScopedWith #-}
 
--- | Interpreter for 'Scoped' that allows the handler to use additional effects
--- that are interpreted by the resource allocator.
---
--- In this variant, no resource is used and the allocator is a plain
--- interpreter. This is useful for scopes that only need local effects, but no
--- resources in the handler.
+-- | Variant of 'interpretScopedWith' in which no resource is used and the
+-- resource allocator is a plain interpreter.
+-- This is useful for scopes that only need local effects, but no resources in
+-- the handler.
 --
 -- See the /Note/ on 'interpretScopedWithH'.
 interpretScopedWith_ ::
@@ -212,24 +214,37 @@ interpretScopedWith_ withResource scopedHandler =
   interpretScopedWithH @extra (\ p f -> withResource p (f ())) \ () e -> liftT (scopedHandler e)
 {-# inline interpretScopedWith_ #-}
 
--- | Interpreter for 'Scoped', taking a @resource@ allocation function and a
--- parameterized interpreter for the plain @effect@.
--- TODO: look at this documentation again.
+-- | Variant of 'interpretScoped' that uses another interpreter instead of a
+-- handler.
 --
--- > runScoped withResource scopedInterpreter
+-- This is mostly useful if you want to reuse an interpreter that you cannot
+-- easily rewrite (like from another library). If you have full control over the
+-- implementation, 'interpretScoped' should be preferred.
 --
--- @withResource@ is a callback function, allowing the user to acquire the
--- resource for each program from other effects.
---
--- @scopedInterpreter@ is a regular interpreter that is called with the
--- @resource@ argument produced by @scope@. This is mostly useful if you want to
--- reuse an interpreter that you cannot easily rewrite (like from another
--- library). If you have full control over the implementation,
--- 'interpretScoped' should be preferred.
---
--- /Note/: This function will be called for each action in the program, so if
--- the interpreter allocates any resources, they will be scoped to a single
+-- /Note/: The wrapped interpreter will be executed fully, including the
+-- initializing code surrounding its handler, for each action in the program, so
+-- if the interpreter allocates any resources, they will be scoped to a single
 -- action. Move them to @withResource@ instead.
+--
+-- For example, consider the following interpreter for
+-- 'Polysemy.AtomicState.AtomicState':
+--
+-- > atomicTVar :: Member (Embed IO) r => a -> InterpreterFor (AtomicState a) r
+-- > atomicTVar initial sem = do
+-- >   tv <- embed (newTVarIO initial)
+-- >   runAtomicStateTVar tv sem
+--
+-- If this interpreter were used for a scoped version of @AtomicState@ like
+-- this:
+--
+-- > runScoped (\ initial use -> use initial) \ initial -> atomicTVar initial
+--
+-- Then the @TVar@ would be created every time an @AtomicState@ action is run,
+-- not just when entering the scope.
+--
+-- The proper way to implement this would be to rewrite the resource allocation:
+--
+-- > runScoped (\ initial use -> use =<< embed (newTVarIO initial)) runAtomicStateTVar
 runScoped ::
   ∀ param resource effect r .
   (∀ x . param -> (resource -> Sem r x) -> Sem r x) ->
@@ -248,7 +263,8 @@ runScoped withResource scopedInterpreter =
           withResource param \ resource -> ex <$> go (wv (main resource <$ s))
 {-# inline runScoped #-}
 
--- | Variant of 'runScoped' in which the resource allocator is a plain action.
+-- | Variant of 'runScoped' in which the resource allocator returns the resource
+-- rather tnen calling a continuation.
 runScopedAs ::
   ∀ param resource effect r .
   (param -> Sem r resource) ->

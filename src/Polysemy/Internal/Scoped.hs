@@ -6,10 +6,6 @@ module Polysemy.Internal.Scoped where
 import Data.Kind (Type)
 
 import Polysemy
-import Polysemy.Internal (Sem(..))
-import Polysemy.Internal.Combinators (transform)
-import Polysemy.Internal.Kind (Effect)
-import Polysemy.Internal.Union (Weaving, decomp, hoist)
 
 -- | @Scoped@ transforms a program so that @effect@ is associated with a
 -- @resource@ within that program. This requires the interpreter for @effect@ to
@@ -80,8 +76,7 @@ import Polysemy.Internal.Union (Weaving, decomp, hoist)
 -- the call site to the interpreter, while the interpreter may be executed at
 -- the outermost layer of the app.
 --
--- This makes it possible to use an [in-memory] (TODO: better term) interpreter
--- for testing:
+-- This makes it possible to use a pure interpreter for testing:
 --
 -- > interpretWriteOutput :: Member (Output (FilePath, Text)) r => InterpreterFor (Scoped FilePath FilePath Write) r
 -- > interpretWriteOutput =
@@ -90,10 +85,10 @@ import Polysemy.Internal.Union (Weaving, decomp, hoist)
 --
 -- Here we simply pass the name to the interpreter in the resource allocation
 -- function. Note how the type of the effect changed, with the @resource@
--- parameter being instantiated as @FilePath@ instead of @Handle@. @resource@
--- should always stay polymorphic until a concrete type is chosen by an
--- interpreter. (TODO: see if this can be rewritten so it doesn't feel like an
--- abrupt statement)
+-- parameter being instantiated as @FilePath@ instead of @Handle@.
+-- This change does not need to be anticipated in the business logic that uses
+-- the scoped effect – as is visible in the signature of @prog@, the @resource@
+-- parameter is always chosen concretely by an interpreter.
 --
 -- Now imagine that we drop requirement 2 from the initial list – we still want
 -- the file to be opened and closed as late/early as possible, but the file name
