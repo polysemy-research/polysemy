@@ -1,6 +1,6 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.34.5.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -114,6 +114,7 @@ library
     , transformers >=0.5.2.0 && <0.6
     , type-errors >=0.2.0.0
     , unagi-chan >=0.4.0.0 && <0.5
+  default-language: Haskell2010
   if impl(ghc < 8.6)
     default-extensions:
         MonadFailDesugaring
@@ -125,7 +126,6 @@ library
   if impl(ghc < 8.2.2)
     build-depends:
         unsupported-ghc-version >1 && <1
-  default-language: Haskell2010
 
 test-suite polysemy-test
   type: exitcode-stdio-1.0
@@ -150,6 +150,7 @@ test-suite polysemy-test
       Paths_polysemy
       Build_doctests
   autogen-modules:
+      Paths_polysemy
       Build_doctests
   hs-source-dirs:
       test
@@ -175,10 +176,10 @@ test-suite polysemy-test
       async >=2.2 && <3
     , base >=4.9 && <5
     , containers >=0.5 && <0.7
-    , doctest >=0.16.0.1 && <0.20
+    , doctest >=0.16.0.1 && <0.19
     , first-class-families >=0.5.0.0 && <0.9
     , hspec >=2.6.0 && <3
-    , inspection-testing >=0.4.2 && <0.6
+    , inspection-testing >=0.4.2 && <0.5
     , mtl >=2.2.2 && <3
     , polysemy
     , stm ==2.*
@@ -188,8 +189,8 @@ test-suite polysemy-test
     , transformers >=0.5.2.0 && <0.6
     , type-errors >=0.2.0.0
     , unagi-chan >=0.4.0.0 && <0.5
+  default-language: Haskell2010
   if impl(ghc < 8.6)
     default-extensions:
         MonadFailDesugaring
         TypeInType
-  default-language: Haskell2010

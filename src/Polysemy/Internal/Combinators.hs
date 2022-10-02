@@ -18,6 +18,7 @@ module Polysemy.Internal.Combinators
   , reinterpretH
   , reinterpret2H
   , reinterpret3H
+  , interpretWeaving
 
   -- * Conditional
   , interceptUsing
@@ -28,6 +29,7 @@ module Polysemy.Internal.Combinators
   , lazilyStateful
   ) where
 
+import           Control.Arrow ((>>>))
 import           Control.Monad
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
@@ -86,6 +88,18 @@ interpretH f (Sem m) = Sem $ \k -> m $ \u ->
     Right (Weaving e s d y v) -> do
       fmap y $ usingSem k $ runTactics s d v (interpretH f . d) $ f e
 {-# INLINE interpretH #-}
+
+-- | Interpret an effect @e@ through a natural transformation from @Weaving e@
+-- to @Sem r@
+interpretWeaving ::
+  ∀ e r .
+  (∀ x . Weaving e (Sem (e : r)) x -> Sem r x) ->
+  InterpreterFor e r
+interpretWeaving h (Sem m) =
+  Sem \ k -> m $ decomp >>> \case
+    Right wav -> runSem (h wav) k
+    Left g -> k $ hoist (interpretWeaving h) g
+{-# inline interpretWeaving #-}
 
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See
