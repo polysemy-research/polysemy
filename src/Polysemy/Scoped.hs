@@ -94,12 +94,45 @@ interpretScopedAs resource =
 -- resource allocator.
 --
 -- /Note/: It is necessary to specify the list of local interpreters with a type application; GHC won't be able to
--- figure them out from the type of @withResource@:
+-- figure them out from the type of @withResource@.
 --
--- > interpretScopedWithH @[State Bool, Reader Int] withResource \ _ -> \case
--- >   SomeAction -> put . (> 0) =<< ask
--- > where
--- >   withResource param use = runState False (runReader 5 (use ()))
+-- As an example for a higher order effect, consider a mutexed concurrent state effect, where an effectful function may
+-- lock write access to the state while making it still possible to read it:
+--
+-- > data MState s :: Effect where
+-- >   MState :: (s -> m (s, a)) -> MState s m a
+-- >   MRead :: MState s m s
+-- > 
+-- > makeSem ''MState
+--
+-- We can now use an 'Polysemy.AtomicState.AtomicState' to store the current value and lock write access with an @MVar@.
+-- Since the state callback is effectful, we need a higher order interpreter:
+--
+-- > withResource ::
+-- >   Member (Embed IO) r =>
+-- >   s ->
+-- >   (MVar () -> Sem (AtomicState s : r) a) ->
+-- >   Sem r a
+-- > withResource initial use = do
+-- >   tv <- embed (newTVarIO initial)
+-- >   lock <- embed (newMVar ())
+-- >   runAtomicStateTVar tv $ use lock
+-- > 
+-- > interpretMState ::
+-- >   ∀ s r .
+-- >   Members [Resource, Embed IO] r =>
+-- >   InterpreterFor (Scoped s (MVar ()) (MState s)) r
+-- > interpretMState =
+-- >   interpretScopedWithH @'[AtomicState s] withResource \ lock -> \case
+-- >     MState f ->
+-- >       bracket_ (embed (takeMVar lock)) (embed (tryPutMVar lock ())) do
+-- >         s0 <- atomicGet
+-- >         res <- runTSimple (f s0)
+-- >         Inspector ins <- getInspectorT
+-- >         for_ (ins res) \ (s, _) -> atomicPut s
+-- >         pure (snd <$> res)
+-- >     MRead ->
+-- >       liftT atomicGet
 interpretScopedWithH ::
   ∀ extra param resource effect r r1 .
   r1 ~ (Append extra r) =>
@@ -127,7 +160,13 @@ interpretScopedWithH withResource scopedHandler =
 -- |Interpreter for 'Scoped' that allows the handler to use additional effects that are interpreted by the resource
 -- allocator.
 --
--- See the /Note/ on 'interpretScopedWithH'.
+-- /Note/: It is necessary to specify the list of local interpreters with a type application; GHC won't be able to
+-- figure them out from the type of @withResource@:
+--
+-- > interpretScopedWith @[State Bool, Reader Int] withResource \ _ -> \case
+-- >   SomeAction -> put . (> 0) =<< ask
+-- > where
+-- >   withResource param use = runState False (runReader 5 (use ()))
 interpretScopedWith ::
   ∀ extra param resource effect r r1 .
   r1 ~ (Append extra r) =>
