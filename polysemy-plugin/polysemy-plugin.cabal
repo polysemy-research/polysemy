@@ -1,6 +1,6 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -89,6 +89,7 @@ test-suite polysemy-plugin-test
       Paths_polysemy_plugin
       Build_doctests
   autogen-modules:
+      Paths_polysemy_plugin
       Build_doctests
   hs-source-dirs:
       test
@@ -122,6 +123,6 @@ test-suite polysemy-plugin-test
     , should-not-typecheck >=2.1.0 && <3
     , syb ==0.7.*
     , transformers >=0.5.2.0 && <0.6
+  default-language: Haskell2010
   if flag(corelint)
     ghc-options: -dcore-lint -dsuppress-all
-  default-language: Haskell2010

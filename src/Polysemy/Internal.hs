@@ -34,6 +34,7 @@ module Polysemy.Internal
   , usingSem
   , liftSem
   , hoistSem
+  , restack
   , Append
   , InterpreterFor
   , InterpretersFor
@@ -343,6 +344,11 @@ hoistSem
 hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSem #-}
 
+restack :: (forall e. ElemOf e r -> ElemOf e r')
+        -> Sem r a
+        -> Sem r' a
+restack n = hoistSem $ \(Union pr wav) -> hoist (restack n) $ Union (n pr) wav
+{-# INLINE restack #-}
 
 ------------------------------------------------------------------------------
 -- | Introduce an arbitrary number of effects on top of the effect stack. This
