@@ -2,10 +2,10 @@
   description = "Higher-order, low-boilerplate free monads.";
 
   inputs = {
-    nixpkgs_2009.url = github:nixos/nixpkgs/release-20.09;
-    nixpkgs_2105.url = github:nixos/nixpkgs/release-21.05;
-    unstable.url = github:nixos/nixpkgs/nixpkgs-unstable;
-    flake-utils.url = github:numtide/flake-utils;
+    nixpkgs_2009.url = "github:nixos/nixpkgs/release-20.09";
+    nixpkgs_2105.url = "github:nixos/nixpkgs/release-21.05";
+    unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs = { nixpkgs_2009, nixpkgs_2105, unstable, flake-utils, ... }:
@@ -20,6 +20,7 @@
       "8107" = hsPkgs unstable "ghc8107";
       "902" = hsPkgs unstable "ghc902";
       "924" = hsPkgs unstable "ghc924";
+      "942" = hsPkgs unstable "ghc942";
     };
 
     mkPackages = version: {

@@ -311,7 +311,7 @@ solveFundep
     -> [Ct]
     -> [Ct]
     -> [Ct]
-    -> TcPluginM TcPluginResult
+    -> TcPluginM TcPluginSolveResult
 solveFundep _ _ _ [] = pure $ TcPluginOk [] []
 solveFundep (ref, stuff) given _ wanted = do
   let wanted_finds = getFindConstraints stuff wanted
