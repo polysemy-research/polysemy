@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "doctest": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1665504572,
+        "narHash": "sha256-JbQzW8D0UvADCIwA53yBwWBO7YJDTevtuXaipBpX84Q=",
+        "owner": "sol",
+        "repo": "doctest",
+        "rev": "59463c2b9ad16073c25ffb2e67ea50e71851d8e6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sol",
+        "ref": "ghc-9.4",
+        "repo": "doctest",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "locked": {
         "lastModified": 1659877975,
@@ -49,6 +66,7 @@
     },
     "root": {
       "inputs": {
+        "doctest": "doctest",
         "flake-utils": "flake-utils",
         "nixpkgs_2009": "nixpkgs_2009",
         "nixpkgs_2105": "nixpkgs_2105",
