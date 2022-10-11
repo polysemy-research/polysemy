@@ -95,7 +95,7 @@ import Polysemy
 -- is globally fixed. For this case, the @param@ type is unused, and the API
 -- provides some convenience aliases to make your code more concise:
 --
--- > prog :: Member (Scoped_ resource Write) r => Sem r ()
+-- > prog :: Member (Scoped_ Write) r => Sem r ()
 -- > prog = do
 -- >   scoped_ do
 -- >     write "line 1"
@@ -105,28 +105,26 @@ import Polysemy
 -- >     write "line 2"
 --
 -- The type 'Scoped_' and the constructor 'scoped_' simply fix @param@ to @()@.
-data Scoped (param :: Type) (resource :: Type) (effect :: Effect) :: Effect where
-  Run :: ∀ param resource effect m a . resource -> effect m a ->
-         Scoped param resource effect m a
-  InScope :: ∀ param resource effect m a . param -> (resource -> m a) ->
-             Scoped param resource effect m a
+data Scoped (param :: Type) (effect :: Effect) :: Effect where
+  Run :: ∀ param effect m a . effect m a -> Scoped param effect m a
+  InScope :: ∀ param effect m a . param -> m a -> Scoped param effect m a
 
 -- |A convenience alias for a scope without parameters.
-type Scoped_ resource effect =
-  Scoped () resource effect
+type Scoped_ effect =
+  Scoped () effect
 
 -- | Constructor for 'Scoped', taking a nested program and transforming all
 -- instances of @effect@ to @'Scoped' param resource effect@.
 --
 -- Please consult the documentation of 'Scoped' for details and examples.
 scoped ::
-  ∀ resource param effect r .
-  Member (Scoped param resource effect) r =>
+  ∀ param effect r .
+  Member (Scoped param effect) r =>
   param ->
   InterpreterFor effect r
 scoped param main =
-  send $ InScope @param @resource @effect param \ resource ->
-    transform @effect (Run @param resource) main
+  send $ InScope @param @effect param do
+    transform @effect (Run @param) main
 {-# inline scoped #-}
 
 -- | Constructor for 'Scoped_', taking a nested program and transforming all
@@ -134,10 +132,10 @@ scoped param main =
 --
 -- Please consult the documentation of 'Scoped' for details and examples.
 scoped_ ::
-  ∀ resource effect r .
-  Member (Scoped_ resource effect) r =>
+  ∀ effect r .
+  Member (Scoped_ effect) r =>
   InterpreterFor effect r
-scoped_ = scoped @resource ()
+scoped_ = scoped ()
 {-# inline scoped_ #-}
 
 -- | Transform the parameters of a 'Scoped' program.
@@ -147,13 +145,13 @@ scoped_ = scoped @resource ()
 -- with some fundamental parameters being supplied at scope creation and some
 -- optional or specific parameters being selected by the user downstream.
 rescope ::
-  ∀ param0 param1 resource effect r .
-  Member (Scoped param1 resource effect) r =>
+  ∀ param0 param1 effect r .
+  Member (Scoped param1 effect) r =>
   (param0 -> param1) ->
-  InterpreterFor (Scoped param0 resource effect) r
+  InterpreterFor (Scoped param0 effect) r
 rescope fp =
   transform \case
-    Run res e      -> Run @param1 res e
+    Run e          -> Run @param1 e
     InScope p main -> InScope (fp p) main
 {-# inline rescope #-}
 
