@@ -7,10 +7,9 @@ import Data.Kind (Type)
 
 import Polysemy
 
--- | @Scoped@ transforms a program so that @effect@ is associated with a
--- @resource@ within that program. This requires the interpreter for @effect@ to
--- be parameterized by @resource@ and constructed for every program using
--- @Scoped@ separately.
+-- | @Scoped@ transforms a program so that an interpreter for @effect@ may
+-- perform arbitrary actions, like resource management, before and after the
+-- computation wrapped by a call to 'scoped' is executed.
 --
 -- An application for this is @Polysemy.Conc.Events@ from
 -- <https://hackage.haskell.org/package/polysemy-conc>, in which each program
@@ -20,6 +19,8 @@ import Polysemy
 -- database effect.
 --
 -- For a longer exposition, see <https://www.tweag.io/blog/2022-01-05-polysemy-scoped/>.
+-- Note that the interface has changed since the blog post was published: The
+-- @resource@ parameter is no longer necessary.
 --
 -- Resource allocation is performed by a function passed to
 -- 'Polysemy.Scoped.interpretScoped'.
@@ -46,7 +47,7 @@ import Polysemy
 --
 -- Then we can take advantage of 'Scoped' to write this program:
 --
--- > prog :: Member (Scoped FilePath resource Write) r => Sem r ()
+-- > prog :: Member (Scoped FilePath Write) r => Sem r ()
 -- > prog = do
 -- >   scoped "file1.txt" do
 -- >     write "line 1"
@@ -61,7 +62,7 @@ import Polysemy
 --
 -- The interpreter may look like this:
 --
--- > interpretWriteFile :: Members '[Resource, Embed IO] => InterpreterFor (Scoped FilePath Handle Write) r
+-- > interpretWriteFile :: Members '[Resource, Embed IO] => InterpreterFor (Scoped FilePath Write) r
 -- > interpretWriteFile =
 -- >   interpretScoped allocator handler
 -- >   where
@@ -78,17 +79,13 @@ import Polysemy
 --
 -- This makes it possible to use a pure interpreter for testing:
 --
--- > interpretWriteOutput :: Member (Output (FilePath, Text)) r => InterpreterFor (Scoped FilePath FilePath Write) r
+-- > interpretWriteOutput :: Member (Output (FilePath, Text)) r => InterpreterFor (Scoped FilePath Write) r
 -- > interpretWriteOutput =
 -- >   interpretScoped (\ name use -> use name) \ name -> \case
 -- >     Write line -> output (name, line)
 --
 -- Here we simply pass the name to the interpreter in the resource allocation
--- function. Note how the type of the effect changed, with the @resource@
--- parameter being instantiated as @FilePath@ instead of @Handle@.
--- This change does not need to be anticipated in the business logic that uses
--- the scoped effect – as is visible in the signature of @prog@, the @resource@
--- parameter is always chosen concretely by an interpreter.
+-- function.
 --
 -- Now imagine that we drop requirement 2 from the initial list – we still want
 -- the file to be opened and closed as late/early as possible, but the file name
@@ -114,7 +111,7 @@ type Scoped_ effect =
   Scoped () effect
 
 -- | Constructor for 'Scoped', taking a nested program and transforming all
--- instances of @effect@ to @'Scoped' param resource effect@.
+-- instances of @effect@ to @'Scoped' param effect@.
 --
 -- Please consult the documentation of 'Scoped' for details and examples.
 scoped ::
@@ -128,7 +125,7 @@ scoped param main =
 {-# inline scoped #-}
 
 -- | Constructor for 'Scoped_', taking a nested program and transforming all
--- instances of @effect@ to @'Scoped_' resource effect@.
+-- instances of @effect@ to @'Scoped_' effect@.
 --
 -- Please consult the documentation of 'Scoped' for details and examples.
 scoped_ ::

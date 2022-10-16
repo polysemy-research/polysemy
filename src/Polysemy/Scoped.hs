@@ -36,7 +36,7 @@ import Polysemy.Internal.Tactics
 -- use the 'Tactical' environment and transforms the effect into other effects
 -- on the stack.
 interpretScopedH ::
-  ∀ param resource effect r .
+  ∀ resource param effect r .
   -- | A callback function that allows the user to acquire a resource for each
   -- computation wrapped by 'scoped' using other effects, with an additional
   -- argument that contains the call site parameter passed to 'scoped'.
@@ -136,7 +136,7 @@ interpretScopedAs resource =
 -- > interpretMState ::
 -- >   ∀ s r .
 -- >   Members [Resource, Embed IO] r =>
--- >   InterpreterFor (Scoped s (MVar ()) (MState s)) r
+-- >   InterpreterFor (Scoped s (MState s)) r
 -- > interpretMState =
 -- >   interpretScopedWithH @'[AtomicState s] withResource \ lock -> \case
 -- >     MState f ->
@@ -186,7 +186,7 @@ interpretScopedWithH withResource scopedHandler =
 -- > data SomeAction :: Effect where
 -- >   SomeAction :: SomeAction m ()
 -- >
--- > foo :: InterpreterFor (Scoped () () SomeAction) r
+-- > foo :: InterpreterFor (Scoped () SomeAction) r
 -- > foo =
 -- >   interpretScopedWith @[Reader Int, State Bool] localEffects \ () -> \case
 -- >     SomeAction -> put . (> 0) =<< ask @Int
@@ -250,7 +250,7 @@ interpretScopedWith_ withResource scopedHandler =
 --
 -- > runScoped (\ initial use -> use =<< embed (newTVarIO initial)) runAtomicStateTVar
 runScoped ::
-  ∀ param resource effect r .
+  ∀ resource param effect r .
   (∀ x . param -> (resource -> Sem r x) -> Sem r x) ->
   (resource -> InterpreterFor effect r) ->
   InterpreterFor (Scoped param effect) r
@@ -270,7 +270,7 @@ runScoped withResource scopedInterpreter =
 -- | Variant of 'runScoped' in which the resource allocator returns the resource
 -- rather tnen calling a continuation.
 runScopedAs ::
-  ∀ param resource effect r .
+  ∀ resource param effect r .
   (param -> Sem r resource) ->
   (resource -> InterpreterFor effect r) ->
   InterpreterFor (Scoped param effect) r
