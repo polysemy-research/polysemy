@@ -54,7 +54,7 @@ import           Polysemy.Plugin.Fundep.Utils
 
 #if __GLASGOW_HASKELL__ >= 900
 import           GHC.Builtin.Types.Prim (alphaTys)
-import           GHC.Plugins (idType, tyConClass_maybe, ppr, Outputable, sep, text, (<+>), parens)
+import           GHC.Plugins (idType, tyConClass_maybe, ppr, Outputable, sep, text, (<+>), parens, emptyUFM)
 import           GHC.Tc.Types.Evidence
 import           GHC.Tc.Plugin (TcPluginM, tcPluginIO)
 import           GHC.Tc.Types
@@ -95,6 +95,7 @@ fundepPlugin = TcPlugin
           <*> polysemyStuff
   , tcPluginSolve = solveFundep
   , tcPluginStop = const $ pure ()
+  , tcPluginRewrite = \ _ -> emptyUFM
   }
 
 
@@ -213,9 +214,9 @@ mkWantedForce
   -> Type
   -> TcPluginM (Unification, Ct)
 mkWantedForce fc given = do
-  (ev, _) <- unsafeTcPluginTcM
-           . runTcSDeriveds
-           $ newWantedEq (fcLoc fc) Nominal wanted given
+  ((ev, _), _) <- unsafeTcPluginTcM
+           . runTcS
+           $ newWantedEq (fcLoc fc) emptyRewriterSet Nominal wanted given
   pure ( Unification (OrdType wanted) (OrdType given)
        , CNonCanonical ev
        )
@@ -308,12 +309,12 @@ solveFundep
     :: ( IORef (S.Set Unification)
        , PolysemyStuff 'Things
        )
-    -> [Ct]
+    -> EvBindsVar
     -> [Ct]
     -> [Ct]
     -> TcPluginM TcPluginSolveResult
 solveFundep _ _ _ [] = pure $ TcPluginOk [] []
-solveFundep (ref, stuff) given _ wanted = do
+solveFundep (ref, stuff) _ given wanted = do
   let wanted_finds = getFindConstraints stuff wanted
       given_finds  = getFindConstraints stuff given
       extra_wanted = getExtraEvidence stuff wanted
