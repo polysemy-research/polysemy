@@ -20,7 +20,7 @@ import Polysemy
 --
 -- For a longer exposition, see <https://www.tweag.io/blog/2022-01-05-polysemy-scoped/>.
 -- Note that the interface has changed since the blog post was published: The
--- @resource@ parameter is no longer necessary.
+-- @resource@ parameter no longer exists.
 --
 -- Resource allocation is performed by a function passed to
 -- 'Polysemy.Scoped.interpretScoped'.

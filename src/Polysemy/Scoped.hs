@@ -46,6 +46,7 @@ interpretScopedH ::
   (∀ r0 x . resource -> effect (Sem r0) x -> Tactical effect (Sem r0) r x) ->
   InterpreterFor (Scoped param effect) r
 interpretScopedH withResource scopedHandler =
+  -- TODO investigate whether loopbreaker optimization is effective here
   go (errorWithoutStackTrace "top level run")
   where
     go :: resource -> InterpreterFor (Scoped param effect) r
