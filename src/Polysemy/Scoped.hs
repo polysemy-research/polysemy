@@ -36,7 +36,7 @@ import Polysemy.Internal.Tactics
 -- use the 'Tactical' environment and transforms the effect into other effects
 -- on the stack.
 interpretScopedH ::
-  ∀ param resource effect r .
+  ∀ resource param effect r .
   -- | A callback function that allows the user to acquire a resource for each
   -- computation wrapped by 'scoped' using other effects, with an additional
   -- argument that contains the call site parameter passed to 'scoped'.
@@ -44,18 +44,19 @@ interpretScopedH ::
   -- | A handler like the one expected by 'interpretH' with an additional
   -- parameter that contains the @resource@ allocated by the first argument.
   (∀ r0 x . resource -> effect (Sem r0) x -> Tactical effect (Sem r0) r x) ->
-  InterpreterFor (Scoped param resource effect) r
+  InterpreterFor (Scoped param effect) r
 interpretScopedH withResource scopedHandler =
-  go
+  -- TODO investigate whether loopbreaker optimization is effective here
+  go (errorWithoutStackTrace "top level run")
   where
-    go :: InterpreterFor (Scoped param resource effect) r
-    go =
+    go :: resource -> InterpreterFor (Scoped param effect) r
+    go resource =
       interpretWeaving \ (Weaving effect s wv ex ins) -> case effect of
-        Run resource act ->
-          ex <$> runTactics s (raise . go . wv) ins (go . wv)
+        Run act ->
+          ex <$> runTactics s (raise . go resource . wv) ins (go resource . wv)
             (scopedHandler resource act)
         InScope param main ->
-          withResource param \ resource -> ex <$> go (wv (main resource <$ s))
+          withResource param \ resource' -> ex <$> go resource' (wv (main <$ s))
 {-# inline interpretScopedH #-}
 
 -- | Variant of 'interpretScopedH' that allows the resource acquisition function
@@ -66,15 +67,19 @@ interpretScopedH' ::
     Tactical e (Sem r0) r x) ->
   (∀ r0 x .
     resource -> effect (Sem r0) x ->
-    Tactical (Scoped param resource effect) (Sem r0) r x) ->
-  InterpreterFor (Scoped param resource effect) r
+    Tactical (Scoped param effect) (Sem r0) r x) ->
+  InterpreterFor (Scoped param effect) r
 interpretScopedH' withResource scopedHandler =
-  interpretH \case
-    Run resource act ->
-      scopedHandler resource act
-    InScope param main ->
-      withResource param \ resource ->
-        runTSimple (main resource)
+  go (errorWithoutStackTrace "top level run")
+  where
+    go :: resource -> InterpreterFor (Scoped param effect) r
+    go resource =
+      interpretH \case
+        Run act ->
+          scopedHandler resource act
+        InScope param main ->
+          withResource param \ resource' ->
+            raise . go resource' =<< runT main
 {-# inline interpretScopedH' #-}
 
 -- | First-order variant of 'interpretScopedH'.
@@ -82,7 +87,7 @@ interpretScoped ::
   ∀ resource param effect r .
   (∀ x . param -> (resource -> Sem r x) -> Sem r x) ->
   (∀ m x . resource -> effect m x -> Sem r x) ->
-  InterpreterFor (Scoped param resource effect) r
+  InterpreterFor (Scoped param effect) r
 interpretScoped withResource scopedHandler =
   interpretScopedH withResource \ r e -> liftT (scopedHandler r e)
 {-# inline interpretScoped #-}
@@ -93,7 +98,7 @@ interpretScopedAs ::
   ∀ resource param effect r .
   (param -> Sem r resource) ->
   (∀ m x . resource -> effect m x -> Sem r x) ->
-  InterpreterFor (Scoped param resource effect) r
+  InterpreterFor (Scoped param effect) r
 interpretScopedAs resource =
   interpretScoped \ p use -> use =<< resource p
 {-# inline interpretScopedAs #-}
@@ -132,7 +137,7 @@ interpretScopedAs resource =
 -- > interpretMState ::
 -- >   ∀ s r .
 -- >   Members [Resource, Embed IO] r =>
--- >   InterpreterFor (Scoped s (MVar ()) (MState s)) r
+-- >   InterpreterFor (Scoped s (MState s)) r
 -- > interpretMState =
 -- >   interpretScopedWithH @'[AtomicState s] withResource \ lock -> \case
 -- >     MState f ->
@@ -149,27 +154,27 @@ interpretScopedWithH ::
   (KnownList extra, r1 ~ Append extra r) =>
   (∀ x . param -> (resource -> Sem r1 x) -> Sem r x) ->
   (∀ r0 x . resource -> effect (Sem r0) x -> Tactical effect (Sem r0) r1 x) ->
-  InterpreterFor (Scoped param resource effect) r
+  InterpreterFor (Scoped param effect) r
 interpretScopedWithH withResource scopedHandler =
   interpretWeaving \case
     Weaving (InScope param main) s wv ex _ ->
-      ex <$> withResource param \ resource -> inScope $
+      ex <$> withResource param \ resource -> inScope resource $
         restack
           (injectMembership
-           (singList @'[Scoped param resource effect])
-           (singList @extra)) $ wv (main resource <$ s)
+           (singList @'[Scoped param effect])
+           (singList @extra)) $ wv (main <$ s)
     _ ->
       errorWithoutStackTrace "top level Run"
   where
-    inScope :: InterpreterFor (Scoped param resource effect) r1
-    inScope =
+    inScope :: resource -> InterpreterFor (Scoped param effect) r1
+    inScope resource =
       interpretWeaving \case
         Weaving (InScope param main) s wv ex _ ->
           restack (extendMembershipLeft (singList @extra))
-            (ex <$> withResource param \resource ->
-                inScope (wv (main resource <$ s)))
-        Weaving (Run resource act) s wv ex ins ->
-          ex <$> runTactics s (raise . inScope . wv) ins (inScope . wv)
+            (ex <$> withResource param \resource' ->
+                inScope resource' (wv (main <$ s)))
+        Weaving (Run act) s wv ex ins ->
+          ex <$> runTactics s (raise . inScope resource . wv) ins (inScope resource . wv)
             (scopedHandler resource act)
 {-# inline interpretScopedWithH #-}
 
@@ -182,7 +187,7 @@ interpretScopedWithH withResource scopedHandler =
 -- > data SomeAction :: Effect where
 -- >   SomeAction :: SomeAction m ()
 -- >
--- > foo :: InterpreterFor (Scoped () () SomeAction) r
+-- > foo :: InterpreterFor (Scoped () SomeAction) r
 -- > foo =
 -- >   interpretScopedWith @[Reader Int, State Bool] localEffects \ () -> \case
 -- >     SomeAction -> put . (> 0) =<< ask @Int
@@ -193,7 +198,7 @@ interpretScopedWith ::
   (r1 ~ Append extra r, KnownList extra) =>
   (∀ x . param -> (resource -> Sem r1 x) -> Sem r x) ->
   (∀ m x . resource -> effect m x -> Sem r1 x) ->
-  InterpreterFor (Scoped param resource effect) r
+  InterpreterFor (Scoped param effect) r
 interpretScopedWith withResource scopedHandler =
   interpretScopedWithH @extra withResource \ r e -> liftT (scopedHandler r e)
 {-# inline interpretScopedWith #-}
@@ -209,7 +214,7 @@ interpretScopedWith_ ::
   (r1 ~ Append extra r, KnownList extra) =>
   (∀ x . param -> Sem r1 x -> Sem r x) ->
   (∀ m x . effect m x -> Sem r1 x) ->
-  InterpreterFor (Scoped param () effect) r
+  InterpreterFor (Scoped param effect) r
 interpretScopedWith_ withResource scopedHandler =
   interpretScopedWithH @extra (\ p f -> withResource p (f ())) \ () e -> liftT (scopedHandler e)
 {-# inline interpretScopedWith_ #-}
@@ -246,29 +251,29 @@ interpretScopedWith_ withResource scopedHandler =
 --
 -- > runScoped (\ initial use -> use =<< embed (newTVarIO initial)) runAtomicStateTVar
 runScoped ::
-  ∀ param resource effect r .
+  ∀ resource param effect r .
   (∀ x . param -> (resource -> Sem r x) -> Sem r x) ->
   (resource -> InterpreterFor effect r) ->
-  InterpreterFor (Scoped param resource effect) r
+  InterpreterFor (Scoped param effect) r
 runScoped withResource scopedInterpreter =
-  go
+  go (errorWithoutStackTrace "top level run")
   where
-    go :: InterpreterFor (Scoped param resource effect) r
-    go =
+    go :: resource -> InterpreterFor (Scoped param effect) r
+    go resource =
       interpretWeaving \ (Weaving effect s wv ex ins) -> case effect of
-        Run resource act ->
+        Run act ->
           scopedInterpreter resource
-            $ liftSem $ injWeaving $ Weaving act s (raise . go . wv) ex ins
+            $ liftSem $ injWeaving $ Weaving act s (raise . go resource . wv) ex ins
         InScope param main ->
-          withResource param \ resource -> ex <$> go (wv (main resource <$ s))
+          withResource param \ resource' -> ex <$> go resource' (wv (main <$ s))
 {-# inline runScoped #-}
 
 -- | Variant of 'runScoped' in which the resource allocator returns the resource
 -- rather tnen calling a continuation.
 runScopedAs ::
-  ∀ param resource effect r .
+  ∀ resource param effect r .
   (param -> Sem r resource) ->
   (resource -> InterpreterFor effect r) ->
-  InterpreterFor (Scoped param resource effect) r
+  InterpreterFor (Scoped param effect) r
 runScopedAs resource = runScoped \ p use -> use =<< resource p
 {-# inline runScopedAs #-}
