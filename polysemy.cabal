@@ -1,10 +1,10 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c7deee2612c61309992251d5b91bce1ab04bd0db127fd24ac9ce109d52733078
+-- hash: c83c8d0f4109147764ae3e2736ffa1abb6c9b47b0eb0c4949392b82c373c2ab7
 
 name:           polysemy
 version:        1.6.0.0
@@ -123,6 +123,7 @@ library
     , transformers >=0.5.2.0 && <0.6
     , type-errors >=0.2.0.0
     , unagi-chan >=0.4.0.0 && <0.5
+  default-language: Haskell2010
   if impl(ghc < 8.6)
     default-extensions:
         MonadFailDesugaring
@@ -138,7 +139,6 @@ library
     cpp-options: -DCABAL_SERIOUSLY_CMON_MATE
   else
     cpp-options: -DNO_ERROR_MESSAGES
-  default-language: Haskell2010
 
 test-suite polysemy-test
   type: exitcode-stdio-1.0
@@ -163,6 +163,7 @@ test-suite polysemy-test
       Paths_polysemy
       Build_doctests
   autogen-modules:
+      Paths_polysemy
       Build_doctests
   hs-source-dirs:
       test
@@ -201,17 +202,19 @@ test-suite polysemy-test
     , transformers >=0.5.2.0 && <0.6
     , type-errors >=0.2.0.0
     , unagi-chan >=0.4.0.0 && <0.5
+  default-language: Haskell2010
   if impl(ghc < 8.6)
     default-extensions:
         MonadFailDesugaring
         TypeInType
-  default-language: Haskell2010
 
 benchmark polysemy-bench
   type: exitcode-stdio-1.0
   main-is: countDown.hs
   other-modules:
       Poly
+      Paths_polysemy
+  autogen-modules:
       Paths_polysemy
   hs-source-dirs:
       bench
@@ -247,8 +250,8 @@ benchmark polysemy-bench
     , transformers >=0.5.2.0 && <0.6
     , type-errors >=0.2.0.0
     , unagi-chan >=0.4.0.0 && <0.5
+  default-language: Haskell2010
   if impl(ghc < 8.6)
     default-extensions:
         MonadFailDesugaring
         TypeInType
-  default-language: Haskell2010

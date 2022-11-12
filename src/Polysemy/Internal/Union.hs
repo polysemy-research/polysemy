@@ -69,81 +69,91 @@ import Polysemy.Internal.Sing (SList (SEnd, SCons))
 import Polysemy.Internal.CustomErrors
 #endif
 
--- liftHandler :: (forall x. e m x -> n x)
---             -> (forall x. e (t m) x -> t n x)
 
-class Weavable e where
-  weave :: (Functor s, Monad m, Monad n)
-        => s ()
-        -> (forall x. s (m x) -> n (s x))
-        -> e m a -> e n (s a)
+------------------------------------------------------------------------------
+-- | An extensible, type-safe union. The @r@ type parameter is a type-level
+-- list of effects, any one of which may be held within the 'Union'.
+data Union (r :: EffectRow) (mWoven :: Type -> Type) a where
+  Union
+      :: -- A proof that the effect is actually in @r@.
+         ElemOf e r
+         -- The effect to wrap. The functions 'prj' and 'decomp' can help
+         -- retrieve this value later.
+      -> Weaving e m a
+      -> Union r m a
 
-liftHandlerStateT :: (Weavable e, Monad m, Monad n)
-                  => (forall x. e m x -> n x)
-                  -> (forall x. e (StateT s m) x -> StateT s n x)
-liftHandlerStateT h = \(eff :: e (StateT s m) a) ->
-  StateT $ \initS ->
-    let
-      initState :: (s, ())
-      initState =  (initS, ())
-
-      distribute :: forall x
-                  . (s, StateT exc m x)
-                 -> m (s, x)
-      distribute (s, st) = swap <$> runStateT st s
-
-      weavedEff :: e m (s, a)
-      weavedEff = weave initState distribute eff
-    in
-      h weavedEff
-
-liftHandler :: ( Weavable e, MonadTransWeave t
-               , Monad m, Monad n
-               )
-            => (forall x. e m x -> n x)
-            -> e (t m) a -> t n a
-liftHandler alg e = controlT $ \lower -> do
-    initSt <- lower (pure ())
-    alg $ weave
-            initSt
-            (lower . join . restoreT)
-            e
-
-data Weaving e m a where
-  Weaving :: Functor s
-          => s ()
-          -> (forall x. s (z x) -> m (s x))
-          -> (s a -> b)
-          -> e z a
-          -> Weaving e m b
-{-
+instance Functor (Union r mWoven) where
+  fmap f (Union w t) = Union w $ f <$> t
+  {-# INLINE fmap #-}
 
 
-newtype Sem r a = Sem { runSem :: ∀ m . Monad m => (∀ x. Union r (Sem r) x -> m x) -> m a }
-newtype Sem r a = Sem { runSem :: ∀ m . Monad m => (∀ e x. ElemOf e r -> Weaving e (Sem r) x -> m x) -> m a }
-newtype Sem r a = Sem { runSem :: ∀ m . Monad m => (∀ x. Weaving e0 (Sem r) x -> m x)
-                                                -> (∀ x. Weaving e1 (Sem r) x -> m x)
-                                                -> ...
-                                                -> m a }
+data Weaving e mAfter resultType where
+  Weaving
+    :: forall t e rInitial a resultType mAfter. (MonadTransWeave t)
+    => {
+        weaveEffect :: e (Sem rInitial) a
+      -- ^ The original effect GADT originally lifted via
+      -- 'Polysemy.Internal.send'.
+      -- ^ @rInitial@ is the effect row that was in scope when this 'Weaving'
+      -- was originally created.
+      , weaveTrans :: forall n x. Monad n => (forall y. mAfter y -> n y) -> Sem rInitial x -> t n x
+      , weaveLowering :: forall z x. Monad z => t z x -> z (StT t x)
+      , weaveResult :: StT t a -> resultType
+      } -> Weaving e mAfter resultType
+
+instance Functor (Weaving e m) where
+  fmap f (Weaving e mkT lwr ex) = Weaving e mkT lwr (f . ex)
+  {-# INLINE fmap #-}
 
 
-  forall x. Weaving e (Sem r) x -> m x
-~ forall s z x q. Functor s => s () -> (forall y. s (z y) -> Sem r (s y)) -> e z q -> (s q -> x) -> m x
-~ forall s z q. Functor s => s () -> (forall y. s (z y) -> Sem r (s y)) -> e z q -> m (s q)
-~ forall s z q. Functor s => (forall y. s (z y) -> Sem r (s y)) -> e z x -> s () -> m (s x)
-is VERY ROUGHLY equivalent to
-~ forall t x. MonadTransControl t => (forall y. z y -> t (Sem r) y) -> e z x -> (forall z y. t z x -> z (StT t y)) -> m (StT t x)
-Roughly equivalent to
-~ forall t x. MonadTransControl t => (forall y. z y -> t (Sem r) y) -> e z x -> t m x
+
+weave :: (MonadTransWeave t, Monad n)
+      => (forall x. m x -> t n x)
+      -> (forall z x. Monad z => t z x -> z (StT t x))
+      -> Union r m a
+      -> Union r n (StT t a)
+weave mkT' lwr' (Union pr (Weaving e mkT lwr ex)) =
+  Union pr $ Weaving e
+                     (\n sem0 -> ComposeT $ mkT (hoistT n . mkT') sem0)
+                     (fmap Compose . lwr' . lwr . getComposeT)
+                     (fmap ex . getCompose)
+{-# INLINE weave #-}
+
+liftHandler :: (MonadTransWeave t, Monad m, Monad n)
+            => (forall x. Union r m x -> n x)
+            -> Union r (t m) a -> t n a
+liftHandler = liftHandlerWithNat id
+{-# INLINE liftHandler #-}
+
+liftHandlerWithNat :: (MonadTransWeave t, Monad m, Monad n)
+                   => (forall x. q x -> t m x)
+                   -> (forall x. Union r m x -> n x)
+                   -> Union r q a -> t n a
+liftHandlerWithNat n handler u = controlT $ \lower -> handler (weave n lower u)
+{-# INLINE liftHandlerWithNat #-}
+
+hoist
+    :: (∀ x. m x -> n x)
+    -> Union r m a
+    -> Union r n a
+hoist n' (Union w (Weaving e mkT lwr ex)) =
+  Union w $ Weaving e (\n -> mkT (n . n')) lwr ex
+{-# INLINE hoist #-}
 
 
-In the context of a 'interpret' use:
-forall t x. MonadTransControl t => (forall y. z y -> t (Sem (e ': r)) y) -> e z x -> t (Sem r) x
-Sem (e ': r) (t y)
+------------------------------------------------------------------------------
+-- | A proof that the effect @e@ is available somewhere inside of the effect
+-- stack @r@.
+type Member e r = MemberNoError e r
 
-liftSend :: (Member e r, MonadTransControl t) => e (t (Sem r)) a -> t (Sem r) a
-liftSend = liftWeavingHandler (liftSem . injWeaving) . mkWeaving
-
+------------------------------------------------------------------------------
+-- | Like 'Member', but will produce an error message if the types are
+-- ambiguous. This is the constraint used for actions generated by
+-- 'Polysemy.makeSem'.
+--
+-- /Be careful with this./ Due to quirks of 'GHC.TypeLits.TypeError',
+-- the custom error messages emitted by this can potentially override other,
+-- more helpful error messages.
 -- See the discussion in
 -- <https://github.com/polysemy-research/polysemy/issues/227 Issue #227>.
 --

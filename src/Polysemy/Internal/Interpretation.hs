@@ -272,6 +272,7 @@ interpretH h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
         fmap ex $ lwr $ go1 (h e)
 {-# INLINE interpretH #-}
 
+{-
 interpretH :: forall e r a
               . (   forall rInitial t x
                   . Traversable t
@@ -314,6 +315,8 @@ interpretH h = usingSem $ \u ->
       in
         fmap ex $ lwr $ go (h e)
 {-# INLINE interpretH #-}
+-}
+
 ------------------------------------------------------------------------------
 -- | The simplest way to produce an effect handler. Interprets an effect @e@ by
 -- transforming it into other effects inside of @r@.
@@ -325,7 +328,7 @@ interpret :: forall e r a
              -> Sem (e ': r) a
              -> Sem r a
 interpret h =
-  interpretH (raise . h)
+  interpretH $ \e -> raise (h e)
 {-# INLINE interpret #-}
 
 -- TODO (KingoftheHomeless): If it matters, optimize the definitions
@@ -355,7 +358,7 @@ reinterpret :: forall e1 e2 r a
              -> Sem (e1 ': r) a
              -> Sem (e2 ': r) a
 reinterpret h =
-  reinterpretH (raise . h)
+  reinterpretH $ \e -> raise (h e)
 {-# INLINE reinterpret #-}
 
 ------------------------------------------------------------------------------
@@ -379,7 +382,7 @@ reinterpret2 :: forall e1 e2 e3 r a
              -> Sem (e1 ': r) a
              -> Sem (e2 ': e3 ': r) a
 reinterpret2 h =
-  reinterpret2H (raise . h)
+  reinterpret2H $ \e -> raise (h e)
 {-# INLINE reinterpret2 #-}
 
 ------------------------------------------------------------------------------
@@ -403,7 +406,7 @@ reinterpret3 :: forall e1 e2 e3 e4 r a
              -> Sem (e1 ': r) a
              -> Sem (e2 ': e3 ': e4 ': r) a
 reinterpret3 h =
-  reinterpret3H (raise . h)
+  reinterpret3H $ \e -> raise (h e)
 {-# INLINE reinterpret3 #-}
 
 ------------------------------------------------------------------------------
@@ -431,7 +434,7 @@ interceptH :: forall e r a
              -> Sem r a
              -> Sem r a
 interceptH h =
-  intercept (raise . h)
+  intercept $ \e -> raise (h e)
 {-# INLINE interceptH #-}
 
 ------------------------------------------------------------------------------
@@ -462,5 +465,5 @@ interceptUsingH :: forall e r a .
                   -> Sem r a
                   -> Sem r a
 interceptUsingH pr h =
-  interceptUsing pr (raise . h)
+  interceptUsing pr $ \e -> raise (h e)
 {-# INLINE interceptUsingH #-}
