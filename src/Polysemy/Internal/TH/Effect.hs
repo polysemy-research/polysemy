@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP, TemplateHaskell #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -31,8 +31,10 @@ module Polysemy.Internal.TH.Effect
 
 import Control.Monad
 import Language.Haskell.TH
+#if __GLASGOW_HASKELL__ >= 902
+import Language.Haskell.TH.Syntax (addModFinalizer)
+#endif
 import Language.Haskell.TH.Datatype
-import Polysemy.Internal.CustomErrors (DefiningModule)
 import Polysemy.Internal.TH.Common
 
 
@@ -123,20 +125,11 @@ makeSem_ = genFreer False
 genFreer :: Bool -> Name -> Q [Dec]
 genFreer should_mk_sigs type_name = do
   checkExtensions [ScopedTypeVariables, FlexibleContexts, DataKinds]
-  (dt_name, cl_infos) <- getEffectMetadata type_name
-  tyfams_on  <- isExtEnabled TypeFamilies
-  def_mod_fi <- sequence [ tySynInstDCompat
-                             ''DefiningModule
-                             Nothing
-                             [pure $ ConT dt_name]
-                             (LitT . StrTyLit . loc_module <$> location)
-                         | tyfams_on
-                         ]
+  cl_infos <- getEffectMetadata type_name
   decs <- traverse (genDec should_mk_sigs) cl_infos
 
   let sigs = if should_mk_sigs then genSig <$> cl_infos else []
-
-  pure $ join $ def_mod_fi : sigs ++ decs
+  pure $ join $ sigs ++ decs
 
 
 ------------------------------------------------------------------------------
@@ -162,7 +155,10 @@ genSig cli
 genDec :: Bool -> ConLiftInfo -> Q [Dec]
 genDec should_mk_sigs cli = do
   let fun_args_names = fst <$> cliFunArgs cli
-
+#if __GLASGOW_HASKELL__ >= 902
+  doc <- getDoc $ DeclDoc $ cliConName cli
+  maybe (pure ()) (addModFinalizer . putDoc (DeclDoc $ cliFunName cli)) doc
+#endif
   pure
     [ PragmaD $ InlineP (cliFunName cli) Inlinable ConLike AllPhases
     , FunD (cliFunName cli)

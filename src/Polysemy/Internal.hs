@@ -11,7 +11,6 @@
 module Polysemy.Internal
   ( Sem (..)
   , Member
-  , MemberWithError
   , Members
   , send
   , sendUsing
@@ -36,11 +35,10 @@ module Polysemy.Internal
   , usingSem
   , liftSem
   , hoistSem
+  , restack
   , Append
   , InterpreterFor
   , InterpretersFor
-  , (.@)
-  , (.@@)
   ) where
 
 import Control.Applicative
@@ -348,6 +346,11 @@ hoistSem
 hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSem #-}
 
+restack :: (forall e. ElemOf e r -> ElemOf e r')
+        -> Sem r a
+        -> Sem r' a
+restack n = hoistSem $ \(Union pr wav) -> hoist (restack n) $ Union (n pr) wav
+{-# INLINE restack #-}
 
 ------------------------------------------------------------------------------
 -- | Introduce an arbitrary number of effects on top of the effect stack. This
@@ -607,8 +610,25 @@ exposeUsing pr = hoistSem $ \(Union pr' wav) -> hoist (exposeUsing pr) $
 {-# INLINE exposeUsing #-}
 
 ------------------------------------------------------------------------------
--- | Embed an effect into a 'Sem'. This is used primarily via
--- 'Polysemy.makeSem' to implement smart constructors.
+-- | Execute an action of an effect.
+--
+-- This is primarily used to create methods for actions of effects:
+--
+-- @
+-- data FooBar m a where
+--   Foo :: String -> m a -> FooBar m a
+--   Bar :: FooBar m Int
+--
+-- foo :: Member FooBar r => String -> Sem r a -> Sem r a
+-- foo s m = send (Foo s m)
+--
+-- bar :: Member FooBar r => Sem r Int
+-- bar = send Bar
+-- @
+--
+-- 'Polysemy.makeSem' allows you to eliminate this boilerplate.
+--
+-- @since TODO
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}
@@ -659,65 +679,3 @@ type InterpreterFor e r = ∀ a. Sem (e ': r) a -> Sem r a
 -- @since 1.5.0.0
 type InterpretersFor es r = ∀ a. Sem (Append es r) a -> Sem r a
 
-
-------------------------------------------------------------------------------
--- | Some interpreters need to be able to lower down to the base monad (often
--- 'IO') in order to function properly --- some good examples of this are
--- 'Polysemy.Error.lowerError' and 'Polysemy.Resource.lowerResource'.
---
--- However, these interpreters don't compose particularly nicely; for example,
--- to run 'Polysemy.Resource.lowerResource', you must write:
---
--- @
--- runM . lowerError runM
--- @
---
--- Notice that 'runM' is duplicated in two places here. The situation gets
--- exponentially worse the more intepreters you have that need to run in this
--- pattern.
---
--- Instead, '.@' performs the composition we'd like. The above can be written as
---
--- @
--- (runM .@ lowerError)
--- @
---
--- The parentheses here are important; without them you'll run into operator
--- precedence errors.
---
--- __Warning:__ This combinator will __duplicate work__ that is intended to be
--- just for initialization. This can result in rather surprising behavior. For
--- a version of '.@' that won't duplicate work, see the @.\@!@ operator in
--- <http://hackage.haskell.org/package/polysemy-zoo/docs/Polysemy-IdempotentLowering.html polysemy-zoo>.
---
--- Interpreters using 'Polysemy.Final' may be composed normally, and
--- avoid the work duplication issue. For that reason, you're encouraged to use
--- @-'Polysemy.Final'@ interpreters instead of @lower-@ interpreters whenever
--- possible.
-(.@)
-    :: Monad m
-    => (∀ x. Sem r x -> m x)
-       -- ^ The lowering function, likely 'runM'.
-    -> (∀ y. (∀ x. Sem r x -> m x)
-          -> Sem (e ': r) y
-          -> Sem r y)
-    -> Sem (e ': r) z
-    -> m z
-f .@ g = f . g f
-infixl 8 .@
-
-
-------------------------------------------------------------------------------
--- | Like '.@', but for interpreters which change the resulting type --- eg.
--- 'Polysemy.Error.lowerError'.
-(.@@)
-    :: Monad m
-    => (∀ x. Sem r x -> m x)
-       -- ^ The lowering function, likely 'runM'.
-    -> (∀ y. (∀ x. Sem r x -> m x)
-          -> Sem (e ': r) y
-          -> Sem r (f y))
-    -> Sem (e ': r) z
-    -> m (f z)
-f .@@ g = f . g f
-infixl 8 .@@

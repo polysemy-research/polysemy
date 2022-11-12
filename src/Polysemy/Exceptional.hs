@@ -4,9 +4,8 @@ module Polysemy.Exceptional where
 import Data.Function ((&))
 import Polysemy
 import Polysemy.Error
-import qualified Control.Exception as X
+import Polysemy.Membership
 import Polysemy.Interpretation
-import qualified System.IO as SysIO
 
 data Exceptional exc eff :: Effect where
   Exceptional :: forall exc eff m a. eff m a -> Exceptional exc eff m (Either exc a)
@@ -34,6 +33,6 @@ runExceptional
 runExceptional h = interpretH $ \(Exceptional e) ->
     h e
   & insertAt @2
-  & subsume @(RunH)
-  & rewrite (\(Stop e) -> Throw e)
+  & subsumeUsing (There Here)
+  & rewrite (\(Stop exc) -> Throw exc)
   & runError

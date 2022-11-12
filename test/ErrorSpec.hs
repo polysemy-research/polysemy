@@ -2,6 +2,7 @@ module ErrorSpec where
 
 import qualified Control.Exception as X
 import           Polysemy
+import           Polysemy.Async
 import           Polysemy.Error
 import           Polysemy.Resource
 import           Test.Hspec
@@ -35,4 +36,21 @@ spec = parallel $ do
               pure ()
             ) $ pure $ error "this exception shouldn't happen"
       a `shouldBe` (Left $ MyExc "hello")
+  describe "errorToIOFinal" $ do
+    it "should catch errors only for the interpreted Error" $ do
+      res1 <- runFinal $ errorToIOFinal @() $ errorToIOFinal @() $ do
+        raise $ throw () `catch` \() -> return ()
+      res1 `shouldBe` Right (Right ())
+      res2 <- runFinal $ errorToIOFinal @() $ errorToIOFinal @() $ do
+        raise (throw ()) `catch` \() -> return ()
+      res2 `shouldBe` Left ()
 
+    it "should propagate errors thrown in 'async'" $ do
+      res1 <- runFinal $ errorToIOFinal @() $ asyncToIOFinal $ do
+        a <- async $ throw ()
+        await a
+      res1 `shouldBe` (Left () :: Either () (Maybe ()))
+      res2 <- runFinal $ errorToIOFinal @() $ asyncToIOFinal $ do
+        a <- async $ throw ()
+        await a `catch` \() -> return $ Just ()
+      res2 `shouldBe` Right (Just ())

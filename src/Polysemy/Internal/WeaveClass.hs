@@ -22,6 +22,7 @@ import qualified Control.Monad.Trans.Writer.Lazy as LWr
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Tuple
+import Data.Kind (Type)
 
 -- | A variant of the classic @MonadTransControl@ class from @monad-control@,
 -- but with a small number of changes to make it more suitable for Polysemy's
@@ -31,7 +32,7 @@ class ( MonadTrans t
       , Traversable (StT t)
       )
    => MonadTransWeave t where
-  type StT t :: * -> *
+  type StT t :: Type -> Type
 
   -- inspect :: Foldable f => f a -> Maybe a
   -- inspect = foldr (const . Just) Nothing
@@ -54,7 +55,7 @@ class ( MonadTrans t
 
   restoreT :: Monad m => m (StT t a) -> t m a
 
-newtype ComposeT t (u :: (* -> *) -> * -> *) m a = ComposeT {
+newtype ComposeT t (u :: (Type -> Type) -> Type -> Type) m a = ComposeT {
     getComposeT :: t (u m) a
   }
   deriving (Functor, Applicative, Monad)

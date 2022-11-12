@@ -39,7 +39,7 @@ newtype Tagged k e m a where
 --             -> 'Sem' r a
 --             -> 'Sem' r a
 -- taggedLocal f m =
---   'tag' @k @('Polysemy.Reader.Reader' i) $ 'Polysemy.Reader.local' @i f ('raise' m)
+--   'tag' \@k \@('Polysemy.Reader.Reader' i) $ 'Polysemy.Reader.local' @i f ('raise' m)
 -- @
 --
 tag

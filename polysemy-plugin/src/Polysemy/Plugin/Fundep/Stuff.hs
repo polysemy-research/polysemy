@@ -13,16 +13,27 @@ import GHC.TcPluginM.Extra (lookupModule, lookupName)
 import GHC.Data.FastString (fsLit)
 import GHC.Types.Name.Occurrence (mkTcOcc)
 import GHC.Tc.Plugin (TcPluginM, tcLookupClass, tcLookupTyCon, unsafeTcPluginTcM)
-import GHC.Plugins (getDynFlags, unitState)
-import GHC.Unit.State (lookupModuleWithSuggestions, LookupResult (..))
-import GHC.Utils.Outputable (pprPanic, empty, text, (<+>), ($$))
+import GHC.Plugins (getDynFlags)
+import GHC.Unit.State (lookupModuleWithSuggestions, LookupResult (..), UnitState)
+import GHC.Utils.Outputable (text, (<+>), ($$))
+#if __GLASGOW_HASKELL__ >= 902
+import GHC.Tc.Plugin (getTopEnv)
+import GHC.Utils.Panic (pprPanic)
+import GHC.Driver.Env (hsc_units)
+#if __GLASGOW_HASKELL__ >= 904
+import GHC.Types.PkgQual (PkgQual(NoPkgQual))
+#endif
+#else
+import GHC.Plugins (unitState)
+import GHC.Utils.Outputable(pprPanic)
+#endif
 #else
 import FastString (fsLit)
 import OccName (mkTcOcc)
 import TcPluginM (TcPluginM, tcLookupClass, tcLookupTyCon, unsafeTcPluginTcM)
 import GhcPlugins (getDynFlags)
 import Packages (lookupModuleWithSuggestions, LookupResult (..))
-import Outputable (pprPanic, empty, text, (<+>), ($$))
+import Outputable (pprPanic, text, (<+>), ($$))
 #endif
 
 
@@ -34,8 +45,6 @@ import Outputable (pprPanic, empty, text, (<+>), ($$))
 data PolysemyStuff (l :: LookupState) = PolysemyStuff
   { findClass         :: ThingOf l Class
   , semTyCon          :: ThingOf l TyCon
-  , ifStuckTyCon      :: ThingOf l TyCon
-  , locateEffectTyCon :: ThingOf l TyCon
   }
 
 
@@ -43,19 +52,33 @@ data PolysemyStuff (l :: LookupState) = PolysemyStuff
 -- | All of the things we need to lookup.
 polysemyStuffLocations :: PolysemyStuff 'Locations
 polysemyStuffLocations = PolysemyStuff
-  { findClass         = ("Polysemy.Internal.Union",                  "Find")
-  , semTyCon          = ("Polysemy.Internal",                        "Sem")
-  , ifStuckTyCon      = ("Polysemy.Internal.CustomErrors.Redefined", "IfStuck")
-  , locateEffectTyCon = ("Polysemy.Internal.Union",                  "LocateEffect")
+  { findClass = ("Polysemy.Internal.Union", "Member")
+  , semTyCon  = ("Polysemy.Internal",       "Sem")
   }
 
+#if __GLASGOW_HASKELL__ >= 900
+------------------------------------------------------------------------------
+-- | GHC-version-dependent access of the UnitState
+getUnitState :: TcPluginM UnitState
+getUnitState = do
+#if __GLASGOW_HASKELL__ >= 902
+  topState <- getTopEnv
+  return (hsc_units topState)
+#else
+  dflags <- unsafeTcPluginTcM getDynFlags
+  return (unitState dflags)
+#endif
+#endif
 
 ------------------------------------------------------------------------------
 -- | Lookup all of the 'PolysemyStuff'.
 polysemyStuff :: TcPluginM (PolysemyStuff 'Things)
 polysemyStuff = do
+#if __GLASGOW_HASKELL__ >= 900
+  theUnitState <- getUnitState
+#else
   dflags <- unsafeTcPluginTcM getDynFlags
-
+#endif
   let error_msg = pprPanic "polysemy-plugin"
           $ text ""
          $$ text "--------------------------------------------------------------------------------"
@@ -66,12 +89,17 @@ polysemyStuff = do
          $$ text ""
   case lookupModuleWithSuggestions
 #if __GLASGOW_HASKELL__ >= 900
-    (unitState dflags)
+    theUnitState
 #else
     dflags
 #endif
     (mkModuleName "Polysemy")
-    Nothing of
+#if __GLASGOW_HASKELL__ >= 904    
+    NoPkgQual
+#else
+    Nothing 
+#endif
+    of
     LookupHidden _ _ -> error_msg
     LookupNotFound _ -> error_msg
 #if __GLASGOW_HASKELL__ >= 806
@@ -79,11 +107,9 @@ polysemyStuff = do
 #endif
     _                -> pure ()
 
-  let PolysemyStuff a b c d = polysemyStuffLocations
+  let PolysemyStuff a b = polysemyStuffLocations
   PolysemyStuff <$> doLookup a
                 <*> doLookup b
-                <*> doLookup c
-                <*> doLookup d
 
 
 ------------------------------------------------------------------------------

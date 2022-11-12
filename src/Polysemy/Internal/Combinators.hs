@@ -11,7 +11,8 @@ module Polysemy.Internal.Combinators
   , lazilyStateful
   ) where
 
-import Control.Monad
+import           Control.Arrow ((>>>))
+import           Control.Monad
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
 import qualified Data.Tuple as S (swap)
@@ -19,6 +20,18 @@ import qualified Data.Tuple as S (swap)
 import Polysemy.Internal
 import Polysemy.Internal.CustomErrors
 import Polysemy.Internal.Union
+
+-- | Interpret an effect @e@ through a natural transformation from @Weaving e@
+-- to @Sem r@
+interpretWeaving ::
+  ∀ e r .
+  (∀ x . Weaving e (Sem (e : r)) x -> Sem r x) ->
+  InterpreterFor e r
+interpretWeaving h (Sem m) =
+  Sem \ k -> m $ decomp >>> \case
+    Right wav -> runSem (h wav) k
+    Left g -> k $ hoist (interpretWeaving h) g
+{-# inline interpretWeaving #-}
 
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See

@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.4.3.1 (2022-07-11)
+
+* Add a missing pattern match that was hit by a user.
+
+## 0.4.3.0 (2021-11-23)
+
+* Support GHC 9.2.1
+* Fix a regression that prevented disambiguation in some cases.
+
+## 0.4.2.0 (2021-11-16)
+
+- Support for `polysemy-1.7.0.0`
+
+## 0.4.1.0 (2021-10-22)
+
+- The plugin can now use instances in scope to help solve ambiguous type
+    variables.
+
 ## 0.4.0.0 (2021-07-12)
 
 * Support GHC 9.0.1

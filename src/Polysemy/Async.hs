@@ -46,23 +46,12 @@ sequenceConcurrently :: forall t r a. (Traversable t, Member Async r) =>
 sequenceConcurrently t = traverse async t >>= traverse await
 {-# INLINABLE sequenceConcurrently #-}
 
-
 ------------------------------------------------------------------------------
 -- | Run an 'Async' effect in terms of 'A.async' through final 'IO'.
 --
 -- /Beware/: Effects that aren't interpreted in terms of 'IO'
 -- will have local state semantics in regards to 'Async' effects
 -- interpreted this way. See 'Final'.
---
--- Notably, unlike 'asyncToIO', this is not consistent with
--- 'Polysemy.State.State' unless 'Polysemy.State.runStateIORef' is used.
--- State that seems like it should be threaded globally throughout 'Async'
--- /will not be./
---
--- Use 'asyncToIO' instead if you need to run
--- pure, stateful interpreters after the interpreter for 'Async'.
--- (Pure interpreters are interpreters that aren't expressed in terms of
--- another effect or monad; for example, 'Polysemy.State.runState'.)
 --
 -- @since 1.2.0.0
 asyncToIOFinal :: Member (Final IO) r

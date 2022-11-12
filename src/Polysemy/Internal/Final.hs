@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, PatternGuards #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, EmptyCase #-}
 module Polysemy.Internal.Final
   (
     -- * Effect
@@ -168,6 +168,7 @@ runStrategy main nat =
         There Here | WithLoweringToFinal main' <- eff ->
           fmap ex $ lwr $ getComposeT $ main' (ComposeT . mkT go)
         There (There Here) | Embed m <- eff -> run_it <$> lift m
+        There (There (There pr_)) -> case pr_ of {}
   in
     go main
 
