@@ -4,13 +4,13 @@ module ScopedSpec where
 
 import Control.Concurrent.STM
 import Polysemy
+import Polysemy.Internal.Interpretation (Tactical)
 import Polysemy.Scoped
 import Test.Hspec
 
 newtype Par =
   Par { unPar :: Int }
-  deriving stock (Eq, Show)
-  deriving newtype (Num, Real, Enum, Integral, Ord)
+  deriving newtype (Num)
 
 data E :: Effect where
   E1 :: E m Int
@@ -24,17 +24,17 @@ data F :: Effect where
 makeSem ''F
 
 handleE ::
-  Member (Embed IO) r =>
+  Members [F, Embed IO] r =>
   TVar Int ->
   E m a ->
-  Tactical effect m (F : r) a
+  Tactical z effect r r a
 handleE tv = \case
   E1 -> do
     i1 <- embed (readTVarIO tv)
     i2 <- f
-    pureT (i1 + i2 + 10)
+    pure (i1 + i2 + 10)
   E2 ->
-    pureT (-1)
+    pure (-1)
 
 interpretF ::
   Member (Embed IO) r =>

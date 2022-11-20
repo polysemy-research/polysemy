@@ -128,7 +128,7 @@ runExposeH z = withInterpreterH $ \n -> do
 --
 -- See 'runExposeH' for more information.
 --
--- Unlike 'runH', this doesn't recursively apply the current interpreter
+-- Unlike 'runExposeH', this doesn't recursively apply the current interpreter
 -- to the monadic action -- allowing you to run a different interpreter
 -- on it instead.
 --
@@ -150,8 +150,8 @@ runExposeH' z = do
 -- For example, consider:
 --
 -- @
--- 'ta' <- runExposeH ma
--- 'tb' <- runExposeH mb
+-- ta <- 'runExposeH' ma
+-- tb <- 'runExposeH' mb
 -- 'restoreH' ta
 -- 'restoreH' tb
 -- @
@@ -163,9 +163,9 @@ runExposeH' z = do
 -- state in between uses of 'runExposeH', so that @'runExposeH' mb@ works with
 -- the changes of @ta@ in scope.
 -- @
--- 'ta' <- runExposeH ma
+-- ta <- 'runExposeH' ma
 -- 'restoreH' ta
--- 'tb' <- runExposeH mb
+-- tb <- 'runExposeH' mb
 -- 'restoreH' tb
 -- @
 --
@@ -179,7 +179,7 @@ restoreH = send . RestoreH @z @_ @e @r
 -- @'runExposeH' m = 'exposeH' ('runH' m)@
 --
 -- /Note/: `polysemy-plugin` is heavily recommended when using this function
--- to avoid type ambiguous types. If `polysemy-plugin` isn't available, consider
+-- to avoid ambiguous types. If `polysemy-plugin` isn't available, consider
 -- using 'runExposeH' and `runExposeH'` instead.
 --
 -- @since TODO
