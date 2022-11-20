@@ -7,10 +7,9 @@ import Data.Kind (Type)
 
 import Polysemy
 
--- | @Scoped@ transforms a program so that @effect@ is associated with a
--- @resource@ within that program. This requires the interpreter for @effect@ to
--- be parameterized by @resource@ and constructed for every program using
--- @Scoped@ separately.
+-- | @Scoped@ transforms a program so that an interpreter for @effect@ may
+-- perform arbitrary actions, like resource management, before and after the
+-- computation wrapped by a call to 'scoped' is executed.
 --
 -- An application for this is @Polysemy.Conc.Events@ from
 -- <https://hackage.haskell.org/package/polysemy-conc>, in which each program
@@ -20,6 +19,8 @@ import Polysemy
 -- database effect.
 --
 -- For a longer exposition, see <https://www.tweag.io/blog/2022-01-05-polysemy-scoped/>.
+-- Note that the interface has changed since the blog post was published: The
+-- @resource@ parameter no longer exists.
 --
 -- Resource allocation is performed by a function passed to
 -- 'Polysemy.Scoped.interpretScoped'.
@@ -46,7 +47,7 @@ import Polysemy
 --
 -- Then we can take advantage of 'Scoped' to write this program:
 --
--- > prog :: Member (Scoped FilePath resource Write) r => Sem r ()
+-- > prog :: Member (Scoped FilePath Write) r => Sem r ()
 -- > prog = do
 -- >   scoped "file1.txt" do
 -- >     write "line 1"
@@ -61,7 +62,7 @@ import Polysemy
 --
 -- The interpreter may look like this:
 --
--- > interpretWriteFile :: Members '[Resource, Embed IO] => InterpreterFor (Scoped FilePath Handle Write) r
+-- > interpretWriteFile :: Members '[Resource, Embed IO] => InterpreterFor (Scoped FilePath Write) r
 -- > interpretWriteFile =
 -- >   interpretScoped allocator handler
 -- >   where
@@ -78,24 +79,20 @@ import Polysemy
 --
 -- This makes it possible to use a pure interpreter for testing:
 --
--- > interpretWriteOutput :: Member (Output (FilePath, Text)) r => InterpreterFor (Scoped FilePath FilePath Write) r
+-- > interpretWriteOutput :: Member (Output (FilePath, Text)) r => InterpreterFor (Scoped FilePath Write) r
 -- > interpretWriteOutput =
 -- >   interpretScoped (\ name use -> use name) \ name -> \case
 -- >     Write line -> output (name, line)
 --
 -- Here we simply pass the name to the interpreter in the resource allocation
--- function. Note how the type of the effect changed, with the @resource@
--- parameter being instantiated as @FilePath@ instead of @Handle@.
--- This change does not need to be anticipated in the business logic that uses
--- the scoped effect – as is visible in the signature of @prog@, the @resource@
--- parameter is always chosen concretely by an interpreter.
+-- function.
 --
 -- Now imagine that we drop requirement 2 from the initial list – we still want
 -- the file to be opened and closed as late/early as possible, but the file name
 -- is globally fixed. For this case, the @param@ type is unused, and the API
 -- provides some convenience aliases to make your code more concise:
 --
--- > prog :: Member (Scoped_ resource Write) r => Sem r ()
+-- > prog :: Member (Scoped_ Write) r => Sem r ()
 -- > prog = do
 -- >   scoped_ do
 -- >     write "line 1"
@@ -105,39 +102,37 @@ import Polysemy
 -- >     write "line 2"
 --
 -- The type 'Scoped_' and the constructor 'scoped_' simply fix @param@ to @()@.
-data Scoped (param :: Type) (resource :: Type) (effect :: Effect) :: Effect where
-  Run :: ∀ param resource effect m a . resource -> effect m a ->
-         Scoped param resource effect m a
-  InScope :: ∀ param resource effect m a . param -> (resource -> m a) ->
-             Scoped param resource effect m a
+data Scoped (param :: Type) (effect :: Effect) :: Effect where
+  Run :: ∀ param effect m a . effect m a -> Scoped param effect m a
+  InScope :: ∀ param effect m a . param -> m a -> Scoped param effect m a
 
 -- |A convenience alias for a scope without parameters.
-type Scoped_ resource effect =
-  Scoped () resource effect
+type Scoped_ effect =
+  Scoped () effect
 
 -- | Constructor for 'Scoped', taking a nested program and transforming all
--- instances of @effect@ to @'Scoped' param resource effect@.
+-- instances of @effect@ to @'Scoped' param effect@.
 --
 -- Please consult the documentation of 'Scoped' for details and examples.
 scoped ::
-  ∀ resource param effect r .
-  Member (Scoped param resource effect) r =>
+  ∀ param effect r .
+  Member (Scoped param effect) r =>
   param ->
   InterpreterFor effect r
 scoped param main =
-  send $ InScope @param @resource @effect param \ resource ->
-    transform @effect (Run @param resource) main
+  send $ InScope @param @effect param do
+    transform @effect (Run @param) main
 {-# inline scoped #-}
 
 -- | Constructor for 'Scoped_', taking a nested program and transforming all
--- instances of @effect@ to @'Scoped_' resource effect@.
+-- instances of @effect@ to @'Scoped_' effect@.
 --
 -- Please consult the documentation of 'Scoped' for details and examples.
 scoped_ ::
-  ∀ resource effect r .
-  Member (Scoped_ resource effect) r =>
+  ∀ effect r .
+  Member (Scoped_ effect) r =>
   InterpreterFor effect r
-scoped_ = scoped @resource ()
+scoped_ = scoped ()
 {-# inline scoped_ #-}
 
 -- | Transform the parameters of a 'Scoped' program.
@@ -147,13 +142,13 @@ scoped_ = scoped @resource ()
 -- with some fundamental parameters being supplied at scope creation and some
 -- optional or specific parameters being selected by the user downstream.
 rescope ::
-  ∀ param0 param1 resource effect r .
-  Member (Scoped param1 resource effect) r =>
+  ∀ param0 param1 effect r .
+  Member (Scoped param1 effect) r =>
   (param0 -> param1) ->
-  InterpreterFor (Scoped param0 resource effect) r
+  InterpreterFor (Scoped param0 effect) r
 rescope fp =
   transform \case
-    Run res e      -> Run @param1 res e
+    Run e          -> Run @param1 e
     InScope p main -> InScope (fp p) main
 {-# inline rescope #-}
 

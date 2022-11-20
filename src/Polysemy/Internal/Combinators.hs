@@ -6,6 +6,9 @@ module Polysemy.Internal.Combinators
     rewrite
   , transform
 
+   -- * Higher order
+  , interpretWeaving
+
     -- * Statefulness
   , stateful
   , lazilyStateful
