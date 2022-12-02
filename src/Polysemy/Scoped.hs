@@ -42,7 +42,7 @@ interpretScopedH ::
   (∀ x . param -> (resource -> Sem r x) -> Sem r x) ->
   -- | A handler like the one expected by 'interpretH' with an additional
   -- parameter that contains the @resource@ allocated by the first argument.
-  (∀ r0 x . resource -> effect (Sem r0) x -> Tactical (Sem r0) (Scoped param effect) r r x) ->
+  (∀ z x . resource -> effect z x -> Tactical z (Scoped param effect) r r x) ->
   InterpreterFor (Scoped param effect) r
 interpretScopedH withResource scopedHandler =
   -- TODO investigate whether loopbreaker optimization is effective here
@@ -61,13 +61,13 @@ interpretScopedH withResource scopedHandler =
 -- to use 'Tactical'.
 interpretScopedH' ::
   ∀ resource param effect r .
-  (∀ t e r0 x . Traversable t =>
+  (∀ t e z x . Traversable t =>
     param ->
-    (resource -> Sem (RunH (Sem r0) t e r ': r) x) ->
-    Sem (RunH (Sem r0) t e r ': r) x) ->
-  (∀ r0 x .
-    resource -> effect (Sem r0) x ->
-    Tactical (Sem r0) (Scoped param effect) r r x) ->
+    (resource -> Sem (RunH z t e r ': r) x) ->
+    Sem (RunH z t e r ': r) x) ->
+  (∀ z x .
+    resource -> effect z x ->
+    Tactical z (Scoped param effect) r r x) ->
   InterpreterFor (Scoped param effect) r
 interpretScopedH' withResource scopedHandler =
   go (errorWithoutStackTrace "top level run")
@@ -153,8 +153,8 @@ interpretScopedWithH ::
   ∀ extra resource param effect r r1 .
   (KnownList extra, r1 ~ Append extra r) =>
   (∀ x . param -> (resource -> Sem r1 x) -> Sem r x) ->
-  (∀ r0 x . resource -> effect (Sem r0) x ->
-   Tactical (Sem r0) (Scoped param effect) r1 r1 x) ->
+  (∀ z x . resource -> effect z x ->
+   Tactical z (Scoped param effect) r1 r1 x) ->
   InterpreterFor (Scoped param effect) r
 interpretScopedWithH withResource scopedHandler = interpretH $ \case
     InScope param main -> do

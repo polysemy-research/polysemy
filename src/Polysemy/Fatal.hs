@@ -166,8 +166,7 @@ mapFatal
   => (e1 -> e2)
   -> Sem (Fatal e1 ': r) a
   -> Sem r a
-mapFatal f = interpret $ \case
-  Fatal e -> fatal $ f e
+mapFatal f = transform (\(Fatal e) -> Fatal (f e))
 {-# INLINE mapFatal #-}
 
 

@@ -57,14 +57,12 @@ module Polysemy.Internal.Union
   ) where
 
 import Control.Monad.Trans.Identity
-import Data.Coerce
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Kind
 import Data.Typeable
 import Polysemy.Internal.Kind
 import Polysemy.Internal.WeaveClass
-import {-# SOURCE #-} Polysemy.Internal
 import Polysemy.Internal.Sing (SList (SEnd, SCons))
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -75,7 +73,7 @@ import Unsafe.Coerce (unsafeCoerce)
 data Union (r :: EffectRow) (mWoven :: Type -> Type) a where
   Union
       :: -- A proof that the effect is actually in @r@.
-         ElemOf e r
+         {-# UNPACK #-} !(ElemOf e r)
          -- The effect to wrap. The functions 'prj' and 'decomp' can help
          -- retrieve this value later.
       -> Weaving e m a
@@ -88,15 +86,16 @@ instance Functor (Union r mWoven) where
 
 data Weaving e mAfter resultType where
   Weaving
-    :: forall t e rInitial a resultType mAfter. (MonadTransWeave t)
+    :: forall t e z a resultType mAfter. (MonadTransWeave t)
     => {
-        weaveEffect :: e (Sem rInitial) a
+        weaveEffect :: e z a
       -- ^ The original effect GADT originally lifted via
       -- 'Polysemy.Internal.send'.
-      -- ^ @rInitial@ is the effect row that was in scope when this 'Weaving'
-      -- was originally created.
-      , weaveTrans :: forall n x. Monad n => (forall y. mAfter y -> n y) -> Sem rInitial x -> t n x
-      , weaveLowering :: forall z x. Monad z => t z x -> z (StT t x)
+      -- ^ @z@ is always of the form @Sem rInitial@, where @rInitial@ is the
+      -- effect row that was in scope when this 'Weaving' was originally
+      -- created.
+      , weaveTrans :: forall n x. Monad n => (forall y. mAfter y -> n y) -> z x -> t n x
+      , weaveLowering :: forall z' x. Monad z' => t z' x -> z' (StT t x)
       , weaveResult :: StT t a -> resultType
       } -> Weaving e mAfter resultType
 
@@ -185,15 +184,9 @@ sameMember :: forall e e' r
             . ElemOf e r
            -> ElemOf e' r
            -> Maybe (e :~: e')
-sameMember Here       Here =
-  Just Refl
-sameMember (There pr) (There pr') =
-  sameMember @e @e' pr pr'
-sameMember (There _)  _ =
-  Nothing
-sameMember _          _ =
-  Nothing
-
+sameMember (UnsafeMkElemOf i) (UnsafeMkElemOf j)
+  | i == j    = Just (unsafeCoerce Refl)
+  | otherwise = Nothing
 
 class Member (t :: Effect) (r :: EffectRow) where
   membership' :: ElemOf t r
@@ -289,14 +282,14 @@ decomp (Union p a) =
 -- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> Weaving e m a
 extract (Union Here a)   = a
-extract (Union (There _) _) = error "Unsafe use of UnsafeMkElemOf"
+extract (Union (There pr) _) = case pr of {}
 {-# INLINE extract #-}
 
 
 ------------------------------------------------------------------------------
 -- | An empty union contains nothing, so this function is uncallable.
 absurdU :: Union '[] m a -> b
-absurdU (Union _ _) = error "Unsafe use of UnsafeMkElemOf"
+absurdU (Union pr _) = case pr of {}
 
 
 ------------------------------------------------------------------------------
@@ -329,15 +322,16 @@ weakenMid sl sm (Union pr e) = Union (injectMembership @right sl sm pr) e
 
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it.
-inj :: forall e r rInitial a. Member e r => e (Sem rInitial) a -> Union r (Sem rInitial) a
+inj :: forall e r z a. Member e r => e z a -> Union r z a
 inj = injWeaving . mkWeaving
 {-# INLINE inj #-}
 
 
-mkWeaving :: forall e rInitial a. e (Sem rInitial) a -> Weaving e (Sem rInitial) a
+mkWeaving :: forall e z a. e z a -> Weaving e z a
 mkWeaving e = Weaving
   e
-  (\ nt -> coerce nt)
+  -- Could be made into coerce through eta expansion
+  (\nt -> unsafeCoerce nt)
   (fmap Identity . runIdentityT)
   runIdentity
 {-# INLINE mkWeaving #-}
@@ -346,11 +340,12 @@ mkWeaving e = Weaving
 ------------------------------------------------------------------------------
 -- | Lift an effect @e@ into a 'Union' capable of holding it,
 -- given an explicit proof that the effect exists in @r@
-injUsing :: forall e r rInitial a.
-  ElemOf e r -> e (Sem rInitial) a -> Union r (Sem rInitial) a
+injUsing :: forall e r z a.
+  ElemOf e r -> e z a -> Union r z a
 injUsing pr e = Union pr $ Weaving
   e
-  (\ nt -> coerce nt)
+  -- Could be made into coerce through eta expansion
+  (\nt -> unsafeCoerce nt)
   (fmap Identity . runIdentityT)
   runIdentity
 {-# INLINE injUsing #-}

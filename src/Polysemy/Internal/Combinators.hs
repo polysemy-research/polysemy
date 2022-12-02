@@ -108,7 +108,7 @@ lazilyStateful f = interpretInLazyStateT $ \e -> LS.StateT $ fmap S.swap . f e
 -- @since 1.2.3.0
 rewrite
     :: forall e1 e2 r a
-     . (forall rInitial x. e1 (Sem rInitial) x -> e2 (Sem rInitial) x)
+     . (forall z x. e1 z x -> e2 z x)
     -> Sem (e1 ': r) a
     -> Sem (e2 ': r) a
 rewrite f (Sem m) = Sem $ \k -> m $ \u ->
@@ -126,7 +126,7 @@ rewrite f (Sem m) = Sem $ \k -> m $ \u ->
 transform
     :: forall e1 e2 r a
      . Member e2 r
-    => (forall rInitial x. e1 (Sem rInitial) x -> e2 (Sem rInitial) x)
+    => (forall z x. e1 z x -> e2 z x)
     -> Sem (e1 ': r) a
     -> Sem r a
 transform f (Sem m) = Sem $ \k -> m $ \u ->

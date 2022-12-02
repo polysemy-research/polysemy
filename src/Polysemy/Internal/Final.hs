@@ -234,7 +234,7 @@ embedFinal m = withLoweringToFinal $ \_ -> lift m
 interpretFinal
     :: forall m e r a
      . (Member (Final m) r, Monad m)
-    => (forall x rInitial. e (Sem rInitial) x -> Strategic m (Sem rInitial) x)
+    => (forall x z. e z x -> Strategic m z x)
        -- ^ A natural transformation from the handled effect to the final monad.
     -> Sem (e ': r) a
     -> Sem r a

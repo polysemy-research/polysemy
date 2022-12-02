@@ -24,10 +24,10 @@ newtype Stop e :: Effect where
 makeSem ''Stop
 
 runExceptional
-  :: (   forall t rInitial x
+  :: (   forall t z x
        . Traversable t
-      => eff (Sem rInitial) x
-      -> Sem (RunH (Sem rInitial) t (Exceptional exc eff) r ': Stop exc ': r) x
+      => eff z x
+      -> Sem (RunH z t (Exceptional exc eff) r ': Stop exc ': r) x
      )
   -> InterpreterFor (Exceptional exc eff) r
 runExceptional h = interpretH $ \(Exceptional e) ->

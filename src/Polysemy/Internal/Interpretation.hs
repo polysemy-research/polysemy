@@ -33,10 +33,10 @@ data RunH z t e r :: Effect where
                     . t a
                    -> RunH z t e r m a
 
-propagate :: forall e r rInitial t e' r' a
+propagate :: forall e r z t e' r' a
            . Member e r
-          => e (Sem rInitial) a
-          -> Sem (RunH (Sem rInitial) t e' r' ': r) a
+          => e z a
+          -> Sem (RunH z t e' r' ': r) a
 propagate e = liftSem $ hoist runH $ Union (There membership) (mkWeaving e)
 {-# INLINE propagate #-}
 
@@ -204,7 +204,7 @@ type Tactical z e r r' a =
   => Sem (RunH z t e r ': r') a
 
 type EffHandlerH e r =
-     forall rInitial x. e (Sem rInitial) x -> Tactical (Sem rInitial) e r r x
+     forall z x. e z x -> Tactical z e r r x
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but for higher-order effects (i.e. those which make use
@@ -314,7 +314,7 @@ interpretH h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
 -- @since TODO
 interpret :: forall e r a
               . FirstOrder e "interpret"
-             => (∀ rInitial x. e (Sem rInitial) x -> Sem r x)
+             => (∀ z x. e z x -> Sem r x)
              -> Sem (e ': r) a
              -> Sem r a
 interpret h =
@@ -344,7 +344,7 @@ reinterpretH h = interpretH h . raiseUnder
 -- @since TODO
 reinterpret :: forall e1 e2 r a
               . FirstOrder e1 "reinterpret"
-             => (∀ rInitial x. e1 (Sem rInitial) x -> Sem (e2 ': r) x)
+             => (∀ z x. e1 z x -> Sem (e2 ': r) x)
              -> Sem (e1 ': r) a
              -> Sem (e2 ': r) a
 reinterpret h =
@@ -368,7 +368,7 @@ reinterpret2H h = interpretH h . raiseUnder2
 -- @since TODO
 reinterpret2 :: forall e1 e2 e3 r a
               . FirstOrder e1 "reinterpret2"
-             => (∀ rInitial x. e1 (Sem rInitial) x -> Sem (e2 ': e3 ': r) x)
+             => (∀ z x. e1 z x -> Sem (e2 ': e3 ': r) x)
              -> Sem (e1 ': r) a
              -> Sem (e2 ': e3 ': r) a
 reinterpret2 h =
@@ -392,7 +392,7 @@ reinterpret3H h = interpretH h . raiseUnder3
 -- @since TODO
 reinterpret3 :: forall e1 e2 e3 e4 r a
               . FirstOrder e1 "reinterpret3"
-             => (∀ rInitial x. e1 (Sem rInitial) x -> Sem (e2 ': e3 ': e4 ': r) x)
+             => (∀ z x. e1 z x -> Sem (e2 ': e3 ': e4 ': r) x)
              -> Sem (e1 ': r) a
              -> Sem (e2 ': e3 ': e4 ': r) a
 reinterpret3 h =
@@ -420,7 +420,7 @@ intercept h = interpretH h . expose
 interceptH :: forall e r a
               . FirstOrder e "intercept"
              => Member e r
-             => (∀ rInitial x. e (Sem rInitial) x -> Sem r x)
+             => (∀ z x. e z x -> Sem r x)
              -> Sem r a
              -> Sem r a
 interceptH h =
@@ -451,7 +451,7 @@ interceptUsingH :: forall e r a .
                      FirstOrder e "interceptUsing"
                   => Member e r
                   => ElemOf e r
-                  -> (∀ rInitial x. e (Sem rInitial) x -> Sem r x)
+                  -> (∀ z x. e z x -> Sem r x)
                   -> Sem r a
                   -> Sem r a
 interceptUsingH pr h =
