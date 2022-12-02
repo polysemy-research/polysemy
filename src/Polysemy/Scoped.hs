@@ -47,17 +47,19 @@ interpretScopedH ::
   (∀ r0 x . resource -> effect (Sem r0) x -> Tactical effect (Sem r0) r x) ->
   InterpreterFor (Scoped param effect) r
 interpretScopedH withResource scopedHandler =
-  -- TODO investigate whether loopbreaker optimization is effective here
-  go (errorWithoutStackTrace "top level run")
+  interpretWeaving $ \(Weaving effect s wv ex _) -> case effect of
+    Run _ -> errorWithoutStackTrace "top level run"
+    InScope param main -> withResource param \ resource ->
+          ex
+      <$> interpretH (scopedHandler resource) (go $ raiseUnder $ wv (main <$ s))
   where
-    go :: resource -> InterpreterFor (Scoped param effect) r
-    go resource =
+    -- TODO investigate whether loopbreaker optimization is effective here
+    go :: InterpreterFor (Scoped param effect) (effect ': r)
+    go =
       interpretWeaving \ (Weaving effect s wv ex ins) -> case effect of
-        Run act ->
-          ex <$> runTactics s (raise . go resource . wv) ins (go resource . wv)
-            (scopedHandler resource act)
-        InScope param main ->
-          withResource param \ resource' -> ex <$> go resource' (wv (main <$ s))
+        Run act -> liftSem $ injWeaving $ Weaving act s (go . wv) ex ins
+        InScope param main -> raise $ withResource param \ resource ->
+          ex <$> interpretH (scopedHandler resource) (go $ wv (main <$ s))
 {-# inline interpretScopedH #-}
 
 -- | Variant of 'interpretScopedH' that allows the resource acquisition function
@@ -159,24 +161,25 @@ interpretScopedWithH ::
 interpretScopedWithH withResource scopedHandler =
   interpretWeaving \case
     Weaving (InScope param main) s wv ex _ ->
-      ex <$> withResource param \ resource -> inScope resource $
-        restack
-          (injectMembership
-           (singList @'[Scoped param effect])
-           (singList @extra)) $ wv (main <$ s)
+      ex <$> withResource param \ resource ->
+        interpretH (scopedHandler resource) $ inScope $
+          restack
+            (injectMembership
+             (singList @'[Scoped param effect])
+             (singList @(effect ': extra))) $ wv (main <$ s)
     _ ->
       errorWithoutStackTrace "top level Run"
   where
-    inScope :: resource -> InterpreterFor (Scoped param effect) r1
-    inScope resource =
+    inScope :: InterpreterFor (Scoped param effect) (effect ': r1)
+    inScope =
       interpretWeaving \case
         Weaving (InScope param main) s wv ex _ ->
-          restack (extendMembershipLeft (singList @extra))
-            (ex <$> withResource param \resource' ->
-                inScope resource' (wv (main <$ s)))
+          restack
+            (extendMembershipLeft (singList @(effect ': extra)))
+            (ex <$> withResource param \resource ->
+                interpretH (scopedHandler resource) $ inScope $ wv (main <$ s))
         Weaving (Run act) s wv ex ins ->
-          ex <$> runTactics s (raise . inScope resource . wv) ins (inScope resource . wv)
-            (scopedHandler resource act)
+          liftSem $ injWeaving $ Weaving act s (inScope . wv) ex ins
 {-# inline interpretScopedWithH #-}
 
 -- | First-order variant of 'interpretScopedWithH'.
@@ -227,46 +230,34 @@ interpretScopedWith_ withResource scopedHandler =
 -- easily rewrite (like from another library). If you have full control over the
 -- implementation, 'interpretScoped' should be preferred.
 --
--- /Note/: The wrapped interpreter will be executed fully, including the
--- initializing code surrounding its handler, for each action in the program, so
--- if the interpreter allocates any resources, they will be scoped to a single
--- action. Move them to @withResource@ instead.
+-- /Note/: In previous versions of Polysemy, the wrapped interpreter was
+-- executed fully, including the initializing code surrounding its handler,
+-- for each action in the program. However, new and continuing discoveries
+-- regarding 'Scoped' has allowed the improvement of having the interpreter be
+-- used only once per use of 'scoped', and have it cover the same scope of
+-- actions that the resource allocator does.
 --
--- For example, consider the following interpreter for
--- 'Polysemy.AtomicState.AtomicState':
---
--- > atomicTVar :: Member (Embed IO) r => a -> InterpreterFor (AtomicState a) r
--- > atomicTVar initial sem = do
--- >   tv <- embed (newTVarIO initial)
--- >   runAtomicStateTVar tv sem
---
--- If this interpreter were used for a scoped version of @AtomicState@ like
--- this:
---
--- > runScoped (\ initial use -> use initial) \ initial -> atomicTVar initial
---
--- Then the @TVar@ would be created every time an @AtomicState@ action is run,
--- not just when entering the scope.
---
--- The proper way to implement this would be to rewrite the resource allocation:
---
--- > runScoped (\ initial use -> use =<< embed (newTVarIO initial)) runAtomicStateTVar
+-- This renders the resource allocator practically redundant; for the moment, the API
+-- surrounding 'Scoped' remains the same, but work is in progress to revamp the
+-- entire API of 'Scoped'.
 runScoped ::
   ∀ resource param effect r .
   (∀ x . param -> (resource -> Sem r x) -> Sem r x) ->
   (resource -> InterpreterFor effect r) ->
   InterpreterFor (Scoped param effect) r
 runScoped withResource scopedInterpreter =
-  go (errorWithoutStackTrace "top level run")
+  interpretWeaving \(Weaving effect s wv ex _) -> case effect of
+    Run _ -> errorWithoutStackTrace "top level run"
+    InScope param main -> withResource param \ resource ->
+      ex <$> scopedInterpreter resource (go (raiseUnder $ wv (main <$ s)))
   where
-    go :: resource -> InterpreterFor (Scoped param effect) r
-    go resource =
+    go :: InterpreterFor (Scoped param effect) (effect ': r)
+    go =
       interpretWeaving \ (Weaving effect s wv ex ins) -> case effect of
-        Run act ->
-          scopedInterpreter resource
-            $ liftSem $ injWeaving $ Weaving act s (raise . go resource . wv) ex ins
+        Run act -> liftSem $ injWeaving $ Weaving act s (go . wv) ex ins
         InScope param main ->
-          withResource param \ resource' -> ex <$> go resource' (wv (main <$ s))
+          raise $ withResource param \ resource ->
+            ex <$> scopedInterpreter resource (go (wv (main <$ s)))
 {-# inline runScoped #-}
 
 -- | Variant of 'runScoped' in which the resource allocator returns the resource
