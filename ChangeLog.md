@@ -25,6 +25,8 @@
     `fixpointToFinal` instead.
 - Changed semantics of `errorToIOFinal` so that it no longer catches errors
   from other handlers of the same type.
+- The semantics of `runScoped` has been changed so that the provided interpreter
+  is now used only once per use of `scoped`, instead of each individual action.
 
 ### Other Changes
 
@@ -33,7 +35,9 @@
 - Removed the debug `dump-core` flag.
 - Introduced the new meta-effect `Scoped`, which allows running an interpreter locally whose implementation is deferred
   to a later stage.
-
+- Fixed a bug in various `Scoped` interpreters where any explicit recursive
+  interpretation of higher-order computations that the handler may perform are
+  ignored by the interpreter, and the original handler was reused instead.
 
 ## 1.7.1.0 (2021-11-23)
 

@@ -54,6 +54,21 @@ scope (Par n) use = do
   tv <- embed (newTVarIO n)
   interpretF tv (use tv)
 
+data HO :: Effect where
+  Inc :: m a -> HO m a
+  Ret :: HO m Int
+
+makeSem ''HO
+
+scopeHO :: () -> (() -> Sem r a) -> Sem r a
+scopeHO () use =
+  use ()
+
+handleHO :: Int -> () -> HO m a -> Tactical HO m r a
+handleHO n () = \case
+  Inc ma -> raise . interpretH (handleHO (n + 1) ()) =<< runT ma
+  Ret -> pureT n
+
 spec :: Spec
 spec = parallel do
   describe "Scoped" do
@@ -65,3 +80,9 @@ spec = parallel do
           pure (i1, i2)
       35 `shouldBe` i1
       38 `shouldBe` i2
+    it "switch interpreter" do
+      r <- runM $ interpretScopedH scopeHO (handleHO 1) do
+        scoped_ @HO do
+          inc do
+            ret
+      2 `shouldBe` r
