@@ -72,7 +72,7 @@ data Union (r :: EffectRow) (mWoven :: Type -> Type) a where
 
 instance Functor (Union r mWoven) where
   fmap f (Union w t) = Union w $ f <$> t
-  {-# INLINE fmap #-}
+  {-# INLINABLE fmap #-}
 
 
 data Weaving e mAfter resultType where
@@ -104,7 +104,7 @@ data Weaving e mAfter resultType where
 
 instance Functor (Weaving e m) where
   fmap f (Weaving e s d f' v) = Weaving e s d (f . f') v
-  {-# INLINE fmap #-}
+  {-# INLINABLE fmap #-}
 
 
 
@@ -121,7 +121,7 @@ weave s' d v' (Union w (Weaving e s nt f v)) =
               (fmap Compose . d . fmap nt . getCompose)
               (fmap f . getCompose)
               (v <=< v' . getCompose)
-{-# INLINE weave #-}
+{-# INLINABLE weave #-}
 
 
 hoist
@@ -130,7 +130,7 @@ hoist
     -> Union r n a
 hoist f' (Union w (Weaving e s nt f v)) =
   Union w $ Weaving e s (f' . nt) f v
-{-# INLINE hoist #-}
+{-# INLINABLE hoist #-}
 
 ------------------------------------------------------------------------------
 -- | A proof that @e@ is an element of @r@.
@@ -193,11 +193,9 @@ class Member (t :: Effect) (r :: EffectRow) where
 
 instance {-# OVERLAPPING #-} Member t (t ': z) where
   membership' = Here
-  {-# INLINE membership' #-}
 
 instance Member t z => Member t (_1 ': z) where
   membership' = There $ membership' @t @z
-  {-# INLINE membership' #-}
 
 ------------------------------------------------------------------------------
 -- | A class for effect rows whose elements are inspectable.
@@ -211,27 +209,27 @@ class KnownRow r where
 
 instance KnownRow '[] where
   tryMembership' = Nothing
-  {-# INLINE tryMembership' #-}
+  {-# INLINABLE tryMembership' #-}
 
 instance (Typeable e, KnownRow r) => KnownRow (e ': r) where
   tryMembership' :: forall e'. Typeable e' => Maybe (ElemOf e' (e ': r))
   tryMembership' = case eqT @e @e' of
     Just Refl -> Just Here
     _         -> There <$> tryMembership' @r @e'
-  {-# INLINE tryMembership' #-}
+  {-# INLINABLE tryMembership' #-}
 
 ------------------------------------------------------------------------------
 -- | Given @'Member' e r@, extract a proof that @e@ is an element of @r@.
 membership :: Member e r => ElemOf e r
 membership = membership'
-{-# INLINE membership #-}
+{-# INLINABLE membership #-}
 
 ------------------------------------------------------------------------------
 -- | Extracts a proof that @e@ is an element of @r@ if that
 -- is indeed the case; otherwise returns @Nothing@.
 tryMembership :: forall e r. (Typeable e, KnownRow r) => Maybe (ElemOf e r)
 tryMembership = tryMembership' @r @e
-{-# INLINE tryMembership #-}
+{-# INLINABLE tryMembership #-}
 
 
 ------------------------------------------------------------------------------
@@ -241,7 +239,7 @@ tryMembership = tryMembership' @r @e
 extendMembershipLeft :: forall l r e. SList l -> ElemOf e r -> ElemOf e (Append l r)
 extendMembershipLeft SEnd pr = pr
 extendMembershipLeft (SCons l) pr = There (extendMembershipLeft l pr)
-{-# INLINE extendMembershipLeft #-}
+{-# INLINABLE extendMembershipLeft #-}
 
 
 ------------------------------------------------------------------------------
@@ -250,7 +248,7 @@ extendMembershipLeft (SCons l) pr = There (extendMembershipLeft l pr)
 extendMembershipRight :: forall l r e. ElemOf e l -> ElemOf e (Append l r)
 extendMembershipRight Here = Here
 extendMembershipRight (There e) = There (extendMembershipRight @_ @r e)
-{-# INLINE extendMembershipRight #-}
+{-# INLINABLE extendMembershipRight #-}
 
 
 ------------------------------------------------------------------------------
@@ -265,7 +263,7 @@ injectMembership :: forall right e left mid
 injectMembership SEnd sm pr = extendMembershipLeft sm pr
 injectMembership (SCons _) _ Here = Here
 injectMembership (SCons sl) sm (There pr) = There (injectMembership @right sl sm pr)
-{-# INLINE injectMembership #-}
+{-# INLINABLE injectMembership #-}
 
 
 ------------------------------------------------------------------------------
@@ -276,14 +274,14 @@ decomp (Union p a) =
   case p of
     Here  -> Right a
     There pr -> Left $ Union pr a
-{-# INLINE decomp #-}
+{-# INLINABLE decomp #-}
 
 ------------------------------------------------------------------------------
 -- | Retrieve the last effect in a 'Union'.
 extract :: Union '[e] m a -> Weaving e m a
 extract (Union Here a)   = a
 extract (Union (There _) _) = error "Unsafe use of UnsafeMkElemOf"
-{-# INLINE extract #-}
+{-# INLINABLE extract #-}
 
 
 ------------------------------------------------------------------------------
@@ -297,7 +295,7 @@ absurdU (Union _ _) = error "Unsafe use of UnsafeMkElemOf"
 -- head.
 weaken :: forall e r m a. Union r m a -> Union (e ': r) m a
 weaken (Union pr a) = Union (There pr) a
-{-# INLINE weaken #-}
+{-# INLINABLE weaken #-}
 
 
 ------------------------------------------------------------------------------
@@ -305,7 +303,7 @@ weaken (Union pr a) = Union (There pr) a
 -- the head, specified as a singleton list proof.
 weakenList :: SList l -> Union r m a -> Union (Append l r) m a
 weakenList sl (Union pr e) = Union (extendMembershipLeft sl pr) e
-{-# INLINE weakenList #-}
+{-# INLINABLE weakenList #-}
 
 
 ------------------------------------------------------------------------------
@@ -317,7 +315,7 @@ weakenMid :: forall right m a left mid
           -> Union (Append left right) m a
           -> Union (Append left (Append mid right)) m a
 weakenMid sl sm (Union pr e) = Union (injectMembership @right sl sm pr) e
-{-# INLINE weakenMid #-}
+{-# INLINABLE weakenMid #-}
 
 
 ------------------------------------------------------------------------------
@@ -329,7 +327,7 @@ inj e = injWeaving $ Weaving
   (fmap Identity . runIdentity)
   runIdentity
   (Just . runIdentity)
-{-# INLINE inj #-}
+{-# INLINABLE inj #-}
 
 
 ------------------------------------------------------------------------------
@@ -343,13 +341,13 @@ injUsing pr e = Union pr $ Weaving
   (fmap Identity . runIdentity)
   runIdentity
   (Just . runIdentity)
-{-# INLINE injUsing #-}
+{-# INLINABLE injUsing #-}
 
 ------------------------------------------------------------------------------
 -- | Lift a @'Weaving' e@ into a 'Union' capable of holding it.
 injWeaving :: forall e r m a. Member e r => Weaving e m a -> Union r m a
 injWeaving = Union membership
-{-# INLINE injWeaving #-}
+{-# INLINABLE injWeaving #-}
 
 ------------------------------------------------------------------------------
 -- | Attempt to take an @e@ effect out of a 'Union'.
@@ -359,7 +357,7 @@ prj :: forall e r m a
     => Union r m a
     -> Maybe (Weaving e m a)
 prj = prjUsing membership
-{-# INLINE prj #-}
+{-# INLINABLE prj #-}
 
 ------------------------------------------------------------------------------
 -- | Attempt to take an @e@ effect out of a 'Union', given an explicit
@@ -370,7 +368,7 @@ prjUsing
   -> Union r m a
   -> Maybe (Weaving e m a)
 prjUsing pr (Union sn a) = (\Refl -> a) <$> sameMember pr sn
-{-# INLINE prjUsing #-}
+{-# INLINABLE prjUsing #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'decomp', but allows for a more efficient
@@ -382,4 +380,4 @@ decompCoerce (Union p a) =
   case p of
     Here  -> Right a
     There pr -> Left (Union (There pr) a)
-{-# INLINE decompCoerce #-}
+{-# INLINABLE decompCoerce #-}
