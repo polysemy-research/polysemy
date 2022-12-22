@@ -31,6 +31,8 @@
 - Exposed `send` from `Polysemy`.
 - Dramatically improved build performance of projects when compiling with `-O2`.
 - Removed the debug `dump-core` flag.
+- Introduced the new meta-effect `Scoped`, which allows running an interpreter locally whose implementation is deferred
+  to a later stage.
 
 
 ## 1.7.1.0 (2021-11-23)
