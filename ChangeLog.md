@@ -4,6 +4,13 @@
 
 ### Breaking Changes
 
+### Other Changes
+
+
+## 1.8.0.0 (2022-12-22)
+
+### Breaking Changes
+
 - Removed `Polysemy.View`
 - Removed `Polysemy.Law`
 - Removed `(@)` and `(@@)` from `Polysemy`
@@ -22,6 +29,9 @@
 ### Other Changes
 
 - Exposed `send` from `Polysemy`.
+- Dramatically improved build performance of projects when compiling with `-O2`.
+- Removed the debug `dump-core` flag.
+
 
 ## 1.7.1.0 (2021-11-23)
 

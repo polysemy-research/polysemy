@@ -4,6 +4,3 @@ packages:
 - .
 - polysemy-plugin
 
-extra-deps:
-- dump-core-0.1.3.2 # used when the dump-core flag is toggled
-- monadLib-3.10 # used by the dump-core library when the dump-core flag is toggled
