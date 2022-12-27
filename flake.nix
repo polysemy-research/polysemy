@@ -19,7 +19,8 @@
       "884" = hsPkgs nixpkgs_2105 "ghc884";
       "8107" = hsPkgs unstable "ghc8107";
       "902" = hsPkgs unstable "ghc902";
-      "924" = hsPkgs unstable "ghc924";
+      "925" = hsPkgs unstable "ghc925";
+      "943" = hsPkgs unstable "ghc943";
     };
 
     mkPackages = version: {
@@ -34,15 +35,16 @@
 
     packages = foldl' (l: r: l // r) defaultPackages (map mkPackages (attrNames ghcs));
 
-    mkDevShell = extra: ghc: ghc.shellFor {
+    mkDevShell = ghc: ghc.shellFor {
       packages = p: [p.polysemy p.polysemy-plugin];
       buildInputs = with ghc; [
         cabal-install
-      ] ++ (if extra then [ghcid haskell-language-server] else []);
-      withHoogle = extra;
+        (ghc.pkgs.haskell.lib.dontCheck ghcid)
+        haskell-language-server
+      ];
     };
 
-    devShells = mapAttrs' (n: g: nameValuePair "ghc${n}" (mkDevShell (n != "924") g)) ghcs;
+    devShells = mapAttrs' (n: g: nameValuePair "ghc${n}" (mkDevShell g)) ghcs;
 
   in {
     inherit packages;

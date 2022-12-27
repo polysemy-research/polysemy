@@ -63,7 +63,7 @@ tests:
     - hspec >= 2.6.0 && < 3
     - should-not-typecheck >= 2.1.0 && < 3
     - inspection-testing >= 0.4.2 && < 0.5
-    - doctest >= 0.16.0.1 && < 0.19
+    - doctest >= 0.16.0.1 && < 0.21
     generated-other-modules:
     - Build_doctests
 

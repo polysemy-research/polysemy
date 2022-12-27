@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+# Support GHC 9.4
+
 ## 0.4.3.1 (2022-07-11)
 
 * Add a missing pattern match that was hit by a user.
