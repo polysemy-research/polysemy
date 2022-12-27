@@ -103,8 +103,11 @@ import Polysemy
 --
 -- The type 'Scoped_' and the constructor 'scoped_' simply fix @param@ to @()@.
 data Scoped (param :: Type) (effect :: Effect) :: Effect where
-  Run :: ∀ param effect m a . effect m a -> Scoped param effect m a
-  InScope :: ∀ param effect m a . param -> m a -> Scoped param effect m a
+  Run :: ∀ param effect m a . Word -> effect m a -> Scoped param effect m a
+  InScope :: ∀ param effect m a . param -> (Word -> m a) -> Scoped param effect m a
+
+data OuterRun (effect :: Effect) :: Effect where
+  OuterRun :: ∀ effect m a . Word -> effect m a -> OuterRun effect m a
 
 -- |A convenience alias for a scope without parameters.
 type Scoped_ effect =
@@ -120,8 +123,8 @@ scoped ::
   param ->
   InterpreterFor effect r
 scoped param main =
-  send $ InScope @param @effect param do
-    transform @effect (Run @param) main
+  send $ InScope @param @effect param $ \w ->
+    transform @effect (Run @param w) main
 {-# inline scoped #-}
 
 -- | Constructor for 'Scoped_', taking a nested program and transforming all
@@ -148,7 +151,7 @@ rescope ::
   InterpreterFor (Scoped param0 effect) r
 rescope fp =
   transform \case
-    Run e          -> Run @param1 e
+    Run w e        -> Run @param1 w e
     InScope p main -> InScope (fp p) main
 {-# inline rescope #-}
 

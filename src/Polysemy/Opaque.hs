@@ -36,9 +36,10 @@ import Polysemy
 -- containing some polymorphic effect variables. By wrapping the polymorphic
 -- effect variables using 'Opaque', users of the function can use effects as
 -- normal, without having to use 'raise' or 'Polysemy.Membership.subsumeUsing'
--- in order to have 'Polysemy.Member' resolve.
+-- in order to have 'Polysemy.Member' resolve. The various interpreters of
+-- 'Polysemy.Scoped.Scoped' are examples of such usage of 'Opaque'.
 --
--- @since TODO
+-- @since 1.9.0.0
 newtype Opaque (e :: Effect) m a = Opaque (e m a)
 
 -- | Wrap 'Opaque' around the top effect of the effect stack
