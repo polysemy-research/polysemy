@@ -3,6 +3,7 @@
 module Polysemy.Scoped (
   -- * Effect
   Scoped,
+  Scoped_,
 
   -- * Constructors
   scoped,
