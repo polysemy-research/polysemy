@@ -6,6 +6,7 @@
 
 ### Other Changes
 
+- Expose the type alias `Scoped_` for a scoped effect without callsite parameters.
 
 ## 1.8.0.0 (2022-12-22)
 
