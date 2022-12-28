@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# OPTIONS_HADDOCK prune #-}
 
 ------------------------------------------------------------------------------
 -- | This code is copied verbatim from 'Type.Errors' due to limitations in the

@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Description: The 'Trace' effect and its interpreters
 module Polysemy.Trace
   ( -- * Effect
     Trace (..)
@@ -28,6 +29,7 @@ import System.IO (stdout, stderr, hPutStrLn, Handle)
 ------------------------------------------------------------------------------
 -- | An effect for logging strings.
 data Trace m a where
+  -- | Log a message.
   Trace :: String -> Trace m ()
 
 makeSem ''Trace

@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Description: The 'Resource' effect, providing bracketing functionality
 module Polysemy.Resource
   ( -- * Effect
     Resource (..)
@@ -26,6 +27,7 @@ import           Polysemy.Final
 -- will successfully run the deallocation action even in the presence of other
 -- short-circuiting effects.
 data Resource m a where
+  -- | Allocate a resource, use it, and clean it up afterwards.
   Bracket
     :: m a
        -- Action to allocate a resource.
@@ -35,6 +37,7 @@ data Resource m a where
     -> (a -> m b)
        -- Action which uses the resource.
     -> Resource m b
+  -- | Allocate a resource, use it, and clean it up afterwards if an error occurred.
   BracketOnError
     :: m a
        -- Action to allocate a resource.

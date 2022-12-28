@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TemplateHaskell #-}
+
+-- | Description: The 'AtomicState' effect
 module Polysemy.AtomicState
   ( -- * Effect
     AtomicState (..)
@@ -36,7 +38,9 @@ import Data.IORef
 --
 -- @since 1.1.0.0
 data AtomicState s m a where
+  -- | Run a state action.
   AtomicState :: (s -> (s, a)) -> AtomicState s m a
+  -- | Get the state.
   AtomicGet   :: AtomicState s m s
 
 makeSem_ ''AtomicState
@@ -78,6 +82,8 @@ atomicState' f = do
   return a
 {-# INLINE atomicState' #-}
 
+-----------------------------------------------------------------------------
+-- | Replace the state with the given value.
 atomicPut :: Member (AtomicState s) r
           => s
           -> Sem r ()
@@ -86,6 +92,8 @@ atomicPut s = do
   return ()
 {-# INLINE atomicPut #-}
 
+-----------------------------------------------------------------------------
+-- | Modify the state lazily.
 atomicModify :: Member (AtomicState s) r
              => (s -> s)
              -> Sem r ()

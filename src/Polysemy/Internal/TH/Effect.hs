@@ -3,7 +3,7 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
 -- | This module provides Template Haskell functions for automatically generating
--- effect operation functions (that is, functions that use 'send') from a given
+-- effect operation functions (that is, functions that use 'Polysemy.send') from a given
 -- effect algebra. For example, using the @FileSystem@ effect from the example in
 -- the module documentation for "Polysemy", we can write the following:
 --
@@ -18,11 +18,11 @@
 -- This will automatically generate (approximately) the following functions:
 --
 -- @
--- readFile :: 'Member' FileSystem r => 'FilePath' -> 'Sem' r 'String'
--- readFile a = 'send' (ReadFile a)
+-- readFile :: 'Polysemy.Member' FileSystem r => 'FilePath' -> 'Polysemy.Sem' r 'String'
+-- readFile a = 'Polysemy.send' (ReadFile a)
 --
--- writeFile :: 'Member' FileSystem r => 'FilePath' -> 'String' -> 'Sem' r ()
--- writeFile a b = 'send' (WriteFile a b)
+-- writeFile :: 'Polysemy.Member' FileSystem r => 'FilePath' -> 'String' -> 'Polysemy.Sem' r ()
+-- writeFile a b = 'Polysemy.send' (WriteFile a b)
 -- @
 module Polysemy.Internal.TH.Effect
   ( makeSem
@@ -76,8 +76,8 @@ makeSem = genFreer True
 -- rules to work properly:
 --
 -- * 'makeSem_' must be used /before/ the explicit type signatures
--- * signatures have to specify argument of 'Sem' representing union of
--- effects as @r@ (e.g. @'Sem' r ()@)
+-- * signatures have to specify argument of 'Polysemy.Sem' representing union of
+-- effects as @r@ (e.g. @'Polysemy.Sem' r ()@)
 -- * all arguments in effect's type constructor have to follow naming scheme
 -- from data constructor's declaration:
 --
@@ -121,7 +121,7 @@ makeSem_ = genFreer False
 
 ------------------------------------------------------------------------------
 -- | Generates declarations and possibly signatures for functions to lift GADT
--- constructors into 'Sem' actions.
+-- constructors into 'Polysemy.Sem' actions.
 genFreer :: Bool -> Name -> Q [Dec]
 genFreer should_mk_sigs type_name = do
   checkExtensions [ScopedTypeVariables, FlexibleContexts, DataKinds]

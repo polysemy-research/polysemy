@@ -1,4 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+
+-- | Description: The 'Tagged' effect and its interpreters
 module Polysemy.Tagged
   (
     -- * Effect

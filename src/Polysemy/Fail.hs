@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
+-- | Description: 'Fail' interpreters
 module Polysemy.Fail
   ( -- * Effect
     Fail(..)

@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: The meta-effect 'Scoped'
 module Polysemy.Internal.Scoped where
 
 import Data.Kind (Type)
@@ -106,6 +107,7 @@ data Scoped (param :: Type) (effect :: Effect) :: Effect where
   Run :: ∀ param effect m a . Word -> effect m a -> Scoped param effect m a
   InScope :: ∀ param effect m a . param -> (Word -> m a) -> Scoped param effect m a
 
+-- | An auxiliary effect for 'Scoped'.
 data OuterRun (effect :: Effect) :: Effect where
   OuterRun :: ∀ effect m a . Word -> effect m a -> OuterRun effect m a
 

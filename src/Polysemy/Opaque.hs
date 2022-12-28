@@ -1,3 +1,4 @@
+-- | The auxiliary effect 'Opaque' used by interpreters of 'Polysemy.Scoped.Scoped'
 module Polysemy.Opaque (
   -- * Effect
   Opaque(..),

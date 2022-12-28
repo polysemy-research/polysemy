@@ -1,5 +1,6 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: 'Fixpoint' effect
 module Polysemy.Internal.Fixpoint where
 
 ------------------------------------------------------------------------------

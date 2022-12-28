@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Description: Interpreters for the effect 'Embed'
 module Polysemy.Embed
   ( -- * Effect
     Embed (..)

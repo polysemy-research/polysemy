@@ -8,6 +8,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: The 'Sem' type and the most basic stack manipulation utilities
 module Polysemy.Internal
   ( Sem (..)
   , Member
@@ -332,11 +333,15 @@ instance Member Fixpoint r => MonadFix (Sem r) where
   {-# INLINE mfix #-}
 
 
+------------------------------------------------------------------------------
+-- | Create a 'Sem' from a 'Union' with matching stacks.
 liftSem :: Union r (Sem r) a -> Sem r a
 liftSem u = Sem $ \k -> k u
 {-# INLINE liftSem #-}
 
 
+------------------------------------------------------------------------------
+-- | Extend the stack of a 'Sem' with an explicit 'Union' transformation.
 hoistSem
     :: (∀ x. Union r (Sem r) x -> Union r' (Sem r') x)
     -> Sem r a
@@ -344,6 +349,9 @@ hoistSem
 hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSem #-}
 
+------------------------------------------------------------------------------
+-- | Extend the stack of a 'Sem' with an explicit membership proof
+-- transformation.
 restack :: (forall e. ElemOf e r -> ElemOf e r')
         -> Sem r a
         -> Sem r' a
@@ -362,7 +370,7 @@ raise_ = hoistSem $ hoist raise_ . raiseUnion
 {-# INLINE raise_ #-}
 
 
--- | See 'raise''.
+-- | See 'raise'.
 --
 -- @since 1.4.0.0
 class Raise (r :: EffectRow) (r' :: EffectRow) where

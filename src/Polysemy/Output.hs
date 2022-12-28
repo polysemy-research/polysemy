@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns, TemplateHaskell #-}
 
+-- | Description: The 'Output' effect for sending side-effecting messages
 module Polysemy.Output
   ( -- * Effect
     Output (..)
@@ -41,6 +42,7 @@ import Polysemy.Internal.Writer
 -- | An effect capable of sending messages. Useful for streaming output and for
 -- logging.
 data Output o m a where
+  -- | Output a message.
   Output :: o -> Output o m ()
 
 makeSem ''Output

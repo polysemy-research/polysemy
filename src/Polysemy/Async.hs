@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Description: The effect 'Async', providing an interface to "Control.Concurrent.Async"
 module Polysemy.Async
   ( -- * Effect
     Async (..)
@@ -30,8 +31,11 @@ import           Polysemy.Final
 --
 -- @since 0.5.0.0
 data Async m a where
+  -- | Run the given action asynchronously and return a thread handle.
   Async :: m a -> Async m (A.Async (Maybe a))
+  -- | Wait for the thread referenced by the given handle to terminate.
   Await :: A.Async a -> Async m a
+  -- | Cancel the thread referenced by the given handle.
   Cancel :: A.Async a -> Async m ()
 
 makeSem ''Async

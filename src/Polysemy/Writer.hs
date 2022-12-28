@@ -1,5 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
+-- | Description: Interpreters for 'Writer'
 module Polysemy.Writer
   ( -- * Effect
     Writer (..)

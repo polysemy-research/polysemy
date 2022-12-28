@@ -1,3 +1,4 @@
+-- | Description: Polysemy is a library for writing high-power, low-boilerplate domain specific languages
 module Polysemy
   ( -- * Core Types
     Sem ()

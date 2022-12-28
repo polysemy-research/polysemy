@@ -2,6 +2,7 @@
 
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: 'Embed' effect
 module Polysemy.Embed.Type
   ( -- * Effect
     Embed (..)

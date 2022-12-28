@@ -1,3 +1,4 @@
+-- | Description: Reexports of membership related functionality
 module Polysemy.Membership
   ( -- * Witnesses
     ElemOf (..)

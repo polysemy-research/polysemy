@@ -5,15 +5,21 @@
 
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: Singleton list
 module Polysemy.Internal.Sing where
 
-import GHC.TypeLits (type (-), Nat)
+import GHC.TypeLits (Nat, type (-))
+
 import Polysemy.Internal.Kind (Effect)
 
+------------------------------------------------------------------------------
+-- | A singleton type used as a witness for type-level lists.
 data SList l where
   SEnd  :: SList '[]
   SCons :: SList xs -> SList (x ': xs)
 
+------------------------------------------------------------------------------
+-- | A singleton list constructor class.
 class KnownList l where
   singList :: SList l
 
@@ -25,6 +31,8 @@ instance KnownList xs => KnownList (x ': xs) where
   singList = SCons singList
   {-# INLINE singList #-}
 
+------------------------------------------------------------------------------
+-- | A utility class for constructing a type-level list of a given length.
 class ListOfLength (n :: Nat) (l :: [Effect]) where
   listOfLength :: SList l
 

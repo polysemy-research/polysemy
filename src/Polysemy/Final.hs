@@ -1,4 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
+
+-- | Description: The effect 'Final' that allows embedding higher-order actions in
+-- the final target monad of the effect stack
 module Polysemy.Final
   (
     -- * Effect

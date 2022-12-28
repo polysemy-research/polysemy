@@ -2,6 +2,7 @@
 
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: The auxiliary higher-order interpreter effect 'Tactics'
 module Polysemy.Internal.Tactics
   ( Tactics (..)
   , getInitialStateT
@@ -76,8 +77,12 @@ import Polysemy.Internal.Union
 type Tactical e m r x = ∀ f. Functor f
                           => Sem (WithTactics e f m r) (f x)
 
+------------------------------------------------------------------------------
+-- | Convenience type alias, see 'Tactical'.
 type WithTactics e f m r = Tactics f m (e ': r) ': r
 
+------------------------------------------------------------------------------
+-- | See 'Tactical'.
 data Tactics f n r m a where
   GetInitialState      :: Tactics f n r m (f ())
   HoistInterpretation  :: (a -> n b) -> Tactics f n r m (f a -> Sem r (f b))

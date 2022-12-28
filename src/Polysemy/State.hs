@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Description: The 'State' effect
 module Polysemy.State
   ( -- * Effect
     State (..)
@@ -28,15 +29,15 @@ module Polysemy.State
   , hoistStateIntoStateT
   ) where
 
-import           Control.Monad.ST
+import Control.Monad.ST
 import qualified Control.Monad.Trans.State as S
-import           Data.IORef
-import           Data.STRef
-import           Data.Tuple (swap)
-import           Polysemy
-import           Polysemy.Internal
-import           Polysemy.Internal.Combinators
-import           Polysemy.Internal.Union
+import Data.IORef
+import Data.STRef
+import Data.Tuple (swap)
+import Polysemy
+import Polysemy.Internal
+import Polysemy.Internal.Combinators
+import Polysemy.Internal.Union
 
 
 ------------------------------------------------------------------------------
@@ -48,17 +49,23 @@ import           Polysemy.Internal.Union
 -- Interpreters which require statefulness can 'Polysemy.reinterpret'
 -- themselves in terms of 'State', and subsequently call 'runState'.
 data State s m a where
+  -- | Get the state.
   Get :: State s m s
+  -- | Update the state.
   Put :: s -> State s m ()
 
 makeSem ''State
 
 
+------------------------------------------------------------------------------
+-- | Apply a function to the state and return the result.
 gets :: forall s a r. Member (State s) r => (s -> a) -> Sem r a
 gets f = f <$> get
 {-# INLINABLE gets #-}
 
 
+------------------------------------------------------------------------------
+-- | Modify the state.
 modify :: Member (State s) r => (s -> s) -> Sem r ()
 modify f = do
   s <- get

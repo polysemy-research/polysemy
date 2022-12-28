@@ -1,5 +1,6 @@
 {-# language AllowAmbiguousTypes, BangPatterns #-}
 
+-- | Description: Interpreters for 'Scoped'
 module Polysemy.Scoped (
   -- * Effect
   Scoped,

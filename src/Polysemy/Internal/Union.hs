@@ -14,8 +14,9 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns            #-}
 
-{-# OPTIONS_HADDOCK not-home #-}
+{-# OPTIONS_HADDOCK not-home, prune #-}
 
+-- | Description: 'Union', 'Weaving' and 'ElemOf', Polysemy's core types
 module Polysemy.Internal.Union
   ( Union (..)
   , Weaving (..)
@@ -75,6 +76,9 @@ instance Functor (Union r mWoven) where
   {-# INLINABLE fmap #-}
 
 
+------------------------------------------------------------------------------
+-- | Polysemy's core type that stores effect values together with information
+-- about the higher-order interpretation state of its construction site.
 data Weaving e mAfter resultType where
   Weaving
     :: forall f e rInitial a resultType mAfter. (Functor f)
@@ -188,7 +192,11 @@ sameMember _          _ =
   Nothing
 
 
+------------------------------------------------------------------------------
+-- | This class indicates that an effect must be present in the caller's stack.
+-- It is the main mechanism by which a program defines its effect dependencies.
 class Member (t :: Effect) (r :: EffectRow) where
+  -- | Create a proof that the effect @t@ is present in the effect stack @r@.
   membership' :: ElemOf t r
 
 instance {-# OVERLAPPING #-} Member t (t ': z) where

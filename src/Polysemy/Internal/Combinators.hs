@@ -2,6 +2,7 @@
 
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: The basic interpreter-building combinators
 module Polysemy.Internal.Combinators
   ( -- * First order
     interpret

@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Description: The 'Input' effect
 module Polysemy.Input
   ( -- * Effect
     Input (..)
@@ -23,6 +24,7 @@ import Polysemy.State
 -- | An effect which can provide input to an application. Useful for dealing
 -- with streaming input.
 data Input i m a where
+  -- | Get the next available message.
   Input :: Input i m i
 
 makeSem ''Input
