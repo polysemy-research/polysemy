@@ -6,6 +6,22 @@
 
 ### Other Changes
 
+## 1.9.0.0 (2022-12-28)
+
+### Breaking Changes
+- Slightly modified the signatures of the various `Scoped` interpreters.
+
+### Other Changes
+- Added `runScopedNew`, a simple but powerful `Scoped` interpreter.
+  `runScopedNew` can be considered a sneak-peek of the future of `Scoped`,
+  which will eventually receive a major API rework to make it both simpler and
+  more expressive.
+- Fixed a bug in various `Scoped` interpreters where a `scoped` usage of an
+  effect always relied on the nearest enclosing use of `scoped` from the same
+  `Scoped` effect, rather than the `scoped` which handles the effect.
+- Added `Polysemy.Opaque`, a module for the `Opaque` effect newtype, meant as
+  a tool to wrap polymorphic effect variables so they don't jam up resolution of
+  `Member` constraints.
 - Expose the type alias `Scoped_` for a scoped effect without callsite parameters.
 
 ## 1.8.0.0 (2022-12-22)
