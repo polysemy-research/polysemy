@@ -64,7 +64,7 @@ insertAtWrongIndex = ()
 -- Note: The /Actual/ row doesn't match the return type because of the 'raiseUnder'.
 -- >>> :{
 -- insertSome :: Sem (e1 : r) a -> Sem (e1 : e2 : State s : e3 : Reader i : e4 : r) a
--- insertSome = raiseUnder . insertAt @2 . raise2Under
+-- insertSome = raiseUnder . insertAt @2 . raiseUnder2
 -- :}
 -- ...
 -- ...insertAt: Failed to insert effects at index 2
