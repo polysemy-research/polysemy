@@ -28,7 +28,6 @@ module Polysemy.Internal
   , raise2Under
   , raise3Under
   , subsume_
-  , subsumeUnion
   , Subsume (..)
   , subsume
   , subsumeUsing
@@ -435,53 +434,53 @@ raiseUnder = subsume_
 -- | Like 'raise', but introduces two new effects underneath the head of the
 -- list.
 --
--- @since 1.2.0.0
-raiseUnder2 :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
-raiseUnder2 = subsume_
-{-# INLINE raiseUnder2 #-}
+-- @since 2.0.0.0
+raise2Under :: ∀ e2 e3 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': r) a
+raise2Under = subsume_
+{-# INLINE raise2Under #-}
 
 
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces three new effects underneath the head of the
 -- list.
 --
--- @since 1.2.0.0
-raiseUnder3 :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
-raiseUnder3 = subsume_
-{-# INLINE raiseUnder3 #-}
+-- @since 2.0.0.0
+raise3Under :: ∀ e2 e3 e4 e1 r a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': e3 ': e4 ': r) a
+raise3Under = subsume_
+{-# INLINE raise3Under #-}
 
 
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces an effect two levels underneath the head of
 -- the list.
 --
--- @since 1.4.0.0
-raise2Under :: ∀ e3 e1 e2 r a. Sem (e1 : e2 : r) a -> Sem (e1 : e2 : e3 : r) a
-raise2Under = hoistSem $ hoist raise2Under . weaken2Under
+-- @since 2.0.0.0
+raiseUnder2 :: ∀ e3 e1 e2 r a. Sem (e1 : e2 : r) a -> Sem (e1 : e2 : e3 : r) a
+raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
   where
-    weaken2Under :: ∀ m x. Union (e1 : e2 : r) m x -> Union (e1 : e2 : e3 : r) m x
-    weaken2Under (Union Here a) = Union Here a
-    weaken2Under (Union (There Here) a) = Union (There Here) a
-    weaken2Under (Union (There (There n)) a) = Union (There (There (There n))) a
-    {-# INLINE weaken2Under #-}
-{-# INLINE raise2Under #-}
+    weakenUnder2 :: ∀ m x. Union (e1 : e2 : r) m x -> Union (e1 : e2 : e3 : r) m x
+    weakenUnder2 (Union Here a) = Union Here a
+    weakenUnder2 (Union (There Here) a) = Union (There Here) a
+    weakenUnder2 (Union (There (There n)) a) = Union (There (There (There n))) a
+    {-# INLINE weakenUnder2 #-}
+{-# INLINE raiseUnder2 #-}
 
 
 ------------------------------------------------------------------------------
 -- | Like 'raise', but introduces an effect three levels underneath the head
 -- of the list.
 --
--- @since 1.4.0.0
-raise3Under :: ∀ e4 e1 e2 e3 r a. Sem (e1 : e2 : e3 : r) a -> Sem (e1 : e2 : e3 : e4 : r) a
-raise3Under = hoistSem $ hoist raise3Under . weaken3Under
+-- @since 2.0.0.0
+raiseUnder3 :: ∀ e4 e1 e2 e3 r a. Sem (e1 : e2 : e3 : r) a -> Sem (e1 : e2 : e3 : e4 : r) a
+raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
   where
-    weaken3Under :: ∀ m x. Union (e1 : e2 : e3 : r) m x -> Union (e1 : e2 : e3 : e4 : r) m x
-    weaken3Under (Union Here a) = Union Here a
-    weaken3Under (Union (There Here) a) = Union (There Here) a
-    weaken3Under (Union (There (There Here)) a) = Union (There (There Here)) a
-    weaken3Under (Union (There (There (There n))) a) = Union (There (There (There (There n)))) a
-    {-# INLINE weaken3Under #-}
-{-# INLINE raise3Under #-}
+    weakenUnder3 :: ∀ m x. Union (e1 : e2 : e3 : r) m x -> Union (e1 : e2 : e3 : e4 : r) m x
+    weakenUnder3 (Union Here a) = Union Here a
+    weakenUnder3 (Union (There Here) a) = Union (There Here) a
+    weakenUnder3 (Union (There (There Here)) a) = Union (There (There Here)) a
+    weakenUnder3 (Union (There (There (There n))) a) = Union (There (There (There (There n)))) a
+    {-# INLINE weakenUnder3 #-}
+{-# INLINE raiseUnder3 #-}
 
 
 ------------------------------------------------------------------------------
@@ -548,6 +547,14 @@ subsume = subsume_
 --   _       -> Nothing
 -- @
 --
+-- 'subsumeUsing' is also useful to resolve issues with 'Polysemy.Member',
+-- as the membership proof can be used to explicitly target a specific effect.
+--
+-- @
+-- localUnder :: forall i e r a. 'Polysemy.Member' ('Polysemy.Reader.Reader' i) r => (i -> i) -> 'Sem' (e ': r) a -> 'Sem' (e ': r) a
+-- localUnder f m = 'Polysemy.Membership.subsumeUsing' @(Reader i) ('Polysemy.Membership.There' 'Polysemy.Membership.membership') ('Polysemy.Reader.local' f ('Polysemy.raise' m))
+-- @
+--
 -- @since 1.3.0.0
 subsumeUsing :: ∀ e r a. ElemOf e r -> Sem (e ': r) a -> Sem r a
 subsumeUsing pr =
@@ -560,6 +567,7 @@ subsumeUsing pr =
   in
     go
 {-# INLINE subsumeUsing #-}
+
 ------------------------------------------------------------------------------
 -- | Moves all uses of an effect @e@ within the argument computation
 -- to a new @e@ placed on top of the effect stack. Note that this does not

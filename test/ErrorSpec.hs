@@ -4,7 +4,7 @@ import qualified Control.Exception as X
 import           Polysemy
 import           Polysemy.Async
 import           Polysemy.Error
-import           Polysemy.Resource
+import           Polysemy.Bracket
 import           Test.Hspec
 
 newtype MyExc = MyExc String
@@ -27,9 +27,9 @@ spec = parallel $ do
         runM $ runError @MyExc $ fromException @MyExc $ pure ()
       a `shouldBe` Right ()
 
-    it "should happen before Resource" $ do
+    it "should happen before Bracket" $ do
       a <-
-        runM $ resourceToIOFinal $ runError @MyExc $ do
+        runM $ bracketToIOFinal $ runError @MyExc $ do
           onException
             (fromException @MyExc $ do
               _ <- X.throwIO $ MyExc "hello"
@@ -38,19 +38,19 @@ spec = parallel $ do
       a `shouldBe` (Left $ MyExc "hello")
   describe "errorToIOFinal" $ do
     it "should catch errors only for the interpreted Error" $ do
-      res1 <- runFinal $ errorToIOFinal @() $ errorToIOFinal @() $ do
+      res1 <- runM $ errorToIOFinal @() $ errorToIOFinal @() $ do
         raise $ throw () `catch` \() -> return ()
       res1 `shouldBe` Right (Right ())
-      res2 <- runFinal $ errorToIOFinal @() $ errorToIOFinal @() $ do
+      res2 <- runM $ errorToIOFinal @() $ errorToIOFinal @() $ do
         raise (throw ()) `catch` \() -> return ()
       res2 `shouldBe` Left ()
 
     it "should propagate errors thrown in 'async'" $ do
-      res1 <- runFinal $ errorToIOFinal @() $ asyncToIOFinal $ do
+      res1 <- runM $ errorToIOFinal @() $ asyncToIOFinal $ do
         a <- async $ throw ()
         await a
       res1 `shouldBe` (Left () :: Either () (Maybe ()))
-      res2 <- runFinal $ errorToIOFinal @() $ asyncToIOFinal $ do
+      res2 <- runM $ errorToIOFinal @() $ asyncToIOFinal $ do
         a <- async $ throw ()
         await a `catch` \() -> return $ Just ()
       res2 `shouldBe` Right (Just ())

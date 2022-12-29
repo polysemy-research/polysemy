@@ -33,15 +33,15 @@ import Polysemy.Internal
 import Polysemy.Internal.Sing
 import Polysemy.Internal.Union
 import Polysemy.Internal.Scoped
-import Polysemy.Internal.Interpretation
+import Polysemy.Internal.Interpret
 
 -- | Construct an interpreter for a higher-order effect wrapped in a 'Scoped',
 -- given a resource allocation function and a parameterized handler for the
 -- plain effect.
 --
 -- This combinator is analogous to 'interpretH' in that it allows the handler to
--- use the 'Tactical' environment and transforms the effect into other effects
--- on the stack.
+-- use the 'Polysemy.Handling' environment and transforms the effect into other
+-- effects on the stack.
 interpretScopedH ::
   ∀ resource param effect r .
   -- | A callback function that allows the user to acquire a resource for each
@@ -52,25 +52,23 @@ interpretScopedH ::
    Sem (Opaque q ': r) x) ->
   -- | A handler like the one expected by 'interpretH' with an additional
   -- parameter that contains the @resource@ allocated by the first argument.
-  (∀ q z x . resource ->
-   effect z x ->
-   Tactical z effect (Opaque q ': r) (Opaque q ': r) x) ->
+  (∀ q . resource -> EffHandlerH effect (Opaque q ': r) (Opaque q ': r)) ->
   InterpreterFor (Scoped param effect) r
 interpretScopedH withResource scopedHandler = runScopedNew \param sem ->
   withResource param \r -> interpretH (scopedHandler r) sem
 {-# inline interpretScopedH #-}
 
 -- | Variant of 'interpretScopedH' that allows the resource acquisition function
--- to use 'Tactical'.
+-- to use 'Polysemy.Handling'.
 interpretScopedH' ::
   ∀ resource param effect r .
   (∀ t e z x . Traversable t =>
     param ->
     (resource -> Sem (Handling z t e r r ': r) x) ->
     Sem (Handling z t e r r ': r) x) ->
-  (∀ z x .
-    resource -> effect z x ->
-    Tactical z (Scoped param effect) r r x) ->
+  (∀ t z x . Traversable t =>
+    resource ->
+    effect z x -> Sem (Handling z t (Scoped param effect) r r ': r) x) ->
   InterpreterFor (Scoped param effect) r
 interpretScopedH' withResource scopedHandler =
   go 0 Empty
@@ -81,12 +79,8 @@ interpretScopedH' withResource scopedHandler =
         Run w act ->
           scopedHandler (S.index resources (fromIntegral w)) act
         InScope param main | !depth' <- depth + 1 -> do
-          ProcessorH prcs <- getProcessorH
-          withResource param \ resource -> do
-            res <- raise $ go depth'
-                          (resources :|> resource)
-                          (prcs (main depth))
-            restoreH res
+          withResource param \ resource -> controlWithProcessorH $ \prcs ->
+            go depth' (resources :|> resource) (prcs (main depth))
 {-# inline interpretScopedH' #-}
 
 -- | First-order variant of 'interpretScopedH'.
@@ -165,10 +159,10 @@ interpretScopedWithH ::
    param ->
    (resource -> Sem (Append extra (Opaque q ': r)) x) ->
    Sem (Opaque q ': r) x) ->
-  (∀ q z x .
+  (∀ q r' .
+   r' ~ Append extra (Opaque q ': r) =>
    resource ->
-   effect z x ->
-   Tactical z effect (Append extra (Opaque q ': r)) (Append extra (Opaque q ': r)) x) ->
+   EffHandlerH effect r' r') ->
   InterpreterFor (Scoped param effect) r
 interpretScopedWithH withResource scopedHandler = runScopedNew
   \param (sem :: Sem (effect ': Opaque q ': r) x) ->
@@ -290,16 +284,13 @@ runScopedNew ::
   InterpreterFor (Scoped param effect) r
 runScopedNew h = interpretH \case
   Run w _ -> errorWithoutStackTrace $ "top level run with depth " ++ show w
-  InScope param main -> do
-    ProcessorH prcs <- getProcessorH
+  InScope param main -> controlWithProcessorH $ \prcs ->
     prcs (main 0)
-      & raiseUnder2
+      & raise2Under
       & go 0
       & h param
       & interpretH (\(Opaque (OuterRun w _)) ->
           errorWithoutStackTrace $ "unhandled OuterRun with depth " ++ show w)
-      & raise
-      >>= restoreH
   where
     go' :: Word
         -> InterpreterFor
@@ -319,14 +310,11 @@ runScopedNew h = interpretH \case
         Run w act
           | w == depth -> propagate act
           | otherwise -> propagate (Opaque (OuterRun w act))
-        InScope param main -> do
-          ProcessorH prcs <- getProcessorH
+        InScope param main -> controlWithProcessorH $ \prcs -> do
           let !depth' = depth + 1
           prcs (main depth')
             & go depth'
             & h param
-            & raiseUnder2
+            & raise2Under
             & go' depth
-            & raise
-            >>= restoreH
 {-# INLINE runScopedNew #-}

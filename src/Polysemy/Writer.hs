@@ -34,7 +34,7 @@ import Data.Semigroup
 import Polysemy
 import Polysemy.Output
 import Polysemy.State
-import Polysemy.Interpretation
+import Polysemy.Interpret
 
 import Polysemy.Internal.Union
 import Polysemy.Internal.Writer
@@ -186,7 +186,7 @@ runWriterTVar tvar = runWriterSTMAction $ \o -> do
 -- 'runWriterTVar', and then returns the result and the final value
 -- of the 'TVar'.
 --
--- /Beware/: Effects that aren't interpreted in terms of 'IO'
+-- /Note/: Effects that aren't interpreted in terms of 'IO'
 -- will have local state semantics in regards to 'Writer' effects
 -- interpreted this way. See 'Final'.
 --
@@ -210,7 +210,7 @@ writerToIOFinal sem = do
 -- You should always use this instead of 'writerToIOFinal' if the monoid
 -- is a list, such as 'String'.
 --
--- /Beware/: Effects that aren't interpreted in terms of 'IO'
+-- /Note/: Effects that aren't interpreted in terms of 'IO'
 -- will have local state semantics in regards to 'Writer' effects
 -- interpreted this way. See 'Final'.
 --

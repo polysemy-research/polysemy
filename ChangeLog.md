@@ -6,6 +6,34 @@
 
 ### Other Changes
 
+## 2.0.0.0 (?)
+### Breaking Changes
+- The `Tactical` environment has been replaced by a revamped higher-order effect
+  handling API, which works through the `Handling` effect.
+- The `Strategic` environment has been revamped to mirror the `Handling` API.
+- `withWeavingToFinal` has been removed. 
+- The `raiseUnderN` and `raiseNUnder` family of combinators have swapped names:
+  `raiseUnder2` now introduces a new effect under the two top effects of the
+  effect stack, and `raise2Under` introduces two new effects under the top
+  effect of the effect stack.
+- `runFinal` has been removed. `runM` now interprets both `Embed m` and
+  `Final m`, making the old idiom of `runFinal . embedToFinal` unnecessary.
+- `runEmbedded` has been renamed to `embedToEmbed`
+- The `Polysemy.Resource` module and its `Resource` effect has been renamed to
+  `Polysemy.Bracket` and `Bracket`. The `Bracket` effect data type has been
+  changed to only have one constructor: `GeneralBracket`.
+- `runResource` has been renamed to `runBracketLocally`
+- Added `generalBracket`
+- Removed `traceToIO` (previously deprecated)
+
+### Other Changes
+- Added `Polysemy.Fatal`, a variant of `Error` without `Catch`.
+- Added `controlFinal`.
+- Added `expose` and `exposeUsing`.
+- Added `sendVia` and `sendViaUsing`.
+- Added `generalBracket 
+  `Polysemy.Bracket` and `Bracket`.
+
 ## 1.9.0.0 (2022-12-28)
 
 ### Breaking Changes

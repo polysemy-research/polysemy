@@ -1,7 +1,7 @@
 module InterceptSpec where
 
 import Polysemy
-import Polysemy.Resource
+import Polysemy.Bracket
 import Polysemy.Trace
 import Test.Hspec
 
@@ -17,7 +17,7 @@ spec = describe "intercept" $ do
   it "should weave through embedded computations" $ do
     let (msgs, ()) = run
                    . runTraceList
-                   . runResource
+                   . runBracketLocally
                    . withTraceLogging $ do
           trace "outside"
           bracket (pure ()) pure (const $ trace "inside")

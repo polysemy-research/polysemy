@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# OPTIONS_HADDOCK not-home #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 -- | Description: The basic interpreter-building combinators
 module Polysemy.Internal.Combinators
@@ -23,7 +22,6 @@ import qualified Control.Monad.Trans.State.Strict as S
 import qualified Data.Tuple as S (swap)
 
 import Polysemy.Internal
-import Polysemy.Internal.CustomErrors
 import Polysemy.Internal.Union
 
 -- | Interpret an effect @e@ through a natural transformation from @Weaving e@

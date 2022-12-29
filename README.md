@@ -129,7 +129,7 @@ main :: IO ()
 main = runM . teletypeToIO $ echo
 ```
 
-Resource effect:
+Bracket effect:
 
 ```haskell
 {-# LANGUAGE TemplateHaskell, LambdaCase, BlockArguments, GADTs
@@ -140,13 +140,13 @@ import Polysemy
 import Polysemy.Input
 import Polysemy.Output
 import Polysemy.Error
-import Polysemy.Resource
+import Polysemy.Bracket
 
 -- Using Teletype effect from above
 
 data CustomException = ThisException | ThatException deriving Show
 
-program :: Members '[Resource, Teletype, Error CustomException] r => Sem r ()
+program :: Members '[Bracket, Teletype, Error CustomException] r => Sem r ()
 program = catch @CustomException work \e -> writeTTY $ "Caught " ++ show e
  where
   work = bracket (readTTY) (const $ writeTTY "exiting bracket") \input -> do
@@ -158,9 +158,8 @@ program = catch @CustomException work \e -> writeTTY $ "Caught " ++ show e
 
 main :: IO (Either CustomException ())
 main
-  = runFinal
-  . embedToFinal @IO
-  . resourceToIOFinal
+  = runM
+  . bracketToIOFinal
   . errorToIOFinal @CustomException
   . teletypeToIO
   $ program
@@ -178,18 +177,18 @@ For example, the library exposes both the `interpret` and `interpretH`
 combinators. If you use the wrong one, the library's got your back:
 
 ```haskell
-runResource
+runBracket
     :: forall r a
-     . Sem (Resource ': r) a
+     . Sem (Bracket ': r) a
     -> Sem r a
-runResource = interpret $ \case
+runBracket = interpret $ \case
   ...
 ```
 
 makes the helpful suggestion:
 
 ```txt
-• 'Resource' is higher-order, but 'interpret' can help only
+• 'Bracket' is higher-order, but 'interpret' can help only
   with first-order effects.
   Fix:
     use 'interpretH' instead.

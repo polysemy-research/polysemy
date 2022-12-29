@@ -7,7 +7,7 @@ module TypeErrors where
 -- >>> :m +Polysemy
 -- >>> :m +Polysemy.Output
 -- >>> :m +Polysemy.Reader
--- >>> :m +Polysemy.Resource
+-- >>> :m +Polysemy.Bracket
 -- >>> :m +Polysemy.State
 -- >>> :m +Polysemy.Trace
 -- >>> :m +Data.Maybe

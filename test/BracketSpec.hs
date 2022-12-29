@@ -4,7 +4,7 @@ import Control.Monad
 import Polysemy
 import Polysemy.Error
 import Polysemy.Output
-import Polysemy.Resource
+import Polysemy.Bracket
 import Polysemy.State
 import Polysemy.Trace
 import Test.Hspec
@@ -142,39 +142,39 @@ spec = parallel $ do
 
 
 runTest
-  :: Sem '[Error (), Resource, State [Char], Trace] a
+  :: Sem '[Error (), Bracket, State [Char], Trace] a
   -> IO ([String], ([Char], Either () a))
 runTest = pure
         . run
         . runTraceList
         . runState ""
-        . runResource
+        . runBracketLocally
         . runError @()
 
 runTest3
-  :: Sem '[Error (), Resource, State [Char], Trace, Output String, Final IO, Embed IO] a
+  :: Sem '[Error (), Bracket, State [Char], Trace, Output String, Embed IO, Final IO] a
   -> IO ([String], ([Char], Either () a))
 runTest3 = runM
          . outputToIOMonoid (:[])
          . traceToOutput
          . stateToIO ""
-         . resourceToIOFinal
+         . bracketToIOFinal
          . runError @()
 
 
 testAllThree
     :: String
     -> (([String], ([Char], Either () a)) -> Expectation)
-    -> (Sem '[Error (), Resource, State [Char], Trace] a)
+    -> (Sem '[Error (), Bracket, State [Char], Trace] a)
     -> Spec
 testAllThree name k m = do
   describe name $ do
-    it "via runResource" $ do
+    it "via runBracketLocally" $ do
       z <- runTest m
       k z
     -- NOTE(sandy): These unsafeCoerces are safe, because we're just weakening
     -- the end of the union
-    it "via resourceToIOFinal" $ do
+    it "via bracketToIOFinal" $ do
       z <- runTest3 $ unsafeCoerce m
       k z
 
@@ -182,18 +182,18 @@ testAllThree name k m = do
 testTheIOTwo
     :: String
     -> (([String], ([Char], Either () a)) -> Expectation)
-    -> (Sem '[Error (), Resource, State [Char], Trace, Output String, Final IO, Embed IO] a)
+    -> (Sem '[Error (), Bracket, State [Char], Trace, Output String, Embed IO, Final IO] a)
     -> Spec
 testTheIOTwo name k m = do
   describe name $ do
     -- NOTE(sandy): This unsafeCoerces are safe, because we're just weakening
     -- the end of the union
-    it "via resourceToIOFinal" $ do
+    it "via bracketToIOFinal" $ do
       z <- runTest3 $ unsafeCoerce m
       k z
 
 
-withTransaction :: (Member Resource r, Member Trace r) => Sem r a -> Sem r a
+withTransaction :: (Member Bracket r, Member Trace r) => Sem r a -> Sem r a
 withTransaction m =
   bracketOnError
     (trace "beginning transaction")

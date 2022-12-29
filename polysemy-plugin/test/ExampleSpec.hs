@@ -6,7 +6,7 @@ import Polysemy
 import Polysemy.Error
 import Polysemy.Input
 import Polysemy.Output
-import Polysemy.Resource
+import Polysemy.Bracket
 import Test.Hspec
 
 data Teletype m a where
@@ -22,7 +22,7 @@ teletypeToIO = interpret $ \case
 
 data CustomException = ThisException | ThatException deriving Show
 
-program :: Members '[Teletype, Resource, Error CustomException] r => Sem r ()
+program :: Members '[Teletype, Bracket, Error CustomException] r => Sem r ()
 program = catch @CustomException work $ \e -> writeTTY ("Caught " ++ show e)
   where work = bracket (readTTY) (const $ writeTTY "exiting bracket") $ \i -> do
           writeTTY "entering bracket"
@@ -35,7 +35,7 @@ foo :: IO (Either CustomException ())
 foo =
     runM
   . embedToFinal @IO
-  . resourceToIOFinal
+  . bracketToIOFinal
   . errorToIOFinal @CustomException
   . teletypeToIO
   $ program

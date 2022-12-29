@@ -203,7 +203,7 @@ runOutputMonoidTVar tvar f = interpret $ \case
 -- 'runOutputMonoidIORef', and then returns the result and the final value
 -- of the 'IORef'.
 --
--- /Beware/: As this uses an 'IORef' internally,
+-- /Note/: As this uses an 'IORef' internally,
 -- all other effects will have local
 -- state semantics in regards to 'Output' effects
 -- interpreted this way.
@@ -233,7 +233,7 @@ outputToIOMonoid f sem = do
 -- You should always use this instead of 'outputToIOMonoid' if the monoid
 -- is a list, such as 'String'.
 --
--- /Beware/: As this uses an 'IORef' internally,
+-- /Note/: As this uses an 'IORef' internally,
 -- all other effects will have local
 -- state semantics in regards to 'Output' effects
 -- interpreted this way.

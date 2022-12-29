@@ -23,6 +23,7 @@ import Polysemy.Input
 
 ------------------------------------------------------------------------------
 -- | The Polysemy port of 'Control.Monad.Trans.Reader.ReaderT'.
+--
 -- __Note that this is probably not the effect you are looking for.__ You
 -- probably want 'Polysemy.Input.Input' instead, which is like 'Reader' but
 -- without 'local'.

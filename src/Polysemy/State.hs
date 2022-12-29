@@ -167,7 +167,7 @@ runStateIORef ref = interpret $ \case
 -- If you need operations over the state to be atomic,
 -- use 'Polysemy.AtomicState.atomicStateToIO' instead.
 --
--- /Beware/: As this uses an 'IORef' internally,
+-- /Note/: As this uses an 'IORef' internally,
 -- all other effects will have local
 -- state semantics in regards to 'State' effects
 -- interpreted this way.
@@ -212,7 +212,7 @@ runStateSTRef ref = interpret $ \case
 -- 'runStateSTRef', and then returns the result and the final value
 -- of the 'STRef'.
 --
--- /Beware/: As this uses an 'STRef' internally,
+-- /Note/: As this uses an 'STRef' internally,
 -- all other effects will have local
 -- state semantics in regards to 'State' effects
 -- interpreted this way.
@@ -261,7 +261,6 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
 {-# INLINE hoistStateIntoStateT #-}
 
 
--- TODO these don't fire anymore, unless `reinterpret` is inlined later
 {-# RULES "runState/reinterpret"
    forall s e (f :: forall m x. e m x -> Sem (State s ': r) x).
      runState s (reinterpret f e) = stateful (\x s' -> runState s' $ f x) s e

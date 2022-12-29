@@ -5,7 +5,7 @@ cabal-version: 2.0
 -- see: https://github.com/sol/hpack
 
 name:           polysemy
-version:        1.9.0.0
+version:        2.0.0.0
 synopsis:       Higher-order, low-boilerplate free monads.
 description:    Please see the README on GitHub at <https://github.com/polysemy-research/polysemy#readme>
 category:       Language
@@ -36,11 +36,11 @@ library
       Polysemy
       Polysemy.Async
       Polysemy.AtomicState
+      Polysemy.Bracket
       Polysemy.Bundle
       Polysemy.Embed
       Polysemy.Embed.Type
       Polysemy.Error
-      Polysemy.Exceptional
       Polysemy.Fail
       Polysemy.Fail.Type
       Polysemy.Fatal
@@ -55,7 +55,7 @@ library
       Polysemy.Internal.Final
       Polysemy.Internal.Fixpoint
       Polysemy.Internal.Index
-      Polysemy.Internal.Interpretation
+      Polysemy.Internal.Interpret
       Polysemy.Internal.Kind
       Polysemy.Internal.NonDet
       Polysemy.Internal.Scoped
@@ -65,14 +65,13 @@ library
       Polysemy.Internal.Union
       Polysemy.Internal.WeaveClass
       Polysemy.Internal.Writer
-      Polysemy.Interpretation
+      Polysemy.Interpret
       Polysemy.IO
       Polysemy.Membership
       Polysemy.NonDet
       Polysemy.Opaque
       Polysemy.Output
       Polysemy.Reader
-      Polysemy.Resource
       Polysemy.Scoped
       Polysemy.State
       Polysemy.Tagged

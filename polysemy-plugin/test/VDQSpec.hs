@@ -7,7 +7,7 @@ import Polysemy
 import Polysemy.Error
 import Polysemy.Input
 import Polysemy.Output
-import Polysemy.Resource
+import Polysemy.Bracket
 import Test.Hspec
 
 data Select a = Select a

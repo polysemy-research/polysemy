@@ -28,16 +28,19 @@ module Polysemy
     -- * Lifting
   , raise
   , raiseUnder
-  , raiseUnder2
-  , raiseUnder3
   , raise2Under
   , raise3Under
+  , raiseUnder2
+  , raiseUnder3
   , raise_
   , subsume_
   , insertAt
 
-    -- * Trivial Interpretation
+    -- * Simple Useful Combinators for Interpreting Effects
   , subsume
+  , rewrite
+  , transform
+  , expose
 
     -- * Creating New Effects
     -- | Effects should be defined as a GADT (enable @-XGADTs@), with kind @(*
@@ -110,8 +113,6 @@ module Polysemy
   , reinterpret
   , reinterpret2
   , reinterpret3
-  , rewrite
-  , transform
 
     -- * Combinators for Interpreting Higher-Order Effects
   , EffHandlerH
@@ -125,24 +126,22 @@ module Polysemy
   , Effect
   , EffectRow
 
-    -- * 'RunH'
-    -- | When interpreting higher-order effects using 'interpretH'
-    -- and friends, you must execute higher-order \"thunks\" given by
-    -- the interpreted effect using 'runH' or 'runH''.
+    -- * 'Handling'
+    -- | When interpreting higher-order effects using 'interpretH' and friends,
+    -- you must execute higher-order \"chunks\" given by the interpreted effect
+    -- using 'runH' or 'runH''.
     --
-    -- These functions are enough for most purposes when using
-    -- 'interpretH'. However, "Polysemy.Interpretation" offers
-    -- additional, more complicated features which are occassionally
-    -- needed.
+    -- 'runH' and 'runH'' are enough for most purposes when using
+    -- 'interpretH'. However, "Polysemy.Interpret" offers additional, more
+    -- complicated features which are occasionally needed.
   , Handling
   , runH
   , runH'
-
   ) where
 
 import Polysemy.Final
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
-import Polysemy.Internal.Interpretation
+import Polysemy.Internal.Interpret
 import Polysemy.Internal.Kind
 import Polysemy.Internal.TH.Effect

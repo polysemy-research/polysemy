@@ -7,7 +7,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Functor.Identity
 import Data.Monoid
 import Polysemy
-import Polysemy.Embed (runEmbedded)
+import Polysemy.Embed (embedToEmbed)
 import Polysemy.Error (Error, runError)
 import Polysemy.State
 import Polysemy.Tagged (Tagged, tag)
@@ -62,6 +62,6 @@ spec = describe "example" $ do
     z `shouldBe` (0, ("", ()))
 
   it "should run uniquelyIO" $ do
-    z <- runM . runEmbedded @Identity (pure . runIdentity) $ uniquelyIO
+    z <- runM . embedToEmbed @Identity (pure . runIdentity) $ uniquelyIO
     z `shouldBe` ()
 

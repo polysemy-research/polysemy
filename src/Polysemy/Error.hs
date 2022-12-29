@@ -258,7 +258,7 @@ catchWithUid uid m h = X.catch m $ \exc@(WrappedExc uid' e) ->
 -- | Run an 'Error' effect as an 'IO' 'X.Exception' through final 'IO'. This
 -- interpretation is significantly faster than 'runError'.
 --
--- /Beware/: Effects that aren't interpreted in terms of 'IO'
+-- /Note/: Effects that aren't interpreted in terms of 'IO'
 -- will have local state semantics in regards to 'Error' effects
 -- interpreted this way. See 'Final'.
 --
@@ -286,6 +286,6 @@ runErrorAsExcFinal
     -> Sem r a
 runErrorAsExcFinal uid = interpretFinal $ \case
   Throw e   -> embed $ X.throwIO $ WrappedExc uid (unsafeCoerce e)
-  Catch m h -> controlS $ \lower ->
+  Catch m h -> controlWithProcessorS $ \lower ->
     catchWithUid uid (lower m) (\e -> lower (h e))
 {-# INLINE runErrorAsExcFinal #-}

@@ -153,8 +153,8 @@ spec = do
 
     it "should commit writes of asyncs spawned inside a listen block even if \
        \the block failed for any reason." $ do
-      Right end1 <- runM . raiseUnder . errorToIOFinal $ test6
-      Right end2 <- runM . raiseUnder . runError $ test6
+      Right end1 <- runM . raise . errorToIOFinal $ test6
+      Right end2 <- runM . raise . runError $ test6
       end1 `shouldBe` "message has been received"
       end2 `shouldBe` "message has been received"
 

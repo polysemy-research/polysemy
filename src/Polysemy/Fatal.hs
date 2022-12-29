@@ -183,7 +183,7 @@ instance (Typeable e) => X.Exception (WrappedExc e)
 -- | Run an 'Fatal' effect as an 'IO' 'X.Exception' through final 'IO'. This
 -- interpretation is significantly faster than 'runFatal'.
 --
--- /Beware/: Effects that aren't interpreted in terms of 'IO'
+-- /Note/: Effects that aren't interpreted in terms of 'IO'
 -- will have local state semantics in regards to 'Fatal' effects
 -- interpreted this way. See 'Final'.
 --

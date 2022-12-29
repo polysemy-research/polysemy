@@ -8,33 +8,42 @@ module Polysemy.Final
     Final
 
     -- * Actions
-  , withStrategicToFinal
   , controlFinal
+  , withStrategicToFinal
   , embedFinal
 
     -- * Combinators for Interpreting to the Final Monad
   , interpretFinal
 
     -- * Strategy
-    -- | Strategy is a domain-specific language very similar to @Tactics@
-    -- (see 'Polysemy.Tactical'), and is used to describe how higher-order
-    -- effects are threaded down to the final monad.
+    -- | 'Strategic' is a domain-specific language very similar in
+    -- use to 'Polysemy.Interpretation.Handling', and is used to describe how
+    -- higher-order effects are threaded down to the final monad.
     --
-    -- Much like @Tactics@, computations can be run and threaded
-    -- through the use of 'runS' and 'bindS', and first-order constructors
-    -- may use 'pureS'. In addition, 'liftS' may be used to
-    -- lift actions of the final monad.
-    --
-    -- Unlike @Tactics@, the final return value within a 'Strategic'
-    -- must be a monadic value of the target monad
-    -- with the functorial state wrapped inside of it.
+    -- 'withStrategicToFinal' should be used when 'controlFinal' is
+    -- not powerful enough for your purposes. Notable combinators include
+    -- 'runS', 'embed', 'liftWithS', and 'restoreS'.
   , Strategic
+
+    -- ** Lifting the final monad to 'Strategic'
+  , embed
+
+    -- ** Lowering computations to the final monad
+  , withProcessorS
+  , controlWithProcessorS
+  , processS
+
+    -- ** Embedding computations into 'Strategic'
+  , runS
+
+    -- ** Lowering 'Strategic' to the final monad
   , controlS
   , liftWithS
+
+    -- ** Manipulating effectful state
   , restoreS
-  , runS
-  , controlS'
-  , liftWithS'
+  , runExposeS
+  , exposeS
 
     -- * Interpretations
   , runM

@@ -53,7 +53,7 @@ sequenceConcurrently t = traverse async t >>= traverse await
 ------------------------------------------------------------------------------
 -- | Run an 'Async' effect in terms of 'A.async' through final 'IO'.
 --
--- /Beware/: Effects that aren't interpreted in terms of 'IO'
+-- /Note/: Effects that aren't interpreted in terms of 'IO'
 -- will have local state semantics in regards to 'Async' effects
 -- interpreted this way. See 'Final'.
 --
@@ -62,7 +62,7 @@ asyncToIOFinal :: Member (Final IO) r
                => Sem (Async ': r) a
                -> Sem r a
 asyncToIOFinal = interpretFinal @IO $ \case
-  Async m -> liftWithS $ \lower -> do
+  Async m -> withProcessorS $ \lower -> do
     fmap (foldr (const . Just) Nothing) <$> A.async (lower m)
   Await a -> embed (A.wait a)
   Cancel a -> embed (A.cancel a)

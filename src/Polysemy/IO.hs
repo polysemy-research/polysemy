@@ -39,6 +39,6 @@ embedToMonadIO
        )
     => Sem (Embed IO ': r) a
     -> Sem r a
-embedToMonadIO = runEmbedded $ liftIO @m
+embedToMonadIO = embedToEmbed $ liftIO @m
 {-# INLINE embedToMonadIO #-}
 

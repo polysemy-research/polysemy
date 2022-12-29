@@ -147,7 +147,7 @@ runAtomicStateTVar tvar = interpret $ \case
 -- 'runAtomicStateIORef', and then returns the result and the final value
 -- of the 'IORef'.
 --
--- /Beware/: As this uses an 'IORef' internally,
+-- /Note/: As this uses an 'IORef' internally,
 -- all other effects will have local
 -- state semantics in regards to 'AtomicState' effects
 -- interpreted this way.

@@ -4,7 +4,6 @@ module ScopedSpec where
 
 import Control.Concurrent.STM
 import Polysemy
-import Polysemy.Internal.Interpretation (Tactical)
 import Polysemy.Scoped
 import Test.Hspec
 
@@ -26,8 +25,7 @@ makeSem ''F
 handleE ::
   Members [F, Embed IO] r =>
   TVar Int ->
-  E m a ->
-  Tactical z effect r r a
+  EffHandlerH E r r
 handleE tv = \case
   E1 -> do
     i1 <- embed (readTVarIO tv)
@@ -64,10 +62,10 @@ scopeHO :: () -> (() -> Sem r a) -> Sem r a
 scopeHO () use =
   use ()
 
-handleHO :: Int -> () -> HO m a -> Tactical HO m r a
+handleHO :: Int -> () -> EffHandlerH HO r r
 handleHO n () = \case
-  Inc ma -> raise . interpretH (handleHO (n + 1) ()) =<< runT ma
-  Ret -> pureT n
+  Inc ma -> interpretH (handleHO (n + 1) ()) (runH' ma)
+  Ret -> return n
 
 data Esc :: Effect where
   Esc :: Esc m Int
