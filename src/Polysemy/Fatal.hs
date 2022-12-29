@@ -124,7 +124,7 @@ fatalFromExceptionSemVia
     -> Sem r a
     -> Sem r a
 fatalFromExceptionSemVia f m = do
-  r <- controlF $ \lower ->
+  r <- controlFinal $ \lower ->
     lower (fmap Right m) `X.catch` (lower . return . Left)
   case r of
     Left e -> fatal $ f e
@@ -194,7 +194,7 @@ fatalToIOFinal
        )
     => Sem (Fatal e ': r) a
     -> Sem r (Either e a)
-fatalToIOFinal sem = controlF $ \lower -> do
+fatalToIOFinal sem = controlFinal $ \lower -> do
     lower (Right <$> runFatalAsExcFinal sem)
   `X.catch` \(WrappedExc e) ->
     lower $ return $ Left e

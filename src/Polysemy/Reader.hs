@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Description: The 'Reader' effect and its interpreters
 module Polysemy.Reader
   ( -- * Effect
     Reader (..)
@@ -31,12 +32,16 @@ import Polysemy.Input
 -- much more joyful if you avoid @IO@ entirely and think deeply about the
 -- lawful chunks of your program that can be turned into effects.
 data Reader i m a where
+  -- | Get the environment.
   Ask   :: Reader i m i
+  -- | Transform the environment.
   Local :: (i -> i) -> m a -> Reader i m a
 
 makeSem ''Reader
 
 
+------------------------------------------------------------------------------
+-- | Apply a function to the environment and return the result.
 asks :: forall i j r. Member (Reader i) r => (i -> j) -> Sem r j
 asks f = f <$> ask
 {-# INLINABLE asks #-}

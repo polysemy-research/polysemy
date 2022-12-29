@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes, TemplateHaskell #-}
 
+-- | Description: Interpreters for 'Fixpoint'
 module Polysemy.Fixpoint
   ( -- * Effect
     Fixpoint (..)

@@ -1,3 +1,4 @@
+-- | Description: Polysemy is a library for writing high-power, low-boilerplate domain specific languages
 module Polysemy
   ( -- * Core Types
     Sem ()
@@ -126,15 +127,14 @@ module Polysemy
 
     -- * 'RunH'
     -- | When interpreting higher-order effects using 'interpretH'
-    -- and friends, you can't execute higher-order \"thunks\" given by
-    -- the interpreted effect directly. Instead, these must be executed
-    -- using 'runH' or 'runH''.
+    -- and friends, you must execute higher-order \"thunks\" given by
+    -- the interpreted effect using 'runH' or 'runH''.
     --
     -- These functions are enough for most purposes when using
     -- 'interpretH'. However, "Polysemy.Interpretation" offers
     -- additional, more complicated features which are occassionally
     -- needed.
-  , RunH
+  , Handling
   , runH
   , runH'
 

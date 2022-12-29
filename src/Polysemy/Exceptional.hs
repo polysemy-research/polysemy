@@ -1,38 +1,38 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Polysemy.Exceptional where
 
-import Data.Function ((&))
-import Polysemy
-import Polysemy.Error
-import Polysemy.Membership
-import Polysemy.Interpretation
+-- import Data.Function ((&))
+-- import Polysemy
+-- import Polysemy.Error
+-- import Polysemy.Membership
+-- import Polysemy.Interpretation
 
-data Exceptional exc eff :: Effect where
-  Exceptional :: forall exc eff m a. eff m a -> Exceptional exc eff m (Either exc a)
+-- data Exceptional exc eff :: Effect where
+--   Exceptional :: forall exc eff m a. eff m a -> Exceptional exc eff m (Either exc a)
 
-trying :: forall exc eff r a
-        . Member (Exceptional exc eff) r
-       => Sem (eff ': r) a -> Sem r (Either exc a)
-trying =
-    runError
-  . interpretH (\e -> propagate (Exceptional @exc e) >>= fromEither)
-  . raiseUnder
+-- trying :: forall exc eff r a
+--         . Member (Exceptional exc eff) r
+--        => Sem (eff ': r) a -> Sem r (Either exc a)
+-- trying =
+--     runError
+--   . interpretH (\e -> propagate (Exceptional @exc e) >>= fromEither)
+--   . raiseUnder
 
-newtype Stop e :: Effect where
-  Stop :: e -> Stop e m void
+-- newtype Stop e :: Effect where
+--   Stop :: e -> Stop e m void
 
-makeSem ''Stop
+-- makeSem ''Stop
 
-runExceptional
-  :: (   forall t z x
-       . Traversable t
-      => eff z x
-      -> Sem (RunH z t (Exceptional exc eff) r ': Stop exc ': r) x
-     )
-  -> InterpreterFor (Exceptional exc eff) r
-runExceptional h = interpretH $ \(Exceptional e) ->
-    h e
-  & insertAt @2
-  & subsumeUsing (There Here)
-  & rewrite (\(Stop exc) -> Throw exc)
-  & runError
+-- runExceptional
+--   :: (   forall t z x
+--        . Traversable t
+--       => eff z x
+--       -> Sem (RunH z t (Exceptional exc eff) r ': Stop exc ': r) x
+--      )
+--   -> InterpreterFor (Exceptional exc eff) r
+-- runExceptional h = interpretH $ \(Exceptional e) ->
+--     h e
+--   & insertAt @2
+--   & subsumeUsing (There Here)
+--   & rewrite (\(Stop exc) -> Throw exc)
+--   & runError

@@ -7,7 +7,7 @@ module Polysemy.Internal.Final
     -- * Actions
   , withStrategicToFinal
   , withLoweringToFinal
-  , controlF
+  , controlFinal
   , embedFinal
 
     -- * Combinators for Interpreting to the Final Monad
@@ -137,16 +137,16 @@ controlS main = controlS' $ \n -> main (n . runS)
 {-# INLINE controlS #-}
 
 -- | A convenience method for @'withStrategicToFinal' . 'controlS'@
-controlF :: forall m r a
-          . (Member (Final m) r, Monad m)
-         => (  forall t
-             . Traversable t
-            => (forall x. Sem r x -> m (t x)) -> m (t a)
-            )
-         -> Sem r a
-controlF main = withLoweringToFinal $ \n ->
+controlFinal :: forall m r a
+              . (Member (Final m) r, Monad m)
+             => (  forall t
+                 . Traversable t
+                => (forall x. Sem r x -> m (t x)) -> m (t a)
+                )
+             -> Sem r a
+controlFinal main = withLoweringToFinal $ \n ->
   controlT $ \lower -> main (lower . n)
-{-# INLINE controlF #-}
+{-# INLINE controlFinal #-}
 
 type Strategic m n a =
   forall t. Traversable t => Sem '[Strategy m t n, Final m, Embed m] a

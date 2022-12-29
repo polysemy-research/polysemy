@@ -4,8 +4,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE CPP #-}
 
-{-# OPTIONS_HADDOCK not-home #-}
+{-# OPTIONS_HADDOCK not-home, prune #-}
 
+-- | Description: Class 'InsertAtIndex' that allows stack extension at a numeric index
 module Polysemy.Internal.Index where
 
 import GHC.TypeLits (Nat)

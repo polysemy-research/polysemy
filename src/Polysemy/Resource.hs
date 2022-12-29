@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell, DeriveTraversable #-}
 
+-- | Description: The 'Resource' effect, providing bracketing functionality
 module Polysemy.Resource
   ( -- * Effect
     Resource (..)
@@ -27,6 +28,7 @@ import           Polysemy.Interpretation
 -- will successfully run the deallocation action even in the presence of other
 -- short-circuiting effects.
 data Resource :: Effect where
+  -- | Allocate a resource, use it, and clean it up afterwards.
   GeneralBracket
     :: m a
        -- Action to allocate a resource.
@@ -83,7 +85,6 @@ bracket :: Member Resource r
 bracket acquire release use =
   fst <$> generalBracket acquire (\a _ -> release a) use
 {-# INLINE bracket #-}
-
 
 ------------------------------------------------------------------------------
 -- | A variant of 'bracket' where the return value from the first computation

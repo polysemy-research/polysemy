@@ -4,6 +4,30 @@
 
 ### Breaking Changes
 
+### Other Changes
+
+## 1.9.0.0 (2022-12-28)
+
+### Breaking Changes
+- Slightly modified the signatures of the various `Scoped` interpreters.
+
+### Other Changes
+- Added `runScopedNew`, a simple but powerful `Scoped` interpreter.
+  `runScopedNew` can be considered a sneak-peek of the future of `Scoped`,
+  which will eventually receive a major API rework to make it both simpler and
+  more expressive.
+- Fixed a bug in various `Scoped` interpreters where a `scoped` usage of an
+  effect always relied on the nearest enclosing use of `scoped` from the same
+  `Scoped` effect, rather than the `scoped` which handles the effect.
+- Added `Polysemy.Opaque`, a module for the `Opaque` effect newtype, meant as
+  a tool to wrap polymorphic effect variables so they don't jam up resolution of
+  `Member` constraints.
+- Expose the type alias `Scoped_` for a scoped effect without callsite parameters.
+
+## 1.8.0.0 (2022-12-22)
+
+### Breaking Changes
+
 - Removed `Polysemy.View`
 - Removed `Polysemy.Law`
 - Removed `(@)` and `(@@)` from `Polysemy`
@@ -18,10 +42,19 @@
     `fixpointToFinal` instead.
 - Changed semantics of `errorToIOFinal` so that it no longer catches errors
   from other handlers of the same type.
+- The semantics of `runScoped` has been changed so that the provided interpreter
+  is now used only once per use of `scoped`, instead of each individual action.
 
 ### Other Changes
 
 - Exposed `send` from `Polysemy`.
+- Dramatically improved build performance of projects when compiling with `-O2`.
+- Removed the debug `dump-core` flag.
+- Introduced the new meta-effect `Scoped`, which allows running an interpreter locally whose implementation is deferred
+  to a later stage.
+- Fixed a bug in various `Scoped` interpreters where any explicit recursive
+  interpretation of higher-order computations that the handler may perform are
+  ignored by the interpreter, and the original handler was reused instead.
 
 ## 1.7.1.0 (2021-11-23)
 

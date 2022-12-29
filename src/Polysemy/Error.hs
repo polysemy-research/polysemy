@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# OPTIONS_HADDOCK prune #-}
 
+-- | Description: The effect 'Error' and its interpreters
 module Polysemy.Error
   ( -- * Effect
     Error (..)
@@ -37,8 +39,16 @@ import           Polysemy.Internal.Union
 import           Unsafe.Coerce              (unsafeCoerce)
 
 
+------------------------------------------------------------------------------
+-- | This effect abstracts the throwing and catching of errors, leaving
+-- it up to the interpreter whether to use exceptions or monad transformers
+-- like 'E.ExceptT' to perform the short-circuiting mechanism.
 data Error e m a where
+  -- | Short-circuit the current program using the given error value.
   Throw :: e -> Error e m a
+  -- | Recover from an error that might have been thrown in the higher-order
+  -- action given by the first argument by passing the error to the handler
+  -- given by the second argument.
   Catch :: ∀ e m a. m a -> (e -> m a) -> Error e m a
 
 makeSem ''Error
@@ -129,7 +139,7 @@ fromExceptionSemVia
     -> Sem r a
     -> Sem r a
 fromExceptionSemVia f m = do
-  r <- controlF $ \lower ->
+  r <- controlFinal $ \lower ->
     lower (fmap Right m) `X.catch` (lower . return . Left)
   case r of
     Left e  -> throw $ f e
@@ -259,7 +269,7 @@ errorToIOFinal
        )
     => Sem (Error e ': r) a
     -> Sem r (Either e a)
-errorToIOFinal sem = controlF $ \lower -> do
+errorToIOFinal sem = controlFinal $ \lower -> do
   uid <- newUnique
   catchWithUid @e
     uid

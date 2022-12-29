@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns, TemplateHaskell, TupleSections #-}
-{-# OPTIONS_HADDOCK not-home #-}
+{-# OPTIONS_HADDOCK not-home, prune #-}
+
+-- | Description: The 'Writer' effect
 module Polysemy.Internal.Writer where
 
 import Control.Concurrent.STM
@@ -20,8 +22,11 @@ import Polysemy.Internal.Union
 ------------------------------------------------------------------------------
 -- | An effect capable of emitting and intercepting messages.
 data Writer o m a where
+  -- | Write a message to the log.
   Tell   :: o -> Writer o m ()
+  -- | Return the log produced by the higher-order action.
   Listen :: ∀ o m a. m a -> Writer o m (o, a)
+  -- | Run the given action and apply the function it returns to the log.
   Pass   :: m (o -> o, a) -> Writer o m a
 
 makeSem ''Writer
@@ -63,7 +68,7 @@ runWriterSTMAction :: forall o r a
                          -> Sem r a
 runWriterSTMAction write = interpretH $ \case
   Tell o -> embedFinal $ atomically (write o)
-  Listen m -> controlF $ \lower -> mask $ \restore -> do
+  Listen m -> controlFinal $ \lower -> mask $ \restore -> do
     -- See below to understand how this works
     tvar   <- newTVarIO mempty
     switch <- newTVarIO False
@@ -74,7 +79,7 @@ runWriterSTMAction write = interpretH $ \case
         commitListen tvar switch
     o      <- commitListen tvar switch
     return $ fmap (o, ) fa
-  Pass m -> controlF $ \lower -> mask $ \restore -> do
+  Pass m -> controlFinal $ \lower -> mask $ \restore -> do
     -- See below to understand how this works
     tvar   <- newTVarIO mempty
     switch <- newTVarIO False

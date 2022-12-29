@@ -9,36 +9,41 @@ import Polysemy.Internal.CustomErrors (FirstOrder)
 import Polysemy.Internal.Kind
 import Polysemy.Internal.Union
 
-
-newtype Processor z t r = Processor { getProcessor :: forall x. z x -> Sem r (t x) }
-
+newtype ProcessorH z t e r = ProcessorH { unProcessorH :: forall x. z x -> Sem (e ': r) (t x) }
+newtype InterpreterH e r r' = InterpreterH { unInterpreterH :: forall x. Sem (e ': r) x -> Sem r' x }
 
 -- | An effect for running monadic actions within a higher-order effect
 -- currently being interpreted.
-data RunH z t e r :: Effect where
-  RunH             :: forall z t e r m a
-                    . z a
-                   -> RunH z t e r m a
-  WithProcessorH   :: forall z t e r m a
-                    . ((forall x. z x -> Sem (e ': r) (t x)) -> a)
-                   -> RunH z t e r m a
-  WithInterpreterH :: forall z t e r m a
-                    . ((forall x. Sem (e ': r) x -> Sem r x) -> a)
-                   -> RunH z t e r m a
-  LiftWithH       :: forall z t e r r' m a
-                    . (forall x. Sem (e ': r) x -> Sem r' x)
-                   -> ((forall x. Sem (RunH z t e r ': r') x -> Sem r' (t x)) -> a)
-                   -> RunH z t e r m a
-  RestoreH         :: forall z t e r m a
-                    . t a
-                   -> RunH z t e r m a
+data Handling z t e r r' :: Effect where
+  WithProcessorH
+    :: forall z t e r r' m a
+     . ((forall x. z x -> Sem (e ': r) (t x)) -> a)
+    -> Handling z t e r r' m a
+  WithInterpreterH
+    :: forall z t e r r' m a
+     . ((forall x. Sem (e ': r) x -> Sem r' x) -> a)
+    -> Handling z t e r r' m a
+  LiftWithH
+    :: forall z t e r r' r'' m a
+     . ((forall x. Sem (Handling z t e r r' ': r'') x -> Sem r'' (t x)) -> a)
+    -> Handling z t e r r' m a
+  RestoreH
+    :: forall z t e r r' m a . t a -> Handling z t e r r' m a
 
-propagate :: forall e r z t e' r' a
-           . Member e r
+propagate :: forall e r z t e' r' r'' a
+           . (Member e r, Subsume r'' r)
           => e z a
-          -> Sem (RunH z t e' r' ': r) a
-propagate e = liftSem $ hoist runH $ Union (There membership) (mkWeaving e)
+          -> Sem (Handling z t e' r' r'' ': r) a
+propagate = propagateUsing membership
 {-# INLINE propagate #-}
+
+propagateUsing :: forall e r z t e' r' r'' a
+                . Subsume r'' r
+               => ElemOf e r
+               -> e z a
+               -> Sem (Handling z t e' r' r'' ': r) a
+propagateUsing pr = sendViaUsing (There pr) runH
+{-# INLINE propagateUsing #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted, and recursively apply the current interpreter on it.
@@ -46,46 +51,27 @@ propagate e = liftSem $ hoist runH $ Union (There membership) (mkWeaving e)
 -- This is the standard tool for interpreting higher-order effects.
 --
 -- @since TODO
-runH :: forall z t e r r' a. z a -> Sem (RunH z t e r ': r') a
-runH = send . RunH @z @t @e @r
+runH :: forall z t e r r' r'' a
+      . Subsume r' r''
+     => z a
+     -> Sem (Handling z t e r r' ': r'') a
+runH = runExposeH >=> restoreH
 {-# INLINE runH #-}
 
-liftWithH :: forall z t e r r' a
-           . ((forall x. Sem (RunH z t e r ': r) x -> Sem r (t x)) -> Sem r' a)
-          -> Sem (RunH z t e r ': r') a
-liftWithH main = withInterpreterH $ \interp -> liftWithH' interp main
+liftWithH :: forall z t e r r' r'' r''' a
+           . (   (forall x. Sem (Handling z t e r r' ': r'') x -> Sem r'' (t x))
+              -> Sem r''' a)
+          -> Sem (Handling z t e r r' ': r''') a
+liftWithH main = sendUsing Here (LiftWithH main) >>= raise
 {-# INLINE liftWithH #-}
 
-liftWithH' :: forall z t e r r' r'' a
-            . (forall x. Sem (e ': r) x -> Sem r' x)
-           -> ((forall x. Sem (RunH z t e r ': r') x -> Sem r' (t x))
-               -> Sem r'' a)
-           -> Sem (RunH z t e r ': r'') a
-liftWithH' interp main = send (LiftWithH interp main) >>= raise
-{-# INLINE liftWithH' #-}
-
-withInterpreterH :: forall z t e r r' a
-                  . (   (forall x. Sem (e ': r) x -> Sem r x)
-                     -> Sem (RunH z t e r ': r') a
-                    )
-                 -> Sem (RunH z t e r ': r') a
-withInterpreterH main = join $ send (WithInterpreterH @z @t main)
-
-controlH :: forall z t e r r' a
-          . (   (forall x. Sem (RunH z t e r ': r) x -> Sem r (t x))
-             -> Sem r' (t a)
+controlH :: forall z t e r r' r'' r''' a
+          . (   (forall x. Sem (Handling z t e r r' ': r'') x -> Sem r'' (t x))
+             -> Sem r''' (t a)
             )
-         -> Sem (RunH z t e r ': r') a
-controlH main = liftWithH main >>= restoreH @z @t @e @r
+         -> Sem (Handling z t e r r' ': r''') a
+controlH main = liftWithH main >>= restoreH
 {-# INLINE controlH #-}
-
-controlH' :: forall z t e r r' r'' a
-           . (forall x. Sem (e ': r) x -> Sem r' x)
-          -> ((forall x. Sem (RunH z t e r ': r') x -> Sem r' (t x))
-              -> Sem r'' (t a))
-          -> Sem (RunH z t e r ': r'') a
-controlH' interp main = liftWithH' interp main >>= restoreH @z @t @e @r
-{-# INLINE controlH' #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted.
@@ -95,7 +81,10 @@ controlH' interp main = liftWithH' interp main >>= restoreH @z @t @e @r
 -- on it instead.
 --
 -- @since TODO
-runH' :: forall z t e r a. z a -> Sem (e ': RunH z t e r ': r) a
+runH' :: forall z t e r r' r'' a
+       . Subsume r r''
+      => z a
+      -> Sem (e ': Handling z t e r r' ': r'') a
 runH' z = runExposeH' z >>= raise . restoreH
 {-# INLINE runH' #-}
 
@@ -116,10 +105,13 @@ runH' z = runExposeH' z >>= raise . restoreH
 -- Once an effectful state has been reified, you may restore it using 'restoreH'.
 --
 -- @since TODO
-runExposeH :: forall z t e r a. z a -> Sem (RunH z t e r ': r) (t a)
-runExposeH z = withInterpreterH $ \n -> do
-  Processor pr <- getProcessorH
-  raise (n (pr z))
+runExposeH :: forall z t e r r' r'' a
+            . Subsume r' r''
+           => z a -> Sem (Handling z t e r r' ': r'') (t a)
+runExposeH z = do
+  ProcessorH prcs <- getProcessorH
+  InterpreterH interp <- getInterpreterH
+  raise $ subsume_ $ interp $ prcs z
 {-# INLINE runExposeH #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
@@ -133,10 +125,13 @@ runExposeH z = withInterpreterH $ \n -> do
 -- on it instead.
 --
 -- @since TODO
-runExposeH' :: forall z t e r a. z a -> Sem (e ': RunH z t e r ': r) (t a)
+runExposeH' :: forall z t e r r' r'' a
+             . Subsume r r''
+            => z a
+            -> Sem (e ': Handling z t e r r' ': r'') (t a)
 runExposeH' z = do
-  Processor pr <- raise getProcessorH
-  raiseUnder (pr z)
+  ProcessorH prcs <- raise getProcessorH
+  subsume_ $ prcs z
 {-# INLINE runExposeH' #-}
 
 
@@ -170,8 +165,8 @@ runExposeH' z = do
 -- @
 --
 -- @since TODO
-restoreH :: forall z t e r r' a. t a -> Sem (RunH z t e r ': r') a
-restoreH = send . RestoreH @z @_ @e @r
+restoreH :: forall z t e r r' r'' a. t a -> Sem (Handling z t e r r' ': r'') a
+restoreH = sendUsing Here . RestoreH
 {-# INLINE restoreH #-}
 
 -- | Reify the effectful state of the local effects of the argument.
@@ -183,9 +178,9 @@ restoreH = send . RestoreH @z @_ @e @r
 -- using 'runExposeH' and `runExposeH'` instead.
 --
 -- @since TODO
-exposeH :: forall z t e r a
-         . Sem (RunH z t e r ': r) a
-        -> Sem (RunH z t e r ': r) (t a)
+exposeH :: forall z t e r r' r'' a
+         . Sem (Handling z t e r r' ': r'') a
+        -> Sem (Handling z t e r r' ': r'') (t a)
 exposeH m = liftWithH $ \lower -> lower m
 {-# INLINE exposeH #-}
 
@@ -193,18 +188,23 @@ exposeH m = liftWithH $ \lower -> lower m
 -- action given by a higher-order effect that is currently being interpreted
 -- without immediately running it, turning it into a @'Sem' (e ': r)@ action
 -- that returns a reified effectful state.
-getProcessorH :: forall z t e r r'
-               . Sem (RunH z t e r ': r') (Processor z t (e ': r))
-getProcessorH = send (WithProcessorH @_ @_ @e Processor)
+getProcessorH :: forall z t e r r' r''
+               . Sem (Handling z t e r r' ': r'') (ProcessorH z t e r)
+getProcessorH = sendUsing Here (WithProcessorH ProcessorH)
 {-# INLINE getProcessorH #-}
+
+getInterpreterH :: forall z t e r r' r''
+               . Sem (Handling z t e r r' ': r'') (InterpreterH e r r')
+getInterpreterH = sendUsing Here (WithInterpreterH InterpreterH)
+{-# INLINE getInterpreterH #-}
 
 type Tactical z e r r' a =
       forall t
     . Traversable t
-  => Sem (RunH z t e r ': r') a
+  => Sem (Handling z t e r r' ': r') a
 
-type EffHandlerH e r =
-     forall z x. e z x -> Tactical z e r r x
+type EffHandlerH e r r' =
+     forall z x. e z x -> Tactical z e r r' x
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but for higher-order effects (i.e. those which make use
@@ -233,79 +233,133 @@ type EffHandlerH e r =
 --
 -- @since TODO
 interpretH :: forall e r a
-              . EffHandlerH e r
+              . EffHandlerH e r r
              -> Sem (e ': r) a
              -> Sem r a
-interpretH h (Sem sem) = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
-  sem $ \u -> case decomp u of
-    Left g -> k $ hoist (interpretH h) g
-    Right (Weaving e
-                 (mkT :: forall n x
-                       . Monad n
-                      => (forall y. Sem (e ': r) y -> n y)
-                      -> z x -> t n x
-                 )
-                 lwr
-                 ex
-          ) ->
-      let
-          {-# SPECIALIZE INLINE
-              commonHandler :: forall n x
-                             . Weaving (RunH z (StT t) e r) n x
-                            -> t m x #-}
-          {-# SPECIALIZE INLINE
-              commonHandler :: forall r' n x
-                             . Weaving (RunH z (StT t) e r) n x
-                            -> t (Sem r') x #-}
-          commonHandler :: forall n b x
-                         . Monad b => Weaving (RunH z (StT t) e r) n x -> t b x
-          commonHandler (Weaving eff _ lwr' ex') = do
-            let run_it = fmap (ex' . (<$ mkInitState lwr'))
-            case eff of
-              RunH _ -> errorWithoutStackTrace "RunH not commonly handled"
-              WithInterpreterH main -> run_it $ return $ main $ interpretH h
-              WithProcessorH main -> run_it $
-                liftWith $ \lower -> return $ main (lower . mkT id)
-              RestoreH t -> run_it $
-                restoreT (return t)
-              LiftWithH subInterpret main -> run_it $ liftWith $ \lower ->
-                return $ main (lower . (go3 subInterpret))
+interpretH = interpretGenericH
+  -- Sem $ \(k :: forall x. Union r (Sem r) x -> m x) ->
+  -- sem $ \u -> case decomp u of
+  --   Left g -> k $ hoist (interpretH h) g
+  --   Right (Weaving e
+  --                (mkT :: forall n x
+  --                      . Monad n
+  --                     => (forall y. Sem (e ': r) y -> n y)
+  --                     -> z x -> t n x
+  --                )
+  --                lwr
+  --                ex
+  --         ) ->
+  --     let
+  --         {-# SPECIALIZE INLINE
+  --             commonHandler :: forall n x
+  --                            . Weaving (Handling z (StT t) e r) n x
+  --                           -> t m x #-}
+  --         {-# SPECIALIZE INLINE
+  --             commonHandler :: forall r' n x
+  --                            . Weaving (Handling z (StT t) e r) n x
+  --                           -> t (Sem r') x #-}
+  --         commonHandler :: forall n b x
+  --                        . Monad b => Weaving (Handling z (StT t) e r) n x -> t b x
+  --         commonHandler (Weaving eff _ lwr' ex') = do
+  --           let run_it = fmap (ex' . (<$ mkInitState lwr'))
+  --           case eff of
+  --             WithInterpreterH main -> run_it $ return $ main $ interpretH h
+  --             WithProcessorH main -> run_it $
+  --               liftWith $ \lower -> return $ main (lower . mkT id)
+  --             RestoreH t -> run_it $
+  --               restoreT (return t)
+  --             LiftWithH main -> run_it $ liftWith $ \lower ->
+  --               return $ main (lower . go3)
 
-          go1 :: forall x. Sem (RunH z (StT t) e r ': r) x -> t m x
-          go1 = usingSem $ \u' -> case decomp u' of
-            Left g -> liftHandlerWithNat go2 k g
-            Right wav@(Weaving eff _ lwr' ex') -> do
-              let run_it = (ex' . (<$ mkInitState lwr'))
-              case eff of
-                RunH z -> run_it <$> mkT (usingSem k . interpretH h) z
-                _      -> commonHandler wav
-          {-# INLINE go1 #-}
+  --         go1 :: forall x. Sem (Handling z (StT t) e r ': r) x -> t m x
+  --         go1 = usingSem $ \u' -> case decomp u' of
+  --           Left g -> liftHandlerWithNat go2 k g
+  --           Right wav -> commonHandler wav
+  --         {-# INLINE go1 #-}
 
-          go2 :: forall x. Sem (RunH z (StT t) e r ': r) x -> t (Sem r) x
-          go2 = usingSem $ \u' -> case decomp u' of
-            Left g -> liftHandlerWithNat go2 liftSem g
-            Right wav@(Weaving eff _ lwr' ex') -> do
-              let run_it = (ex' . (<$ mkInitState lwr'))
-              case eff of
-                RunH z -> run_it <$> mkT (interpretH h) z
-                _      -> commonHandler wav
-          {-# NOINLINE go2 #-}
+  --         go2 :: forall x. Sem (Handling z (StT t) e r ': r) x -> t (Sem r) x
+  --         go2 = usingSem $ \u' -> case decomp u' of
+  --           Left g -> liftHandlerWithNat go2 liftSem g
+  --           Right wav -> commonHandler wav
+  --         {-# NOINLINE go2 #-}
 
-          go3 :: forall r' x
-               . (forall y. Sem (e ': r) y -> Sem r' y)
-              -> Sem (RunH z (StT t) e r ': r') x
-              -> t (Sem r') x
-          go3 subInterpret = usingSem $ \u' -> case decomp u' of
-            Left g -> liftHandlerWithNat (go3 subInterpret) liftSem g
-            Right wav@(Weaving eff _ lwr' ex') -> do
-              let run_it = (ex' . (<$ mkInitState lwr'))
-              case eff of
-                RunH z -> run_it <$> mkT subInterpret z
-                _      -> commonHandler wav
-          {-# NOINLINE go3 #-}
-      in
-        fmap ex $ lwr $ go1 (h e)
+  --         go3 :: forall r'' x
+  --              . Sem (Handling z (StT t) e r r' ': r'') x
+  --             -> t (Sem r'') x
+  --         go3 subInterpret = usingSem $ \u' -> case decomp u' of
+  --           Left g -> liftHandlerWithNat (go3 subInterpret) liftSem g
+  --           Right wav -> commonHandler wav
+  --         {-# NOINLINE go3 #-}
+  --     in
+  --       fmap ex $ lwr $ go1 (h e)
 {-# INLINE interpretH #-}
+
+interpretGenericH :: forall e r' r a
+                  . Subsume r r'
+                 => EffHandlerH e r r'
+                 -> Sem (e ': r) a
+                 -> Sem r' a
+interpretGenericH h = go
+  where
+    go :: forall a'. Sem (e ': r) a' -> Sem r' a'
+    go (Sem sem) = Sem $ \(k :: forall x. Union r' (Sem r') x -> m x) ->
+      sem $ \u -> case decomp u of
+        Left g -> k $ subsumeUnion @r @r' $ hoist go g
+        Right (Weaving e
+                     (mkT :: forall n x
+                           . Monad n
+                          => (forall y. Sem (e ': r) y -> n y)
+                          -> z x -> t n x
+                     )
+                     lwr
+                     ex
+              ) ->
+          let
+              {-# SPECIALIZE INLINE
+                  commonHandler :: forall n x
+                                 . Weaving (Handling z (StT t) e r r') n x
+                                -> t m x #-}
+              {-# SPECIALIZE INLINE
+                  commonHandler :: forall r'' n x
+                                 . Weaving (Handling z (StT t) e r r') n x
+                                -> t (Sem r'') x #-}
+              commonHandler :: forall n b x
+                             . Monad b
+                            => Weaving (Handling z (StT t) e r r') n x -> t b x
+              commonHandler (Weaving eff _ lwr' ex') = do
+                let run_it = fmap (ex' . (<$ mkInitState lwr'))
+                case eff of
+                  WithInterpreterH main -> run_it $ return $ main $ go
+                  WithProcessorH main -> run_it $
+                    liftWith $ \lower -> return $ main (lower . mkT id)
+                  RestoreH t -> run_it $
+                    restoreT (return t)
+                  LiftWithH main -> run_it $ liftWith $ \lower ->
+                    return $ main (lower . go3)
+
+              go1 :: forall x. Sem (Handling z (StT t) e r r' ': r') x -> t m x
+              go1 = usingSem $ \u' -> case decomp u' of
+                Left g -> liftHandlerWithNat go2 k g
+                Right wav -> commonHandler wav
+              {-# INLINE go1 #-}
+
+              go2 :: forall x
+                   . Sem (Handling z (StT t) e r r' ': r') x -> t (Sem r') x
+              go2 = usingSem $ \u' -> case decomp u' of
+                Left g -> liftHandlerWithNat go2 liftSem g
+                Right wav -> commonHandler wav
+              {-# NOINLINE go2 #-}
+
+              go3 :: forall r'' x
+                   . Sem (Handling z (StT t) e r r' ': r'') x
+                  -> t (Sem r'') x
+              go3 = usingSem $ \u' -> case decomp u' of
+                Left g -> liftHandlerWithNat go3 liftSem g
+                Right wav -> commonHandler wav
+              {-# NOINLINE go3 #-}
+          in
+            fmap ex $ lwr $ go1 (h e)
+{-# INLINE interpretGenericH #-}
 
 ------------------------------------------------------------------------------
 -- | The simplest way to produce an effect handler. Interprets an effect @e@ by
@@ -329,10 +383,10 @@ interpret h =
 --
 -- @since TODO
 reinterpretH :: forall e1 e2 r a
-                . EffHandlerH e1 (e2 ': r)
+                . EffHandlerH e1 r (e2 ': r)
                -> Sem (e1 ': r) a
                -> Sem (e2 ': r) a
-reinterpretH h = interpretH h . raiseUnder
+reinterpretH = interpretGenericH
 {-# INLINE reinterpretH #-}
 
 ------------------------------------------------------------------------------
@@ -356,10 +410,10 @@ reinterpret h =
 --
 -- @since TODO
 reinterpret2H :: forall e1 e2 e3 r a
-                 . EffHandlerH e1 (e2 ': e3 ': r)
+                 . EffHandlerH e1 r (e2 ': e3 ': r)
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': r) a
-reinterpret2H h = interpretH h . raiseUnder2
+reinterpret2H = interpretGenericH
 {-# INLINE reinterpret2H #-}
 
 ------------------------------------------------------------------------------
@@ -380,10 +434,10 @@ reinterpret2 h =
 --
 -- @since TODO
 reinterpret3H :: forall e1 e2 e3 e4 r a
-                 . EffHandlerH e1 (e2 ': e3 ': e4 ': r)
+                 . EffHandlerH e1 r (e2 ': e3 ': e4 ': r)
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': e4 ': r) a
-reinterpret3H h = interpretH h . raiseUnder3
+reinterpret3H = interpretGenericH
 {-# INLINE reinterpret3H #-}
 
 ------------------------------------------------------------------------------
@@ -405,7 +459,7 @@ reinterpret3 h =
 -- @since TODO
 intercept :: forall e r a
               . Member e r
-             => EffHandlerH e r
+             => EffHandlerH e r r
              -> Sem r a
              -> Sem r a
 intercept h = interpretH h . expose
@@ -433,7 +487,7 @@ interceptH h =
 -- @since TODO
 interceptUsing :: forall e r a
                    . ElemOf e r
-                  -> EffHandlerH e r
+                  -> EffHandlerH e r r
                   -> Sem r a
                   -> Sem r a
 interceptUsing pr h = interpretH h . exposeUsing pr

@@ -4,6 +4,7 @@
 
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: The 'NonDet' effect
 module Polysemy.Internal.NonDet where
 
 

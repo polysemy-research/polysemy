@@ -1,4 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+
+-- | Description: The 'Bundle' effect for bundling effects
 module Polysemy.Bundle
   ( -- * Effect
     Bundle (..)

@@ -1,5 +1,6 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: Kind aliases 'Effect' and 'EffectRow'
 module Polysemy.Internal.Kind where
 
 import Data.Kind (Type)
@@ -17,6 +18,8 @@ type Effect    = (Type -> Type) -> Type -> Type
 type EffectRow = [Effect]
 
 
+------------------------------------------------------------------------------
+-- | Append two type-level lists.
 type family Append l r where
   Append (a ': l) r = a ': (Append l r)
   Append '[] r = r

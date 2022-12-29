@@ -54,7 +54,7 @@ import           Polysemy.Plugin.Fundep.Utils
 
 #if __GLASGOW_HASKELL__ >= 900
 import           GHC.Builtin.Types.Prim (alphaTys)
-import           GHC.Plugins (idType, tyConClass_maybe, ppr, Outputable, sep, text, (<+>), parens)
+import           GHC.Plugins (idType, tyConClass_maybe, ppr, Outputable, sep, text, (<+>), parens, emptyUFM)
 import           GHC.Tc.Types.Evidence
 import           GHC.Tc.Plugin (TcPluginM, tcPluginIO)
 import           GHC.Tc.Types
@@ -95,6 +95,9 @@ fundepPlugin = TcPlugin
           <*> polysemyStuff
   , tcPluginSolve = solveFundep
   , tcPluginStop = const $ pure ()
+#if __GLASGOW_HASKELL__ >= 904
+  , tcPluginRewrite = \ _ -> emptyUFM
+#endif
   }
 
 
@@ -213,9 +216,15 @@ mkWantedForce
   -> Type
   -> TcPluginM (Unification, Ct)
 mkWantedForce fc given = do
+#if __GLASGOW_HASKELL__ >= 904
+  ((ev, _), _) <- unsafeTcPluginTcM
+           . runTcS
+           $ newWantedEq (fcLoc fc) emptyRewriterSet Nominal wanted given
+#else
   (ev, _) <- unsafeTcPluginTcM
            . runTcSDeriveds
            $ newWantedEq (fcLoc fc) Nominal wanted given
+#endif
   pure ( Unification (OrdType wanted) (OrdType given)
        , CNonCanonical ev
        )
@@ -308,12 +317,23 @@ solveFundep
     :: ( IORef (S.Set Unification)
        , PolysemyStuff 'Things
        )
+#if __GLASGOW_HASKELL__ >= 904
+    -> EvBindsVar
+    -> [Ct]
+    -> [Ct]
+    -> TcPluginM TcPluginSolveResult
+#else
     -> [Ct]
     -> [Ct]
     -> [Ct]
     -> TcPluginM TcPluginResult
+#endif
 solveFundep _ _ _ [] = pure $ TcPluginOk [] []
+#if __GLASGOW_HASKELL__ >= 904
+solveFundep (ref, stuff) _ given wanted = do
+#else
 solveFundep (ref, stuff) given _ wanted = do
+#endif
   let wanted_finds = getFindConstraints stuff wanted
       given_finds  = getFindConstraints stuff given
       extra_wanted = getExtraEvidence stuff wanted

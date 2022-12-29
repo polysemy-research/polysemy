@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Description: Interpreters for 'NonDet'
 module Polysemy.NonDet
   ( -- * Effect
     NonDet (..)

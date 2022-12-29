@@ -4,8 +4,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns    #-}
 
-{-# OPTIONS_HADDOCK not-home #-}
+{-# OPTIONS_HADDOCK not-home, prune #-}
 
+-- | Description: TH utilities for generating effect constructors
 module Polysemy.Internal.TH.Common
   ( ConLiftInfo (..)
   , getEffectMetadata
@@ -168,8 +169,8 @@ makeSemType r result = ConT ''Sem `AppT` VarT r `AppT` result
 
 ------------------------------------------------------------------------------
 -- | Given a 'ConLiftInfo', this will produce an action for it. It's arguments
--- will come from any variables in scope that correspond to the 'cliArgs' of
--- the 'ConLiftInfo'.
+-- will come from any variables in scope that correspond to the 'cliEffArgs'
+-- of the 'ConLiftInfo'.
 makeUnambiguousSend :: Bool -> ConLiftInfo -> Exp
 makeUnambiguousSend should_make_sigs cli =
   let fun_args_names = fst <$> cliFunArgs cli

@@ -8,12 +8,15 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
+-- | Description: The 'Sem' type and the most basic stack manipulation utilities
 module Polysemy.Internal
   ( Sem (..)
   , Member
   , Members
   , send
+  , sendVia
   , sendUsing
+  , sendViaUsing
   , embed
   , run
   , raise_
@@ -25,6 +28,7 @@ module Polysemy.Internal
   , raise2Under
   , raise3Under
   , subsume_
+  , subsumeUnion
   , Subsume (..)
   , subsume
   , subsumeUsing
@@ -334,11 +338,14 @@ instance Member Fixpoint r => MonadFix (Sem r) where
   {-# INLINE mfix #-}
 
 
+------------------------------------------------------------------------------
+-- | Create a 'Sem' from a 'Union' with matching stacks.
 liftSem :: Union r (Sem r) a -> Sem r a
 liftSem u = Sem $ \k -> k u
 {-# INLINE liftSem #-}
 
-
+------------------------------------------------------------------------------
+-- | Extend the stack of a 'Sem' with an explicit 'Union' transformation.
 hoistSem
     :: (∀ x. Union r (Sem r) x -> Union r' (Sem r') x)
     -> Sem r a
@@ -346,6 +353,9 @@ hoistSem
 hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSem #-}
 
+------------------------------------------------------------------------------
+-- | Extend the stack of a 'Sem' with an explicit membership proof
+-- transformation.
 restack :: (forall e. ElemOf e r -> ElemOf e r')
         -> Sem r a
         -> Sem r' a
@@ -364,7 +374,7 @@ raise_ = hoistSem $ hoist raise_ . raiseUnion
 {-# INLINE raise_ #-}
 
 
--- | See 'raise''.
+-- | See 'raise'.
 --
 -- @since 1.4.0.0
 class Raise (r :: EffectRow) (r' :: EffectRow) where
@@ -374,8 +384,8 @@ instance {-# overlapping #-} Raise r r where
   raiseUnion = id
   {-# INLINE raiseUnion #-}
 
-instance (r' ~ (_0 ': r''), Raise r r'') => Raise r r' where
-  raiseUnion = (\(Union n w) -> Union (There n) w) . raiseUnion
+instance (r' ~ (_0 ': r''), Subsume r r'') => Raise r r' where
+  raiseUnion = (\(Union n w) -> Union (There n) w) . subsumeUnion
   {-# INLINE raiseUnion #-}
 
 
@@ -633,6 +643,16 @@ send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
 {-# INLINE[3] send #-}
 
+------------------------------------------------------------------------------
+-- | Execute an action of an effect, given a natural transformation from
+-- the monad used for the higher-order chunks in the effect to
+-- @'Polysemy.Sem' r@.
+sendVia :: forall e z r a
+         . Member e r
+        => (forall x. z x -> Sem r x)
+        -> e z a -> Sem r a
+sendVia n = liftSem . hoist n . inj
+{-# INLINE[3] sendVia #-}
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem', given an explicit proof
@@ -643,6 +663,14 @@ send = liftSem . inj
 sendUsing :: ElemOf e r -> e (Sem r) a -> Sem r a
 sendUsing pr = liftSem . injUsing pr
 {-# INLINE[3] sendUsing #-}
+
+------------------------------------------------------------------------------
+-- | Embed an effect into a 'Sem', given an explicit proof
+-- that the effect exists in @r@, and a natural transformation from the monad
+-- used for the higher-order thunks in the effect to @'Polysemy.Sem' r@.
+sendViaUsing :: ElemOf e r -> (forall x. z x -> Sem r x) -> e z a -> Sem r a
+sendViaUsing pr n = liftSem . hoist n . injUsing pr
+{-# INLINE[3] sendViaUsing #-}
 
 
 ------------------------------------------------------------------------------

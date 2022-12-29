@@ -4,8 +4,9 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_HADDOCK not-home #-}
+{-# OPTIONS_HADDOCK not-home, prune #-}
 
+-- | Description: type-errors-pretty redefinitions
 module Polysemy.Internal.CustomErrors
   ( WhenStuck
   , FirstOrder
@@ -16,9 +17,10 @@ module Polysemy.Internal.CustomErrors
 import Data.Kind
 import Fcf
 import GHC.TypeLits (Symbol)
-import Polysemy.Internal.Kind
+import Type.Errors hiding (IfStuck, UnlessStuck, WhenStuck)
+
 import Polysemy.Internal.CustomErrors.Redefined
-import Type.Errors hiding (IfStuck, WhenStuck, UnlessStuck)
+import Polysemy.Internal.Kind
 
 
 -- These are taken from type-errors-pretty because it's not in stackage for 9.0.1

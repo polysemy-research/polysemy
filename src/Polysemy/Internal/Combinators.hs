@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# OPTIONS_HADDOCK not-home #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+
+-- | Description: The basic interpreter-building combinators
 module Polysemy.Internal.Combinators
   ( -- * First order
     rewrite

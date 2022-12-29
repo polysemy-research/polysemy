@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
+-- | Description: Compatibility with 'MonadIO'
 module Polysemy.IO
   ( -- * Interpretations
     embedToMonadIO
@@ -11,7 +12,7 @@ import Polysemy.Embed
 
 
 ------------------------------------------------------------------------------
--- The 'MonadIO' class is conceptually an interpretation of 'IO' to some
+-- | The 'MonadIO' class is conceptually an interpretation of 'IO' to some
 -- other monad. This function reifies that intuition, by transforming an 'IO'
 -- effect into some other 'MonadIO'.
 --

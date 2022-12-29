@@ -6,12 +6,15 @@ module Polysemy.Interpretation
   , exposeH
   , restoreH
   , propagate
+  , propagateUsing
 
   -- * Lowering Higher-Order thunks to actions of @'Sem' r@.
-  , Processor(..)
   , liftWithH
   , controlH
+  , ProcessorH(..)
   , getProcessorH
+  , InterpreterH(..)
+  , getInterpreterH
   ) where
 
 import Polysemy.Internal.Interpretation
