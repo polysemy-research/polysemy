@@ -2,21 +2,17 @@
   description = "Higher-order, low-boilerplate free monads.";
 
   inputs = {
-    nixpkgs_2009.url = github:nixos/nixpkgs/release-20.09;
-    nixpkgs_2105.url = github:nixos/nixpkgs/release-21.05;
     unstable.url = github:nixos/nixpkgs/nixpkgs-unstable;
     flake-utils.url = github:numtide/flake-utils;
   };
 
-  outputs = { nixpkgs_2009, nixpkgs_2105, unstable, flake-utils, ... }:
+  outputs = { unstable, flake-utils, ... }:
   flake-utils.lib.eachSystem ["x86_64-linux"] (system:
   with unstable.lib;
   let
     hsPkgs = nixpkgs: compiler: import ./nix/overlay.nix { inherit system nixpkgs compiler; };
 
     ghcs = {
-      "865" = hsPkgs nixpkgs_2009 "ghc865";
-      "884" = hsPkgs nixpkgs_2105 "ghc884";
       "8107" = hsPkgs unstable "ghc8107";
       "902" = hsPkgs unstable "ghc902";
       "925" = hsPkgs unstable "ghc925";
