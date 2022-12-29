@@ -25,6 +25,7 @@
 - `runResource` has been renamed to `runBracketLocally`
 - Added `generalBracket`
 - Removed `traceToIO` (previously deprecated)
+- Dropped support for GHC 8.6 and 8.8
 
 ### Other Changes
 - Added `Polysemy.Fatal`, a variant of `Error` without `Catch`.

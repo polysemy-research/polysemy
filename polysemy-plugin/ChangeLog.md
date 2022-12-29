@@ -2,18 +2,20 @@
 
 ## Unreleased
 
+- Dropped support for GHC 8.6 and 8.8
+
 ## 0.4.4.0 (2022-12-27)
 
-* Support GHC 9.4
+- Support GHC 9.4
 
 ## 0.4.3.1 (2022-07-11)
 
-* Add a missing pattern match that was hit by a user.
+- Add a missing pattern match that was hit by a user.
 
 ## 0.4.3.0 (2021-11-23)
 
-* Support GHC 9.2.1
-* Fix a regression that prevented disambiguation in some cases.
+- Support GHC 9.2.1
+- Fix a regression that prevented disambiguation in some cases.
 
 ## 0.4.2.0 (2021-11-16)
 
@@ -26,12 +28,13 @@
 
 ## 0.4.0.0 (2021-07-12)
 
-* Support GHC 9.0.1
+- Support GHC 9.0.1
 
 ## 0.3.0.0 (2021-03-30)
 
 ### Breaking Changes
-* Dropped support for GHC 8.4
+
+- Dropped support for GHC 8.4
 
 ## 0.2.5.2 (2020-11-01)
 
