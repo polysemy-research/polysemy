@@ -31,8 +31,8 @@
 - Added `controlFinal`.
 - Added `expose` and `exposeUsing`.
 - Added `sendVia` and `sendViaUsing`.
-- Added `generalBracket 
-  `Polysemy.Bracket` and `Bracket`.
+- Added `generalBracket`
+- `Polysemy.Membership` now exports various membership manipulation functions
 
 ## 1.9.0.0 (2022-12-28)
 
