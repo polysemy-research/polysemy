@@ -263,7 +263,7 @@ processH z = withProcessorH $ \lower -> return (lower z)
 -- by turning it into a @'Sem' (e ': rPre)@ action that returns a reified
 -- effectful state.
 --
--- /Note/: Processed actions makes use of the effectful state as it is by
+-- /Note/: Processed actions make use of the effectful state as it is by
 -- the time 'withProcessorH' is run, rather than what it is by the time the
 -- processed action is run.
 withProcessorH :: forall z t e rPre rPost r a
@@ -507,13 +507,13 @@ reinterpret3 h =
 -- | Like 'intercept', but for higher-order effects.
 --
 -- @since TODO
-intercept :: forall e r a
-              . Member e r
-             => EffHandlerH e r r
-             -> Sem r a
-             -> Sem r a
-intercept h = interpretH h . expose
-{-# INLINE intercept #-}
+interceptH :: forall e r a
+               . Member e r
+              => EffHandlerH e r r
+              -> Sem r a
+              -> Sem r a
+interceptH h = interpretH h . expose
+{-# INLINE interceptH #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of handling the effect, allows responding to
@@ -523,27 +523,27 @@ intercept h = interpretH h . expose
 -- See 'interpretH' for a simple usage guide.
 --
 -- @since 2.0.0.0
-interceptH :: forall e r a
-              . FirstOrder e "intercept"
-             => Member e r
-             => (∀ z x. e z x -> Sem r x)
-             -> Sem r a
-             -> Sem r a
-interceptH h =
-  intercept $ \e -> raise (h e)
-{-# INLINE interceptH #-}
+intercept :: forall e r a
+             . FirstOrder e "intercept"
+            => Member e r
+            => (∀ z x. e z x -> Sem r x)
+            -> Sem r a
+            -> Sem r a
+intercept h =
+  interceptH $ \e -> raise (h e)
+{-# INLINE intercept #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'interceptUsing', but for higher-order effects.
 --
 -- @since TODO
-interceptUsing :: forall e r a
-                   . ElemOf e r
-                  -> EffHandlerH e r r
-                  -> Sem r a
-                  -> Sem r a
-interceptUsing pr h = interpretH h . exposeUsing pr
-{-# INLINE interceptUsing #-}
+interceptUsingH :: forall e r a
+                    . ElemOf e r
+                   -> EffHandlerH e r r
+                   -> Sem r a
+                   -> Sem r a
+interceptUsingH pr h = interpretH h . exposeUsing pr
+{-# INLINE interceptUsingH #-}
 
 ------------------------------------------------------------------------------
 -- | A variant of 'intercept' that accepts an explicit proof that the effect
@@ -553,13 +553,13 @@ interceptUsing pr h = interpretH h . exposeUsing pr
 -- in order to conditionally perform 'intercept'.
 --
 -- @since TODO
-interceptUsingH :: forall e r a .
+interceptUsing :: forall e r a .
                      FirstOrder e "interceptUsing"
                   => Member e r
                   => ElemOf e r
                   -> (∀ z x. e z x -> Sem r x)
                   -> Sem r a
                   -> Sem r a
-interceptUsingH pr h =
-  interceptUsing pr $ \e -> raise (h e)
-{-# INLINE interceptUsingH #-}
+interceptUsing pr h =
+  interceptUsingH pr $ \e -> raise (h e)
+{-# INLINE interceptUsing #-}
