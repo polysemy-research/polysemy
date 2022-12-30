@@ -121,6 +121,10 @@ finally
     -> Sem r a
 finally act end = bracket (pure ()) (const end) (const act)
 
+------------------------------------------------------------------------------
+-- | Like 'bracket', but the release action only runs if an exception was
+-- raised.
+--
 -- @since 0.4.0.0
 bracketOnError :: Member Bracket r
                => Sem r a
