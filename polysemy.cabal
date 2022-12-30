@@ -59,11 +59,13 @@ library
       Polysemy.Internal.Index
       Polysemy.Internal.Kind
       Polysemy.Internal.NonDet
+      Polysemy.Internal.Opaque
       Polysemy.Internal.Scoped
       Polysemy.Internal.Sing
       Polysemy.Internal.TH.Common
       Polysemy.Internal.TH.Effect
       Polysemy.Internal.Union
+      Polysemy.Internal.Utils
       Polysemy.Internal.WeaveClass
       Polysemy.Internal.Writer
       Polysemy.IO

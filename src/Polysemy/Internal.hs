@@ -65,7 +65,7 @@ import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
 import Type.Errors (WhenStuck)
-import Polysemy.Internal.Sing (ListOfLength (listOfLength))
+import Polysemy.Internal.Sing
 
 
 -- $setup
@@ -355,12 +355,26 @@ hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 ------------------------------------------------------------------------------
 -- | Rewrite the effect stack of a 'Sem' using with an explicit membership proof
 -- transformation.
-mapMembership :: (forall e. ElemOf e r -> ElemOf e r')
+mapMembership :: forall r r' a
+               . (forall e. ElemOf e r -> ElemOf e r')
               -> Sem r a
               -> Sem r' a
-mapMembership n = hoistSem $ \(Union pr wav) ->
-  hoist (mapMembership n) $ Union (n pr) wav
-{-# INLINE mapMembership #-}
+mapMembership n = go
+  where
+    go :: forall x. Sem r x -> Sem r' x
+    go = hoistSem $ \(Union pr wav) -> hoist go_ $ Union (n pr) wav
+    {-# INLINE go #-}
+
+    go_ :: forall x. Sem r x -> Sem r' x
+    go_ = go
+    {-# NOINLINE go_ #-}
+{-# INLINE[1] mapMembership #-}
+
+{-# RULES "mapMembership/mapMembership"
+   forall (f :: forall e. ElemOf e r' -> ElemOf e r'')
+          (g :: forall e. ElemOf e r -> ElemOf e r') m.
+     mapMembership f (mapMembership g m) = mapMembership (f . g) m
+#-}
 
 ------------------------------------------------------------------------------
 -- | Introduce an arbitrary number of effects on top of the effect stack. This
@@ -370,7 +384,7 @@ mapMembership n = hoistSem $ \(Union pr wav) ->
 --
 -- @since 1.4.0.0
 raise_ :: ∀ r r' a. Raise r r' => Sem r a -> Sem r' a
-raise_ = hoistSem $ hoist raise_ . raiseUnion
+raise_ = mapMembership raiseMembership
 {-# INLINE raise_ #-}
 
 
@@ -378,15 +392,15 @@ raise_ = hoistSem $ hoist raise_ . raiseUnion
 --
 -- @since 1.4.0.0
 class Raise (r :: EffectRow) (r' :: EffectRow) where
-  raiseUnion :: Union r m a -> Union r' m a
+  raiseMembership :: ElemOf e r -> ElemOf e r'
 
 instance {-# overlapping #-} Raise r r where
-  raiseUnion = id
-  {-# INLINE raiseUnion #-}
+  raiseMembership = id
+  {-# INLINE raiseMembership #-}
 
 instance (r' ~ (_0 ': r''), Subsume r r'') => Raise r r' where
-  raiseUnion = (\(Union n w) -> Union (There n) w) . subsumeUnion
-  {-# INLINE raiseUnion #-}
+  raiseMembership = There . subsumeMembership
+  {-# INLINE raiseMembership #-}
 
 
 ------------------------------------------------------------------------------
@@ -457,13 +471,7 @@ raise3Under = subsume_
 --
 -- @since 2.0.0.0
 raiseUnder2 :: ∀ e3 e1 e2 r a. Sem (e1 : e2 : r) a -> Sem (e1 : e2 : e3 : r) a
-raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
-  where
-    weakenUnder2 :: ∀ m x. Union (e1 : e2 : r) m x -> Union (e1 : e2 : e3 : r) m x
-    weakenUnder2 (Union Here a) = Union Here a
-    weakenUnder2 (Union (There Here) a) = Union (There Here) a
-    weakenUnder2 (Union (There (There n)) a) = Union (There (There (There n))) a
-    {-# INLINE weakenUnder2 #-}
+raiseUnder2 = insertAt @2
 {-# INLINE raiseUnder2 #-}
 
 
@@ -473,14 +481,7 @@ raiseUnder2 = hoistSem $ hoist raiseUnder2 . weakenUnder2
 --
 -- @since 2.0.0.0
 raiseUnder3 :: ∀ e4 e1 e2 e3 r a. Sem (e1 : e2 : e3 : r) a -> Sem (e1 : e2 : e3 : e4 : r) a
-raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
-  where
-    weakenUnder3 :: ∀ m x. Union (e1 : e2 : e3 : r) m x -> Union (e1 : e2 : e3 : e4 : r) m x
-    weakenUnder3 (Union Here a) = Union Here a
-    weakenUnder3 (Union (There Here) a) = Union (There Here) a
-    weakenUnder3 (Union (There (There Here)) a) = Union (There (There Here)) a
-    weakenUnder3 (Union (There (There (There n))) a) = Union (There (There (There (There n)))) a
-    {-# INLINE weakenUnder3 #-}
+raiseUnder3 = insertAt @3
 {-# INLINE raiseUnder3 #-}
 
 
@@ -494,7 +495,7 @@ raiseUnder3 = hoistSem $ hoist raiseUnder3 . weakenUnder3
 --
 -- @since 1.4.0.0
 subsume_ :: ∀ r r' a. Subsume r r' => Sem r a -> Sem r' a
-subsume_ = hoistSem $ hoist subsume_ . subsumeUnion
+subsume_ = mapMembership subsumeMembership
 {-# INLINE subsume_ #-}
 
 
@@ -502,19 +503,24 @@ subsume_ = hoistSem $ hoist subsume_ . subsumeUnion
 --
 -- @since 1.4.0.0
 class Subsume (r :: EffectRow) (r' :: EffectRow) where
-  subsumeUnion :: Union r m a -> Union r' m a
+  subsumeMembership :: ElemOf e r -> ElemOf e r'
 
 instance {-# incoherent #-} Raise r r' => Subsume r r' where
-  subsumeUnion = raiseUnion
-  {-# INLINE subsumeUnion #-}
+  subsumeMembership = raiseMembership
+  {-# INLINE subsumeMembership #-}
+
+instance {-# incoherent #-} Subsume (e ': r) (e ': r) where
+  subsumeMembership = id
+  {-# INLINE subsumeMembership #-}
 
 instance (Member e r', Subsume r r') => Subsume (e ': r) r' where
-  subsumeUnion = either subsumeUnion injWeaving . decomp
-  {-# INLINE subsumeUnion #-}
+  subsumeMembership Here = membership
+  subsumeMembership (There pr) = subsumeMembership pr
+  {-# INLINE subsumeMembership #-}
 
 instance Subsume '[] r where
-  subsumeUnion = absurdU
-  {-# INLINE subsumeUnion #-}
+  subsumeMembership = absurdMembership
+  {-# INLINE subsumeMembership #-}
 
 
 ------------------------------------------------------------------------------
@@ -558,15 +564,9 @@ subsume = subsume_
 --
 -- @since 1.3.0.0
 subsumeUsing :: ∀ e r a. ElemOf e r -> Sem (e ': r) a -> Sem r a
-subsumeUsing pr =
-  let
-    go :: ∀ x. Sem (e ': r) x -> Sem r x
-    go = hoistSem $ \u -> hoist go $ case decomp u of
-      Right w -> Union pr w
-      Left  g -> g
-    {-# INLINE go #-}
-  in
-    go
+subsumeUsing pr = mapMembership \case
+  Here -> pr
+  There pr' -> pr'
 {-# INLINE subsumeUsing #-}
 
 ------------------------------------------------------------------------------
@@ -608,8 +608,11 @@ insertAt
      , InsertAtIndex index head tail oldTail full inserted)
   => Sem old a
   -> Sem full a
-insertAt = hoistSem $ \u -> hoist (insertAt @index @inserted @head @oldTail) $
-  weakenMid @oldTail (listOfLength @index @head) (insertAtIndex @Effect @index @head @tail @oldTail @full @inserted) u
+insertAt = mapMembership $
+  injectMembership
+    @oldTail
+    (listOfLength @index @head)
+    (insertAtIndex @Effect @index @head @tail @oldTail @full @inserted)
 {-# INLINE insertAt #-}
 
 -- | Given an explicit proof that @e@ exists in @r@, moves all uses of e@
@@ -622,10 +625,10 @@ insertAt = hoistSem $ \u -> hoist (insertAt @index @inserted @head @oldTail) $
 --
 -- @since TODO
 exposeUsing :: forall e r a. ElemOf e r -> Sem r a -> Sem (e ': r) a
-exposeUsing pr = hoistSem $ \(Union pr' wav) -> hoist (exposeUsing pr) $
+exposeUsing pr = mapMembership \pr' ->
   case sameMember pr pr' of
-    Just Refl -> Union Here wav
-    _         -> Union (There pr') wav
+    Just Refl -> Here
+    _         -> There pr'
 {-# INLINE exposeUsing #-}
 
 ------------------------------------------------------------------------------

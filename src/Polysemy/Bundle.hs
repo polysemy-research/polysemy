@@ -10,15 +10,19 @@ module Polysemy.Bundle
     -- * Interpretations
   , runBundle
   , subsumeBundle
+  , consBundle
+  , unconsBundle
+  , mapMembershipBundle
     -- * Miscellaneous
   , KnownList
   ) where
 
 import Polysemy
+import Polysemy.HigherOrder
 import Polysemy.Internal
 import Polysemy.Internal.Union
-import Polysemy.Internal.Bundle (subsumeMembership)
-import Polysemy.Internal.Sing (KnownList (singList))
+import Polysemy.Internal.Bundle (simpleSubsumeMembership)
+import Polysemy.Internal.Sing
 
 ------------------------------------------------------------------------------
 -- | An effect for collecting multiple effects into one effect.
@@ -41,19 +45,56 @@ injBundle = Bundle membership
 ------------------------------------------------------------------------------
 -- | Send uses of an effect to a 'Bundle' containing that effect.
 sendBundle
-  :: forall e r' r a
-   . (Member e r', Member (Bundle r') r)
+  :: forall e l r a
+   . (Member e l, Member (Bundle l) r)
   => Sem (e ': r) a
   -> Sem r a
-sendBundle = hoistSem $ \u -> case decomp u of
-  Right (Weaving e mkT lwr ex) ->
-    injWeaving $
-      Weaving (Bundle (membership @e @r') e)
-              (\n -> mkT (n . sendBundle @e @r'))
-              lwr
-              ex
-  Left g -> hoist (sendBundle @e @r') g
+sendBundle = sendBundleUsing (membership @e @l)
 {-# INLINE sendBundle #-}
+
+------------------------------------------------------------------------------
+-- | Send uses of an effect to a 'Bundle' containing that effect, given an
+-- explicit proof that that the bundle contains that effect.
+sendBundleUsing
+  :: forall e l r a
+   . Member (Bundle l) r
+  => ElemOf e l
+  -> Sem (e ': r) a
+  -> Sem r a
+sendBundleUsing pr = transform (Bundle pr)
+{-# INLINE sendBundleUsing #-}
+
+------------------------------------------------------------------------------
+-- | Send uses of @e@ and @'Bundle' l@ to @'Bundle' (e ': r)@
+consBundle :: forall e l r a
+            . Sem (e ': Bundle l ': r) a
+           -> Sem (Bundle (e ': l) ': r) a
+consBundle =
+    mapMembershipBundle @(e ': l) There
+  . sendBundleUsing (Here @e @(e ': l))
+  . raiseUnder2
+
+------------------------------------------------------------------------------
+-- | Decompose @'Bundle' (e ': l)@ into @e@ and @Bundle l@ by placing uses
+-- of @e@ on top of the effect stack, and sending uses of any effect of @l@ to
+-- @'Bundle' l@
+unconsBundle :: forall e l r a
+              . Sem (Bundle (e ': l) ': r) a
+             -> Sem (e ': Bundle l ': r) a
+unconsBundle = reinterpret2H \case
+  Bundle Here e -> propagate e
+  Bundle (There pr) e -> propagateUsing (There Here) (Bundle pr e)
+
+------------------------------------------------------------------------------
+-- | Send uses of @'Bundle' l@ to @'Bundle' r@ given an explicit membership
+-- proof transformation
+mapMembershipBundle :: forall l' l r a
+                     . Member (Bundle l') r
+                    => (forall e. ElemOf e l -> ElemOf e l')
+                    -> Sem (Bundle l ': r) a
+                    -> Sem r a
+mapMembershipBundle t = transform (\(Bundle pr e) -> Bundle (t pr) e)
+{-# INLINE mapMembershipBundle #-}
 
 ------------------------------------------------------------------------------
 -- | Run a @'Bundle' r@ by prepending @r@ to the effect stack.
@@ -69,7 +110,7 @@ runBundle = hoistSem $ \u -> hoist runBundle $ case decomp u of
 {-# INLINE runBundle #-}
 
 ------------------------------------------------------------------------------
--- | Run a @'Bundle' r@ if the effect stack contains all effects of @r@.
+-- | Run a @'Bundle' l@ if the effect stack contains all effects of @r@.
 subsumeBundle
   :: forall r' r a
    . Members r' r
@@ -77,6 +118,6 @@ subsumeBundle
   -> Sem r a
 subsumeBundle = hoistSem $ \u -> hoist subsumeBundle $ case decomp u of
   Right (Weaving (Bundle pr e) mkT lwr ex) ->
-    Union (subsumeMembership pr) (Weaving e mkT lwr ex)
+    Union (simpleSubsumeMembership pr) (Weaving e mkT lwr ex)
   Left g -> g
 {-# INLINE subsumeBundle #-}

@@ -49,8 +49,13 @@ module Polysemy.Internal.Final
 
   -- * Interpretations for Other Effects
   , embedToFinal
+
+  -- * Retrieving the type parameters of a 'Lowering' environemt
+  , TypeParamsL(..)
+  , getTypeParamsL
   ) where
 
+import Data.Kind
 import Control.Monad.Trans
 import Polysemy.Internal
 import Polysemy.Internal.Union
@@ -121,6 +126,22 @@ data Lower m t n z a where
                  -> Lower m t n z a
   RestoreL  :: forall m t n z a. t a -> Lower m t n z a
   RunL      :: forall m t n z a. n a -> Lower m t n z a
+
+-- | A singleton datatype parametrized with type parameters corresponding to
+-- @HigherOrder@
+data TypeParamsL
+      (m :: Type -> Type)
+      (t :: Type -> Type)
+      (n :: Type -> Type) = TypeParamsL
+
+-- | A trivial action just returning the 'TypeParamsL' singleton, with
+-- type parameters matching that of the current 'Lowering' environment.
+--
+-- You can use this together with @ScopedTypeVariables@ to gain access to the
+-- various parameters of the 'Lowering' if you need them.
+getTypeParamsL :: forall m t n r
+                . Sem (Lower m t n ': r) (TypeParamsL m t n)
+getTypeParamsL = return TypeParamsL
 
 -- | Embed a computation of the source monad into 'Lowering'.
 --

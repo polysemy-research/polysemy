@@ -5,106 +5,37 @@ module Polysemy.Scoped (
   -- * Effect
   Scoped,
   Scoped_,
+  Scoped1,
+  Scoped1_,
 
   -- * Constructors
   scoped,
   scoped_,
+  scoped1,
+  scoped1_,
   rescope,
+  rescope_,
+  rescope1,
+  rescope1_,
 
   -- * Interpreters
-  runScopedNew,
-  interpretScopedH,
-  interpretScopedH',
-  interpretScoped,
-  interpretScopedAs,
-  interpretScopedWithH,
-  interpretScopedWith,
-  interpretScopedWith_,
   runScoped,
-  runScopedAs,
+  runScoped_,
+  runScoped1,
+  runScoped1_,
 ) where
 
-import Data.Function ((&))
-import Data.Sequence (Seq(..))
-import qualified Data.Sequence as S
-
+import Data.Functor.Identity
+import Data.Functor.Const
+import Polysemy
+import Polysemy.Bundle
 import Polysemy.Opaque
 import Polysemy.Internal
-import Polysemy.Internal.Sing
+import Polysemy.Internal.Utils
 import Polysemy.Internal.Union
 import Polysemy.Internal.Scoped
 import Polysemy.Internal.HigherOrder
-
--- | Construct an interpreter for a higher-order effect wrapped in a 'Scoped',
--- given a resource allocation function and a parameterized handler for the
--- plain effect.
---
--- This combinator is analogous to 'interpretH' in that it allows the handler to
--- use the 'Polysemy.HigherOrder' environment and transforms the effect into
--- other effects on the stack.
-interpretScopedH ::
-  ∀ resource param effect r .
-  -- | A callback function that allows the user to acquire a resource for each
-  -- computation wrapped by 'scoped' using other effects, with an additional
-  -- argument that contains the call site parameter passed to 'scoped'.
-  (∀ q x . param ->
-   (resource -> Sem (Opaque q ': r) x) ->
-   Sem (Opaque q ': r) x) ->
-  -- | A handler like the one expected by 'interpretH' with an additional
-  -- parameter that contains the @resource@ allocated by the first argument.
-  (∀ q . resource -> EffHandlerH effect (Opaque q ': r) (Opaque q ': r)) ->
-  InterpreterFor (Scoped param effect) r
-interpretScopedH withResource scopedHandler = runScopedNew \param sem ->
-  withResource param \r -> interpretH (scopedHandler r) sem
-{-# inline interpretScopedH #-}
-
--- | Variant of 'interpretScopedH' that allows the resource acquisition function
--- to use 'Polysemy.HigherOrder'.
-interpretScopedH' ::
-  ∀ resource param effect r .
-  (∀ t e z x . Traversable t =>
-    param ->
-    (resource -> Sem (HigherOrder z t e r r ': r) x) ->
-    Sem (HigherOrder z t e r r ': r) x) ->
-  (∀ t z x . Traversable t =>
-    resource ->
-    effect z x -> Sem (HigherOrder z t (Scoped param effect) r r ': r) x) ->
-  InterpreterFor (Scoped param effect) r
-interpretScopedH' withResource scopedHandler =
-  go 0 Empty
-  where
-    go :: Word -> Seq resource -> InterpreterFor (Scoped param effect) r
-    go depth resources =
-      interpretH \case
-        Run w act ->
-          scopedHandler (S.index resources (fromIntegral w)) act
-        InScope param main | !depth' <- depth + 1 -> do
-          withResource param \ resource -> controlWithProcessorH $ \prcs ->
-            go depth' (resources :|> resource) (prcs (main depth))
-{-# inline interpretScopedH' #-}
-
--- | First-order variant of 'interpretScopedH'.
-interpretScoped ::
-  ∀ resource param effect r .
-  (∀ q x . param ->
-   (resource -> Sem (Opaque q ': r) x) ->
-   Sem (Opaque q ': r) x) ->
-  (∀ m x . resource -> effect m x -> Sem r x) ->
-  InterpreterFor (Scoped param effect) r
-interpretScoped withResource scopedHandler =
-  interpretScopedH withResource \ r e -> (raise . raise) (scopedHandler r e)
-{-# inline interpretScoped #-}
-
--- | Variant of 'interpretScoped' in which the resource allocator is a plain
--- action.
-interpretScopedAs ::
-  ∀ resource param effect r .
-  (param -> Sem r resource) ->
-  (∀ m x . resource -> effect m x -> Sem r x) ->
-  InterpreterFor (Scoped param effect) r
-interpretScopedAs resource =
-  interpretScoped \ p use -> use =<< raise (resource p)
-{-# inline interpretScopedAs #-}
+import Unsafe.Coerce
 
 -- | Higher-order interpreter for 'Scoped' that allows the handler to use
 -- additional effects that are interpreted by the resource allocator.
@@ -152,26 +83,7 @@ interpretScopedAs resource =
 -- >         pure (snd <$> res)
 -- >     MRead ->
 -- >       liftT atomicGet
-interpretScopedWithH ::
-  ∀ extra resource param effect r .
-  KnownList extra =>
-  (∀ q x .
-   param ->
-   (resource -> Sem (Append extra (Opaque q ': r)) x) ->
-   Sem (Opaque q ': r) x) ->
-  (∀ q r' .
-   r' ~ Append extra (Opaque q ': r) =>
-   resource ->
-   EffHandlerH effect r' r') ->
-  InterpreterFor (Scoped param effect) r
-interpretScopedWithH withResource scopedHandler = runScopedNew
-  \param (sem :: Sem (effect ': Opaque q ': r) x) ->
-    withResource param \resource ->
-      sem
-        & mapMembership
-           (injectMembership (singList @'[effect]) (singList @extra))
-        & interpretH (scopedHandler @q resource)
-{-# inline interpretScopedWithH #-}
+
 
 -- | First-order variant of 'interpretScopedWithH'.
 --
@@ -188,83 +100,6 @@ interpretScopedWithH withResource scopedHandler = runScopedNew
 -- >     SomeAction -> put . (> 0) =<< ask @Int
 -- >   where
 -- >     localEffects () use = evalState False (runReader 5 (use ()))
-interpretScopedWith ::
-  ∀ extra param resource effect r.
-  KnownList extra =>
-  (∀ q x .
-   param ->
-   (resource -> Sem (Append extra (Opaque q ': r)) x) ->
-   Sem (Opaque q ': r) x) ->
-  (∀ m x . resource -> effect m x -> Sem (Append extra r) x) ->
-  InterpreterFor (Scoped param effect) r
-interpretScopedWith withResource scopedHandler = runScopedNew
-  \param (sem :: Sem (effect ': Opaque q ': r) x) ->
-    withResource param \resource ->
-      sem
-        & mapMembership
-           (injectMembership (singList @'[effect]) (singList @extra))
-        & interpretH \e -> raise $
-            mapMembership
-              (injectMembership @r (singList @extra) (singList @'[Opaque q]))
-              (scopedHandler resource e)
-{-# inline interpretScopedWith #-}
-
--- | Variant of 'interpretScopedWith' in which no resource is used and the
--- resource allocator is a plain interpreter.
--- This is useful for scopes that only need local effects, but no resources in
--- the handler.
---
--- See the /Note/ on 'interpretScopedWithH'.
-interpretScopedWith_ ::
-  ∀ extra param effect r .
-  KnownList extra =>
-  (∀ q x .
-   param ->
-   Sem (Append extra (Opaque q ': r)) x ->
-   Sem (Opaque q ': r) x) ->
-  (∀ m x . effect m x -> Sem (Append extra r) x) ->
-  InterpreterFor (Scoped param effect) r
-interpretScopedWith_ withResource scopedHandler =
-  interpretScopedWith @extra
-    (\ p f -> withResource p (f ()))
-    (\ () -> scopedHandler)
-{-# inline interpretScopedWith_ #-}
-
--- | Variant of 'interpretScoped' that uses another interpreter instead of a
--- handler.
---
--- This is mostly useful if you want to reuse an interpreter that you cannot
--- easily rewrite (like from another library). If you have full control over the
--- implementation, 'interpretScoped' should be preferred.
---
--- /Note/: In previous versions of Polysemy, the wrapped interpreter was
--- executed fully, including the initializing code surrounding its handler,
--- for each action in the program. However, new and continuing discoveries
--- regarding 'Scoped' has allowed the improvement of having the interpreter be
--- used only once per use of 'scoped', and have it cover the same scope of
--- actions that the resource allocator does.
---
--- This renders the resource allocator practically redundant; for the moment,
--- the API surrounding 'Scoped' remains the same, but work is in progress to
--- revamp the entire API of 'Scoped'.
-runScoped ::
-  ∀ resource param effect r .
-  (∀ q x . param -> (resource -> Sem (Opaque q ': r) x) -> Sem (Opaque q ': r) x) ->
-  (∀ q . resource -> InterpreterFor effect (Opaque q ': r)) ->
-  InterpreterFor (Scoped param effect) r
-runScoped withResource scopedInterpreter = runScopedNew \param sem ->
-  withResource param (\r -> scopedInterpreter r sem)
-{-# inline runScoped #-}
-
--- | Variant of 'runScoped' in which the resource allocator returns the resource
--- rather than calling a continuation.
-runScopedAs ::
-  ∀ resource param effect r .
-  (param -> Sem r resource) ->
-  (∀ q. resource -> InterpreterFor effect (Opaque q ': r)) ->
-  InterpreterFor (Scoped param effect) r
-runScopedAs resource = runScoped \ p use -> use =<< raise (resource p)
-{-# inline runScopedAs #-}
 
 -- | Run a 'Scoped' effect by specifying the interpreter to be used at every
 -- use of 'scoped'.
@@ -278,43 +113,142 @@ runScopedAs resource = runScoped \ p use -> use =<< raise (resource p)
 -- expanded to make 'Scoped' even more flexible.
 --
 -- @since 1.9.0.0
-runScopedNew ::
-  ∀ param effect r .
-  (∀ q. param -> InterpreterFor effect (Opaque q ': r)) ->
-  InterpreterFor (Scoped param effect) r
-runScopedNew h = interpretH \case
-  Run w _ -> errorWithoutStackTrace $ "top level run with depth " ++ show w
-  InScope param main -> controlWithProcessorH $ \prcs ->
-    prcs (main 0)
-      & raise2Under
-      & go 0
-      & h param
-      & interpretH (\(Opaque (OuterRun w _)) ->
-          errorWithoutStackTrace $ "unhandled OuterRun with depth " ++ show w)
-  where
-    go' :: Word
-        -> InterpreterFor
-             (Opaque (OuterRun effect))
-             (effect ': Opaque (OuterRun effect) ': r)
-    go' depth = interpretH \case
-      sr@(Opaque (OuterRun w act))
-        | w == depth -> propagate act
-        | otherwise -> propagate sr
 
-    -- TODO investigate whether loopbreaker optimization is effective here
-    go :: Word
-       -> InterpreterFor
-            (Scoped param effect)
-            (effect ': Opaque (OuterRun effect) ': r)
-    go depth = interpretH \case
-        Run w act
-          | w == depth -> propagate act
-          | otherwise -> propagate (Opaque (OuterRun w act))
-        InScope param main -> controlWithProcessorH $ \prcs -> do
-          let !depth' = depth + 1
-          prcs (main depth')
-            & go depth'
-            & h param
-            & raise2Under
-            & go' depth
-{-# INLINE runScopedNew #-}
+runScoped ::
+  ∀ effect param modifier r .
+  (∀ q x.
+   param ->
+   Sem (effect ': Opaque q ': r) x ->
+   Sem (Opaque q ': r) (modifier x)) ->
+  InterpreterFor (Scoped effect param modifier) r
+runScoped interp =
+  coerceEffs
+    @_ @(Scoped1
+          (Const2 effect :: () -> Effect)
+          (Const param)
+          (Const1 modifier)
+         ': r)
+  >>> runScoped1 \(Const param) (sem :: Sem (ce ': Opaque q ': r) x) ->
+    Const1 <$> interp @q param (coerceEffs sem)
+
+runScoped_ ::
+  ∀ effect param r .
+  (∀ q x.
+   param ->
+   Sem (effect ': Opaque q ': r) x -> Sem (Opaque q ': r) x) ->
+  InterpreterFor (Scoped_ effect param) r
+runScoped_ interp = runScoped \p sem -> Identity <$> interp p sem
+
+runScoped1 ::
+  ∀ effect param modifier r .
+  (∀ k q x.
+   param k ->
+   Sem (effect k ': Opaque q ': r) x ->
+   Sem (Opaque q ': r) (modifier k x)
+   ) ->
+  InterpreterFor (Scoped1 effect param modifier) r
+runScoped1 interp = interpretH \case
+  RunInScope1 w _ ->
+    errorWithoutStackTrace $ "top level run with depth " ++ show w
+  Scoped1 ex (param :: param k) main -> do
+    (_ :: TypeParamsH z t sc rPre rPost) <- getTypeParamsH
+    runH' @z @t @sc @r @r (main 0)
+      -- Scoped ... ': HigherOrder ... ': Bundle '[HigherOrder ...] ': r
+      & sink @'[_]
+      -- HigherOrder ... ': Scoped ... ': Bundle '[HigherOrder ...] ': r
+      & rewrite (Bundle (Here @_ @_ @'[]))
+      -- Bundle '[HigherOrder ...] ': Scoped ... ': Bundle '[HigherOrder ...] ': r
+      & subsumeUsing (There Here)
+      -- Scoped ... ': Bundle '[HigherOrder ...] ': r
+      & go @k 0
+      -- effect k ': OuterRun effect ': Bundle '[HigherOrder ...] ': r
+      & subsume_
+      -- OuterRun effect ': Bundle '[HigherOrder ...] ': effect k ': Bundle '[OuterRun effect, HigherOrder ...] ': r
+      & consBundle @_ @'[_]
+      -- Bundle '[OuterRun effect, HigherOrder ...] ': effect k ': Bundle '[OuterRun effect, HigherOrder ...] ': r
+      & subsumeUsing (There Here)
+      -- effect k ': Bundle '[OuterRun effect, HigherOrder ...] ': r
+      & bundleToOpaque
+      -- effect k ': Opaque (Bundle '[OuterRun effect, HigherOrder ...]) ': r
+      & interp param
+      -- Opaque (Bundle '[OuterRun effect, HigherOrder ...]) ': r
+      & fromOpaque
+      -- Bundle '[OuterRun effect, HigherOrder ...] ': r
+      & runBundle
+      -- OuterRun effect ': HigherOrder ... ': r
+      & interpretH @(OuterRun effect) \case
+        OuterRun w _ -> errorWithoutStackTrace $ "unhandled OuterRun with depth " ++ show w
+      -- OuterRun effect ': HigherOrder ... ': r
+    <&> ex
+  where
+    sink :: forall mid l r' x before after
+          . (before ~ l ': (Append mid r'), after ~ Append mid (l ': r'),
+             Subsume before after
+            )
+         => Sem before x -> Sem after x
+    sink = subsume_
+
+    bundleToOpaque :: forall e l x
+                    . Sem (e ': Bundle l ': r) x
+                   -> Sem (e ': Opaque (Bundle l) ': r) x
+    bundleToOpaque = coerceEffs
+
+    go :: forall k l x
+        . Word
+       -> Sem (Scoped1 effect param modifier ': Bundle l ': r) x
+       -> Sem (effect k ': OuterRun effect ': Bundle l ': r) x
+    go depth = reinterpret2H \case
+        RunInScope1 w act
+          | w == depth -> propagateUsing Here (unsafeCoerce act)
+          | otherwise -> propagate (OuterRun w act)
+        Scoped1 ex (param :: param k') main -> do
+          let depth' = depth + 1
+          (_ :: TypeParamsH z t sc rPre rPost) <- getTypeParamsH
+          runH' @z @t @sc @rPre @rPost (main depth')
+            -- Scoped ... ': HigherOrder ... ': Bundle l ': Bundle (HigherOrder ... ': l) ': r
+            & sink @'[_, _]
+            -- HigherOrder ... ': Bundle l ': Scoped ... ': Bundle (HigherOrder ... ': l) ': r
+            & consBundle @_ @l
+            -- Bundle (HigherOrder ... ': l) ': Scoped ... ': Bundle (HigherOrder ... ': l) ': r
+            & subsumeUsing (There Here)
+            -- Scoped ... ': Bundle (HigherOrder ... ': l) ': r
+            & go @k' depth'
+            -- effect k' ': OuterRun effect ': Bundle (HigherOrder ... ': l') ': r
+            & subsume_
+            -- OuterRun effect ': Bundle (HigherOrder ... ': l') ': effect k' ': Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+            & consBundle @(OuterRun effect) @(_ ': l)
+            -- Bundle (OuterRun effect ': HigherOrder ... ': l) ': effect k' ': Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+            & subsumeUsing (There Here)
+            -- effect k' ': Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+            & bundleToOpaque
+            -- effect k' ': Opaque (Bundle (OuterRun effect ': HigherOrder ... ': l)) ': r
+            & interp param
+            -- Opaque (Bundle (OuterRun effect ': HigherOrder ... ': l)) ': r
+            & fromOpaque
+            -- Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+            & unconsBundle
+            -- OuterRun effect ': Bundle (HigherOrder ... ': l) ': r
+            & insertAt @2
+            -- OuterRun effect ': Bundle (HigherOrder ... ': l) ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+            & interpretH \case
+              orun@(OuterRun w act)
+                | w == depth -> propagateUsing (There (There Here)) (unsafeCoerce act)
+                | otherwise -> propagate orun
+            -- Bundle (HigherOrder ... ': l) ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+            & unconsBundle
+            -- HigherOrder ... ': Bundle l ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+            & subsumeUsing (There Here)
+            -- Bundle l ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+            & subsumeUsing (There (There (There Here)))
+            -- HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+          <&> ex
+{-# NOINLINE runScoped1 #-}
+
+runScoped1_ ::
+  ∀ effect param r .
+  (∀ k q x.
+   param k ->
+   Sem (effect k ': Opaque q ': r) x -> Sem (Opaque q ': r) x
+   ) ->
+  InterpreterFor (Scoped1_ effect param) r
+runScoped1_ interp = runScoped1 \p sem -> (Const1 #. Identity) <$> interp p sem

@@ -20,6 +20,8 @@ module Polysemy.Membership
   , extendMembershipLeft
   , extendMembershipRight
   , injectMembership
+  , Subsume(..)
+  , Raise(..)
 
     -- * Miscellaneous
   , KnownList(..)

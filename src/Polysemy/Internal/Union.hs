@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes     #-}
+{-# LANGUAGE BangPatterns            #-}
 {-# LANGUAGE CPP                     #-}
 {-# LANGUAGE ConstraintKinds         #-}
 {-# LANGUAGE EmptyCase               #-}
@@ -41,7 +42,7 @@ module Polysemy.Internal.Union
   , absurdU
   , decompCoerce
   -- * Witnesses
-  , ElemOf (Here, There)
+  , ElemOf (.., Here, There)
   , membership
   , sameMember
   -- * Checking membership
@@ -50,6 +51,7 @@ module Polysemy.Internal.Union
   , extendMembershipLeft
   , extendMembershipRight
   , injectMembership
+  , absurdMembership
   , weakenList
   , weakenMid
 
@@ -63,6 +65,7 @@ import Data.Functor.Identity
 import Data.Kind
 import Data.Typeable
 import Polysemy.Internal.Kind
+import Polysemy.Internal.Opaque
 import Polysemy.Internal.WeaveClass
 import Polysemy.Internal.Sing (SList (..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -169,12 +172,15 @@ matchThere :: forall e r. ElemOf e r -> MatchThere e r
 matchThere (UnsafeMkElemOf 0) = MTNo
 matchThere (UnsafeMkElemOf e) = unsafeCoerce $ MTYes $ UnsafeMkElemOf $ e - 1
 
-pattern Here :: () => (r ~ (e ': r')) => ElemOf e r
+absurdMembership :: ElemOf e '[] -> b
+absurdMembership !_ = errorWithoutStackTrace "bad use of UnsafeMkElemOf"
+
+pattern Here :: () => ((e ': r') ~ r) => ElemOf e r
 pattern Here <- (matchHere -> MHYes)
   where
     Here = UnsafeMkElemOf 0
 
-pattern There :: () => (r' ~ (e' ': r)) => ElemOf e r -> ElemOf e r'
+pattern There :: () => ((e' ': r) ~ r') => ElemOf e r -> ElemOf e r'
 pattern There e <- (matchThere -> MTYes e)
   where
     There (UnsafeMkElemOf e) = UnsafeMkElemOf $ e + 1
@@ -203,6 +209,9 @@ instance {-# OVERLAPPING #-} Member t (t ': z) where
   membership' = Here
 
 instance Member t z => Member t (_1 ': z) where
+  membership' = There $ membership' @t @z
+
+instance {-# INCOHERENT #-} Member t z => Member t (Opaque q ': z) where
   membership' = There $ membership' @t @z
 
 ------------------------------------------------------------------------------
@@ -295,7 +304,7 @@ extract (Union (There pr) _) = case pr of {}
 ------------------------------------------------------------------------------
 -- | An empty union contains nothing, so this function is uncallable.
 absurdU :: Union '[] m a -> b
-absurdU (Union pr _) = case pr of {}
+absurdU (Union pr _) = absurdMembership pr
 
 
 ------------------------------------------------------------------------------

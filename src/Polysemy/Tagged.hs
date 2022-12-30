@@ -17,10 +17,7 @@ module Polysemy.Tagged
 
 import Data.Coerce
 import Polysemy
-import Polysemy.Internal
-import Polysemy.Internal.Union
-import Unsafe.Coerce
-
+import Polysemy.Internal.Utils
 
 ------------------------------------------------------------------------------
 -- | An effect for annotating effects and disambiguating identical effects.
@@ -61,7 +58,7 @@ tagged
     :: forall k e r a
      . Sem (e ': r) a
     -> Sem (Tagged k e ': r) a
-tagged = unsafeCoerce
+tagged = coerceEffs
 {-# INLINE tagged #-}
 
 
@@ -72,7 +69,7 @@ untag
     :: forall k e r a
      . Sem (Tagged k e ': r) a
     -> Sem (e ': r) a
-untag = unsafeCoerce
+untag = coerceEffs
 {-# INLINE untag #-}
 
 
@@ -83,9 +80,5 @@ retag
      . Member (Tagged k2 e) r
     => Sem (Tagged k1 e ': r) a
     -> Sem r a
-retag = hoistSem $ \u -> case decomp u of
-  Right (Weaving (Tagged e) mkT lwr ex) ->
-    injWeaving $ Weaving (Tagged @k2 e) (\n -> mkT $ n . retag @_ @k2) lwr ex
-  Left g -> hoist (retag @_ @k2) g
+retag = transform (\(Tagged e) -> Tagged @k2 e)
 {-# INLINE retag #-}
-

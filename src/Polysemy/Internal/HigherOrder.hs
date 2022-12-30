@@ -2,6 +2,7 @@
 {-# OPTIONS_HADDOCK not-home #-}
 module Polysemy.Internal.HigherOrder where
 
+import Data.Kind (Type)
 import Control.Monad
 
 import Polysemy.Internal
@@ -49,6 +50,25 @@ data HigherOrder z t e rPre rPost :: Effect where
     -> HigherOrder z t e rPre rPost m a
   RestoreH
     :: forall z t e rPre rPost m a. t a -> HigherOrder z t e rPre rPost m a
+
+-- | A singleton datatype parametrized with type parameters corresponding to
+-- @HigherOrder@
+data TypeParamsH
+      (z :: Type -> Type)
+      (t :: Type -> Type)
+      (e :: Effect)
+      (rPre :: EffectRow)
+      (rPost :: EffectRow) = TypeParamsH
+
+-- | A trivial action just returning the 'TypeParamsH' singleton, with
+-- type parameters matching that of the current 'HigherOrder' environment.
+--
+-- You can use this together with @ScopedTypeVariables@ to gain access to the
+-- various parameters of the 'HigherOrder' if you need them.
+getTypeParamsH :: forall z t e rPre rPost
+                    . Sem (HigherOrder z t e rPre rPost ': rPost)
+                          (TypeParamsH z t e rPre rPost)
+getTypeParamsH = return TypeParamsH
 
 -- | Propagate an effect action where the higher-order chunks are of the same
 -- monad @z@ as that used by the effect currently being handled.
@@ -330,31 +350,31 @@ interpretH :: forall e r a
               . EffHandlerH e r r
              -> Sem (e ': r) a
              -> Sem r a
-interpretH = genericInterpretH
+interpretH = genericInterpretH subsumeMembership
 {-# INLINE interpretH #-}
 
 ------------------------------------------------------------------------------
 -- | A generalization of 'interpretH', 'reinterpretH', 'reinterpret2H', etc.:
--- given a handler @h@ for a (higher-order) effect @e@, @'genericInterpretH' h@
--- gives an interpreter @Sem (e ': r)@ to @Sem r'@, as long @r@ can be
--- transformed to @r'@ through subsuming and/or introducing effects.
+-- given an explicit membership transformation from @r@ to @r'@ and a
+-- handler @h@ for a (higher-order) effect @e@, @'genericInterpretH' h@
+-- gives an interpreter @Sem (e ': r)@ to @Sem r'@.
 --
--- Due to its generic nature, 'genericInterpretH' is often unsuitable for inline
--- use. It's most useful to defined specializations (like 'interpretH' and
--- 'reinterpretH'.)
+-- The most commonly useful membership transformation to use with
+-- 'genericInterpretH' is 'Polysemy.Membership.subsumeMembership'
 --
 -- @since TODO
 genericInterpretH :: forall e r' r a
-                  . Subsume r r'
-                 => EffHandlerH e r r'
+                  . (forall e'. ElemOf e' r -> ElemOf e' r')
+                 -> EffHandlerH e r r'
                  -> Sem (e ': r) a
                  -> Sem r' a
-genericInterpretH h = go
+genericInterpretH tPr h = go
   where
     go :: forall a'. Sem (e ': r) a' -> Sem r' a'
     go (Sem sem) = Sem $ \(k :: forall x. Union r' (Sem r') x -> m x) ->
       sem $ \u -> case decomp u of
-        Left g -> k $ subsumeUnion @r @r' $ hoist go g
+        Left (Union pr wav) ->
+          k $ hoist go (Union (tPr pr) wav)
         Right (Weaving e
                      (mkT :: forall n x
                            . Monad n
@@ -409,7 +429,7 @@ genericInterpretH h = go
               {-# NOINLINE go3 #-}
           in
             fmap ex $ lwr $ go1 (h e)
-{-# INLINE genericInterpretH #-}
+{-# INLINE[1] genericInterpretH #-}
 
 ------------------------------------------------------------------------------
 -- | The simplest way to produce an effect handler. Interprets an effect @e@ by
@@ -434,7 +454,7 @@ reinterpretH :: forall e1 e2 r a
                 . EffHandlerH e1 r (e2 ': r)
                -> Sem (e1 ': r) a
                -> Sem (e2 ': r) a
-reinterpretH = genericInterpretH
+reinterpretH = genericInterpretH There
 {-# INLINE reinterpretH #-}
 
 ------------------------------------------------------------------------------
@@ -462,7 +482,7 @@ reinterpret2H :: forall e1 e2 e3 r a
                  . EffHandlerH e1 r (e2 ': e3 ': r)
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': r) a
-reinterpret2H = genericInterpretH
+reinterpret2H = genericInterpretH (There . There)
 {-# INLINE[2] reinterpret2H #-}
 
 ------------------------------------------------------------------------------
@@ -487,7 +507,7 @@ reinterpret3H :: forall e1 e2 e3 e4 r a
                  . EffHandlerH e1 r (e2 ': e3 ': e4 ': r)
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': e4 ': r) a
-reinterpret3H = genericInterpretH
+reinterpret3H = genericInterpretH (There . There . There)
 {-# INLINE reinterpret3H #-}
 
 ------------------------------------------------------------------------------

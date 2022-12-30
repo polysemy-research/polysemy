@@ -32,6 +32,10 @@ module Polysemy.HigherOrder
   -- * Lowering @'Polysemy.Sem' ('HigherOrder' ... ': r)@ to @'Polysemy.Sem' r@
   , liftWithH
   , controlH
+
+  -- * Retrieving the type parameters of a 'HigherOrder'
+  , TypeParamsH(..)
+  , getTypeParamsH
   ) where
 
 import Polysemy.Internal.HigherOrder

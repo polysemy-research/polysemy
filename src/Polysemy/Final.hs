@@ -51,6 +51,10 @@ module Polysemy.Final
 
   -- * Interpretations for Other Effects
   , embedToFinal
+
+  -- * Retrieving the type parameters of a 'Lowering' environemt
+  , TypeParamsL(..)
+  , getTypeParamsL
   ) where
 
 import Polysemy.Internal.Final
