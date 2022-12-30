@@ -126,15 +126,15 @@ module Polysemy
   , Effect
   , EffectRow
 
-    -- * 'Handling'
+    -- * 'HigherOrder'
     -- | When interpreting higher-order effects using 'interpretH' and friends,
     -- you must execute higher-order \"chunks\" given by the interpreted effect
     -- using 'runH' or 'runH''.
     --
     -- 'runH' and 'runH'' are enough for most purposes when using
-    -- 'interpretH'. However, "Polysemy.Interpret" offers additional, more
+    -- 'interpretH'. However, "Polysemy.HigherOrder" offers additional, more
     -- complicated features which are occasionally needed.
-  , Handling
+  , HigherOrder
   , runH
   , runH'
   ) where
@@ -142,6 +142,6 @@ module Polysemy
 import Polysemy.Final
 import Polysemy.Internal
 import Polysemy.Internal.Combinators
-import Polysemy.Internal.Interpret
+import Polysemy.Internal.HigherOrder
 import Polysemy.Internal.Kind
 import Polysemy.Internal.TH.Effect

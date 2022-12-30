@@ -1,7 +1,7 @@
 -- | Description: Reexports of membership related functionality
 module Polysemy.Membership
   ( -- * Witnesses
-    ElemOf (..)
+    ElemOf (Here, There)
   , membership
   , sameMember
 
@@ -14,6 +14,7 @@ module Polysemy.Membership
   , exposeUsing
   , interceptUsing
   , interceptUsingH
+  , mapMembership
 
   -- * Membership manipulation
   , extendMembershipLeft
@@ -22,10 +23,10 @@ module Polysemy.Membership
 
     -- * Miscellaneous
   , KnownList(..)
-  , SList(..)
+  , SList(SEnd, SCons)
   ) where
 
 import Polysemy.Internal
-import Polysemy.Internal.Interpret
+import Polysemy.Internal.HigherOrder
 import Polysemy.Internal.Sing
 import Polysemy.Internal.Union

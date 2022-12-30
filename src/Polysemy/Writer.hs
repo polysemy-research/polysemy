@@ -34,7 +34,7 @@ import Data.Semigroup
 import Polysemy
 import Polysemy.Output
 import Polysemy.State
-import Polysemy.Interpret
+import Polysemy.HigherOrder
 
 import Polysemy.Internal.Union
 import Polysemy.Internal.Writer

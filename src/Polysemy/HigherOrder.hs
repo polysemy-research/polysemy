@@ -1,7 +1,7 @@
 -- | Tools for more advanced usages of 'Polysemy.interpretH'
-module Polysemy.Interpret
-  ( -- * 'Handling' effect
-    Handling
+module Polysemy.HigherOrder
+  ( -- * 'HigherOrder' effect
+    HigherOrder
 
     -- * Ultrageneric 'interpretH'
   , genericInterpretH
@@ -29,9 +29,9 @@ module Polysemy.Interpret
   , InterpreterH(..)
   , getInterpreterH
 
-  -- * Lowering @'Polysemy.Sem' ('Handling' ... ': r)@ to @'Polysemy.Sem' r@
+  -- * Lowering @'Polysemy.Sem' ('HigherOrder' ... ': r)@ to @'Polysemy.Sem' r@
   , liftWithH
   , controlH
   ) where
 
-import Polysemy.Internal.Interpret
+import Polysemy.Internal.HigherOrder

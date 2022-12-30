@@ -38,7 +38,7 @@ module Polysemy.Internal
   , usingSem
   , liftSem
   , hoistSem
-  , restack
+  , mapMembership
   , Append
   , InterpreterFor
   , InterpretersFor
@@ -353,13 +353,14 @@ hoistSem nat (Sem m) = Sem $ \k -> m $ \u -> k $ nat u
 {-# INLINE hoistSem #-}
 
 ------------------------------------------------------------------------------
--- | Extend the stack of a 'Sem' with an explicit membership proof
+-- | Rewrite the effect stack of a 'Sem' using with an explicit membership proof
 -- transformation.
-restack :: (forall e. ElemOf e r -> ElemOf e r')
-        -> Sem r a
-        -> Sem r' a
-restack n = hoistSem $ \(Union pr wav) -> hoist (restack n) $ Union (n pr) wav
-{-# INLINE restack #-}
+mapMembership :: (forall e. ElemOf e r -> ElemOf e r')
+              -> Sem r a
+              -> Sem r' a
+mapMembership n = hoistSem $ \(Union pr wav) ->
+  hoist (mapMembership n) $ Union (n pr) wav
+{-# INLINE mapMembership #-}
 
 ------------------------------------------------------------------------------
 -- | Introduce an arbitrary number of effects on top of the effect stack. This

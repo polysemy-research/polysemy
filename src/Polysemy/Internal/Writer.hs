@@ -102,15 +102,13 @@ runWriterSTMAction write = interpretH $ \case
       doesn't use 'write' at all, and instead, when the computation completes,
       commit the changes it made to the local tvar by 'commitPass',
       globally 'write'ing it all at once.
-      ('commitListen' serves only as a (likely unneeded)
-      safety measure.)
+      ('commitListen' serves only as a (likely unneeded) safety measure.)
 
       'commitListen''/'commitPass' is protected by 'mask'+'onException'.
-      Combine this with the fact that the 'withWeavingToFinal' can't be
+      Combine this with the fact that the 'controlFinal' can't be
       interrupted by pure errors emitted by effects (since these will be
-      represented as part of the functorial state), and we
-      guarantee that no writes will be lost if the argument computation
-      fails for whatever reason.
+      represented as part of the effectful state), and we guarantee that no
+      writes will be lost if the argument computation fails for whatever reason.
 
       The argument computation to a 'pass' may also spawn
       asynchronous computations which do 'tell's of their own.

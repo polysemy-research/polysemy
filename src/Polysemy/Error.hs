@@ -286,6 +286,6 @@ runErrorAsExcFinal
     -> Sem r a
 runErrorAsExcFinal uid = interpretFinal $ \case
   Throw e   -> embed $ X.throwIO $ WrappedExc uid (unsafeCoerce e)
-  Catch m h -> controlWithProcessorS $ \lower ->
+  Catch m h -> controlWithProcessorL $ \lower ->
     catchWithUid uid (lower m) (\e -> lower (h e))
 {-# INLINE runErrorAsExcFinal #-}

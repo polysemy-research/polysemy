@@ -23,7 +23,7 @@ import qualified Control.Exception as X
 import           Control.Monad
 import           Polysemy
 import           Polysemy.Final
-import           Polysemy.Interpret
+import           Polysemy.HigherOrder
 
 ------------------------------------------------------------------------------
 -- | An effect capable of providing 'X.bracket' semantics. Interpreters for this
@@ -162,23 +162,23 @@ bracketToIOFinal :: Member (Final IO) r
                   -> Sem r a
 bracketToIOFinal = interpretFinal @IO $ \case
   GeneralBracket alloc dealloc use -> do
-    let release a ec = withProcessorS $ \lower ->
+    let release a ec = withProcessorL $ \lower ->
           X.try @X.SomeException $ X.uninterruptibleMask_ $ lower $ dealloc a ec
-    controlS $ \lower -> X.mask $ \restore -> lower $ do
-      a <- runS alloc
-      etb <- withProcessorS $ \lower' -> X.try $ restore (lower' (use a))
+    controlL $ \lower -> X.mask $ \restore -> lower $ do
+      a <- runL alloc
+      etb <- withProcessorL $ \lower' -> X.try $ restore (lower' (use a))
       case etb of
         Left e -> do
           _ <- release a (ExitCaseException e)
           embed (X.throwIO e)
         Right tb | Just tVoid <- traverse (const Nothing) tb -> do
           _ <- release a ExitCaseAbort
-          restoreS tVoid
+          restoreL tVoid
         Right tb -> do
-          b <- restoreS tb
+          b <- restoreL tb
           c <-     release a (ExitCaseSuccess b)
                >>= either (embed . X.throwIO) return
-               >>= restoreS
+               >>= restoreL
           return (b, c)
 {-# INLINE bracketToIOFinal #-}
 

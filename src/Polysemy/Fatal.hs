@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
+-- | Description: The effect 'Fatal' and its interpreters
 module Polysemy.Fatal
   ( -- * Effect
     Fatal (..)
@@ -19,13 +20,14 @@ module Polysemy.Fatal
   , runFatal
   , mapFatal
   , fatalToError
+  , fatalIntoError
   , fatalToIOFinal
   ) where
 
 import qualified Control.Exception as X
 import           Control.Monad
 import qualified Control.Monad.Trans.Except as E
-import           Data.Typeable
+import           Data.Coerce
 import           Polysemy
 import           Polysemy.Error
 import           Polysemy.Final
@@ -33,8 +35,11 @@ import           Polysemy.Internal
 import           Polysemy.Internal.Union
 
 
-data Fatal e m a where
-  Fatal :: e -> Fatal e m a
+------------------------------------------------------------------------------
+-- | A variant of 'Error' without the ability to catch exceptions
+newtype Fatal e m a where
+  -- | Short-circuit the current program using the given error value.
+  Fatal :: e -> Fatal e m void
 
 makeSem ''Fatal
 
@@ -169,16 +174,6 @@ mapFatal
 mapFatal f = transform (\(Fatal e) -> Fatal (f e))
 {-# INLINE mapFatal #-}
 
-
-newtype WrappedExc e = WrappedExc { _unwrapExc :: e }
-  deriving (Typeable)
-
-instance Typeable e => Show (WrappedExc e) where
-  show = mappend "WrappedExc: " . show . typeRep
-
-instance (Typeable e) => X.Exception (WrappedExc e)
-
-
 ------------------------------------------------------------------------------
 -- | Run an 'Fatal' effect as an 'IO' 'X.Exception' through final 'IO'. This
 -- interpretation is significantly faster than 'runFatal'.
@@ -189,35 +184,28 @@ instance (Typeable e) => X.Exception (WrappedExc e)
 --
 -- @since 1.2.0.0
 fatalToIOFinal
-    :: ( Typeable e
-       , Member (Final IO) r
-       )
+    :: Member (Final IO) r
     => Sem (Fatal e ': r) a
     -> Sem r (Either e a)
-fatalToIOFinal sem = controlFinal $ \lower -> do
-    lower (Right <$> runFatalAsExcFinal sem)
-  `X.catch` \(WrappedExc e) ->
-    lower $ return $ Left e
+fatalToIOFinal = errorToIOFinal . fatalIntoError
 {-# INLINE fatalToIOFinal #-}
 
-
-runFatalAsExcFinal
-    :: forall e r a
-    .  ( Typeable e
-       , Member (Final IO) r
-       )
-    => Sem (Fatal e ': r) a
-    -> Sem r a
-runFatalAsExcFinal = interpretFinal @IO $ \case
-  Fatal e   -> embed $ X.throwIO $ WrappedExc e
-{-# INLINE runFatalAsExcFinal #-}
-
-
+-- | Transform a @'Fatal' e@ effect into a @'Error' e@ effect.
 fatalToError
-    :: Member (Error e) r
+    :: forall e r a
+     . Member (Error e) r
     => Sem (Fatal e ': r) a
     -> Sem r a
-fatalToError = interpret $ \case
-  Fatal e -> throw e
+fatalToError = transform (coerce (Throw @e @z @x)
+                          :: forall z x. Fatal e z x -> Error e z x)
 {-# INLINE fatalToError #-}
 
+-- | Rewrite a @'Fatal' e@ effect into a @'Error' e@ effect on top of the effect
+-- stack.
+fatalIntoError
+    :: forall e r a
+     . Sem (Fatal e ': r) a
+    -> Sem (Error e ': r) a
+fatalIntoError = rewrite (coerce (Throw @e @z @x)
+                          :: forall z x. Fatal e z x -> Error e z x)
+{-# INLINE fatalIntoError #-}

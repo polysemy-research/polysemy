@@ -15,9 +15,11 @@ module Polysemy.Tagged
   , retag
   ) where
 
+import Data.Coerce
 import Polysemy
 import Polysemy.Internal
 import Polysemy.Internal.Union
+import Unsafe.Coerce
 
 
 ------------------------------------------------------------------------------
@@ -49,10 +51,7 @@ tag
      . Member (Tagged k e) r
     => Sem (e ': r) a
     -> Sem r a
-tag = hoistSem $ \u -> case decomp u of
-  Right (Weaving e mkT lwr ex) ->
-    injWeaving $ Weaving (Tagged @k e) (\n -> mkT (n . tag @k)) lwr ex
-  Left g -> hoist (tag @k) g
+tag = transform @e @(Tagged k e) coerce
 {-# INLINE tag #-}
 
 
@@ -62,11 +61,7 @@ tagged
     :: forall k e r a
      . Sem (e ': r) a
     -> Sem (Tagged k e ': r) a
-tagged = hoistSem $ \u ->
-  case decompCoerce u of
-    Right (Weaving e mkT lwr ex) ->
-      injWeaving $ Weaving (Tagged @k e) (\n -> mkT (n . tagged @k)) lwr ex
-    Left g -> hoist (tagged @k) g
+tagged = unsafeCoerce
 {-# INLINE tagged #-}
 
 
@@ -77,13 +72,7 @@ untag
     :: forall k e r a
      . Sem (Tagged k e ': r) a
     -> Sem (e ': r) a
--- TODO(KingoftheHomeless): I think this is safe to replace with 'unsafeCoerce',
--- but doing so probably worsens performance, as it hampers optimizations.
--- Once GHC 8.10 rolls out, I will benchmark and compare.
-untag = hoistSem $ \u -> case decompCoerce u of
-  Right (Weaving (Tagged e) mkT lwr ex) ->
-    Union Here (Weaving e (\n -> mkT (n . untag)) lwr ex)
-  Left g -> hoist untag g
+untag = unsafeCoerce
 {-# INLINE untag #-}
 
 

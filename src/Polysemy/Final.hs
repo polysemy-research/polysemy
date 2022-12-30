@@ -9,41 +9,41 @@ module Polysemy.Final
 
     -- * Actions
   , controlFinal
-  , withStrategicToFinal
+  , withLoweringToFinal
   , embedFinal
 
     -- * Combinators for Interpreting to the Final Monad
   , interpretFinal
 
-    -- * Strategy
-    -- | 'Strategic' is a domain-specific language very similar in
-    -- use to 'Polysemy.Interpretation.Handling', and is used to describe how
+    -- * Lowering
+    -- | 'Lowering' is a domain-specific language very similar in
+    -- use to 'Polysemy.HigherOrder', and is used to describe how
     -- higher-order effects are threaded down to the final monad.
     --
-    -- 'withStrategicToFinal' should be used when 'controlFinal' is
+    -- 'withLoweringToFinal' should be used when 'controlFinal' is
     -- not powerful enough for your purposes. Notable combinators include
-    -- 'runS', 'embed', 'liftWithS', and 'restoreS'.
-  , Strategic
+    -- 'runL', 'embed', 'liftWithL', and 'restoreL'.
+  , Lowering
 
-    -- ** Lifting the final monad to 'Strategic'
+    -- ** Lifting the final monad to 'Lowering'
   , embed
 
     -- ** Lowering computations to the final monad
-  , withProcessorS
-  , controlWithProcessorS
-  , processS
+  , withProcessorL
+  , controlWithProcessorL
+  , processL
 
-    -- ** Embedding computations into 'Strategic'
-  , runS
+    -- ** Embedding computations into 'Lowering'
+  , runL
 
-    -- ** Lowering 'Strategic' to the final monad
-  , controlS
-  , liftWithS
+    -- ** Lowering 'Lowering' to the final monad
+  , controlL
+  , liftWithL
 
     -- ** Manipulating effectful state
-  , restoreS
-  , runExposeS
-  , exposeS
+  , restoreL
+  , runExposeL
+  , exposeL
 
     -- * Interpretations
   , runM

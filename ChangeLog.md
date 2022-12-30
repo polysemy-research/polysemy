@@ -9,8 +9,9 @@
 ## 2.0.0.0 (?)
 ### Breaking Changes
 - The `Tactical` environment has been replaced by a revamped higher-order effect
-  handling API, which works through the `Handling` effect.
-- The `Strategic` environment has been revamped to mirror the `Handling` API.
+  handling API, which works through the `HigherOrder` effect.
+- The `Strategic` environment has been replaced by the `Lowering` environment,
+  which mirrors the `HigherOrder` API.
 - `withWeavingToFinal` has been removed. 
 - The `raiseUnderN` and `raiseNUnder` family of combinators have swapped names:
   `raiseUnder2` now introduces a new effect under the two top effects of the
@@ -33,6 +34,7 @@
 - Added `expose` and `exposeUsing`.
 - Added `sendVia` and `sendViaUsing`.
 - Added `generalBracket`
+- Added `mapMembership`
 - `Polysemy.Membership` now exports various membership manipulation functions
 
 ## 1.9.0.0 (2022-12-28)

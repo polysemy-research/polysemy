@@ -64,7 +64,7 @@ import Data.Kind
 import Data.Typeable
 import Polysemy.Internal.Kind
 import Polysemy.Internal.WeaveClass
-import Polysemy.Internal.Sing (SList (SEnd, SCons))
+import Polysemy.Internal.Sing (SList (..))
 import Unsafe.Coerce (unsafeCoerce)
 
 
@@ -244,9 +244,10 @@ tryMembership = tryMembership' @r @e
 -- | Extends a proof that @e@ is an element of @r@ to a proof that @e@ is an
 -- element of the concatenation of the lists @l@ and @r@.
 -- @l@ must be specified as a singleton list proof.
-extendMembershipLeft :: forall l r e. SList l -> ElemOf e r -> ElemOf e (Append l r)
-extendMembershipLeft SEnd pr = pr
-extendMembershipLeft (SCons l) pr = There (extendMembershipLeft l pr)
+extendMembershipLeft :: forall l r e
+                      . SList l -> ElemOf e r -> ElemOf e (Append l r)
+extendMembershipLeft (UnsafeMkSList n) (UnsafeMkElemOf pr) =
+  UnsafeMkElemOf (n + pr)
 {-# INLINABLE extendMembershipLeft #-}
 
 
@@ -254,8 +255,7 @@ extendMembershipLeft (SCons l) pr = There (extendMembershipLeft l pr)
 -- | Extends a proof that @e@ is an element of @l@ to a proof that @e@ is an
 -- element of the concatenation of the lists @l@ and @r@.
 extendMembershipRight :: forall l r e. ElemOf e l -> ElemOf e (Append l r)
-extendMembershipRight Here = Here
-extendMembershipRight (There e) = There (extendMembershipRight @_ @r e)
+extendMembershipRight (UnsafeMkElemOf pr) = (UnsafeMkElemOf pr)
 {-# INLINABLE extendMembershipRight #-}
 
 
@@ -268,9 +268,9 @@ injectMembership :: forall right e left mid
                  -> SList mid
                  -> ElemOf e (Append left right)
                  -> ElemOf e (Append left (Append mid right))
-injectMembership SEnd sm pr = extendMembershipLeft sm pr
-injectMembership (SCons _) _ Here = Here
-injectMembership (SCons sl) sm (There pr) = There (injectMembership @right sl sm pr)
+injectMembership (UnsafeMkSList l) (UnsafeMkSList m) (UnsafeMkElemOf pr)
+  | pr < l    = UnsafeMkElemOf pr
+  | otherwise = UnsafeMkElemOf (m + pr)
 {-# INLINABLE injectMembership #-}
 
 
@@ -384,7 +384,7 @@ prjUsing pr (Union sn a) = (\Refl -> a) <$> sameMember pr sn
 
 ------------------------------------------------------------------------------
 -- | Like 'decomp', but allows for a more efficient
--- 'Polysemy.Interpretation.reinterpret' function.
+-- 'Polysemy.rewrite' function.
 decompCoerce
     :: Union (e ': r) m a
     -> Either (Union (f ': r) m a) (Weaving e m a)

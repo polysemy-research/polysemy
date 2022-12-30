@@ -33,15 +33,15 @@ import Polysemy.Internal
 import Polysemy.Internal.Sing
 import Polysemy.Internal.Union
 import Polysemy.Internal.Scoped
-import Polysemy.Internal.Interpret
+import Polysemy.Internal.HigherOrder
 
 -- | Construct an interpreter for a higher-order effect wrapped in a 'Scoped',
 -- given a resource allocation function and a parameterized handler for the
 -- plain effect.
 --
 -- This combinator is analogous to 'interpretH' in that it allows the handler to
--- use the 'Polysemy.Handling' environment and transforms the effect into other
--- effects on the stack.
+-- use the 'Polysemy.HigherOrder' environment and transforms the effect into
+-- other effects on the stack.
 interpretScopedH ::
   ∀ resource param effect r .
   -- | A callback function that allows the user to acquire a resource for each
@@ -59,16 +59,16 @@ interpretScopedH withResource scopedHandler = runScopedNew \param sem ->
 {-# inline interpretScopedH #-}
 
 -- | Variant of 'interpretScopedH' that allows the resource acquisition function
--- to use 'Polysemy.Handling'.
+-- to use 'Polysemy.HigherOrder'.
 interpretScopedH' ::
   ∀ resource param effect r .
   (∀ t e z x . Traversable t =>
     param ->
-    (resource -> Sem (Handling z t e r r ': r) x) ->
-    Sem (Handling z t e r r ': r) x) ->
+    (resource -> Sem (HigherOrder z t e r r ': r) x) ->
+    Sem (HigherOrder z t e r r ': r) x) ->
   (∀ t z x . Traversable t =>
     resource ->
-    effect z x -> Sem (Handling z t (Scoped param effect) r r ': r) x) ->
+    effect z x -> Sem (HigherOrder z t (Scoped param effect) r r ': r) x) ->
   InterpreterFor (Scoped param effect) r
 interpretScopedH' withResource scopedHandler =
   go 0 Empty
@@ -168,7 +168,7 @@ interpretScopedWithH withResource scopedHandler = runScopedNew
   \param (sem :: Sem (effect ': Opaque q ': r) x) ->
     withResource param \resource ->
       sem
-        & restack
+        & mapMembership
            (injectMembership (singList @'[effect]) (singList @extra))
         & interpretH (scopedHandler @q resource)
 {-# inline interpretScopedWithH #-}
@@ -201,10 +201,10 @@ interpretScopedWith withResource scopedHandler = runScopedNew
   \param (sem :: Sem (effect ': Opaque q ': r) x) ->
     withResource param \resource ->
       sem
-        & restack
+        & mapMembership
            (injectMembership (singList @'[effect]) (singList @extra))
         & interpretH \e -> raise $
-            restack
+            mapMembership
               (injectMembership @r (singList @extra) (singList @'[Opaque q]))
               (scopedHandler resource e)
 {-# inline interpretScopedWith #-}

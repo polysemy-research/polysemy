@@ -11,7 +11,7 @@ module Polysemy.Bundle
   , runBundle
   , subsumeBundle
     -- * Miscellaneous
-  , KnownList(..)
+  , KnownList
   ) where
 
 import Polysemy

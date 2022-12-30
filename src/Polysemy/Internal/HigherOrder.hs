@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_HADDOCK not-home #-}
-module Polysemy.Internal.Interpret where
+module Polysemy.Internal.HigherOrder where
 
 import Control.Monad
 
@@ -9,7 +9,7 @@ import Polysemy.Internal.CustomErrors (FirstOrder)
 import Polysemy.Internal.Kind
 import Polysemy.Internal.Union
 
--- A reified interpreter, transforming @'Polysemy.Sem' (e ': rPre)@ to
+-- | A reified interpreter, transforming @'Polysemy.Sem' (e ': rPre)@ to
 -- @'Polysemy.Sem' rPost@.
 --
 -- @since 2.0.0.0
@@ -26,29 +26,29 @@ newtype InterpreterH e rPre rPost = InterpreterH {
 -- * @z@: The monad of the higher-order thunks of the effect being interpreted.
 -- * @t@: The type of effectful state of effects that have already been
 --   interpreted (sometimes called local (effectful) state). @t@ is always
---   'Traversable', which can sometimes be useful (see
---   'Polysemy.Interpret.runExposeH' for an example.)
+--   'Traversable', which can sometimes be useful (see the documentation of
+--   'Polysemy.HigherOrder.runExposeH' for some examples.)
 -- * @e@: The effect being handled
 -- * @rPre@: The tail of the effect stack (i.e. omitting @e@) before the
 --   interpreter is run
 -- * @rPost@: The resulting effect stack after the interpreter is run
 --
 -- @since 2.0.0.0
-data Handling z t e rPre rPost :: Effect where
+data HigherOrder z t e rPre rPost :: Effect where
   WithProcessorH
     :: forall z t e rPre rPost m a
      . ((forall x. z x -> Sem (e ': rPre) (t x)) -> a)
-    -> Handling z t e rPre rPost m a
+    -> HigherOrder z t e rPre rPost m a
   GetInterpreterH
     :: forall z t e rPre rPost m
-     . Handling z t e rPre rPost m (InterpreterH e rPre rPost)
+     . HigherOrder z t e rPre rPost m (InterpreterH e rPre rPost)
   LiftWithH
     :: forall z t e rPre rPost m a
-     . ((forall r x. Sem (Handling z t e rPre rPost ': r) x -> Sem r (t x))
+     . ((forall r x. Sem (HigherOrder z t e rPre rPost ': r) x -> Sem r (t x))
         -> a)
-    -> Handling z t e rPre rPost m a
+    -> HigherOrder z t e rPre rPost m a
   RestoreH
-    :: forall z t e rPre rPost m a. t a -> Handling z t e rPre rPost m a
+    :: forall z t e rPre rPost m a. t a -> HigherOrder z t e rPre rPost m a
 
 -- | Propagate an effect action where the higher-order chunks are of the same
 -- monad @z@ as that used by the effect currently being handled.
@@ -62,7 +62,7 @@ data Handling z t e rPre rPost :: Effect where
 propagate :: forall e r z t eH rPre rPost a
            . (Member e r, Subsume rPost r)
           => e z a
-          -> Sem (Handling z t eH rPre rPost ': r) a
+          -> Sem (HigherOrder z t eH rPre rPost ': r) a
 propagate = propagateUsing membership
 {-# INLINE propagate #-}
 
@@ -73,7 +73,7 @@ propagateUsing :: forall e r z t eH rPre rPost a
                 . Subsume rPost r
                => ElemOf e r
                -> e z a
-               -> Sem (Handling z t eH rPre rPost ': r) a
+               -> Sem (HigherOrder z t eH rPre rPost ': r) a
 propagateUsing pr = sendViaUsing (There pr) runH
 {-# INLINE propagateUsing #-}
 
@@ -92,14 +92,14 @@ propagateUsing pr = sendViaUsing (There pr) runH
 -- same, making the signature the more understandable:
 --
 -- @
--- 'runH' :: z a -> 'Polysemy.Sem' ('Polysemy.Handling' z t e r r ': r) a
+-- 'runH' :: z a -> 'Polysemy.Sem' ('Polysemy.HigherOrder' z t e r r ': r) a
 -- @
 --
 -- @since 2.0.0.0
 runH :: forall z t e rPre rPost r a
       . Subsume rPost r
      => z a
-     -> Sem (Handling z t e rPre rPost ': r) a
+     -> Sem (HigherOrder z t e rPre rPost ': r) a
 runH = runExposeH >=> restoreH
 {-# INLINE runH #-}
 
@@ -114,24 +114,24 @@ runH = runExposeH >=> restoreH
 runH' :: forall z t e rPre rPost r a
        . Subsume rPre r
       => z a
-      -> Sem (e ': Handling z t e rPre rPost ': r) a
+      -> Sem (e ': HigherOrder z t e rPre rPost ': r) a
 runH' = runExposeH' >=> raise . restoreH
 {-# INLINE runH' #-}
 
 -- | Locally gain access to lowering function that can transform
--- @'Polysemy.Sem' ('Polysemy.Interpretation.Handling' z t ... ': r) x@ to
+-- @'Polysemy.Sem' ('Polysemy.Interpretation.HigherOrder' z t ... ': r) x@ to
 -- @'Polysemy.Sem' r (t x)@.
 --
 -- This is analogous to @liftWith@ of @MonadTransControl@.
 --
--- Note: the lowering function lowers @'Sem' ('Handling' ... ': r)@ by using the
+-- Note: the lowering function lowers @'Sem' ('HigherOrder' ... ': r)@ by using the
 -- effectful state as it is when 'liftWithH' is run.
 liftWithH :: forall z t e rPre rPost r a
            . (   (   forall r' x
-                   . Sem (Handling z t e rPre rPost ': r') x
+                   . Sem (HigherOrder z t e rPre rPost ': r') x
                   -> Sem r' (t x))
               -> Sem r a)
-          -> Sem (Handling z t e rPre rPost ': r) a
+          -> Sem (HigherOrder z t e rPre rPost ': r) a
 liftWithH main = sendUsing Here (LiftWithH main) >>= raise
 {-# INLINE liftWithH #-}
 
@@ -140,14 +140,14 @@ liftWithH main = sendUsing Here (LiftWithH main) >>= raise
 --
 -- This is analogous to @controlT@ of @MonadTransControl@.
 --
--- Note: the lowering function lowers @'Sem' ('Handling' ... ': r)@ by using the
+-- Note: the lowering function lowers @'Sem' ('HigherOrder' ... ': r)@ by using the
 -- effectful state as it is when 'controlH' is run.
 controlH :: forall z t e rPre rPost r a
           . (   (   forall r' x
-                  . Sem (Handling z t e rPre rPost ': r') x
+                  . Sem (HigherOrder z t e rPre rPost ': r') x
                  -> Sem r' (t x))
              -> Sem r (t a))
-         -> Sem (Handling z t e rPre rPost ': r) a
+         -> Sem (HigherOrder z t e rPre rPost ': r) a
 controlH main = liftWithH main >>= restoreH
 {-# INLINE controlH #-}
 
@@ -171,7 +171,7 @@ controlH main = liftWithH main >>= restoreH
 -- @since TODO
 runExposeH :: forall z t e rPre rPost r a
             . Subsume rPost r
-           => z a -> Sem (Handling z t e rPre rPost ': r) (t a)
+           => z a -> Sem (HigherOrder z t e rPre rPost ': r) (t a)
 runExposeH z = do
   InterpreterH interp <- getInterpreterH
   withProcessorH $ \prcs -> subsume_ $ interp $ prcs z
@@ -191,7 +191,7 @@ runExposeH z = do
 runExposeH' :: forall z t e rPre rPost r a
              . Subsume rPre r
             => z a
-            -> Sem (e ': Handling z t e rPre rPost ': r) (t a)
+            -> Sem (e ': HigherOrder z t e rPre rPost ': r) (t a)
 runExposeH' = raise . processH >=> subsume_
 {-# INLINE runExposeH' #-}
 
@@ -229,7 +229,7 @@ runExposeH' = raise . processH >=> subsume_
 --
 -- @since TODO
 restoreH :: forall z t e rPre rPost r a
-          . t a -> Sem (Handling z t e rPre rPost ': r) a
+          . t a -> Sem (HigherOrder z t e rPre rPost ': r) a
 restoreH = sendUsing Here . RestoreH
 {-# INLINE restoreH #-}
 
@@ -239,8 +239,8 @@ restoreH = sendUsing Here . RestoreH
 --
 -- @since TODO
 exposeH :: forall z t e rPre rPost r a
-         . Sem (Handling z t e rPre rPost ': r) a
-        -> Sem (Handling z t e rPre rPost ': r) (t a)
+         . Sem (HigherOrder z t e rPre rPost ': r) a
+        -> Sem (HigherOrder z t e rPre rPost ': r) (t a)
 exposeH m = liftWithH $ \lower -> lower m
 {-# INLINE exposeH #-}
 
@@ -254,7 +254,7 @@ exposeH m = liftWithH $ \lower -> lower m
 -- action is run.
 processH :: forall z t e rPre rPost r a
           . z a
-         -> Sem (Handling z t e rPre rPost ': r) (Sem (e ': rPre) (t a))
+         -> Sem (HigherOrder z t e rPre rPost ': r) (Sem (e ': rPre) (t a))
 processH z = withProcessorH $ \lower -> return (lower z)
 {-# INLINE processH #-}
 
@@ -269,7 +269,7 @@ processH z = withProcessorH $ \lower -> return (lower z)
 withProcessorH :: forall z t e rPre rPost r a
                 . ((forall x. z x -> Sem (e ': rPre) (t x))
                    -> Sem r a)
-               -> Sem (Handling z t e rPre rPost ': r) a
+               -> Sem (HigherOrder z t e rPre rPost ': r) a
 withProcessorH main = sendUsing Here (WithProcessorH main) >>= raise
 {-# INLINE withProcessorH #-}
 
@@ -282,13 +282,13 @@ withProcessorH main = sendUsing Here (WithProcessorH main) >>= raise
 controlWithProcessorH :: forall z t e rPre rPost r a
                        . ((forall x. z x -> Sem (e ': rPre) (t x))
                           -> Sem r (t a))
-                      -> Sem (Handling z t e rPre rPost ': r) a
+                      -> Sem (HigherOrder z t e rPre rPost ': r) a
 controlWithProcessorH main = withProcessorH main >>= restoreH
 {-# INLINE controlWithProcessorH #-}
 
 -- | Retrieve a 'InterpreterH': the interpreter currently being defined
 getInterpreterH :: forall z t e rPre rPost r
-                 . Sem (Handling z t e rPre rPost ': r)
+                 . Sem (HigherOrder z t e rPre rPost ': r)
                        (InterpreterH e rPre rPost)
 getInterpreterH = sendUsing Here GetInterpreterH
 {-# INLINE getInterpreterH #-}
@@ -298,7 +298,7 @@ getInterpreterH = sendUsing Here GetInterpreterH
 type EffHandlerH e rPre rPost =
        forall t z x
      . Traversable t
-    => e z x -> Sem (Handling z t e rPre rPost ': rPost) x
+    => e z x -> Sem (HigherOrder z t e rPre rPost ': rPost) x
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but for higher-order effects (i.e. those which make use
@@ -367,15 +367,15 @@ genericInterpretH h = go
           let
               {-# SPECIALIZE INLINE
                   commonHandler :: forall n x
-                                 . Weaving (Handling z (StT t) e r r') n x
+                                 . Weaving (HigherOrder z (StT t) e r r') n x
                                 -> t m x #-}
               {-# SPECIALIZE INLINE
                   commonHandler :: forall r'' n x
-                                 . Weaving (Handling z (StT t) e r r') n x
+                                 . Weaving (HigherOrder z (StT t) e r r') n x
                                 -> t (Sem r'') x #-}
               commonHandler :: forall n b x
                              . Monad b
-                            => Weaving (Handling z (StT t) e r r') n x -> t b x
+                            => Weaving (HigherOrder z (StT t) e r r') n x -> t b x
               commonHandler (Weaving eff _ lwr' ex') = do
                 let run_it = fmap (ex' . (<$ mkInitState lwr'))
                 case eff of
@@ -387,21 +387,21 @@ genericInterpretH h = go
                   LiftWithH main -> run_it $ liftWith $ \lower ->
                     return $ main (lower . go3)
 
-              go1 :: forall x. Sem (Handling z (StT t) e r r' ': r') x -> t m x
+              go1 :: forall x. Sem (HigherOrder z (StT t) e r r' ': r') x -> t m x
               go1 = usingSem $ \u' -> case decomp u' of
                 Left g -> liftHandlerWithNat go2 k g
                 Right wav -> commonHandler wav
               {-# INLINE go1 #-}
 
               go2 :: forall x
-                   . Sem (Handling z (StT t) e r r' ': r') x -> t (Sem r') x
+                   . Sem (HigherOrder z (StT t) e r r' ': r') x -> t (Sem r') x
               go2 = usingSem $ \u' -> case decomp u' of
                 Left g -> liftHandlerWithNat go2 liftSem g
                 Right wav -> commonHandler wav
               {-# NOINLINE go2 #-}
 
               go3 :: forall r'' x
-                   . Sem (Handling z (StT t) e r r' ': r'') x
+                   . Sem (HigherOrder z (StT t) e r r' ': r'') x
                   -> t (Sem r'') x
               go3 = usingSem $ \u' -> case decomp u' of
                 Left g -> liftHandlerWithNat go3 liftSem g

@@ -9,6 +9,7 @@ module Polysemy.Opaque (
   ) where
 
 import Polysemy
+import Unsafe.Coerce
 
 -- | An effect newtype meant to be used to wrap polymorphic effect variables to
 -- prevent them from jamming up resolution of 'Polysemy.Member'.
@@ -45,10 +46,10 @@ newtype Opaque (e :: Effect) m a = Opaque (e m a)
 
 -- | Wrap 'Opaque' around the top effect of the effect stack
 toOpaque :: Sem (e ': r) a -> Sem (Opaque e ': r) a
-toOpaque = rewrite Opaque
+toOpaque = unsafeCoerce
 {-# INLINE toOpaque #-}
 
 -- | Unwrap 'Opaque' around the top effect of the effect stack
 fromOpaque :: Sem (Opaque e ': r) a -> Sem (e ': r) a
-fromOpaque = rewrite (\(Opaque e) -> e)
+fromOpaque = unsafeCoerce
 {-# INLINE fromOpaque #-}

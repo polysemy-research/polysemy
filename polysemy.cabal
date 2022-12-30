@@ -46,6 +46,7 @@ library
       Polysemy.Fatal
       Polysemy.Final
       Polysemy.Fixpoint
+      Polysemy.HigherOrder
       Polysemy.Input
       Polysemy.Internal
       Polysemy.Internal.Bundle
@@ -54,8 +55,8 @@ library
       Polysemy.Internal.CustomErrors.Redefined
       Polysemy.Internal.Final
       Polysemy.Internal.Fixpoint
+      Polysemy.Internal.HigherOrder
       Polysemy.Internal.Index
-      Polysemy.Internal.Interpret
       Polysemy.Internal.Kind
       Polysemy.Internal.NonDet
       Polysemy.Internal.Scoped
@@ -65,7 +66,6 @@ library
       Polysemy.Internal.Union
       Polysemy.Internal.WeaveClass
       Polysemy.Internal.Writer
-      Polysemy.Interpret
       Polysemy.IO
       Polysemy.Membership
       Polysemy.NonDet

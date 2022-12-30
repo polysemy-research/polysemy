@@ -62,7 +62,7 @@ asyncToIOFinal :: Member (Final IO) r
                => Sem (Async ': r) a
                -> Sem r a
 asyncToIOFinal = interpretFinal @IO $ \case
-  Async m -> withProcessorS $ \lower -> do
+  Async m -> withProcessorL $ \lower -> do
     fmap (foldr (const . Just) Nothing) <$> A.async (lower m)
   Await a -> embed (A.wait a)
   Cancel a -> embed (A.cancel a)
