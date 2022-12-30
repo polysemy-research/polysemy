@@ -1,7 +1,8 @@
 # Changelog for polysemy-plugin
 
-## Unreleased
+## 0.5.0.0 (?)
 
+### Breaking Changes
 - Dropped support for GHC 8.6 and 8.8
 
 ## 0.4.4.0 (2022-12-27)

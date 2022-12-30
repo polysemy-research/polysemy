@@ -1,0 +1,4 @@
+-- stack versions 2.9.3 and below have an issue where stack ghci doesn't respect
+-- default-language of the .cabal file.
+-- This file can be removed once stack 2.10 is released
+:set -XHaskell2010

@@ -1,5 +1,5 @@
 name:                polysemy-plugin
-version:             0.4.4.0
+version:             0.5.0.0
 github:              "polysemy-research/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -18,7 +18,7 @@ description:         Please see the README on GitHub at <https://github.com/poly
 
 dependencies:
 - base >= 4.9 && < 5
-- ghc >= 8.6.5 && < 10
+- ghc >= 8.10 && < 10
 - ghc-tcplugins-extra >= 0.3 && < 0.5
 - polysemy >= 1.7
 - syb >= 0.7 && < 0.8
@@ -80,5 +80,11 @@ default-extensions:
   - TypeApplications
   - TypeOperators
   - TypeFamilies
-
   - UnicodeSyntax
+
+when:
+  # To ensure GHC 9.0.2 compatibility.
+  # Remove this condition once we drop support for GHC 9.0.2.
+  - condition: impl(ghc >= 9.2.4)
+    default-extensions:
+      - NoDeepSubsumption

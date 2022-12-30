@@ -53,10 +53,11 @@ default-extensions:
   - UnicodeSyntax
 
 when:
-  - condition: impl(ghc < 8.6)
+  # To ensure GHC 9.0.2 compatibility.
+  # Remove this condition once we drop support for GHC 9.0.2.
+  - condition: impl(ghc >= 9.2.4)
     default-extensions:
-      - MonadFailDesugaring
-      - TypeInType
+      - NoDeepSubsumption
 
 library:
   ghc-options: -Wall
@@ -66,7 +67,7 @@ library:
   - Paths_polysemy
 
   when:
-    - condition: impl(ghc < 8.2.2)
+    - condition: impl(ghc < 8.10)
       dependencies:
         - unsupported-ghc-version > 1 && < 1
 
