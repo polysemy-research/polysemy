@@ -7,9 +7,6 @@ module Polysemy.Internal.Combinators
     rewrite
   , transform
 
-   -- * Higher order
-  , interpretWeaving
-
     -- * Statefulness
   , stateful
   , lazilyStateful
@@ -23,18 +20,6 @@ import qualified Data.Tuple as S (swap)
 
 import Polysemy.Internal
 import Polysemy.Internal.Union
-
--- | Interpret an effect @e@ through a natural transformation from @Weaving e@
--- to @Sem r@
-interpretWeaving ::
-  ∀ e r .
-  (∀ x . Weaving e (Sem (e : r)) x -> Sem r x) ->
-  InterpreterFor e r
-interpretWeaving h (Sem m) =
-  Sem \ k -> m $ decomp >>> \case
-    Right wav -> runSem (h wav) k
-    Left g -> k $ hoist (interpretWeaving h) g
-{-# inline interpretWeaving #-}
 
 ------------------------------------------------------------------------------
 -- | A highly-performant combinator for interpreting an effect statefully. See

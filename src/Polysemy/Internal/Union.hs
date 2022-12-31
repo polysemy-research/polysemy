@@ -48,6 +48,9 @@ module Polysemy.Internal.Union
   -- * Checking membership
   , KnownRow
   , tryMembership
+
+  -- * Membership manipulation
+  , idMembership
   , extendMembershipLeft
   , extendMembershipRight
   , injectMembership
@@ -282,6 +285,9 @@ injectMembership (UnsafeMkSList l) (UnsafeMkSList m) (UnsafeMkElemOf pr)
   | otherwise = UnsafeMkElemOf (m + pr)
 {-# INLINABLE injectMembership #-}
 
+idMembership :: ElemOf e r -> ElemOf e r
+idMembership = id
+{-# INLINE[0] idMembership #-}
 
 ------------------------------------------------------------------------------
 -- | Decompose a 'Union'. Either this union contains an effect @e@---the head

@@ -1,5 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_HADDOCK not-home #-}
+{-# OPTIONS_GHC -ddump-simpl #-}
+{-# OPTIONS_GHC -ddump-rules #-}
+{-# OPTIONS_GHC -ddump-spec #-}
+
 module Polysemy.Internal.HigherOrder where
 
 import Data.Kind (Type)
@@ -69,6 +73,7 @@ getTypeParamsH :: forall z t e rPre rPost
                     . Sem (HigherOrder z t e rPre rPost ': rPost)
                           (TypeParamsH z t e rPre rPost)
 getTypeParamsH = return TypeParamsH
+{-# INLINE getTypeParamsH #-}
 
 -- | Propagate an effect action where the higher-order chunks are of the same
 -- monad @z@ as that used by the effect currently being handled.
@@ -95,7 +100,6 @@ propagateUsing :: forall e r z t eH rPre rPost a
                -> e z a
                -> Sem (HigherOrder z t eH rPre rPost ': r) a
 propagateUsing pr = sendViaUsing (There pr) runH
-{-# INLINE propagateUsing #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted, and recursively apply the current interpreter on it.
@@ -121,7 +125,13 @@ runH :: forall z t e rPre rPost r a
      => z a
      -> Sem (HigherOrder z t e rPre rPost ': r) a
 runH = runExposeH >=> restoreH
-{-# INLINE runH #-}
+-- {-# INLINE runH #-}
+{-# SPECIALIZE runH :: z a -> Sem (HigherOrder z t e rPre rPost ': rPost) a #-}
+
+-- runH1 :: z a
+--       -> Sem (HigherOrder z t e rPre rPost ': rPost) a
+-- runH1 = runH
+-- {-# RULES "runH/sameTail" runH = runH1 #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted.
@@ -136,7 +146,10 @@ runH' :: forall z t e rPre rPost r a
       => z a
       -> Sem (e ': HigherOrder z t e rPre rPost ': r) a
 runH' = runExposeH' >=> raise . restoreH
-{-# INLINE runH' #-}
+-- {-# INLINE runH' #-}
+-- {-# SPECIALIZE
+--   runH' :: z a
+--         -> Sem (HigherOrder z t eH rPre rPost ': rPre) a #-}
 
 -- | Locally gain access to lowering function that can transform
 -- @'Polysemy.Sem' ('Polysemy.Interpretation.HigherOrder' z t ... ': r) x@ to
@@ -153,7 +166,7 @@ liftWithH :: forall z t e rPre rPost r a
               -> Sem r a)
           -> Sem (HigherOrder z t e rPre rPost ': r) a
 liftWithH main = sendUsing Here (LiftWithH main) >>= raise
-{-# INLINE liftWithH #-}
+-- {-# INLINE liftWithH #-}
 
 -- | A particularly useful composition:
 -- @'controlH' h = 'liftWithH' h >>= 'restoreH'@
@@ -169,7 +182,7 @@ controlH :: forall z t e rPre rPost r a
              -> Sem r (t a))
          -> Sem (HigherOrder z t e rPre rPost ': r) a
 controlH main = liftWithH main >>= restoreH
-{-# INLINE controlH #-}
+-- {-# INLINE liftWithH #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted, recursively apply the current interpreter on it,
@@ -195,7 +208,10 @@ runExposeH :: forall z t e rPre rPost r a
 runExposeH z = do
   InterpreterH interp <- getInterpreterH
   withProcessorH $ \prcs -> subsume_ $ interp $ prcs z
-{-# INLINE runExposeH #-}
+-- {-# INLINEABLE runExposeH #-}
+-- {-# SPECIALIZE
+--   runExposeH :: z a
+--              -> Sem (HigherOrder z t e rPre rPost ': rPost) (t a) #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted, and reify the effectful state of all local effects
@@ -213,7 +229,19 @@ runExposeH' :: forall z t e rPre rPost r a
             => z a
             -> Sem (e ': HigherOrder z t e rPre rPost ': r) (t a)
 runExposeH' = raise . processH >=> subsume_
-{-# INLINE runExposeH' #-}
+-- {-# INLINEABLE runExposeH' #-}
+-- {-# SPECIALIZE
+--   runExposeH' :: z a
+--               -> Sem (e ': HigherOrder z t e rPre rPost ': rPre) (t a) #-}
+-- {-# SPECIALIZE
+--   runExposeH' :: z a
+--               -> Sem (e ': HigherOrder z t e rPre rPost ': e1 ': rPre) (t a) #-}
+-- {-# SPECIALIZE
+--   runExposeH' :: z a
+--               -> Sem (e ': HigherOrder z t e rPre rPost ': e1 ': e2 ': rPre) (t a) #-}
+-- {-# SPECIALIZE
+--   runExposeH' :: z a
+--               -> Sem (e ': HigherOrder z t e rPre rPost ': e1 ': e2 ': e3 ': rPre) (t a) #-}
 
 
 -- | Restore a reified effectful state, bringing its changes into scope, and
@@ -251,7 +279,7 @@ runExposeH' = raise . processH >=> subsume_
 restoreH :: forall z t e rPre rPost r a
           . t a -> Sem (HigherOrder z t e rPre rPost ': r) a
 restoreH = sendUsing Here . RestoreH
-{-# INLINE restoreH #-}
+-- {-# INLINE restoreH #-}
 
 -- | Reify the effectful state of the local effects of the argument.
 --
@@ -262,7 +290,7 @@ exposeH :: forall z t e rPre rPost r a
          . Sem (HigherOrder z t e rPre rPost ': r) a
         -> Sem (HigherOrder z t e rPre rPost ': r) (t a)
 exposeH m = liftWithH $ \lower -> lower m
-{-# INLINE exposeH #-}
+-- {-# INLINE exposeH #-}
 
 -- | Process a monadic action given by the higher-order effect that is currently
 -- being interpreted by turning it into a @'Sem' (e ': rPre)@ action that
@@ -276,7 +304,7 @@ processH :: forall z t e rPre rPost r a
           . z a
          -> Sem (HigherOrder z t e rPre rPost ': r) (Sem (e ': rPre) (t a))
 processH z = withProcessorH $ \lower -> return (lower z)
-{-# INLINE processH #-}
+-- {-# INLINE processH #-}
 
 -- | Locally gain access to a processor: a function that transforms a monadic
 -- action given by the higher-order effect that is currently being interpreted
@@ -291,7 +319,7 @@ withProcessorH :: forall z t e rPre rPost r a
                    -> Sem r a)
                -> Sem (HigherOrder z t e rPre rPost ': r) a
 withProcessorH main = sendUsing Here (WithProcessorH main) >>= raise
-{-# INLINE withProcessorH #-}
+-- {-# INLINE withProcessorH #-}
 
 -- | A particularly useful composition:
 -- @'controlWithProcessorH' h = 'withProcessorH' h >>= 'restoreH'@
@@ -304,14 +332,14 @@ controlWithProcessorH :: forall z t e rPre rPost r a
                           -> Sem r (t a))
                       -> Sem (HigherOrder z t e rPre rPost ': r) a
 controlWithProcessorH main = withProcessorH main >>= restoreH
-{-# INLINE controlWithProcessorH #-}
+-- {-# INLINE controlWithProcessorH #-}
 
 -- | Retrieve a 'InterpreterH': the interpreter currently being defined
 getInterpreterH :: forall z t e rPre rPost r
                  . Sem (HigherOrder z t e rPre rPost ': r)
                        (InterpreterH e rPre rPost)
 getInterpreterH = sendUsing Here GetInterpreterH
-{-# INLINE getInterpreterH #-}
+-- {-# INLINE getInterpreterH #-}
 
 -- | A handler for a higher-order effect @e@, working with the effect stack
 -- @rPost@.
@@ -351,7 +379,7 @@ interpretH :: forall e r a
              -> Sem (e ': r) a
              -> Sem r a
 interpretH = genericInterpretH subsumeMembership
-{-# INLINE interpretH #-}
+-- {-# INLINE interpretH #-}
 
 ------------------------------------------------------------------------------
 -- | A generalization of 'interpretH', 'reinterpretH', 'reinterpret2H', etc.:
@@ -405,31 +433,19 @@ genericInterpretH tPr h = go
                   RestoreH t -> run_it $
                     restoreT (return t)
                   LiftWithH main -> run_it $ liftWith $ \lower ->
-                    return $ main (lower . go3)
+                    return $ main (lower . go')
 
-              go1 :: forall x. Sem (HigherOrder z (StT t) e r r' ': r') x -> t m x
-              go1 = usingSem $ \u' -> case decomp u' of
-                Left g -> liftHandlerWithNat go2 k g
-                Right wav -> commonHandler wav
-              {-# INLINE go1 #-}
-
-              go2 :: forall x
-                   . Sem (HigherOrder z (StT t) e r r' ': r') x -> t (Sem r') x
-              go2 = usingSem $ \u' -> case decomp u' of
-                Left g -> liftHandlerWithNat go2 liftSem g
-                Right wav -> commonHandler wav
-              {-# NOINLINE go2 #-}
-
-              go3 :: forall r'' x
+              go' :: forall r'' x
                    . Sem (HigherOrder z (StT t) e r r' ': r'') x
                   -> t (Sem r'') x
-              go3 = usingSem $ \u' -> case decomp u' of
-                Left g -> liftHandlerWithNat go3 liftSem g
+              go' = usingSem $ \u' -> case decomp u' of
+                Left g -> liftHandlerWithNat go' liftSem g
                 Right wav -> commonHandler wav
-              {-# NOINLINE go3 #-}
           in
-            fmap ex $ lwr $ go1 (h e)
-{-# INLINE[1] genericInterpretH #-}
+            fmap ex $ lwr $ runSem (h e) $ \u' -> case decomp u' of
+              Left g -> liftHandlerWithNat go' k g
+              Right wav -> commonHandler wav
+-- {-# INLINE[1] genericInterpretH #-}
 
 ------------------------------------------------------------------------------
 -- | The simplest way to produce an effect handler. Interprets an effect @e@ by
@@ -455,7 +471,7 @@ reinterpretH :: forall e1 e2 r a
                -> Sem (e1 ': r) a
                -> Sem (e2 ': r) a
 reinterpretH = genericInterpretH There
-{-# INLINE reinterpretH #-}
+-- {-# INLINE reinterpretH #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of removing the effect @e@, reencodes it in
@@ -483,7 +499,7 @@ reinterpret2H :: forall e1 e2 e3 r a
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': r) a
 reinterpret2H = genericInterpretH (There . There)
-{-# INLINE[2] reinterpret2H #-}
+-- {-# INLINE[2] reinterpret2H #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /two/ intermediary effects.
@@ -508,7 +524,7 @@ reinterpret3H :: forall e1 e2 e3 e4 r a
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': e4 ': r) a
 reinterpret3H = genericInterpretH (There . There . There)
-{-# INLINE reinterpret3H #-}
+-- {-# INLINE reinterpret3H #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /three/ intermediary effects.
@@ -524,18 +540,6 @@ reinterpret3 h =
 {-# INLINE[2] reinterpret3 #-}
 
 ------------------------------------------------------------------------------
--- | Like 'intercept', but for higher-order effects.
---
--- @since TODO
-intercept :: forall e r a
-              . Member e r
-             => EffHandlerH e r r
-             -> Sem r a
-             -> Sem r a
-intercept h = interpretH h . expose
-{-# INLINE intercept #-}
-
-------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of handling the effect, allows responding to
 -- the effect while leaving it unhandled. This allows you, for example, to
 -- intercept other effects and insert logic around them.
@@ -543,14 +547,26 @@ intercept h = interpretH h . expose
 -- See 'interpretH' for a simple usage guide.
 --
 -- @since 2.0.0.0
+intercept :: forall e r a
+           . FirstOrder e "intercept"
+          => Member e r
+          => (∀ z x. e z x -> Sem r x)
+          -> Sem r a
+          -> Sem r a
+intercept h =
+  interceptH $ \e -> raise (h e)
+{-# INLINE intercept #-}
+
+------------------------------------------------------------------------------
+-- | Like 'intercept', but for higher-order effects.
+--
+-- @since TODO
 interceptH :: forall e r a
-              . FirstOrder e "intercept"
-             => Member e r
-             => (∀ z x. e z x -> Sem r x)
+              . Member e r
+             => EffHandlerH e r r
              -> Sem r a
              -> Sem r a
-interceptH h =
-  intercept $ \e -> raise (h e)
+interceptH h = interpretH h . expose
 {-# INLINE interceptH #-}
 
 ------------------------------------------------------------------------------

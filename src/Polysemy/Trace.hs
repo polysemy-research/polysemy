@@ -113,4 +113,3 @@ outputToTrace
 outputToTrace show' = interpret $ \case
   Output m -> trace $ show' m
 {-# INLINE outputToTrace #-}
-

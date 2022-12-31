@@ -368,12 +368,17 @@ mapMembership n = go
     go_ :: forall x. Sem r x -> Sem r' x
     go_ = go
     {-# NOINLINE go_ #-}
-{-# INLINE[1] mapMembership #-}
+{-# NOINLINE[0] mapMembership #-}
 
-{-# RULES "mapMembership/mapMembership"
-   forall (f :: forall e. ElemOf e r' -> ElemOf e r'')
-          (g :: forall e. ElemOf e r -> ElemOf e r') m.
-     mapMembership f (mapMembership g m) = mapMembership (f . g) m
+{-# RULES
+"mapMembership/id" [2]
+  forall m.
+    mapMembership idMembership m = m
+
+"mapMembership/mapMembership" [1]
+  forall (f :: forall e. ElemOf e r' -> ElemOf e r'')
+         (g :: forall e. ElemOf e r -> ElemOf e r') m.
+    mapMembership f (mapMembership g m) = mapMembership (f . g) m
 #-}
 
 ------------------------------------------------------------------------------
@@ -398,10 +403,8 @@ instance {-# overlapping #-} Raise r r where
   raiseMembership = id
   {-# INLINE raiseMembership #-}
 
-instance (r' ~ (_0 ': r''), Subsume r r'') => Raise r r' where
-  raiseMembership = There . subsumeMembership
-  {-# INLINE raiseMembership #-}
-
+instance (r' ~ (_0 ': r''), Raise r r'') => Raise r r' where
+  raiseMembership = There . raiseMembership
 
 ------------------------------------------------------------------------------
 -- | Introduce an effect into 'Sem'. Analogous to
@@ -499,29 +502,47 @@ subsume_ = mapMembership subsumeMembership
 {-# INLINE subsume_ #-}
 
 
+
+instance {-# overlapping #-} Raise' r r where
+  raiseMembership' = idMembership
+  {-# INLINE raiseMembership' #-}
+
+instance (r' ~ (_0 ': r''), Subsume r r'') => Raise' r r' where
+  raiseMembership' = There . subsumeMembership
+
+class Raise' (r :: EffectRow) (r' :: EffectRow) where
+  raiseMembership' :: ElemOf e r -> ElemOf e r'
+
 -- | See 'subsume_'.
 --
 -- @since 1.4.0.0
 class Subsume (r :: EffectRow) (r' :: EffectRow) where
   subsumeMembership :: ElemOf e r -> ElemOf e r'
 
-instance {-# incoherent #-} Raise r r' => Subsume r r' where
-  subsumeMembership = raiseMembership
+instance {-# INCOHERENT #-} Raise' r r' => Subsume r r' where
+  subsumeMembership = raiseMembership'
   {-# INLINE subsumeMembership #-}
 
-instance {-# incoherent #-} Subsume (e ': r) (e ': r) where
-  subsumeMembership = id
+instance {-# INCOHERENT #-} Subsume (e ': r) (e ': r) where
+  subsumeMembership = idMembership
   {-# INLINE subsumeMembership #-}
 
 instance (Member e r', Subsume r r') => Subsume (e ': r) r' where
   subsumeMembership Here = membership
   subsumeMembership (There pr) = subsumeMembership pr
-  {-# INLINE subsumeMembership #-}
 
 instance Subsume '[] r where
   subsumeMembership = absurdMembership
   {-# INLINE subsumeMembership #-}
 
+{-# SPECIALIZE
+  subsumeMembership :: ElemOf e r -> ElemOf e (e1 ': r) #-}
+{-# SPECIALIZE
+  subsumeMembership :: ElemOf e r -> ElemOf e (e1 ': e2 ': r) #-}
+{-# SPECIALIZE
+  subsumeMembership :: ElemOf e r -> ElemOf e (e1 ': e2 ': e3 ': r) #-}
+{-# SPECIALIZE
+  subsumeMembership :: ElemOf e (e' ': r) -> ElemOf e (e' ': e1 ': r) #-}
 
 ------------------------------------------------------------------------------
 -- | Interprets an effect in terms of another identical effect.

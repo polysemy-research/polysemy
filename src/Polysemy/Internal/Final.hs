@@ -55,6 +55,7 @@ module Polysemy.Internal.Final
   , getTypeParamsL
   ) where
 
+import Data.Functor.Identity
 import Data.Kind
 import Control.Monad.Trans
 import Polysemy.Internal
@@ -148,7 +149,7 @@ getTypeParamsL = return TypeParamsL
 -- @since 2.0.0.0
 runL :: forall m t n r a. n a -> Sem (Lower m t n ': r) a
 runL = send . RunL @m @t
-{-# INLINE runL #-}
+-- {-# INLINE runL #-}
 
 -- | Lift an computation of the final monad @m@ by giving it access to a
 -- lowering function that can transform @'Lowering' m t n x@ to @m (t x)@.
@@ -163,7 +164,7 @@ liftWithL :: forall m t n r a
            . ((forall x. Lowering m t n x -> m (t x)) -> m a)
           -> Sem (Lower m t n ': r) a
 liftWithL main = send (LiftWithL main)
-{-# INLINE liftWithL #-}
+-- {-# INLINE liftWithL #-}
 
 -- | A particularly useful composition:
 -- @'controlL' h = 'liftWithL' h >>= 'restoreL'@
@@ -178,7 +179,7 @@ controlL :: forall m t n r a
           . ((forall x. Lowering m t n x -> m (t x)) -> m (t a))
          -> Sem (Lower m t n ': r) a
 controlL main = liftWithL main >>= restoreL
-{-# INLINE controlL #-}
+-- {-# INLINE controlL #-}
 
 -- | Embed a computation of the source monad into 'Lowering', and reify
 --   the effectful state of all purely interpreted effects (effects not
@@ -201,7 +202,7 @@ controlL main = liftWithL main >>= restoreL
 -- @since 2.0.0.0
 runExposeL :: forall m t n r a. n a -> Sem (Lower m t n ': r) (t a)
 runExposeL z = withProcessorL $ \lower -> lower z
-{-# INLINE runExposeL #-}
+-- {-# INLINE runExposeL #-}
 
 -- | Restore a reified effectful state, bringing its changes into scope, and
 -- returning the result of the computation.
@@ -237,7 +238,7 @@ runExposeL z = withProcessorL $ \lower -> lower z
 -- @since 2.0.0.0
 restoreL :: forall m t n r a. t a -> Sem (Lower m t n ': r) a
 restoreL = send . RestoreL @m @_ @n
-{-# INLINE restoreL #-}
+-- {-# INLINE restoreL #-}
 
 -- | Reify the effectful state of the purely interpreted effects used
 --   used within the argument.
@@ -249,7 +250,7 @@ exposeL :: forall m t n r a
          . Lowering m t n a
         -> Sem (Lower m t n ': r) (t a)
 exposeL m = liftWithL $ \lower -> lower m
-{-# INLINE exposeL #-}
+-- {-# INLINE exposeL #-}
 
 -- | Process a computation of the source monad by turning it into an computation
 -- of the final monad returning a reified effectful state. The processed
@@ -265,7 +266,7 @@ processL :: forall m t n r a
          => n a
          -> Sem (Lower m t n ': r) (m (t a))
 processL z = withProcessorL $ \lower -> return (lower z)
-{-# INLINE processL #-}
+-- {-# INLINE processL #-}
 
 -- | Lift an computation of the final monad by giving it access to a processor:
 -- a function that transforms a computation of the source monad by turning it
@@ -284,7 +285,7 @@ withProcessorL :: forall m t n r a
                 . ((forall x. n x -> m (t x)) -> m a)
                -> Sem (Lower m t n ': r) a
 withProcessorL main = send (WithProcessorL main)
-{-# INLINE withProcessorL #-}
+-- {-# INLINE withProcessorL #-}
 
 -- | A particularly useful composition:
 -- @'controlWithProcessorL' h = 'withProcessorL' h >>= 'restoreL'@
@@ -302,7 +303,7 @@ controlWithProcessorL :: forall m t n r a
                        . ((forall x. n x -> m (t x)) -> m (t a))
                       -> Sem (Lower m t n ': r) a
 controlWithProcessorL main = withProcessorL main >>= restoreL
-{-# INLINE controlWithProcessorL #-}
+-- {-# INLINE controlWithProcessorL #-}
 
 -- | Lift an computation of the final monad by giving it access to a function
 -- that transforms any @'Sem' r@ computation into a compuation of the final
@@ -332,7 +333,7 @@ controlFinal :: forall m r a
              -> Sem r a
 controlFinal main = withTransToFinal $ \n ->
   controlT $ \lower -> main (lower . n)
-{-# INLINE controlFinal #-}
+-- {-# INLINE controlFinal #-}
 
 runLowering :: forall m n t a
              . (Monad m, MonadTransWeave t)
@@ -371,7 +372,7 @@ withLoweringToFinal :: (Monad m, Member (Final m) r)
                      => (forall t. Traversable t => Lowering m t (Sem r) a)
                      -> Sem r a
 withLoweringToFinal main = withTransToFinal (runLowering main)
-{-# INLINE withLoweringToFinal #-}
+-- {-# INLINE withLoweringToFinal #-}
 
 ------------------------------------------------------------------------------
 -- | Lower a 'Sem' containing only a single lifted 'Monad' into that
@@ -382,7 +383,9 @@ runM = usingSem $ \u -> case decomp u of
   Left g -> case extract g of
     Weaving (WithTransToFinal main) mkT lwr ex ->
       fmap ex $ lwr $ main $ mkT runM
-{-# INLINE runM #-}
+-- {-# INLINE runM #-}
+{-# SPECIALIZE runM :: Sem '[Embed IO, Final IO] a -> IO a #-}
+{-# SPECIALIZE runM :: Sem '[Embed Identity, Final Identity] a -> Identity a #-}
 
 
 -----------------------------------------------------------------------------
@@ -393,7 +396,7 @@ runM = usingSem $ \u -> case decomp u of
 -- @since 1.2.0.0
 embedFinal :: (Member (Final m) r, Monad m) => m a -> Sem r a
 embedFinal m = withTransToFinal $ \_ -> lift m
-{-# INLINE embedFinal #-}
+-- {-# INLINE embedFinal #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'interpretH', but may be used to
@@ -435,10 +438,10 @@ interpretFinal h =
             lwr
             ex
       Left g -> hoist go g
-    {-# INLINE go #-}
+    -- {-# INLINE go #-}
   in
     go
-{-# INLINE interpretFinal #-}
+-- {-# INLINE interpretFinal #-}
 
 ------------------------------------------------------------------------------
 -- | Given natural transformations between @m1@ and @m2@, run a @'Final' m1@
@@ -463,10 +466,10 @@ finalToFinal to from =
             lwr
             ex
       Left g -> hoist go g
-    {-# INLINE go #-}
+    -- {-# INLINE go #-}
   in
     go
-{-# INLINE finalToFinal #-}
+-- {-# INLINE finalToFinal #-}
 
 ------------------------------------------------------------------------------
 -- | Transform an @'Embed' m@ effect into a @'Final' m@ effect
@@ -476,4 +479,4 @@ embedToFinal :: (Member (Final m) r, Monad m)
              => Sem (Embed m ': r) a
              -> Sem r a
 embedToFinal = interpret $ \(Embed m) -> embedFinal m
-{-# INLINE embedToFinal #-}
+-- {-# INLINE embedToFinal #-}
