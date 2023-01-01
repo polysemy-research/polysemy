@@ -27,7 +27,6 @@ import Polysemy.Internal.Union
 -- | Run a 'NonDet' effect in terms of some underlying 'Alternative' @f@.
 runNonDet :: Alternative f => Sem (NonDet ': r) a -> Sem r (f a)
 runNonDet = runNonDetC . runNonDetInC
-{-# INLINE runNonDet #-}
 
 ------------------------------------------------------------------------------
 -- | Run a 'NonDet' effect in terms of an underlying 'Maybe'
@@ -47,7 +46,6 @@ runNonDetMaybe (Sem sem) = Sem $ \k -> runMaybeT $ sem $ \u ->
               MaybeT (runNonDetMaybe (lwr (mkT id left)))
           <|> MaybeT (runNonDetMaybe (lwr (mkT id right)))
     Left x -> liftHandlerWithNat (MaybeT . runNonDetMaybe) k x
-{-# INLINE runNonDetMaybe #-}
 
 ------------------------------------------------------------------------------
 -- | Transform a 'NonDet' effect into an @'Error' e@ effect,
@@ -60,18 +58,15 @@ nonDetToError :: Member (Error e) r
               => e
               -> Sem (NonDet ': r) a
               -> Sem r a
-nonDetToError (e :: e) = interpretH $ \case
-  Empty -> throw e
-  Choose left right -> do
-    runH left `catch` \(_ :: e) -> runH right
-{-# INLINE nonDetToError #-}
+nonDetToError (e :: e) = transform $ \case
+  Empty -> Throw e
+  Choose left right -> Catch left (\_ -> right)
 
 
 --------------------------------------------------------------------------------
 -- This stuff is lifted from 'fused-effects'. Thanks guys!
 runNonDetC :: (Alternative f, Applicative m) => NonDetC m a -> m (f a)
 runNonDetC (NonDetC m) = m (fmap . (<|>) . pure) (pure empty)
-{-# INLINE runNonDetC #-}
 
 
 newtype NonDetC m a = NonDetC
@@ -84,23 +79,22 @@ newtype NonDetC m a = NonDetC
 
 instance Applicative (NonDetC m) where
   pure a = NonDetC (\ cons -> cons a)
-  {-# INLINE pure #-}
 
   NonDetC f <*> NonDetC a = NonDetC $ \ cons ->
     f (\ f' -> a (cons . f'))
-  {-# INLINE (<*>) #-}
+  -- {-# INLINE (<*>) #-}
 
 instance Alternative (NonDetC m) where
   empty = NonDetC (\ _ nil -> nil)
-  {-# INLINE empty #-}
+  -- {-# INLINE empty #-}
 
   NonDetC l <|> NonDetC r = NonDetC $ \ cons -> l cons . r cons
-  {-# INLINE (<|>) #-}
+  -- {-# INLINE (<|>) #-}
 
 instance Monad (NonDetC m) where
   NonDetC a >>= f = NonDetC $ \ cons ->
     a (\ a' -> unNonDetC (f a') cons)
-  {-# INLINE (>>=) #-}
+  -- {-# INLINE (>>=) #-}
 
 instance MonadTrans NonDetC where
   lift m = NonDetC $ \c b -> m >>= (`c` b)
@@ -122,4 +116,3 @@ runNonDetInC = usingSem $ \u ->
     Right (Weaving Empty _ _ _)-> empty
     Right (Weaving (Choose left right) mkT lwr ex) -> fmap ex $
       runNonDetInC (lwr (mkT id left)) <|> runNonDetInC (lwr (mkT id right))
-{-# INLINE runNonDetInC #-}

@@ -1,8 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_HADDOCK not-home #-}
-{-# OPTIONS_GHC -ddump-simpl #-}
-{-# OPTIONS_GHC -ddump-rules #-}
-{-# OPTIONS_GHC -ddump-spec #-}
 
 module Polysemy.Internal.HigherOrder where
 
@@ -85,17 +81,16 @@ getTypeParamsH = return TypeParamsH
 -- transform t = interpretH $ \e -> propagate (t e)
 -- @
 propagate :: forall e r z t eH rPre rPost a
-           . (Member e r, Subsume rPost r)
+           . (Member e r, Raise rPost r)
           => e z a
           -> Sem (HigherOrder z t eH rPre rPost ': r) a
 propagate = propagateUsing membership
-{-# INLINE propagate #-}
 
 -- | Propagate an effect action where the higher-order chunks are of the same
 -- monad @z@ as that used by the effect currently being handled, given an
 -- explicit proof that the effect exists in the effect stack.
 propagateUsing :: forall e r z t eH rPre rPost a
-                . Subsume rPost r
+                . Raise rPost r
                => ElemOf e r
                -> e z a
                -> Sem (HigherOrder z t eH rPre rPost ': r) a
@@ -121,17 +116,10 @@ propagateUsing pr = sendViaUsing (There pr) runH
 --
 -- @since 2.0.0.0
 runH :: forall z t e rPre rPost r a
-      . Subsume rPost r
+      . Raise rPost r
      => z a
      -> Sem (HigherOrder z t e rPre rPost ': r) a
 runH = runExposeH >=> restoreH
--- {-# INLINE runH #-}
-{-# SPECIALIZE runH :: z a -> Sem (HigherOrder z t e rPre rPost ': rPost) a #-}
-
--- runH1 :: z a
---       -> Sem (HigherOrder z t e rPre rPost ': rPost) a
--- runH1 = runH
--- {-# RULES "runH/sameTail" runH = runH1 #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted.
@@ -142,14 +130,10 @@ runH = runExposeH >=> restoreH
 --
 -- @since 2.0.0.0
 runH' :: forall z t e rPre rPost r a
-       . Subsume rPre r
+       . Raise rPre r
       => z a
       -> Sem (e ': HigherOrder z t e rPre rPost ': r) a
 runH' = runExposeH' >=> raise . restoreH
--- {-# INLINE runH' #-}
--- {-# SPECIALIZE
---   runH' :: z a
---         -> Sem (HigherOrder z t eH rPre rPost ': rPre) a #-}
 
 -- | Locally gain access to lowering function that can transform
 -- @'Polysemy.Sem' ('Polysemy.Interpretation.HigherOrder' z t ... ': r) x@ to
@@ -166,7 +150,6 @@ liftWithH :: forall z t e rPre rPost r a
               -> Sem r a)
           -> Sem (HigherOrder z t e rPre rPost ': r) a
 liftWithH main = sendUsing Here (LiftWithH main) >>= raise
--- {-# INLINE liftWithH #-}
 
 -- | A particularly useful composition:
 -- @'controlH' h = 'liftWithH' h >>= 'restoreH'@
@@ -182,7 +165,6 @@ controlH :: forall z t e rPre rPost r a
              -> Sem r (t a))
          -> Sem (HigherOrder z t e rPre rPost ': r) a
 controlH main = liftWithH main >>= restoreH
--- {-# INLINE liftWithH #-}
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted, recursively apply the current interpreter on it,
@@ -203,15 +185,11 @@ controlH main = liftWithH main >>= restoreH
 --
 -- @since TODO
 runExposeH :: forall z t e rPre rPost r a
-            . Subsume rPost r
+            . Raise rPost r
            => z a -> Sem (HigherOrder z t e rPre rPost ': r) (t a)
 runExposeH z = do
   InterpreterH interp <- getInterpreterH
-  withProcessorH $ \prcs -> subsume_ $ interp $ prcs z
--- {-# INLINEABLE runExposeH #-}
--- {-# SPECIALIZE
---   runExposeH :: z a
---              -> Sem (HigherOrder z t e rPre rPost ': rPost) (t a) #-}
+  withProcessorH $ \prcs -> raise_ $ interp $ prcs z
 
 -- | Run a monadic action given by a higher-order effect that is currently
 -- being interpreted, and reify the effectful state of all local effects
@@ -225,24 +203,12 @@ runExposeH z = do
 --
 -- @since TODO
 runExposeH' :: forall z t e rPre rPost r a
-             . Subsume rPre r
+             . Raise rPre r
             => z a
             -> Sem (e ': HigherOrder z t e rPre rPost ': r) (t a)
-runExposeH' = raise . processH >=> subsume_
--- {-# INLINEABLE runExposeH' #-}
--- {-# SPECIALIZE
---   runExposeH' :: z a
---               -> Sem (e ': HigherOrder z t e rPre rPost ': rPre) (t a) #-}
--- {-# SPECIALIZE
---   runExposeH' :: z a
---               -> Sem (e ': HigherOrder z t e rPre rPost ': e1 ': rPre) (t a) #-}
--- {-# SPECIALIZE
---   runExposeH' :: z a
---               -> Sem (e ': HigherOrder z t e rPre rPost ': e1 ': e2 ': rPre) (t a) #-}
--- {-# SPECIALIZE
---   runExposeH' :: z a
---               -> Sem (e ': HigherOrder z t e rPre rPost ': e1 ': e2 ': e3 ': rPre) (t a) #-}
-
+runExposeH' = raise . processH >=> mapMembership \case
+  Here -> Here
+  There pr -> There (raiseMembership pr)
 
 -- | Restore a reified effectful state, bringing its changes into scope, and
 -- returning the result of the computation.
@@ -279,7 +245,6 @@ runExposeH' = raise . processH >=> subsume_
 restoreH :: forall z t e rPre rPost r a
           . t a -> Sem (HigherOrder z t e rPre rPost ': r) a
 restoreH = sendUsing Here . RestoreH
--- {-# INLINE restoreH #-}
 
 -- | Reify the effectful state of the local effects of the argument.
 --
@@ -290,7 +255,6 @@ exposeH :: forall z t e rPre rPost r a
          . Sem (HigherOrder z t e rPre rPost ': r) a
         -> Sem (HigherOrder z t e rPre rPost ': r) (t a)
 exposeH m = liftWithH $ \lower -> lower m
--- {-# INLINE exposeH #-}
 
 -- | Process a monadic action given by the higher-order effect that is currently
 -- being interpreted by turning it into a @'Sem' (e ': rPre)@ action that
@@ -304,7 +268,6 @@ processH :: forall z t e rPre rPost r a
           . z a
          -> Sem (HigherOrder z t e rPre rPost ': r) (Sem (e ': rPre) (t a))
 processH z = withProcessorH $ \lower -> return (lower z)
--- {-# INLINE processH #-}
 
 -- | Locally gain access to a processor: a function that transforms a monadic
 -- action given by the higher-order effect that is currently being interpreted
@@ -319,7 +282,6 @@ withProcessorH :: forall z t e rPre rPost r a
                    -> Sem r a)
                -> Sem (HigherOrder z t e rPre rPost ': r) a
 withProcessorH main = sendUsing Here (WithProcessorH main) >>= raise
--- {-# INLINE withProcessorH #-}
 
 -- | A particularly useful composition:
 -- @'controlWithProcessorH' h = 'withProcessorH' h >>= 'restoreH'@
@@ -332,14 +294,12 @@ controlWithProcessorH :: forall z t e rPre rPost r a
                           -> Sem r (t a))
                       -> Sem (HigherOrder z t e rPre rPost ': r) a
 controlWithProcessorH main = withProcessorH main >>= restoreH
--- {-# INLINE controlWithProcessorH #-}
 
 -- | Retrieve a 'InterpreterH': the interpreter currently being defined
 getInterpreterH :: forall z t e rPre rPost r
                  . Sem (HigherOrder z t e rPre rPost ': r)
                        (InterpreterH e rPre rPost)
 getInterpreterH = sendUsing Here GetInterpreterH
--- {-# INLINE getInterpreterH #-}
 
 -- | A handler for a higher-order effect @e@, working with the effect stack
 -- @rPost@.
@@ -379,7 +339,6 @@ interpretH :: forall e r a
              -> Sem (e ': r) a
              -> Sem r a
 interpretH = genericInterpretH subsumeMembership
--- {-# INLINE interpretH #-}
 
 ------------------------------------------------------------------------------
 -- | A generalization of 'interpretH', 'reinterpretH', 'reinterpret2H', etc.:
@@ -413,17 +372,10 @@ genericInterpretH tPr h = go
                      ex
               ) ->
           let
-              {-# SPECIALIZE INLINE
-                  commonHandler :: forall n x
-                                 . Weaving (HigherOrder z (StT t) e r r') n x
-                                -> t m x #-}
-              {-# SPECIALIZE INLINE
-                  commonHandler :: forall r'' n x
-                                 . Weaving (HigherOrder z (StT t) e r r') n x
-                                -> t (Sem r'') x #-}
               commonHandler :: forall n b x
                              . Monad b
-                            => Weaving (HigherOrder z (StT t) e r r') n x -> t b x
+                            => Weaving (HigherOrder z (StT t) e r r') n x
+                            -> t b x
               commonHandler (Weaving eff _ lwr' ex') = do
                 let run_it = fmap (ex' . (<$ mkInitState lwr'))
                 case eff of
@@ -434,6 +386,7 @@ genericInterpretH tPr h = go
                     restoreT (return t)
                   LiftWithH main -> run_it $ liftWith $ \lower ->
                     return $ main (lower . go')
+              {-# INLINE commonHandler #-}
 
               go' :: forall r'' x
                    . Sem (HigherOrder z (StT t) e r r' ': r'') x
@@ -445,7 +398,6 @@ genericInterpretH tPr h = go
             fmap ex $ lwr $ runSem (h e) $ \u' -> case decomp u' of
               Left g -> liftHandlerWithNat go' k g
               Right wav -> commonHandler wav
--- {-# INLINE[1] genericInterpretH #-}
 
 ------------------------------------------------------------------------------
 -- | The simplest way to produce an effect handler. Interprets an effect @e@ by
@@ -457,8 +409,7 @@ interpret :: forall e r a
              => (∀ z x. e z x -> Sem r x)
              -> Sem (e ': r) a
              -> Sem r a
-interpret h =
-  interpretH $ \e -> raise (h e)
+interpret h = interpretH $ \e -> raise (h e)
 {-# INLINE interpret #-}
 
 ------------------------------------------------------------------------------
@@ -471,7 +422,6 @@ reinterpretH :: forall e1 e2 r a
                -> Sem (e1 ': r) a
                -> Sem (e2 ': r) a
 reinterpretH = genericInterpretH There
--- {-# INLINE reinterpretH #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'interpret', but instead of removing the effect @e@, reencodes it in
@@ -485,8 +435,7 @@ reinterpret :: forall e1 e2 r a
              => (∀ z x. e1 z x -> Sem (e2 ': r) x)
              -> Sem (e1 ': r) a
              -> Sem (e2 ': r) a
-reinterpret h =
-  reinterpretH $ \e -> raise (h e)
+reinterpret h = reinterpretH $ \e -> raise (h e)
 {-# INLINE[2] reinterpret #-}
 
 ------------------------------------------------------------------------------
@@ -499,7 +448,6 @@ reinterpret2H :: forall e1 e2 e3 r a
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': r) a
 reinterpret2H = genericInterpretH (There . There)
--- {-# INLINE[2] reinterpret2H #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /two/ intermediary effects.
@@ -510,9 +458,8 @@ reinterpret2 :: forall e1 e2 e3 r a
              => (∀ z x. e1 z x -> Sem (e2 ': e3 ': r) x)
              -> Sem (e1 ': r) a
              -> Sem (e2 ': e3 ': r) a
-reinterpret2 h =
-  reinterpret2H $ \e -> raise (h e)
-{-# INLINE[2] reinterpret2 #-}
+reinterpret2 h = reinterpret2H $ \e -> raise (h e)
+{-# INLINE[2] reinterpret2 #-} -- rewrite rule
 
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret3', but for higher-order effects. See 'interpretH' for a
@@ -524,7 +471,6 @@ reinterpret3H :: forall e1 e2 e3 e4 r a
                 -> Sem (e1 ': r) a
                 -> Sem (e2 ': e3 ': e4 ': r) a
 reinterpret3H = genericInterpretH (There . There . There)
--- {-# INLINE reinterpret3H #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'reinterpret', but introduces /three/ intermediary effects.
@@ -553,9 +499,8 @@ intercept :: forall e r a
           => (∀ z x. e z x -> Sem r x)
           -> Sem r a
           -> Sem r a
-intercept h =
-  interceptH $ \e -> raise (h e)
-{-# INLINE intercept #-}
+intercept h = interceptH $ \e -> raise (h e)
+{-# INLINE intercept #-} -- interceptH uses mapMembership
 
 ------------------------------------------------------------------------------
 -- | Like 'intercept', but for higher-order effects.
@@ -567,19 +512,19 @@ interceptH :: forall e r a
              -> Sem r a
              -> Sem r a
 interceptH h = interpretH h . expose
-{-# INLINE interceptH #-}
+{-# INLINE interceptH #-} -- expose uses mapMembership
 
 ------------------------------------------------------------------------------
 -- | Like 'interceptUsing', but for higher-order effects.
 --
 -- @since TODO
-interceptUsing :: forall e r a
-                   . ElemOf e r
-                  -> EffHandlerH e r r
-                  -> Sem r a
-                  -> Sem r a
-interceptUsing pr h = interpretH h . exposeUsing pr
-{-# INLINE interceptUsing #-}
+interceptUsingH :: forall e r a
+                 . ElemOf e r
+                -> EffHandlerH e r r
+                -> Sem r a
+                -> Sem r a
+interceptUsingH pr h = interpretH h . exposeUsing pr
+{-# INLINE interceptUsing #-} -- exposeUsing uses mapMembership
 
 ------------------------------------------------------------------------------
 -- | A variant of 'intercept' that accepts an explicit proof that the effect
@@ -589,13 +534,12 @@ interceptUsing pr h = interpretH h . exposeUsing pr
 -- in order to conditionally perform 'intercept'.
 --
 -- @since TODO
-interceptUsingH :: forall e r a .
-                     FirstOrder e "interceptUsing"
-                  => Member e r
-                  => ElemOf e r
-                  -> (∀ z x. e z x -> Sem r x)
-                  -> Sem r a
-                  -> Sem r a
-interceptUsingH pr h =
-  interceptUsing pr $ \e -> raise (h e)
-{-# INLINE interceptUsingH #-}
+interceptUsing :: forall e r a .
+                  FirstOrder e "interceptUsing"
+               => Member e r
+               => ElemOf e r
+               -> (∀ z x. e z x -> Sem r x)
+               -> Sem r a
+               -> Sem r a
+interceptUsing pr h = interceptUsingH pr $ \e -> raise (h e)
+{-# INLINE interceptUsingH #-} -- interceptUsingH uses mapMembership

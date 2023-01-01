@@ -138,7 +138,6 @@ scoped param eff = send $
       (\e -> Scoped $
         RunInScope1 @_ @_ @(Const param) @(Const1 modifier) w (Const2 e))
       eff
-{-# INLINE scoped #-}
 
 -- | Constructor for @'Scoped_' eff@: it takes a nested program which uses the
 --- effect @eff@ and runs the interpreter provided by @'Scoped_' eff@ on it.
@@ -150,7 +149,6 @@ scoped_ :: forall eff param r a
         -> Sem (eff ': r) a
         -> Sem r a
 scoped_ p = fmap runIdentity . scoped @eff @param @Identity p
-{-# INLINE scoped_ #-}
 
 -- | Constructor for @'Scoped1' eff@: it takes a nested program which uses the
 -- effect @eff k@ and runs the interpreter provided by @'Scoped1' eff@ on it,
@@ -164,7 +162,6 @@ scoped1 :: forall k eff param modifier r a
         -> Sem r (modifier k a)
 scoped1 param eff = send $ Scoped1 @_ @eff id param $ \w ->
   transform (RunInScope1 @_ @_ @param @modifier w) eff
-{-# INLINE scoped1 #-}
 
 -- | Constructor for @'Scoped1_' eff@: it takes a nested program which uses the
 -- effect @eff k@ and runs the interpreter provided by @'Scoped1_' eff@ on it.
@@ -178,7 +175,6 @@ scoped1_ :: forall k eff param r a
 scoped1_ p =
     fmap (runIdentity #. getConst1)
   . scoped1 @_ @eff @param @(Const1 Identity) p
-{-# INLINE scoped1_ #-}
 
 -- | An auxiliary effect for 'Scoped' and 'Scoped1'.
 data OuterRun (effect :: k -> Effect) :: Effect where

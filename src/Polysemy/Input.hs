@@ -39,7 +39,6 @@ inputs f = f <$> input
 runInputConst :: i -> Sem (Input i ': r) a -> Sem r a
 runInputConst c = interpret $ \case
   Input -> pure c
-{-# INLINE runInputConst #-}
 
 
 ------------------------------------------------------------------------------
@@ -56,7 +55,6 @@ runInputList is = fmap snd . runState is . reinterpret
         for_ s $ put . snd
         pure $ fst <$> s
   )
-{-# INLINE runInputList #-}
 
 
 ------------------------------------------------------------------------------
@@ -64,4 +62,3 @@ runInputList is = fmap snd . runState is . reinterpret
 runInputSem :: forall i r a. Sem r i -> Sem (Input i ': r) a -> Sem r a
 runInputSem m = interpret $ \case
   Input -> m
-{-# INLINE runInputSem #-}

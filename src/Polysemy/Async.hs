@@ -66,5 +66,3 @@ asyncToIOFinal = interpretFinal @IO $ \case
     fmap (foldr (const . Just) Nothing) <$> A.async (lower m)
   Await a -> embed (A.wait a)
   Cancel a -> embed (A.cancel a)
-{-# INLINE asyncToIOFinal #-}
-

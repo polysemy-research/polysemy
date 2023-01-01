@@ -157,7 +157,6 @@ runFatal (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
     Left x ->
       liftHandlerWithNat (E.ExceptT . runFatal) k x
     Right (Weaving (Fatal e) _ _ _) -> E.throwE e
-{-# INLINE runFatal #-}
 
 
 ------------------------------------------------------------------------------
@@ -172,7 +171,6 @@ mapFatal
   -> Sem (Fatal e1 ': r) a
   -> Sem r a
 mapFatal f = transform (\(Fatal e) -> Fatal (f e))
-{-# INLINE mapFatal #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Fatal' effect as an 'IO' 'X.Exception' through final 'IO'. This
@@ -188,7 +186,6 @@ fatalToIOFinal
     => Sem (Fatal e ': r) a
     -> Sem r (Either e a)
 fatalToIOFinal = errorToIOFinal . fatalIntoError
-{-# INLINE fatalToIOFinal #-}
 
 -- | Transform a @'Fatal' e@ effect into a @'Error' e@ effect.
 fatalToError
@@ -198,7 +195,6 @@ fatalToError
     -> Sem r a
 fatalToError = transform (coerce (Throw @e @z @x)
                           :: forall z x. Fatal e z x -> Error e z x)
-{-# INLINE fatalToError #-}
 
 -- | Rewrite a @'Fatal' e@ effect into a @'Error' e@ effect on top of the effect
 -- stack.
@@ -208,4 +204,3 @@ fatalIntoError
     -> Sem (Error e ': r) a
 fatalIntoError = rewrite (coerce (Throw @e @z @x)
                           :: forall z x. Fatal e z x -> Error e z x)
-{-# INLINE fatalIntoError #-}

@@ -272,39 +272,39 @@ usingSem k m = runSem m k
 
 instance Functor (Sem f) where
   fmap f (Sem m) = Sem $ \k -> f <$> m k
-  {-# INLINE fmap #-}
+  -- {-# INLINE fmap #-}
 
 
 instance Applicative (Sem f) where
   pure a = Sem $ \_ -> pure a
-  {-# INLINE pure #-}
+  -- {-# INLINE pure #-}
 
   Sem f <*> Sem a = Sem $ \k -> f k <*> a k
-  {-# INLINE (<*>) #-}
+  -- {-# INLINE (<*>) #-}
 
   liftA2 f ma mb = Sem $ \k -> liftA2 f (runSem ma k) (runSem mb k)
-  {-# INLINE liftA2 #-}
+  -- {-# INLINE liftA2 #-}
 
   ma <* mb = Sem $ \k -> runSem ma k <* runSem mb k
-  {-# INLINE (<*) #-}
+  -- {-# INLINE (<*) #-}
 
   -- Use (>>=) because many monads are bad at optimizing (*>).
   -- Ref https://github.com/polysemy-research/polysemy/issues/368
   ma *> mb = Sem $ \k -> runSem ma k >>= \_ -> runSem mb k
-  {-# INLINE (*>) #-}
+  -- {-# INLINE (*>) #-}
 
 instance Monad (Sem f) where
   Sem ma >>= f = Sem $ \k -> do
     z <- ma k
     runSem (f z) k
-  {-# INLINE (>>=) #-}
+  -- {-# INLINE (>>=) #-}
 
 
 instance (Member NonDet r) => Alternative (Sem r) where
   empty = send Empty
-  {-# INLINE empty #-}
+  -- {-# INLINE empty #-}
   a <|> b = send (Choose a b)
-  {-# INLINE (<|>) #-}
+  -- {-# INLINE (<|>) #-}
 
 -- | @since 0.2.1.0
 instance (Member NonDet r) => MonadPlus (Sem r) where
@@ -314,7 +314,7 @@ instance (Member NonDet r) => MonadPlus (Sem r) where
 -- | @since 1.1.0.0
 instance (Member Fail r) => MonadFail (Sem r) where
   fail = send . Fail
-  {-# INLINE fail #-}
+  -- {-# INLINE fail #-}
 
 -- | @since 1.6.0.0
 instance Semigroup a => Semigroup (Sem f a) where
@@ -334,7 +334,7 @@ instance Member (Embed IO) r => MonadIO (Sem r) where
 
 instance Member Fixpoint r => MonadFix (Sem r) where
   mfix f = send $ Fixpoint f
-  {-# INLINE mfix #-}
+  -- {-# INLINE mfix #-}
 
 
 ------------------------------------------------------------------------------
@@ -399,11 +399,15 @@ raise_ = mapMembership raiseMembership
 class Raise (r :: EffectRow) (r' :: EffectRow) where
   raiseMembership :: ElemOf e r -> ElemOf e r'
 
-instance {-# overlapping #-} Raise r r where
-  raiseMembership = id
+instance {-# INCOHERENT #-} Raise r r where
+  raiseMembership = idMembership
   {-# INLINE raiseMembership #-}
 
-instance (r' ~ (_0 ': r''), Raise r r'') => Raise r r' where
+instance {-# OVERLAPPING #-} Raise (e ': r) (e ': r) where
+  raiseMembership = idMembership
+  {-# INLINE raiseMembership #-}
+
+instance Raise r r' => Raise r (_0 ': r') where
   raiseMembership = There . raiseMembership
 
 ------------------------------------------------------------------------------
@@ -474,7 +478,7 @@ raise3Under = subsume_
 --
 -- @since 2.0.0.0
 raiseUnder2 :: ∀ e3 e1 e2 r a. Sem (e1 : e2 : r) a -> Sem (e1 : e2 : e3 : r) a
-raiseUnder2 = insertAt @2
+raiseUnder2 = subsume_
 {-# INLINE raiseUnder2 #-}
 
 
@@ -484,7 +488,7 @@ raiseUnder2 = insertAt @2
 --
 -- @since 2.0.0.0
 raiseUnder3 :: ∀ e4 e1 e2 e3 r a. Sem (e1 : e2 : e3 : r) a -> Sem (e1 : e2 : e3 : e4 : r) a
-raiseUnder3 = insertAt @3
+raiseUnder3 = subsume_
 {-# INLINE raiseUnder3 #-}
 
 
@@ -501,7 +505,8 @@ subsume_ :: ∀ r r' a. Subsume r r' => Sem r a -> Sem r' a
 subsume_ = mapMembership subsumeMembership
 {-# INLINE subsume_ #-}
 
-
+class Raise' (r :: EffectRow) (r' :: EffectRow) where
+  raiseMembership' :: ElemOf e r -> ElemOf e r'
 
 instance {-# overlapping #-} Raise' r r where
   raiseMembership' = idMembership
@@ -510,8 +515,22 @@ instance {-# overlapping #-} Raise' r r where
 instance (r' ~ (_0 ': r''), Subsume r r'') => Raise' r r' where
   raiseMembership' = There . subsumeMembership
 
-class Raise' (r :: EffectRow) (r' :: EffectRow) where
-  raiseMembership' :: ElemOf e r -> ElemOf e r'
+class Subsume' (origR' :: EffectRow) (r :: EffectRow) (r' :: EffectRow) where
+  subsumeMembership' :: (ElemOf e r' -> ElemOf e origR')
+                     -> ElemOf e r -> ElemOf e origR'
+
+instance Subsume r origR' => Subsume' origR' r r' where
+  subsumeMembership' _ = subsumeMembership
+  {-# INLINE subsumeMembership' #-}
+
+instance {-# INCOHERENT #-} Subsume' origR r r'
+  => Subsume' origR (e ': r) (e ': r') where
+  subsumeMembership' t Here = t Here
+  subsumeMembership' t (There pr) = subsumeMembership' (t . There) pr
+
+instance {-# INCOHERENT #-} Subsume' origR (e ': r) (e ': r) where
+  subsumeMembership' t = t
+  {-# INLINE subsumeMembership' #-}
 
 -- | See 'subsume_'.
 --
@@ -523,26 +542,18 @@ instance {-# INCOHERENT #-} Raise' r r' => Subsume r r' where
   subsumeMembership = raiseMembership'
   {-# INLINE subsumeMembership #-}
 
-instance {-# INCOHERENT #-} Subsume (e ': r) (e ': r) where
-  subsumeMembership = idMembership
+instance {-# INCOHERENT #-} Subsume' (e ': r') (e ': r) (e ': r')
+      => Subsume (e ': r) (e ': r') where
+  subsumeMembership = subsumeMembership' idMembership
   {-# INLINE subsumeMembership #-}
-
-instance (Member e r', Subsume r r') => Subsume (e ': r) r' where
-  subsumeMembership Here = membership
-  subsumeMembership (There pr) = subsumeMembership pr
 
 instance Subsume '[] r where
   subsumeMembership = absurdMembership
   {-# INLINE subsumeMembership #-}
 
-{-# SPECIALIZE
-  subsumeMembership :: ElemOf e r -> ElemOf e (e1 ': r) #-}
-{-# SPECIALIZE
-  subsumeMembership :: ElemOf e r -> ElemOf e (e1 ': e2 ': r) #-}
-{-# SPECIALIZE
-  subsumeMembership :: ElemOf e r -> ElemOf e (e1 ': e2 ': e3 ': r) #-}
-{-# SPECIALIZE
-  subsumeMembership :: ElemOf e (e' ': r) -> ElemOf e (e' ': e1 ': r) #-}
+instance (Member e r', Subsume r r') => Subsume (e ': r) r' where
+  subsumeMembership Here = membership
+  subsumeMembership (There pr) = subsumeMembership pr
 
 ------------------------------------------------------------------------------
 -- | Interprets an effect in terms of another identical effect.
@@ -575,11 +586,13 @@ subsume = subsume_
 --   _       -> Nothing
 -- @
 --
--- 'subsumeUsing' is also useful to resolve issues with 'Polysemy.Member',
--- as the membership proof can be used to explicitly target a specific effect.
+-- 'subsumeUsing' is also useful when you encounter issues with
+-- 'Polysemy.Member', as the membership proof can be used to explicitly target
+-- a specific effect.
 --
 -- @
--- localUnder :: forall i e r a. 'Polysemy.Member' ('Polysemy.Reader.Reader' i) r => (i -> i) -> 'Sem' (e ': r) a -> 'Sem' (e ': r) a
+-- localUnder :: forall i e r a. 'Polysemy.Member' ('Polysemy.Reader.Reader' i) r
+--            => (i -> i) -> 'Sem' (e ': r) a -> 'Sem' (e ': r) a
 -- localUnder f m = 'Polysemy.Membership.subsumeUsing' @(Reader i) ('Polysemy.Membership.There' 'Polysemy.Membership.membership') ('Polysemy.Reader.local' f ('Polysemy.raise' m))
 -- @
 --
@@ -644,7 +657,7 @@ insertAt = mapMembership $
 -- and 'interpret'\/'interpretH' in order to conditionally perform
 -- 'intercept'-like operations.
 --
--- @since TODO
+-- @since 2.0.0.0
 exposeUsing :: forall e r a. ElemOf e r -> Sem r a -> Sem (e ': r) a
 exposeUsing pr = mapMembership \pr' ->
   case sameMember pr pr' of
@@ -670,22 +683,22 @@ exposeUsing pr = mapMembership \pr' ->
 -- @
 --
 -- 'Polysemy.makeSem' allows you to eliminate this boilerplate.
---
--- @since TODO
 send :: Member e r => e (Sem r) a -> Sem r a
 send = liftSem . inj
-{-# INLINE[3] send #-}
+{-# NOINLINE[3] send #-}
 
 ------------------------------------------------------------------------------
 -- | Execute an action of an effect, given a natural transformation from
 -- the monad used for the higher-order chunks in the effect to
 -- @'Polysemy.Sem' r@.
+--
+-- @since 2.0.0.0
 sendVia :: forall e z r a
          . Member e r
         => (forall x. z x -> Sem r x)
         -> e z a -> Sem r a
 sendVia n = liftSem . hoist n . inj
-{-# INLINE[3] sendVia #-}
+{-# NOINLINE[3] sendVia #-}
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem', given an explicit proof
@@ -695,7 +708,7 @@ sendVia n = liftSem . hoist n . inj
 -- in order to conditionally make use of effects.
 sendUsing :: ElemOf e r -> e (Sem r) a -> Sem r a
 sendUsing pr = liftSem . injUsing pr
-{-# INLINE[3] sendUsing #-}
+{-# NOINLINE[3] sendUsing #-}
 
 ------------------------------------------------------------------------------
 -- | Embed an effect into a 'Sem', given an explicit proof
@@ -703,7 +716,7 @@ sendUsing pr = liftSem . injUsing pr
 -- used for the higher-order thunks in the effect to @'Polysemy.Sem' r@.
 sendViaUsing :: ElemOf e r -> (forall x. z x -> Sem r x) -> e z a -> Sem r a
 sendViaUsing pr n = liftSem . hoist n . injUsing pr
-{-# INLINE[3] sendViaUsing #-}
+{-# NOINLINE[3] sendViaUsing #-}
 
 
 ------------------------------------------------------------------------------
@@ -712,7 +725,6 @@ sendViaUsing pr n = liftSem . hoist n . injUsing pr
 -- @since 1.0.0.0
 embed :: Member (Embed m) r => m a -> Sem r a
 embed = send . Embed
-{-# INLINE embed #-}
 
 
 ------------------------------------------------------------------------------

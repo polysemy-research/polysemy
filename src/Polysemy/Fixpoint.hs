@@ -67,4 +67,3 @@ fixpointToFinal :: forall m r a
 fixpointToFinal = interpretFinal @m $ \case
   Fixpoint f -> controlWithProcessorL $ \lower ->
     mfix $ lower . f . foldr const (bomb "fixpointToFinal")
-{-# INLINE fixpointToFinal #-}

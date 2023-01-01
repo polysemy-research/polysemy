@@ -54,15 +54,11 @@ runReader :: i -> Sem (Reader i ': r) a -> Sem r a
 runReader i = interpretH $ \case
   Ask -> return i
   Local f m -> runReader (f i) (runH' m)
-{-# INLINE runReader #-}
 
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Input' effect into a 'Reader' effect.
 --
 -- @since 1.0.0.0
-inputToReader :: Member (Reader i) r => Sem (Input i ': r) a -> Sem r a
-inputToReader = interpret $ \case
-  Input -> ask
-{-# INLINE inputToReader #-}
-
+inputToReader :: forall i r a. Member (Reader i) r => Sem (Input i ': r) a -> Sem r a
+inputToReader = transform @_ @(Reader i) (\Input -> Ask)

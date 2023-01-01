@@ -96,7 +96,6 @@ runState = stateful $ \case
 -- @since 1.0.0.0
 evalState :: s -> Sem (State s ': r) a -> Sem r a
 evalState s = fmap snd . runState s
-{-# INLINE evalState #-}
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect with local state.
@@ -104,7 +103,6 @@ evalState s = fmap snd . runState s
 -- @since 1.2.3.1
 execState :: s -> Sem (State s ': r) a -> Sem r s
 execState s = fmap fst . runState s
-{-# INLINE execState #-}
 
 
 
@@ -122,7 +120,6 @@ runLazyState = lazilyStateful $ \case
 -- @since 1.0.0.0
 evalLazyState :: s -> Sem (State s ': r) a -> Sem r a
 evalLazyState s = fmap snd . runLazyState s
-{-# INLINE evalLazyState #-}
 
 
 ------------------------------------------------------------------------------
@@ -131,7 +128,6 @@ evalLazyState s = fmap snd . runLazyState s
 -- @since 1.2.3.1
 execLazyState :: s -> Sem (State s ': r) a -> Sem r s
 execLazyState s = fmap fst . runLazyState s
-{-# INLINE execLazyState #-}
 
 
 
@@ -153,7 +149,6 @@ runStateIORef
 runStateIORef ref = interpret $ \case
   Get   -> embed $ readIORef ref
   Put s -> embed $ writeIORef ref s
-{-# INLINE runStateIORef #-}
 
 --------------------------------------------------------------------
 -- | Run an 'State' effect in terms of operations
@@ -187,7 +182,6 @@ stateToIO s sem = do
   res <- runStateIORef ref sem
   end <- embed $ readIORef ref
   return (end, res)
-{-# INLINE stateToIO #-}
 
 ------------------------------------------------------------------------------
 -- | Run a 'State' effect by transforming it into operations over an 'STRef'.
@@ -202,7 +196,6 @@ runStateSTRef
 runStateSTRef ref = interpret $ \case
   Get   -> embed $ readSTRef ref
   Put s -> embed $ writeSTRef ref s
-{-# INLINE runStateSTRef #-}
 
 --------------------------------------------------------------------
 -- | Run an 'State' effect in terms of operations
@@ -242,7 +235,6 @@ stateToST s sem = do
   res <- runStateSTRef ref sem
   end <- embed $ readSTRef ref
   return (end, res)
-{-# INLINE stateToST #-}
 
 ------------------------------------------------------------------------------
 -- | Hoist a 'State' effect into a 'S.StateT' monad transformer. This can be
@@ -258,7 +250,6 @@ hoistStateIntoStateT (Sem m) = m $ \u ->
       liftHandlerWithNat hoistStateIntoStateT liftSem x
     Right (Weaving Get _ lwr ex)     -> ex . (<$ mkInitState lwr) <$> S.get
     Right (Weaving (Put s) _ lwr ex) -> ex . (<$ mkInitState lwr) <$> S.put s
-{-# INLINE hoistStateIntoStateT #-}
 
 
 {-# RULES "runState/reinterpret"

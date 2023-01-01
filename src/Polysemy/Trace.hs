@@ -41,7 +41,6 @@ makeSem ''Trace
 traceToHandle :: Member (Embed IO) r => Handle -> Sem (Trace ': r) a -> Sem r a
 traceToHandle handle = interpret $ \case
   Trace m -> embed $ hPutStrLn handle m
-{-# INLINE traceToHandle #-}
 
 
 ------------------------------------------------------------------------------
@@ -50,7 +49,6 @@ traceToHandle handle = interpret $ \case
 -- @since 1.6.0.0
 traceToStdout :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
 traceToStdout = traceToHandle stdout
-{-# INLINE traceToStdout #-}
 
 
 ------------------------------------------------------------------------------
@@ -59,7 +57,6 @@ traceToStdout = traceToHandle stdout
 -- @since 1.6.0.0
 traceToStderr :: Member (Embed IO) r => Sem (Trace ': r) a -> Sem r a
 traceToStderr = traceToHandle stderr
-{-# INLINE traceToStderr #-}
 
 
 ------------------------------------------------------------------------------
@@ -69,7 +66,6 @@ traceToStderr = traceToHandle stderr
 ignoreTrace :: Sem (Trace ': r) a -> Sem r a
 ignoreTrace = interpret $ \case
   Trace _ -> pure ()
-{-# INLINE ignoreTrace #-}
 
 
 ------------------------------------------------------------------------------
@@ -82,7 +78,6 @@ traceToOutput
     -> Sem r a
 traceToOutput = interpret $ \case
   Trace m -> output m
-{-# INLINE traceToOutput #-}
 
 
 ------------------------------------------------------------------------------
@@ -96,7 +91,6 @@ runTraceList = runOutputList . reinterpret (
   \case
     Trace m -> output m
   )
-{-# INLINE runTraceList #-}
 
 
 ------------------------------------------------------------------------------
@@ -112,4 +106,3 @@ outputToTrace
   -> Sem r a
 outputToTrace show' = interpret $ \case
   Output m -> trace $ show' m
-{-# INLINE outputToTrace #-}

@@ -63,7 +63,6 @@ atomicGets :: forall s s' r
            => (s -> s')
            -> Sem r s'
 atomicGets = (<$> atomicGet)
-{-# INLINE atomicGets #-}
 
 -----------------------------------------------------------------------------
 -- | A variant of 'atomicState' in which the computation is strict in the new
@@ -80,7 +79,6 @@ atomicState' f = do
     case f s of
       v@(!_, _) -> v
   return a
-{-# INLINE atomicState' #-}
 
 -----------------------------------------------------------------------------
 -- | Replace the state with the given value.
@@ -90,7 +88,6 @@ atomicPut :: Member (AtomicState s) r
 atomicPut s = do
   !_ <- atomicState $ \_ -> (s, ()) -- strict put with atomicModifyIORef
   return ()
-{-# INLINE atomicPut #-}
 
 -----------------------------------------------------------------------------
 -- | Modify the state lazily.
@@ -98,7 +95,6 @@ atomicModify :: Member (AtomicState s) r
              => (s -> s)
              -> Sem r ()
 atomicModify f = atomicState $ \s -> (f s, ())
-{-# INLINE atomicModify #-}
 
 -----------------------------------------------------------------------------
 -- | A variant of 'atomicModify' in which the computation is strict in the
@@ -109,7 +105,6 @@ atomicModify' :: Member (AtomicState s) r
 atomicModify' f = do
   !_ <- atomicState $ \s -> let !s' = f s in (s', ())
   return ()
-{-# INLINE atomicModify' #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'AtomicState' effect by transforming it into atomic operations
@@ -122,7 +117,6 @@ runAtomicStateIORef :: forall s r a
 runAtomicStateIORef ref = interpret $ \case
   AtomicState f -> embed $ atomicModifyIORef ref f
   AtomicGet     -> embed $ readIORef ref
-{-# INLINE runAtomicStateIORef #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'AtomicState' effect by transforming it into atomic operations
@@ -137,7 +131,6 @@ runAtomicStateTVar tvar = interpret $ \case
     writeTVar tvar s'
     return a
   AtomicGet -> embed $ readTVarIO tvar
-{-# INLINE runAtomicStateTVar #-}
 
 --------------------------------------------------------------------
 -- | Run an 'AtomicState' effect in terms of atomic operations
@@ -166,7 +159,6 @@ atomicStateToIO s sem = do
   res <- runAtomicStateIORef ref sem
   end <- embed $ readIORef ref
   return (end, res)
-{-# INLINE atomicStateToIO #-}
 
 ------------------------------------------------------------------------------
 -- | Transform an 'AtomicState' effect to a 'State' effect, discarding
@@ -180,7 +172,6 @@ atomicStateToState = interpret $ \case
     put s'
     return a
   AtomicGet -> get
-{-# INLINE atomicStateToState #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'AtomicState' with local state semantics, discarding
@@ -194,7 +185,6 @@ runAtomicStateViaState :: s
                        -> Sem r (s, a)
 runAtomicStateViaState s =
   runState s . atomicStateToState . raiseUnder
-{-# INLINE runAtomicStateViaState #-}
 
 ------------------------------------------------------------------------------
 -- | Evaluate an 'AtomicState' with local state semantics, discarding
@@ -207,7 +197,6 @@ evalAtomicStateViaState :: s
                         -> Sem r a
 evalAtomicStateViaState s =
   evalState s . atomicStateToState . raiseUnder
-{-# INLINE evalAtomicStateViaState #-}
 
 ------------------------------------------------------------------------------
 -- | Execute an 'AtomicState' with local state semantics, discarding
@@ -220,4 +209,3 @@ execAtomicStateViaState :: s
                         -> Sem r s
 execAtomicStateViaState s =
   execState s . atomicStateToState . raiseUnder
-{-# INLINE execAtomicStateViaState #-}

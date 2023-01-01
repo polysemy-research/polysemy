@@ -92,7 +92,6 @@ bracket :: Member Bracket r
         -> Sem r b
 bracket acquire release use =
   fst <$> generalBracket acquire (\a _ -> release a) use
-{-# INLINE bracket #-}
 
 ------------------------------------------------------------------------------
 -- | A variant of 'bracket' where the return value from the first computation
@@ -135,7 +134,6 @@ bracketOnError acquire release use =
                 _ -> void $ release a
             )
     use
-{-# INLINE bracketOnError #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'bracketOnError', but for the simple case of one computation to run
@@ -180,7 +178,6 @@ bracketToIOFinal = interpretFinal @IO $ \case
                >>= either (embed . X.throwIO) return
                >>= restoreL
           return (b, c)
-{-# INLINE bracketToIOFinal #-}
 
 
 ------------------------------------------------------------------------------
@@ -212,4 +209,3 @@ runBracketLocally = interpretH $ \case
         b <- restoreH tb
         c <- runH $ dealloc a (ExitCaseSuccess b)
         return (b, c)
-{-# INLINE runBracketLocally #-}

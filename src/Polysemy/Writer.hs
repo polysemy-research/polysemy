@@ -48,7 +48,6 @@ censor :: Member (Writer o) r
        -> Sem r a
        -> Sem r a
 censor f m = pass $ (f ,) <$> m
-{-# INLINE censor #-}
 
 ------------------------------------------------------------------------------
 -- | Transform an 'Output' effect into a 'Writer' effect.
@@ -57,7 +56,6 @@ censor f m = pass $ (f ,) <$> m
 outputToWriter :: Member (Writer o) r => Sem (Output o ': r) a -> Sem r a
 outputToWriter = interpret $ \case
   Output o -> tell o
-{-# INLINE outputToWriter #-}
 
 
 ------------------------------------------------------------------------------
@@ -86,7 +84,6 @@ runWriter = runState mempty . reinterpretH
         (_, a) <- restoreH t
         return a
   )
-{-# INLINE runWriter #-}
 
 
 ------------------------------------------------------------------------------
@@ -115,7 +112,6 @@ runLazyWriter = interpretViaLazyWriter $ \(Weaving e mkT lwr ex) ->
         ft <- m'
         let f = foldr (const . fst) id ft
         return (ex $ snd <$> ft, f)
-{-# INLINE runLazyWriter #-}
 
 -----------------------------------------------------------------------------
 -- | Like 'runWriter', but right-associates uses of '<>'.
@@ -136,7 +132,6 @@ runWriterAssocR =
   . runWriter
   . writerToEndoWriter
   . raiseUnder
-{-# INLINE runWriterAssocR #-}
 
 
 -----------------------------------------------------------------------------
@@ -161,7 +156,6 @@ runLazyWriterAssocR =
   . runLazyWriter
   . writerToEndoWriter
   . raiseUnder
-{-# INLINE runLazyWriterAssocR #-}
 
 --------------------------------------------------------------------
 -- | Transform a 'Writer' effect into atomic operations
@@ -175,7 +169,6 @@ runWriterTVar :: (Monoid o, Member (Final IO) r)
 runWriterTVar tvar = runWriterSTMAction $ \o -> do
   s <- readTVar tvar
   writeTVar tvar $! s <> o
-{-# INLINE runWriterTVar #-}
 
 
 --------------------------------------------------------------------
@@ -199,7 +192,6 @@ writerToIOFinal sem = do
   res  <- runWriterTVar tvar sem
   end  <- embedFinal $ readTVarIO tvar
   return (end, res)
-{-# INLINE writerToIOFinal #-}
 
 --------------------------------------------------------------------
 -- | Like 'writerToIOFinal'. but right-associates uses of '<>'.
@@ -223,4 +215,3 @@ writerToIOAssocRFinal =
   . writerToIOFinal
   . writerToEndoWriter
   . raiseUnder
-{-# INLINE writerToIOAssocRFinal #-}

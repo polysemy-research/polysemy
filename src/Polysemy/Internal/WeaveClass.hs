@@ -2,12 +2,7 @@
 {-# OPTIONS_HADDOCK not-home #-}
 module Polysemy.Internal.WeaveClass
   ( MonadTransWeave(..)
-
   , mkInitState
-  , mkDistrib
-  , Distrib(..)
-  , mkInspector
-
   , ComposeT(..)
   ) where
 
@@ -33,9 +28,6 @@ class ( MonadTrans t
       )
    => MonadTransWeave t where
   type StT t :: Type -> Type
-
-  -- inspect :: Foldable f => f a -> Maybe a
-  -- inspect = foldr (const . Just) Nothing
 
   hoistT :: (Monad m, Monad n)
          => (forall x. m x -> n x)
@@ -87,24 +79,11 @@ instance ( MonadTransWeave t
 
   restoreT m = ComposeT (restoreT (restoreT (fmap getCompose m)))
 
-newtype Distrib f q m = Distrib (forall x. f (q x) -> m (f x))
-
 mkInitState :: Monad (t Identity)
             => (t Identity () -> Identity (StT t ()))
             -> StT t ()
 mkInitState lwr = runIdentity $ lwr (pure ())
 {-# INLINE mkInitState #-}
-
-mkDistrib :: (MonadTransWeave t, Monad m)
-          => (forall n x. Monad n => (forall y. m y -> n y) -> q x -> t n x)
-          -> (forall z x. Monad z => t z x -> z (StT t x))
-          -> Distrib (StT t) q m
-mkDistrib mkT lwr = Distrib $ lwr . join . restoreT . return . fmap (mkT id)
-{-# INLINE mkDistrib #-}
-
-mkInspector :: Foldable f => f a -> Maybe a
-mkInspector = foldr (const . Just) Nothing
-{-# INLINE mkInspector #-}
 
 instance MonadTransWeave IdentityT where
   type StT IdentityT = Identity

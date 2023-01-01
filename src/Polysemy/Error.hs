@@ -213,7 +213,6 @@ runError (Sem m) = Sem $ \k -> E.runExceptT $ m $ \u ->
             case ma' of
               Left e' -> pure $ Left e'
               Right a -> pure . Right $ ex a
-{-# INLINE runError #-}
 
 ------------------------------------------------------------------------------
 -- | Transform one 'Error' into another. This function can be used to aggregate
@@ -232,7 +231,6 @@ mapError f = interpretH $ \case
     runError (runH' action) >>= \case
       Right x -> pure x
       Left e  -> runH (handler e)
-{-# INLINE mapError #-}
 
 
 data WrappedExc = WrappedExc !Unique Any
@@ -275,7 +273,6 @@ errorToIOFinal sem = controlFinal $ \lower -> do
     uid
     (lower (Right <$> runErrorAsExcFinal uid sem))
     (\e -> lower $ return $ Left e)
-{-# INLINE errorToIOFinal #-}
 
 runErrorAsExcFinal
     :: forall e r a

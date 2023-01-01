@@ -62,7 +62,6 @@ sendBundleUsing
   -> Sem (e ': r) a
   -> Sem r a
 sendBundleUsing pr = transform (Bundle pr)
-{-# INLINE sendBundleUsing #-}
 
 ------------------------------------------------------------------------------
 -- | Send uses of @e@ and @'Bundle' l@ to @'Bundle' (e ': r)@
@@ -94,7 +93,6 @@ mapMembershipBundle :: forall l' l r a
                     -> Sem (Bundle l ': r) a
                     -> Sem r a
 mapMembershipBundle t = transform (\(Bundle pr e) -> Bundle (t pr) e)
-{-# INLINE mapMembershipBundle #-}
 
 ------------------------------------------------------------------------------
 -- | Run a @'Bundle' r@ by prepending @r@ to the effect stack.
@@ -107,7 +105,6 @@ runBundle = hoistSem $ \u -> hoist runBundle $ case decomp u of
   Right (Weaving (Bundle pr e) mkT lwr ex) ->
     Union (extendMembershipRight @r' @r pr) $ Weaving e mkT lwr ex
   Left g -> weakenList @r' @r (singList @r') g
-{-# INLINE runBundle #-}
 
 ------------------------------------------------------------------------------
 -- | Run a @'Bundle' l@ if the effect stack contains all effects of @r@.
@@ -120,4 +117,3 @@ subsumeBundle = hoistSem $ \u -> hoist subsumeBundle $ case decomp u of
   Right (Weaving (Bundle pr e) mkT lwr ex) ->
     Union (simpleSubsumeMembership pr) (Weaving e mkT lwr ex)
   Left g -> g
-{-# INLINE subsumeBundle #-}

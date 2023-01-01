@@ -285,7 +285,8 @@ injectMembership (UnsafeMkSList l) (UnsafeMkSList m) (UnsafeMkElemOf pr)
   | otherwise = UnsafeMkElemOf (m + pr)
 {-# INLINABLE injectMembership #-}
 
-idMembership :: ElemOf e r -> ElemOf e r
+-- | A variant of id that gets inlined late for rewrite rule purposes
+idMembership :: ElemOf (e :: Effect) r -> ElemOf e r
 idMembership = id
 {-# INLINE[0] idMembership #-}
 

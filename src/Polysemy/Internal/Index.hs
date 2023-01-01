@@ -24,14 +24,12 @@ class InsertAtIndex (index :: Nat) (head :: [k]) (tail :: [k]) (oldTail :: [k]) 
 
 instance inserted ~ '[] => InsertAtIndex index head oldTail oldTail full inserted where
   insertAtIndex = SEnd
-  {-# INLINE insertAtIndex #-}
 
 instance {-# INCOHERENT #-} (
     InsertAtIndex index head tail oldTail full insertedTail,
     inserted ~ (e ': insertedTail)
   ) => InsertAtIndex index head (e ': tail) oldTail full inserted where
     insertAtIndex = SCons (insertAtIndex @_ @index @head @tail @oldTail @full)
-    {-# INLINE insertAtIndex #-}
 
 -- Broken on 9.2.
 -- It appears that instance matching is done with an abstract value for @oldTail@, thus not matching the correct

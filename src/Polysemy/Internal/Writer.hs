@@ -55,7 +55,6 @@ writerToEndoWriter = interpretH $ \case
     (f, a) <- runH m
     let f' (Endo oo) = let !o' = f (oo mempty) in Endo (o' <>)
     return (f', a)
-{-# INLINE writerToEndoWriter #-}
 
 
 ------------------------------------------------------------------------------
@@ -169,7 +168,6 @@ runWriterSTMAction write = interpretH $ \case
         write o'
       writeTVar switch True
     {-# INLINE commitPass #-}
-{-# INLINE runWriterSTMAction #-}
 
 
 -- TODO (KingoftheHomeless):
@@ -190,6 +188,4 @@ interpretViaLazyWriter f sem = Sem $ \(k :: forall x. Union r (Sem r) x -> m x) 
         liftHandlerWithNat
           (Lazy.WriterT . fmap swap . interpretViaLazyWriter f)
           k g
-    {-# INLINE go #-}
   in swap <$> Lazy.runWriterT (go sem)
-{-# INLINE interpretViaLazyWriter #-}

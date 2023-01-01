@@ -49,7 +49,6 @@ tag
     => Sem (e ': r) a
     -> Sem r a
 tag = transform @e @(Tagged k e) coerce
-{-# INLINE tag #-}
 
 
 ------------------------------------------------------------------------------
@@ -81,4 +80,3 @@ retag
     => Sem (Tagged k1 e ': r) a
     -> Sem r a
 retag = transform (\(Tagged e) -> Tagged @k2 e)
-{-# INLINE retag #-}

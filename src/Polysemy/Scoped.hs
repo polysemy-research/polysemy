@@ -205,6 +205,8 @@ runScoped1 interp = interpretH \case
           let depth' = depth + 1
           (_ :: TypeParamsH z t sc rPre rPost) <- getTypeParamsH
           runH' @z @t @sc @rPre @rPost (main depth')
+            -- Scoped ... ': HigherOrder ... ': Bundle l ': r
+            & raiseUnder3
             -- Scoped ... ': HigherOrder ... ': Bundle l ': Bundle (HigherOrder ... ': l) ': r
             & sink @'[_, _]
             -- HigherOrder ... ': Bundle l ': Scoped ... ': Bundle (HigherOrder ... ': l) ': r
@@ -242,7 +244,6 @@ runScoped1 interp = interpretH \case
             & subsumeUsing (There (There (There Here)))
             -- HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
           <&> ex
-{-# NOINLINE runScoped1 #-}
 
 runScoped1_ ::
   ∀ effect param r .

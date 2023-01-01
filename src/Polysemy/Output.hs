@@ -61,7 +61,6 @@ runOutputList = fmap (first reverse) . runState [] . reinterpret
   (\case
       Output o -> modify' (o :)
   )
-{-# INLINE runOutputList #-}
 
 
 ------------------------------------------------------------------------------
@@ -77,7 +76,6 @@ runLazyOutputList
      . Sem (Output o ': r) a
     -> Sem r ([o], a)
 runLazyOutputList = runLazyOutputMonoidAssocR pure
-{-# INLINE runLazyOutputList #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into a monoid.
@@ -93,7 +91,6 @@ runOutputMonoid f = runState mempty . reinterpret
   (\case
       Output o -> modify' (`mappend` f o)
   )
-{-# INLINE runOutputMonoid #-}
 
 
 ------------------------------------------------------------------------------
@@ -133,7 +130,6 @@ runOutputMonoidAssocR
 runOutputMonoidAssocR f =
     fmap (first (`appEndo` mempty))
   . runOutputMonoid (\o -> let !o' = f o in Endo (o' <>))
-{-# INLINE runOutputMonoidAssocR #-}
 
 ------------------------------------------------------------------------------
 -- | Like 'runLazyOutputMonoid', but right-associates uses of '<>'.
@@ -158,7 +154,6 @@ runLazyOutputMonoidAssocR f =
     fmap (first (`appEndo` mempty))
   . runLazyOutputMonoid (\o -> let o' = f o in Endo (o' <>))
                               --   ^ N.B. No bang pattern
-{-# INLINE runLazyOutputMonoidAssocR #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into atomic operations
@@ -174,7 +169,6 @@ runOutputMonoidIORef
     -> Sem r a
 runOutputMonoidIORef ref f = interpret $ \case
   Output o -> embed $ atomicModifyIORef' ref (\s -> let !o' = f o in (s <> o', ()))
-{-# INLINE runOutputMonoidIORef #-}
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by transforming it into atomic operations
@@ -192,7 +186,6 @@ runOutputMonoidTVar tvar f = interpret $ \case
   Output o -> embed $ atomically $ do
     s <- readTVar tvar
     writeTVar tvar $! s <> f o
-{-# INLINE runOutputMonoidTVar #-}
 
 
 --------------------------------------------------------------------
@@ -259,7 +252,6 @@ outputToIOMonoidAssocR f =
 ignoreOutput :: Sem (Output o ': r) a -> Sem r a
 ignoreOutput = interpret $ \case
   Output _ -> pure ()
-{-# INLINE ignoreOutput #-}
 
 
 ------------------------------------------------------------------------------
@@ -299,4 +291,3 @@ runOutputBatched size m = do
 runOutputSem :: (o -> Sem r ()) -> Sem (Output o ': r) a -> Sem r a
 runOutputSem act = interpret $ \case
     Output o -> act o
-{-# INLINE runOutputSem #-}
