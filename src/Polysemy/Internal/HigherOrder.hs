@@ -50,7 +50,7 @@ data HigherOrder z t e rH :: Effect where
   RestoreH
     :: forall z t e rH m a. t a -> HigherOrder z t e rH m a
 
--- | A singleton datatype parametrized with type parameters corresponding to
+-- | A proxy datatype parametrized with type parameters corresponding to
 -- @HigherOrder@
 data TypeParamsH
       (z :: Type -> Type)
