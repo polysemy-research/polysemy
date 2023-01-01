@@ -508,11 +508,15 @@ subsume_ = mapMembership subsumeMembership
 class Raise' (r :: EffectRow) (r' :: EffectRow) where
   raiseMembership' :: ElemOf e r -> ElemOf e r'
 
-instance {-# overlapping #-} Raise' r r where
+instance {-# INCOHERENT #-} Raise' r r where
   raiseMembership' = idMembership
   {-# INLINE raiseMembership' #-}
 
-instance (r' ~ (_0 ': r''), Subsume r r'') => Raise' r r' where
+instance {-# OVERLAPPING #-} Raise' (e ': r) (e ': r) where
+  raiseMembership' = idMembership
+  {-# INLINE raiseMembership' #-}
+
+instance Subsume r r' => Raise' r (_0 ': r') where
   raiseMembership' = There . subsumeMembership
 
 class Subsume' (origR' :: EffectRow) (r :: EffectRow) (r' :: EffectRow) where
