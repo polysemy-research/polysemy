@@ -42,6 +42,7 @@ module Polysemy.Internal
   , Append
   , InterpreterFor
   , InterpretersFor
+  , genericInterpretWeaving
   ) where
 
 import Control.Applicative
@@ -756,3 +757,22 @@ type InterpreterFor e r = ∀ a. Sem (e ': r) a -> Sem r a
 -- @since 1.5.0.0
 type InterpretersFor es r = ∀ a. Sem (Append es r) a -> Sem r a
 
+
+genericInterpretWeaving :: forall e r' r a
+                         . (forall e'. ElemOf e' r -> ElemOf e' r')
+                        -> (forall t z x
+                             . MonadTransWeave t
+                            => (forall y. z y -> t (Sem (e ': r)) y)
+                            -> e z x -> t (Sem r') x
+                           )
+                        -> Sem (e ': r) a
+                        -> Sem r' a
+genericInterpretWeaving tPr h = go
+  where
+    go :: forall a'. Sem (e ': r) a' -> Sem r' a'
+    go (Sem sem) = Sem $ \(k :: forall x. Union r' (Sem r') x -> m x) ->
+      sem $ \u -> case decomp u of
+        Left (Union pr wav) ->
+          k $ hoist go (Union (tPr pr) wav)
+        Right (Weaving e mkT lwr ex) ->
+          fmap ex $ runSem (lwr $ h (mkT id) e) k

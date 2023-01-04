@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE AllowAmbiguousTypes, BangPatterns, ConstraintKinds #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
 -- | Description: The meta-effect 'Scoped'
@@ -6,11 +6,25 @@ module Polysemy.Internal.Scoped where
 
 import Data.Kind (Type)
 
+import Control.Monad
+import Data.Proxy
 import Data.Coerce
 import Data.Functor.Identity
+import Control.Monad.Trans
 import Data.Functor.Const
 import Polysemy
+import Polysemy.Bundle
+import Polysemy.Membership
+import Polysemy.HigherOrder
+import Polysemy.Internal
+import Polysemy.Internal.Final
+import Polysemy.Internal.WeaveClass
+import Polysemy.Internal.Union
+import Polysemy.Internal.Sing
 import Polysemy.Internal.Utils
+import Polysemy.Internal.Kind
+
+import Unsafe.Coerce
 
 -- | @Scoped@ is an effect for providing an effect interpreter for use within
 -- application code, which can be accessed through 'scoped'. @Scoped@ is both
@@ -118,6 +132,180 @@ data Scoped1 (eff :: k -> Effect)
     :: forall k eff param modifier m a b
      . (modifier k a -> b)
     -> param k -> (Word -> m a) -> Scoped1 eff param modifier m b
+
+
+-- data Weaving e mAfter resultType where
+--   Weaving
+--     :: forall t e z a resultType mAfter. (MonadTransWeave t)
+--     => {
+--         weaveEffect :: e z a
+--       -- ^ The original effect GADT originally lifted via
+--       -- 'Polysemy.Internal.send'.
+--       -- ^ @z@ is always of the form @Sem rInitial@, where @rInitial@ is the
+--       -- effect row that was in scope when this 'Weaving' was originally
+--       -- created.
+--       , weaveTrans :: forall n x. Monad n => (forall y. mAfter y -> n y) -> z x -> t n x
+--       , weaveLowering :: forall z' x. Monad z' => t z' x -> z' (StT t x)
+--       , weaveBluh :: (forall x. k x -> z k x)
+--       -- , weaveResult :: StT t a -> resultType
+--       } -> Weaving e mAfter resultType
+
+-- data Augmented :: (Type -> Type) -> Effect -> Effect where
+--   Finally :: m a -> Augmented m z a
+--   Aug :: e z a -> Augmented m z a
+
+
+
+data Transformative extra :: Effect where
+  Transformative :: Union extra (Sem r0) a
+                 -> Transformative extra m a
+
+newtype Razer rFinal extra m = Razer {
+  getRazer :: forall x
+            . Word
+           -> (forall y. m y -> Sem rFinal y)
+           -> Sem (Append extra rFinal) x -> Sem rFinal x
+  }
+
+-- data Meta (param :: EffectRow -> Effect -> Effect) :: Effect where
+--   MetaFinal :: forall param rFinal m a
+--              . (forall rFinal. Proxy rFinal -> Word -> Final (Sem rFinal) m a) -> Meta param m a
+--   ToMeta :: forall param extra eff z t rFinal m a b
+--           . MonadTransWeave t
+--          => Word
+--          -> SList extra
+--          -> param extra eff z a
+--          -> (((forall y. z y -> t (Sem (eff ': rFinal)) y)
+--               -> t (Sem (Append extra rFinal)) a)
+--               -> b
+--             )
+--          -> Meta param m b
+
+data Meta (param :: EffectRow -> Effect -> Effect) :: Effect where
+  MetaBundle :: forall param rFinal m a
+              . Word -> Bundle rFinal m a -> Meta param m a
+  MetaRun :: forall param eff m a
+           . Word -> eff m a -> Meta param m a
+  ToMeta :: forall param extra eff z m a
+          . SList extra
+         -> param extra eff z a
+         -> (forall x. Word -> z x -> m x)
+         -> (forall rFinal. Razer rFinal extra m)
+         -> Meta param m a
+
+toMeta :: forall param extra eff r a
+        . (Member (Meta param) r, KnownList extra)
+       => param extra eff (Sem (eff ': Append extra r)) a
+       -> Sem (Append extra r) a
+toMeta p =
+      sendUsing (extendMembershipLeft @r (singList @extra) membership)
+    $ ToMeta
+        (singList @extra)
+        p
+        (\w -> transformUsing (extendMembershipLeft @r (singList @extra) membership) (MetaRun @param w))
+        razer
+  where
+    razer :: forall rFinal. Razer rFinal extra (Sem (Append extra r))
+    razer = Razer $ \w to (Sem m) -> Sem $ \k -> m $ \(Union pr wav) ->
+      case splitMembership @rFinal (singList @extra) pr of
+        Left pr' ->
+          usingSem k $ to $ liftSem $ hoist (backRazer w)
+          $ Union (extendMembershipRight @_ @r pr') wav
+        Right pr' -> k $ hoist (to . backRazer w) $ Union pr' wav
+      where
+        backRazer :: forall x
+                   . Word
+                  -> Sem (Append extra rFinal) x
+                  -> Sem (Append extra r) x
+        backRazer w = hoistSem $ \(Union pr wav@(Weaving act mkT lwr ex)) ->
+          hoist (backRazer w) $
+            case splitMembership @rFinal (singList @extra) pr of
+              Left pr' ->
+                Union (extendMembershipRight @_ @r pr') wav
+              Right pr' ->
+                Union (extendMembershipLeft @r (singList @extra) membership)
+                $ Weaving (MetaBundle @param w (Bundle pr' act)) mkT lwr ex
+
+data OuterMeta :: Effect where
+  OuterMetaRun :: ∀ effect m a . Word -> effect m a -> OuterMeta m a
+  OuterMetaBundle :: ∀ rFinal m a . Word -> Bundle rFinal m a -> OuterMeta m a
+
+-- toMeta :: forall param extra eff r a
+--         . (Member (Meta param) r, KnownList extra)
+--        => param extra eff (Sem (eff ': Append extra r)) a
+--        -> Sem (Append extra r) a
+-- toMeta p =
+--       sendUsing (extendMembershipLeft @r (singList @extra) membership)
+--     $ MetaFinal @param $ \(_ :: Proxy rFinal) w -> WithTransToFinal $ \(n :: forall x. Sem (Append extra r) x -> t (Sem rFinal) x) ->
+--       let
+--         magic :: forall x. Sem (eff ': Append extra r) x -> Sem (Append extra r) x
+--         magic _ = undefined
+
+--         go1 :: forall x. Sem (eff ': Append extra r) x -> t (Sem (eff ': rFinal)) x
+--         go1 = usingSem $ \case
+--           Union Here wav -> liftHandlerWithNat go1 liftSem (Union Here wav)
+--           Union (There pr) wav -> hoistT raise $ n $ liftSem $ hoist magic (Union pr wav)
+--         go2 :: forall x
+--              . (forall z x. Monad z => t z x -> z (StT t x))
+--             -> Sem (Append extra rFinal) x -> t (Sem rFinal) x
+--         go2 lwr = usingSem $ \(Union pr wav) ->
+--           case splitMembership @rFinal (singList @extra) pr of
+--             Left pr' -> controlT \lwr' -> do
+--               let u' = weave (go2 lwr') lwr $ Union (extendMembershipRight @_ @r pr') wav
+--               stt <- lwr' $ n $ liftSem $ hoist undefined u'
+--               return $ undefined stt
+--       in join $ n
+--         $ sendUsing (extendMembershipLeft @r (singList @extra) membership)
+--         $ ToMeta w (singList @extra) p (\main -> controlT $ \lwr -> fmap undefined $ lwr $ go2 lwr (lwr (main go1)))
+                -- Union (extendMembershipLeft @r (singList @extra) membership)
+                --   $ Weaving
+                      -- (MetaBundle @param @rFinal w (Bundle pr' act))
+                      -- mkT lwr ex
+
+          -- hoist (getRazer (rewriteTransformative @rFinal) w) $
+      --(Sem sem) -> Sem $ \k -> sem $ \(Union pr (Weaving act mkT lwr ex)) ->
+
+      -- genericInterpretH (extendMembershipLeft @r (singList @extra))
+      -- $ \(Transformative (Union pr wav)) ->
+      --   raise
+      --   $ sendUsing (extendMembershipLeft @r (singList @extra) membership)
+      --   $ MetaFinal @param w $ WithTransToFinal $ \n ->
+      --     n $ liftSem $ hoist (liftR0 w) (Union (extendMembershipRight @_ @r pr) wav)
+
+    -- liftR0 :: forall rFinal x. Word -> Sem rFinal x -> Sem (Append extra r) x
+    -- liftR0 w m =
+    --     sendUsing (extendMembershipLeft @r (singList @extra) membership)
+    --   $ MetaFinal @param w $ WithTransToFinal $ \_ -> lift m
+                                                    --controlT $ \lwr ->
+          -- n $ weave _ _
+
+data Dict c where
+  Dict :: c => Dict c
+
+newtype Impl a b = Impl (a => Dict b)
+
+toKnownList :: forall l. SList (l :: EffectRow) -> Dict (KnownList l)
+toKnownList !s = unsafeCoerce (Impl Dict :: Impl (KnownList l) (KnownList l)) s
+-- This is definable even without unsafeCoerce, unsafeCoerce is just faster:
+-- toKnownList SEnd = Dict
+-- toKnownList (SCons l) | Dict <- toKnownList l = Dict
+
+data OmegaScoped (param :: Effect -> Effect) :: Effect where
+  OmegaRunInScope ::
+      forall param eff m a
+    . Word -> eff m a -> OmegaScoped param m a
+  OmegaScoped
+    :: forall param eff z m a
+     . param eff z a -> (forall x. Word -> z x -> m x) -> OmegaScoped param m a
+
+omegaScoped1 :: forall param eff r a
+              . Member (OmegaScoped param) r
+             => param eff (Sem (eff ': r)) a
+             -> Sem r a
+omegaScoped1 p = send $ OmegaScoped @param p (\w -> transform (OmegaRunInScope @param w))
+
+data OuterOmegaRun :: Effect where
+  OuterOmegaRun :: ∀ effect m a . Word -> effect m a -> OuterOmegaRun m a
 
 type Scoped1_ eff param = Scoped1 eff param (Const1 Identity)
 

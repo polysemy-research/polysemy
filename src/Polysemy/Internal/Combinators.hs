@@ -6,6 +6,7 @@ module Polysemy.Internal.Combinators
   ( -- * First order
     rewrite
   , transform
+  , transformUsing
 
     -- * Statefulness
   , stateful
@@ -114,8 +115,17 @@ transform
     => (forall z x. e1 z x -> e2 z x)
     -> Sem (e1 ': r) a
     -> Sem r a
-transform f (Sem m) = Sem $ \k -> m $ \u ->
-  k $ hoist (transform f) $ case decomp u of
+transform = transformUsing membership
+{-# INLINE transform #-}
+
+transformUsing
+    :: forall e1 e2 r a
+     . ElemOf e2 r
+    -> (forall z x. e1 z x -> e2 z x)
+    -> Sem (e1 ': r) a
+    -> Sem r a
+transformUsing pr f (Sem m) = Sem $ \k -> m $ \u ->
+  k $ hoist (transformUsing pr f) $ case decomp u of
     Left g -> g
     Right (Weaving e mkT lwr ex) ->
-      injWeaving (Weaving (f e) mkT lwr ex)
+      Union pr (Weaving (f e) mkT lwr ex)

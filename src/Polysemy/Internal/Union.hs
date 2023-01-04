@@ -51,6 +51,7 @@ module Polysemy.Internal.Union
 
   -- * Membership manipulation
   , idMembership
+  , splitMembership
   , extendMembershipLeft
   , extendMembershipRight
   , injectMembership
@@ -108,6 +109,17 @@ data Weaving e mAfter resultType where
       , weaveLowering :: forall z' x. Monad z' => t z' x -> z' (StT t x)
       , weaveResult :: StT t a -> resultType
       } -> Weaving e mAfter resultType
+
+-- data Weaving e mAfter resultType where
+--   Weaving
+--     :: forall t e z a resultType mAfter. (MonadTransWeave t)
+--     => {
+--         weaveEffect :: e z a
+--       , (forall x. z x -> Sem r0 x)
+--       , weaveTrans :: forall r' x. (forall y. mAfter y -> Sem r' y) -> z x -> t n x
+--       , weaveLowering :: forall z' x. Monad z' => t z' x -> z' (StT t x)
+--       , weaveResult :: StT t a -> resultType
+--       } -> Weaving e mAfter resultType
 
 instance Functor (Weaving e m) where
   fmap f (Weaving e mkT lwr ex) = Weaving e mkT lwr (f . ex)
@@ -256,7 +268,7 @@ tryMembership = tryMembership' @r @e
 -- | Extends a proof that @e@ is an element of @r@ to a proof that @e@ is an
 -- element of the concatenation of the lists @l@ and @r@.
 -- @l@ must be specified as a singleton list proof.
-extendMembershipLeft :: forall l r e
+extendMembershipLeft :: forall r l e
                       . SList l -> ElemOf e r -> ElemOf e (Append l r)
 extendMembershipLeft (UnsafeMkSList n) (UnsafeMkElemOf pr) =
   UnsafeMkElemOf (n + pr)
@@ -284,6 +296,14 @@ injectMembership (UnsafeMkSList l) (UnsafeMkSList m) (UnsafeMkElemOf pr)
   | pr < l    = UnsafeMkElemOf pr
   | otherwise = UnsafeMkElemOf (m + pr)
 {-# INLINABLE injectMembership #-}
+
+splitMembership :: forall right left e
+                 . SList left
+                -> ElemOf e (Append left right)
+                -> Either (ElemOf e left) (ElemOf e right)
+splitMembership (UnsafeMkSList l) (UnsafeMkElemOf pr)
+  | pr < l    = Left (UnsafeMkElemOf pr)
+  | otherwise = Right $! UnsafeMkElemOf (pr - l)
 
 -- | A variant of id that gets inlined late for rewrite rule purposes
 idMembership :: ElemOf (e :: Effect) r -> ElemOf e r

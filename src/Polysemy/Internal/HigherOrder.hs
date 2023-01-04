@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
 module Polysemy.Internal.HigherOrder where
@@ -398,6 +399,7 @@ genericInterpretH tPr h = go
             fmap ex $ lwr $ runSem (h e) $ \u' -> case decomp u' of
               Left g -> liftHandlerWithNat go' k g
               Right wav -> commonHandler wav
+
 
 ------------------------------------------------------------------------------
 -- | The simplest way to produce an effect handler. Interprets an effect @e@ by

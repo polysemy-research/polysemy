@@ -1,4 +1,4 @@
-{-# language AllowAmbiguousTypes, BangPatterns #-}
+{-# language AllowAmbiguousTypes, BangPatterns, GeneralizedNewtypeDeriving #-}
 
 -- | Description: Interpreters for 'Scoped'
 module Polysemy.Scoped (
@@ -23,12 +23,24 @@ module Polysemy.Scoped (
   runScoped_,
   runScoped1,
   runScoped1_,
+
+  Meta,
+  toMeta,
+  runMeta
 ) where
 
+import Control.Monad.Trans
+import Polysemy.Internal.WeaveClass
+
 import Data.Functor.Identity
+import Data.Functor.Compose
+import Data.Proxy
 import Data.Functor.Const
 import Polysemy
+import Polysemy.Fatal
+import Polysemy.Final
 import Polysemy.Bundle
+import Polysemy.Membership
 import Polysemy.Opaque
 import Polysemy.Internal
 import Polysemy.Internal.Utils
@@ -253,3 +265,324 @@ runScoped1_ ::
    ) ->
   InterpreterFor (Scoped1_ effect param) r
 runScoped1_ interp = runScoped1 \p sem -> (Const1 #. Identity) <$> interp p sem
+
+data WithTail :: EffectRow -> (Effect -> Effect) -> Effect -> Effect where
+  WithTail :: z ~ Sem (eff ': Append r r0)
+           => param eff z a
+           -> WithTail r param eff z a
+
+
+-- data FreeT f m a where Pure a | FreeT (m (f (FreeT f m a)))
+
+-- liftWithFree :: (Functor f, Monad m) => ((forall x. FreeT f m x -> m (f x)) -> m (f a)) -> FreeT f m a
+-- liftWithFree main = FreeT ((fmap . fmap) Pure (main _))
+-- runOmegaScopedWithTail ::
+--   ∀ extra param r .
+--     KnownList extra =>
+--   ( ∀ eff q z x
+--     . (forall y. z y -> Sem (eff ': Append extra (Opaque q ': r)) y)
+--    -> param eff z x -> Sem (Opaque q ': Append extra r) x) ->
+--   InterpreterFor (OmegaScoped (WithTail extra param)) r
+-- runOmegaScopedWithTail interp = runOmegaScoped \(n :: forall y. z y -> Sem (eff ': Opaque q ': r) y) (WithTail param) ->
+--   Sem $ \k -> runSem (interp @eff @q
+--                         (mapMembership (injectMembership
+--                                          (singList @'[_])
+--                                          (singList @extra)) . n) param) $ \case
+--     Union Here wav -> _
+
+-- data Sender l :: Effect where
+--   Bundle l m a -> Sender rFinal l
+-- sick :: forall e r0 t eH rPre rPost a. Traversable t => (forall x. Sem rPost x -> Sem (e ': r0) x) -> Sem (e ': HigherOrder (Sem (e ': r0)) t eH rPre rPost ': rPost) a -> Sem (HigherOrder (Sem (e ': r0)) t eH rPre rPost ': Final (Sem rPost) ': rPost) a
+-- sick n = raiseUnder2 >>> interpretH \e -> controlFinal @(Sem rPost) $ \lwr -> do
+--   res <- lwr $ raise $ runH $ Sem $ \k -> k $ Union Here $ Weaving e (\n z -> _ $ lwr (runH z)) _ id
+--   _
+  -- where
+    -- gooba :: forall x. Sem (HigherOrder z t e rPre rPost ': rPost) x -> Carrying z t e rPre rPost (Sem r0) x
+    -- gooba = _
+
+  -- res <- liftWithH $ \lwr -> liftWithH $ \lwr' -> lowerCarrying lwr $ lowerCarrying lwr' $ getComposeT $ liftHandlerWithNat _ _ $ Union Here $ mkWeaving e
+  -- _
+  --let e' = sendViaUsin_
+
+runOmegaScoped ::
+  ∀ param r .
+  ( ∀ eff q z x
+    . (forall y. z y -> Sem (eff ': Opaque q ': r) y)
+   -> param eff z x -> Sem (Opaque q ': r) x) ->
+  InterpreterFor (OmegaScoped param) r
+runOmegaScoped interp = interpretH \case
+  OmegaRunInScope w _ ->
+    errorWithoutStackTrace $ "top level run with depth " ++ show w
+  OmegaScoped (param :: param eff q a) n -> do
+    (_ :: TypeParamsH z t sc r r) <- getTypeParamsH
+    let
+      runIt :: forall y
+             . q y
+            -> Sem (eff ': Opaque (Bundle '[OuterOmegaRun,
+                                            HigherOrder z t sc r r]) ': r) y
+      runIt = n 0
+        >>> runH' @z @t @sc @r @r
+        -- Scoped ... ': HigherOrder ... ': Bundle '[HigherOrder ...] ': r
+        >>> sink @'[_]
+        -- HigherOrder ... ': Scoped ... ': Bundle '[HigherOrder ...] ': r
+        >>> rewrite (Bundle (Here @_ @_ @'[]))
+        -- Bundle '[HigherOrder ...] ': Scoped ... ': Bundle '[HigherOrder ...] ': r
+        >>> subsumeUsing (There Here)
+        -- Scoped ... ': Bundle '[HigherOrder ...] ': r
+        >>> go @eff 0
+        -- effect k ': OuterRun effect ': Bundle '[HigherOrder ...] ': r
+        >>> subsume_
+        -- OuterRun effect ': Bundle '[HigherOrder ...] ': effect k ': Bundle '[OuterRun effect, HigherOrder ...] ': r
+        >>> consBundle @_ @'[_]
+        -- Bundle '[OuterRun effect, HigherOrder ...] ': effect k ': Bundle '[OuterRun effect, HigherOrder ...] ': r
+        >>> subsumeUsing (There Here)
+        -- effect k ': Bundle '[OuterRun effect, HigherOrder ...] ': r
+        >>> bundleToOpaque
+    interp runIt param
+      & fromOpaque
+      & runBundle
+      & interpretH @OuterOmegaRun \case
+        OuterOmegaRun w _ -> errorWithoutStackTrace $ "unhandled OuterOmegaRun with depth " ++ show w
+  where
+    sink :: forall mid l r' x before after
+          . (before ~ l ': (Append mid r'), after ~ Append mid (l ': r'),
+             Subsume before after
+            )
+         => Sem before x -> Sem after x
+    sink = subsume_
+
+    bundleToOpaque :: forall e l x
+                    . Sem (e ': Bundle l ': r) x
+                   -> Sem (e ': Opaque (Bundle l) ': r) x
+    bundleToOpaque = coerceEffs
+
+    go :: forall eff l x
+        . Word
+       -> Sem (OmegaScoped param ': Bundle l ': r) x
+       -> Sem (eff ': OuterOmegaRun ': Bundle l ': r) x
+    go depth = reinterpret2H \case
+      OmegaRunInScope w act
+        | w == depth -> propagateUsing Here (unsafeCoerce act)
+        | otherwise -> propagateUsing (There Here) (OuterOmegaRun w act)
+      OmegaScoped (param :: param eff' q a) n -> do
+        (_ :: TypeParamsH z t sc rPre rPost) <- getTypeParamsH
+        let
+          !depth' = depth + 1
+
+          runIt :: forall y
+                 . q y
+                -> Sem (eff' ': Opaque (Bundle (OuterOmegaRun
+                                               ': HigherOrder z t sc rPre rPost
+                                                ': l)) ': r) y
+          runIt = n depth'
+            >>> runH' @z @t @sc @rPre @rPost
+            -- Scoped ... ': HigherOrder ... ': Bundle l ': r
+            >>> raiseUnder3
+            -- Scoped ... ': HigherOrder ... ': Bundle l ': Bundle (HigherOrder ... ': l) ': r
+            >>> sink @'[_, _]
+            -- HigherOrder ... ': Bundle l ': Scoped ... ': Bundle (HigherOrder ... ': l) ': r
+            >>> consBundle @_ @l
+            -- Bundle (HigherOrder ... ': l) ': Scoped ... ': Bundle (HigherOrder ... ': l) ': r
+            >>> subsumeUsing (There Here)
+            -- Scoped ... ': Bundle '[HigherOrder ...] ': r
+            >>> go @eff' depth'
+            -- effect k' ': OuterRun effect ': Bundle (HigherOrder ... ': l') ': r
+            >>> subsume_
+            -- OuterRun effect ': Bundle (HigherOrder ... ': l') ': effect k' ': Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+            >>> consBundle @OuterOmegaRun @(_ ': l)
+            -- Bundle (OuterRun effect ': HigherOrder ... ': l) ': effect k' ': Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+            >>> subsumeUsing (There Here)
+            -- effect k' ': Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+            >>> bundleToOpaque
+
+        interp runIt param
+          & fromOpaque
+          -- Bundle (OuterOmegaRun ': HigherOrder ... ': l) ': r
+          & unconsBundle
+          -- OuterOmegaRun ': Bundle (HigherOrder ... ': l) ': r
+          & insertAt @2
+          -- OuterOmegaRun ': Bundle (HigherOrder ... ': l) ': HigherOrder ... ': effect ': OuterOmegaRun ': Bundle l ': r
+          & interpretH \case
+            orun@(OuterOmegaRun w act)
+              | w == depth -> propagateUsing (There (There Here)) (unsafeCoerce act)
+              | otherwise -> propagateUsing (There (There (There Here))) orun
+          -- Bundle (HigherOrder ... ': l) ': HigherOrder ... ': effect k ': OuterOmegaRun ': Bundle l ': r
+          & unconsBundle
+          -- HigherOrder ... ': Bundle l ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+          & subsumeUsing (There Here)
+          -- Bundle l ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+          & subsumeUsing (There (There (There Here)))
+          -- HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+
+
+    -- go :: forall k l x
+    --     . Word
+    --    -> Sem (Scoped1 effect param modifier ': Bundle l ': r) x
+    --    -> Sem (effect k ': OuterRun effect ': Bundle l ': r) x
+    -- go depth = reinterpret2H \case
+    --     RunInScope1 w act
+    --       | w == depth -> propagateUsing Here (unsafeCoerce act)
+    --       | otherwise -> propagate (OuterRun w act)
+    --     Scoped1 ex (param :: param k') main -> do
+    --       let depth' = depth + 1
+    --       (_ :: TypeParamsH z t sc rPre rPost) <- getTypeParamsH
+    --       runH' @z @t @sc @rPre @rPost (main depth')
+    --         -- Scoped ... ': HigherOrder ... ': Bundle l ': r
+    --         & raiseUnder3
+    --         -- Scoped ... ': HigherOrder ... ': Bundle l ': Bundle (HigherOrder ... ': l) ': r
+    --         & sink @'[_, _]
+    --         -- HigherOrder ... ': Bundle l ': Scoped ... ': Bundle (HigherOrder ... ': l) ': r
+    --         & consBundle @_ @l
+    --         -- Bundle (HigherOrder ... ': l) ': Scoped ... ': Bundle (HigherOrder ... ': l) ': r
+    --         & subsumeUsing (There Here)
+    --         -- Scoped ... ': Bundle (HigherOrder ... ': l) ': r
+    --         & go @k' depth'
+    --         -- effect k' ': OuterRun effect ': Bundle (HigherOrder ... ': l') ': r
+    --         & subsume_
+    --         -- OuterRun effect ': Bundle (HigherOrder ... ': l') ': effect k' ': Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+    --         & consBundle @(OuterRun effect) @(_ ': l)
+    --         -- Bundle (OuterRun effect ': HigherOrder ... ': l) ': effect k' ': Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+    --         & subsumeUsing (There Here)
+    --         -- effect k' ': Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+    --         & bundleToOpaque
+    --         -- effect k' ': Opaque (Bundle (OuterRun effect ': HigherOrder ... ': l)) ': r
+    --         & interp param
+    --         -- Opaque (Bundle (OuterRun effect ': HigherOrder ... ': l)) ': r
+    --         & fromOpaque
+    --         -- Bundle (OuterRun effect ': HigherOrder ... ': l) ': r
+    --         & unconsBundle
+    --         -- OuterRun effect ': Bundle (HigherOrder ... ': l) ': r
+    --         & insertAt @2
+    --         -- OuterRun effect ': Bundle (HigherOrder ... ': l) ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+    --         & interpretH \case
+    --           orun@(OuterRun w act)
+    --             | w == depth -> propagateUsing (There (There Here)) (unsafeCoerce act)
+    --             | otherwise -> propagate orun
+    --         -- Bundle (HigherOrder ... ': l) ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+    --         & unconsBundle
+    --         -- HigherOrder ... ': Bundle l ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+    --         & subsumeUsing (There Here)
+    --         -- Bundle l ': HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+    --         & subsumeUsing (There (There (There Here)))
+    --         -- HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
+    --       <&> ex
+
+
+runMeta ::
+  ∀ param r .
+  ( ∀ extra eff q z x
+    . KnownList extra
+   => (forall y. z y -> Sem (eff ': Opaque q ': r) y)
+   -> param extra eff z x -> Sem (Append extra (Opaque q ': r)) x) ->
+  InterpreterFor (Meta param) r
+runMeta interp =
+  raiseUnder
+  >>> go 0
+  >>> interpretH \case
+    OuterMetaRun w _ ->
+      errorWithoutStackTrace $ "Unhandled MetaRun with depth " ++ show w
+    OuterMetaBundle w _ ->
+      errorWithoutStackTrace $ "Unhandled MetaBundle with depth " ++ show w
+  >>> runBundle @'[]
+  where
+    sink :: forall mid l r' x before after
+          . (before ~ l ': (Append mid r'), after ~ Append mid (l ': r'),
+             Subsume before after
+            )
+         => Sem before x -> Sem after x
+    sink = subsume_
+
+    bundleToOpaque :: forall e l x
+                    . Sem (e ': Bundle l ': r) x
+                   -> Sem (e ': Opaque (Bundle l) ': r) x
+    bundleToOpaque = coerceEffs
+
+    go :: forall l x
+        . Word
+       -> Sem (Meta param ': Bundle l ': r) x
+       -> Sem (OuterMeta ': Bundle l ': r) x
+    go depth = reinterpretH \case
+      MetaRun w act -> propagate (OuterMetaRun w act)
+      MetaBundle w bdl -> propagate (OuterMetaBundle w bdl)
+      ToMeta slist (param :: param extra eff' q a) n razer -> do
+        (_ :: TypeParamsH z t meta rPre rPost) <- getTypeParamsH
+        (_ :: Proxy opaque) <-
+          return $ Proxy @(Opaque (Bundle (HigherOrder z t meta rPre rPost
+                                           ': OuterMeta
+                                           ': l)))
+        let
+          !depth' = depth + 1
+
+          runIt1 :: forall y. z y -> Sem (eff' ': opaque ': r) y
+          runIt1 = runH' @z @t @meta @rPre @rPost
+            -- Meta ... ': HigherOrder ... ': Bundle l ': r
+            >>> raiseUnder3
+            -- Meta ... ': HigherOrder ... ': Bundle l ': Bundle (HigherOrder ... ': l) ': r
+            >>> sink @'[_, _]
+            -- HigherOrder ... ': Bundle l ': Meta ... ': Bundle (HigherOrder ... ': l) ': r
+            >>> transformUsing (There (There Here)) (Bundle Here)
+            -- Bundle l ': Meta ... ': Bundle (HigherOrder ... ': l) ': r
+            >>> transformUsing
+                  (There Here)
+                  (\(Bundle pr act) -> Bundle (There (There pr)) act)
+            -- Meta ... ': Bundle (HigherOrder ... ': l) ': r
+            >>> go depth'
+            -- OuterMetaRun ': Bundle (HigherOrder ... ': l) ': r
+            >>> reinterpretH \case
+              OuterMetaRun w act
+                | depth == w -> propagateUsing Here (unsafeCoerce act)
+              outermeta -> propagateUsing (There Here) (Bundle (There Here) outermeta)
+            -- effect ': Bundle (HigherOrder ... ': l) ': r
+            >>> bundleToOpaque
+
+          runIt2 :: forall y. z y -> Sem (opaque ': r) y
+          runIt2 = runH @z @t @meta @rPre @rPost
+            -- HigherOrder ... ': OuterMeta ': Bundle l ': r
+            >>> raiseUnder3
+            -- HigherOrder ... ': OuterMeta ': Bundle l ': (Bundle ...) ': 'r
+            >>> transformUsing (There (There Here)) (Bundle Here) -- interpretH \case
+            -- OuterMeta ': Bundle l ': (Bundle ...) ': 'r
+            >>> transformUsing (There Here) (Bundle (There Here))
+            -- Bundle l ': (Bundle ...) ': 'r
+            >>> transformUsing
+                  Here
+                  (\(Bundle pr act) -> Bundle (There (There pr)) act)
+            -- (Bundle ...) ': 'r
+            >>> toOpaque
+
+          handleOuterMetaBundle
+            :: forall z' t' r' y
+             . r' ~ (HigherOrder z t meta rPre rPost ': OuterMeta ': Bundle l ': r)
+            => OuterMeta z' y
+            -> Sem (HigherOrder z' t' OuterMeta r' r' ': r') y
+          handleOuterMetaBundle = \case
+            OuterMetaBundle w (Bundle (pr :: ElemOf e' rFinal) act)
+              | w == depth,
+                UnsafeRefl <- unsafeEqualityProof @rFinal @(opaque ': r) ->
+                case pr of
+                  Here -> case act of
+                    -- Opaque (Bundle Here (RestoreH t)) -> case traverse (const Nothing) t of
+                    --   Just tVoid -> propagateUsing Here (RestoreH tVoid)
+                    --   _          -> return (foldr const undefined t)
+                    Opaque (Bundle Here act') -> propagate act'
+                    Opaque (Bundle (There Here) act') ->
+                      handleOuterMetaBundle act'
+                    Opaque (Bundle (There (There pr')) act') ->
+                      propagate (Bundle pr' act')
+                  There pr' -> propagateUsing (There (There (There pr'))) act
+            outermeta -> propagate outermeta
+
+        case toKnownList slist of
+          Dict ->
+            interp (runIt1 . n depth) param
+              & getRazer razer depth runIt2
+              -- Opaque (Bundle (HigherOrder z t mt rPre rPost ': OuterMeta ': l)) ': r
+              & fromOpaque
+              -- Bundle (HigherOrder z t mt rPre rPost ': OuterMeta ': l) ': r
+              & reinterpret3H \case
+                  Bundle Here e -> propagate e
+                  Bundle (There Here) e -> propagate e
+                  Bundle (There (There pr)) e -> propagate (Bundle pr e)
+              -- HigherOrder z t mt rPre rPost ': OuterMeta ': Bundle l ': r
+              & interceptH handleOuterMetaBundle
+              -- HigherOrder z t mt rPre rPost ': OuterMeta ': Bundle l ': r

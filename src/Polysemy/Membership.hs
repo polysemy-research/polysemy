@@ -11,6 +11,7 @@ module Polysemy.Membership
 
   -- * Using membership
   , subsumeUsing
+  , transformUsing
   , exposeUsing
   , interceptUsing
   , interceptUsingH
@@ -29,6 +30,7 @@ module Polysemy.Membership
   ) where
 
 import Polysemy.Internal
+import Polysemy.Internal.Combinators
 import Polysemy.Internal.HigherOrder
 import Polysemy.Internal.Sing
 import Polysemy.Internal.Union

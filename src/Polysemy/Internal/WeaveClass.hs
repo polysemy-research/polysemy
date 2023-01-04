@@ -4,6 +4,7 @@ module Polysemy.Internal.WeaveClass
   ( MonadTransWeave(..)
   , mkInitState
   , ComposeT(..)
+  , WeaveFreeT(..)
   ) where
 
 import Control.Monad
@@ -18,6 +19,28 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Tuple
 import Data.Kind (Type)
+
+-- The (co)Free MonadTransWeave for a (Traversable t)
+newtype WeaveFreeT t m a = WeaveFreeT { unWeaveFreeT :: forall u. MonadTransWeave u => (forall x. t x -> StT u x) -> (forall x. StT u x -> t x) -> u m a }
+
+instance Monad m => Functor (WeaveFreeT t m) where
+  fmap = liftM
+
+instance Monad m => Applicative (WeaveFreeT t m) where
+  pure a = WeaveFreeT $ \_ _ -> pure a
+  (<*>) = ap
+
+instance Monad m => Monad (WeaveFreeT t m) where
+  m >>= f = WeaveFreeT $ \to from -> unWeaveFreeT m to from >>= \a -> unWeaveFreeT (f a) to from
+
+instance MonadTrans (WeaveFreeT t) where
+  lift m = WeaveFreeT $ \_ _ -> lift m
+
+-- For extra hilarity, we can instead use the cofree traversable of t
+instance Traversable t => MonadTransWeave (WeaveFreeT t) where
+  type StT (WeaveFreeT t) = t
+  restoreT main = WeaveFreeT $ \to _ -> restoreT (fmap to main)
+  liftWith main = WeaveFreeT $ \to from -> liftWith $ \lwr -> main $ \tm -> from <$> lwr (unWeaveFreeT tm to from)
 
 -- | A variant of the classic @MonadTransControl@ class from @monad-control@,
 -- but with a small number of changes to make it more suitable for Polysemy's
