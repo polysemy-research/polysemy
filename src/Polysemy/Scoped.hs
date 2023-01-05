@@ -24,17 +24,26 @@ module Polysemy.Scoped (
   runScoped1,
   runScoped1_,
 
+  MetaEffect,
   Meta,
-  toMeta,
-  runMeta
+  sendMeta,
+  genericInterpretMeta,
+  interpretMeta,
+  MetaHandler,
+  runMeta,
+  runMeta'
+  -- toMeta,
+  -- runMeta
 ) where
 
 import Control.Monad.Trans
 import Polysemy.Internal.WeaveClass
 
+import Data.Unique
 import Data.Functor.Identity
 import Data.Functor.Compose
 import Data.Proxy
+import Data.Kind
 import Data.Functor.Const
 import Polysemy
 import Polysemy.Fatal
@@ -47,6 +56,7 @@ import Polysemy.Internal.Utils
 import Polysemy.Internal.Union
 import Polysemy.Internal.Scoped
 import Polysemy.Internal.HigherOrder
+import System.IO.Unsafe
 import Unsafe.Coerce
 
 -- | Higher-order interpreter for 'Scoped' that allows the handler to use
@@ -466,123 +476,291 @@ runOmegaScoped interp = interpretH \case
     --         & subsumeUsing (There (There (There Here)))
     --         -- HigherOrder ... ': effect k ': OuterRun effect ': Bundle l ': r
     --       <&> ex
+   -- => (forall eff z t q x y. Traversable t => param eff z x y -> Sem (eff ': HigherOrder z t q r r ': r) x -> Sem (HigherOrder z t q r r ': r) y)
 
+-- type MetaParam = EffectRow -> Effect -> (Type -> Type) -> Effect
 
-runMeta ::
-  ∀ param r .
-  ( ∀ extra eff q z x
-    . KnownList extra
-   => (forall y. z y -> Sem (eff ': Opaque q ': r) y)
-   -> param extra eff z x -> Sem (Append extra (Opaque q ': r)) x) ->
-  InterpreterFor (Meta param) r
-runMeta interp =
-  raiseUnder
-  >>> go 0
-  >>> interpretH \case
-    OuterMetaRun w _ ->
-      errorWithoutStackTrace $ "Unhandled MetaRun with depth " ++ show w
-    OuterMetaBundle w _ ->
-      errorWithoutStackTrace $ "Unhandled MetaBundle with depth " ++ show w
-  >>> runBundle @'[]
+-- supergeneric but not worth it:
+-- runMeta ::
+--   ∀ param r .
+--   ( ∀ eff q' z u x
+--    -> param eff u z x -> Sem (MetaHandler r (RunHM z t r q' ': r)
+--                               ': RunHM z t r q' ': r) x) ->
+--   Sem (Meta q param ': r) x -> Sem (q ': r) x
+
+{-
+
+forall x. e z x -> Sem (HigherOrder z t e r r ': r) x
+
+forall x. e z x -> Sem (HigherOrder z t e r r ': r) x
+-}
+-- this, instead:
+-- runMeta ::
+--   ∀ param r .
+--   ( ∀ forall eff u x. InterpreterFor (param eff u) (RunHM eff u ': r))
+-- runMeta ::
+--   (forall eff u x. Sem (param eff u ': RunHM r) x -> Sem r x)
+--   Sem (Meta param ': r) x -> Sem r x
+
+data MetaHandler q z :: Effect where
+  MetaHandlerMetaRun
+    :: forall q z m a
+     . MetaRun m a -> MetaHandler q z m a
+  RunMeta
+    :: forall q z m a
+     . Unique
+    -> q a
+    -> MetaHandler q z m (z a)
+
+data Box where
+  Box :: a -> Box
+
+newUnique' :: Box -> IO Unique
+newUnique' (Box _) = newUnique
+{-# NOINLINE newUnique' #-}
+
+processMeta :: forall q z r a
+             . q a
+            -> Sem (MetaHandler q z ': r) (Unique, z a)
+processMeta q = do
+  let !uniq = unsafePerformIO (newUnique' (Box q))
+      {-# NOINLINE uniq #-}
+  z <- sendUsing Here (RunMeta uniq q)
+  return (uniq, z)
+{-# NOINLINE processMeta #-}
+
+exposeMetaRun :: forall eff q z r a
+               . ElemOf (MetaHandler q z) r
+              -> Unique -> Sem r a -> Sem (eff ': r) a
+exposeMetaRun pr uniq =
+  raise
+  >>> interceptUsingH (There pr) \case
+        MetaHandlerMetaRun (MetaRun uniq' act)
+          | uniq' == uniq -> propagateUsing Here (unsafeCoerce act)
+        metarun -> propagateUsing (There pr) metarun
+
+runMeta :: forall metaeff eff q t z rPre rPost r a mh
+         . (Raise (mh ': rPost) r, mh ~ MetaHandler q z)
+        => q a
+        -> Sem (eff
+                ': HigherOrder z t (Meta metaeff) (mh ': rPre) (mh ': rPost)
+                ': r) a
+runMeta q = do
+  let mhMembership = There $ raiseMembership @(mh ': rPost) @r Here
+  (uniq, z) <- subsumeUsing (There mhMembership) (processMeta q)
+  exposeMetaRun mhMembership uniq (runH z)
+
+runMeta' :: forall metaeff eff q t z rPre rPost r a mh
+          . (Raise (mh ': rPre) r, mh ~ MetaHandler q z)
+         => q a
+         -> Sem (eff
+                 ': Meta metaeff
+                 ': HigherOrder z t (Meta metaeff) (mh ': rPre) (mh ': rPost)
+                 ': r) a
+runMeta' q = do
+  let mhMembership = There $ There $ raiseMembership @(mh ': rPre) @r Here
+  (uniq, z) <- subsumeUsing (There mhMembership) (processMeta q)
+  exposeMetaRun mhMembership uniq (runH' z)
+
+interpretMeta
+  :: forall metaeff r
+   . (   forall eff q t z x mh
+       . (Traversable t, mh ~ MetaHandler q z)
+      => metaeff eff q z x
+      -> Sem (HigherOrder z t (Meta metaeff) (mh ': r) (mh ': r)
+              ': mh ': r) x
+     )
+  -> InterpreterFor (Meta metaeff) r
+interpretMeta = genericInterpretMeta idMembership
+
+genericInterpretMeta
+  :: forall metaeff rPre rPost
+   . (forall e. ElemOf e rPre -> ElemOf e rPost)
+  -> (   forall eff q t z y mh
+       . (Traversable t, mh ~ MetaHandler q z)
+      => metaeff eff q z y
+      -> Sem (HigherOrder z t (Meta metaeff) (mh ': rPre) (mh ': rPost)
+              ': mh ': rPost) y
+     )
+  -> (forall x. Sem (Meta metaeff ': rPre) x -> Sem rPost x)
+genericInterpretMeta tPr h =
+    interpretH \case
+      MetaRun q _ ->
+        errorWithoutStackTrace $
+          "Unhandled MetaRun with unique hash " ++ show (hashUnique q)
+  . genericInterpretH (There . tPr) \case
+      MetaMetaRun metarun -> propagate metarun
+      SendMeta metaeff (n :: forall y. Unique -> q y -> z y) ->
+        h metaeff
+        & (raiseUnder2 . raiseUnder2)
+        & rewriteHigherOrder
+        & subsumeUsing (There Here)
+        & metaHandlerToOther (Bundle membership)
+        where
+          metaHandlerToOther
+            :: forall r y
+             . (forall k v. MetaRun k v -> Bundle r k v)
+            -> Sem (MetaHandler q z ': r) y
+            -> Sem r y
+          metaHandlerToOther toBdl = interpretH \case
+            MetaHandlerMetaRun metarun | Bundle pr act <- toBdl metarun ->
+              propagateUsing pr act
+            RunMeta uniq q -> return (n uniq q)
+
+          rewriteHigherOrder
+            :: forall t r y mh
+             . mh ~ MetaHandler q z
+            => Sem (HigherOrder z t (Meta metaeff) (mh ': rPre) (mh ': rPost)
+                    ': r) y
+            -> Sem (HigherOrder z t (Meta metaeff) rPre (MetaRun ': rPost)
+                    ': r) y
+          rewriteHigherOrder = reinterpret \case
+            WithProcessorH main -> withProcessorH $ \lwr -> return $
+              main $
+                lwr
+                >>> reinterpret2H \case
+                  MetaMetaRun metarun ->
+                    propagateUsing (There Here) (MetaHandlerMetaRun metarun)
+                  sendmeta -> propagate sendmeta
+            GetInterpreterH -> do
+              InterpreterH interp <- getInterpreterH
+              return $ InterpreterH $
+                sink @'[_]
+                >>> metaHandlerToOther (Bundle Here . MetaMetaRun)
+                >>> interp
+                >>> rewrite MetaHandlerMetaRun
+            LiftWithH main -> liftWithH $ \lwr -> return $
+              main (lwr . rewriteHigherOrder)
+            RestoreH t -> restoreH t
+
   where
-    sink :: forall mid l r' x before after
+    sink :: forall mid l r' y before after
           . (before ~ l ': (Append mid r'), after ~ Append mid (l ': r'),
              Subsume before after
             )
-         => Sem before x -> Sem after x
+         => Sem before y -> Sem after y
     sink = subsume_
 
-    bundleToOpaque :: forall e l x
-                    . Sem (e ': Bundle l ': r) x
-                   -> Sem (e ': Opaque (Bundle l) ': r) x
-    bundleToOpaque = coerceEffs
+-- transformUsing Here MetaHandlerMetaRun
 
-    go :: forall l x
-        . Word
-       -> Sem (Meta param ': Bundle l ': r) x
-       -> Sem (OuterMeta ': Bundle l ': r) x
-    go depth = reinterpretH \case
-      MetaRun w act -> propagate (OuterMetaRun w act)
-      MetaBundle w bdl -> propagate (OuterMetaBundle w bdl)
-      ToMeta slist (param :: param extra eff' q a) n razer -> do
-        (_ :: TypeParamsH z t meta rPre rPost) <- getTypeParamsH
-        (_ :: Proxy opaque) <-
-          return $ Proxy @(Opaque (Bundle (HigherOrder z t meta rPre rPost
-                                           ': OuterMeta
-                                           ': l)))
-        let
-          !depth' = depth + 1
 
-          runIt1 :: forall y. z y -> Sem (eff' ': opaque ': r) y
-          runIt1 = runH' @z @t @meta @rPre @rPost
-            -- Meta ... ': HigherOrder ... ': Bundle l ': r
-            >>> raiseUnder3
-            -- Meta ... ': HigherOrder ... ': Bundle l ': Bundle (HigherOrder ... ': l) ': r
-            >>> sink @'[_, _]
-            -- HigherOrder ... ': Bundle l ': Meta ... ': Bundle (HigherOrder ... ': l) ': r
-            >>> transformUsing (There (There Here)) (Bundle Here)
-            -- Bundle l ': Meta ... ': Bundle (HigherOrder ... ': l) ': r
-            >>> transformUsing
-                  (There Here)
-                  (\(Bundle pr act) -> Bundle (There (There pr)) act)
-            -- Meta ... ': Bundle (HigherOrder ... ': l) ': r
-            >>> go depth'
-            -- OuterMetaRun ': Bundle (HigherOrder ... ': l) ': r
-            >>> reinterpretH \case
-              OuterMetaRun w act
-                | depth == w -> propagateUsing Here (unsafeCoerce act)
-              outermeta -> propagateUsing (There Here) (Bundle (There Here) outermeta)
-            -- effect ': Bundle (HigherOrder ... ': l) ': r
-            >>> bundleToOpaque
 
-          runIt2 :: forall y. z y -> Sem (opaque ': r) y
-          runIt2 = runH @z @t @meta @rPre @rPost
-            -- HigherOrder ... ': OuterMeta ': Bundle l ': r
-            >>> raiseUnder3
-            -- HigherOrder ... ': OuterMeta ': Bundle l ': (Bundle ...) ': 'r
-            >>> transformUsing (There (There Here)) (Bundle Here) -- interpretH \case
-            -- OuterMeta ': Bundle l ': (Bundle ...) ': 'r
-            >>> transformUsing (There Here) (Bundle (There Here))
-            -- Bundle l ': (Bundle ...) ': 'r
-            >>> transformUsing
-                  Here
-                  (\(Bundle pr act) -> Bundle (There (There pr)) act)
-            -- (Bundle ...) ': 'r
-            >>> toOpaque
+-- runMeta ::
+--   ∀ param r .
+--   ( ∀ extra eff q z u x
+--     . KnownList extra
+--    => (forall y. z y -> Sem (Opaque q ': r) y)
+--    -> (forall y. u y -> Sem (eff ': Opaque q ': r) y)
+--    -> param extra eff z u x -> Sem (Append extra (Opaque q ': r)) x) ->
+--   InterpreterFor (Meta param) r
+-- runMeta interp =
+--   raiseUnder
+--   >>> go 0
+--   >>> interpretH \case
+--     OuterMetaRun w _ ->
+--       errorWithoutStackTrace $ "Unhandled MetaRun with depth " ++ show w
+--     OuterMetaBundle w _ ->
+--       errorWithoutStackTrace $ "Unhandled MetaBundle with depth " ++ show w
+--   >>> runBundle @'[]
+--   where
+--     sink :: forall mid l r' x before after
+--           . (before ~ l ': (Append mid r'), after ~ Append mid (l ': r'),
+--              Subsume before after
+--             )
+--          => Sem before x -> Sem after x
+--     sink = subsume_
 
-          handleOuterMetaBundle
-            :: forall z' t' r' y
-             . r' ~ (HigherOrder z t meta rPre rPost ': OuterMeta ': Bundle l ': r)
-            => OuterMeta z' y
-            -> Sem (HigherOrder z' t' OuterMeta r' r' ': r') y
-          handleOuterMetaBundle = \case
-            OuterMetaBundle w (Bundle (pr :: ElemOf e' rFinal) act)
-              | w == depth,
-                UnsafeRefl <- unsafeEqualityProof @rFinal @(opaque ': r) ->
-                case pr of
-                  Here -> case act of
-                    -- Opaque (Bundle Here (RestoreH t)) -> case traverse (const Nothing) t of
-                    --   Just tVoid -> propagateUsing Here (RestoreH tVoid)
-                    --   _          -> return (foldr const undefined t)
-                    Opaque (Bundle Here act') -> propagate act'
-                    Opaque (Bundle (There Here) act') ->
-                      handleOuterMetaBundle act'
-                    Opaque (Bundle (There (There pr')) act') ->
-                      propagate (Bundle pr' act')
-                  There pr' -> propagateUsing (There (There (There pr'))) act
-            outermeta -> propagate outermeta
+--     bundleToOpaque :: forall e l x
+--                     . Sem (e ': Bundle l ': r) x
+--                    -> Sem (e ': Opaque (Bundle l) ': r) x
+--     bundleToOpaque = coerceEffs
 
-        case toKnownList slist of
-          Dict ->
-            interp (runIt1 . n depth) param
-              & getRazer razer depth runIt2
-              -- Opaque (Bundle (HigherOrder z t mt rPre rPost ': OuterMeta ': l)) ': r
-              & fromOpaque
-              -- Bundle (HigherOrder z t mt rPre rPost ': OuterMeta ': l) ': r
-              & reinterpret3H \case
-                  Bundle Here e -> propagate e
-                  Bundle (There Here) e -> propagate e
-                  Bundle (There (There pr)) e -> propagate (Bundle pr e)
-              -- HigherOrder z t mt rPre rPost ': OuterMeta ': Bundle l ': r
-              & interceptH handleOuterMetaBundle
-              -- HigherOrder z t mt rPre rPost ': OuterMeta ': Bundle l ': r
+--     go :: forall l x
+--         . Word
+--        -> Sem (Meta param ': Bundle l ': r) x
+--        -> Sem (OuterMeta ': Bundle l ': r) x
+--     go depth = reinterpretH \case
+--       MetaRun w act -> propagate (OuterMetaRun w act)
+--       MetaBundle w bdl -> propagate (OuterMetaBundle w bdl)
+--       ToMeta slist (param :: param extra eff' q p a) n1 n2 razer -> do
+--         (_ :: TypeParamsH z t meta rPre rPost) <- getTypeParamsH
+--         (_ :: Proxy opaque) <-
+--           return $ Proxy @(Opaque (Bundle (HigherOrder z t meta rPre rPost
+--                                            ': OuterMeta
+--                                            ': l)))
+--         let
+--           !depth' = depth + 1
+
+--           runIt1 :: forall y. z y -> Sem (eff' ': opaque ': r) y
+--           runIt1 = runH' @z @t @meta @rPre @rPost
+--             -- Meta ... ': HigherOrder ... ': Bundle l ': r
+--             >>> raiseUnder3
+--             -- Meta ... ': HigherOrder ... ': Bundle l ': Bundle (HigherOrder ... ': l) ': r
+--             >>> sink @'[_, _]
+--             -- HigherOrder ... ': Bundle l ': Meta ... ': Bundle (HigherOrder ... ': l) ': r
+--             >>> transformUsing (There (There Here)) (Bundle Here)
+--             -- Bundle l ': Meta ... ': Bundle (HigherOrder ... ': l) ': r
+--             >>> transformUsing
+--                   (There Here)
+--                   (\(Bundle pr act) -> Bundle (There (There pr)) act)
+--             -- Meta ... ': Bundle (HigherOrder ... ': l) ': r
+--             >>> go depth'
+--             -- OuterMetaRun ': Bundle (HigherOrder ... ': l) ': r
+--             >>> reinterpretH \case
+--               OuterMetaRun w act
+--                 | depth == w -> propagateUsing Here (unsafeCoerce act)
+--               outermeta -> propagateUsing (There Here) (Bundle (There Here) outermeta)
+--             -- effect ': Bundle (HigherOrder ... ': l) ': r
+--             >>> bundleToOpaque
+
+--           runIt2 :: forall y. z y -> Sem (opaque ': r) y
+--           runIt2 = runH @z @t @meta @rPre @rPost
+--             -- HigherOrder ... ': OuterMeta ': Bundle l ': r
+--             >>> raiseUnder3
+--             -- HigherOrder ... ': OuterMeta ': Bundle l ': (Bundle ...) ': 'r
+--             >>> transformUsing (There (There Here)) (Bundle Here) -- interpretH \case
+--             -- OuterMeta ': Bundle l ': (Bundle ...) ': 'r
+--             >>> transformUsing (There Here) (Bundle (There Here))
+--             -- Bundle l ': (Bundle ...) ': 'r
+--             >>> transformUsing
+--                   Here
+--                   (\(Bundle pr act) -> Bundle (There (There pr)) act)
+--             -- (Bundle ...) ': 'r
+--             >>> toOpaque
+
+--           handleOuterMetaBundle
+--             :: forall z' t' r' y
+--              . r' ~ (HigherOrder z t meta rPre rPost ': OuterMeta ': Bundle l ': r)
+--             => OuterMeta z' y
+--             -> Sem (HigherOrder z' t' OuterMeta r' r' ': r') y
+--           handleOuterMetaBundle = \case
+--             OuterMetaBundle w (Bundle (pr :: ElemOf e' rFinal) act)
+--               | w == depth,
+--                 UnsafeRefl <- unsafeEqualityProof @rFinal @(opaque ': r) ->
+--                 case pr of
+--                   Here -> case act of
+--                     -- Opaque (Bundle Here (RestoreH t)) -> case traverse (const Nothing) t of
+--                     --   Just tVoid -> propagateUsing Here (RestoreH tVoid)
+--                     --   _          -> return (foldr const undefined t)
+--                     Opaque (Bundle Here act') -> propagate act'
+--                     Opaque (Bundle (There Here) act') ->
+--                       handleOuterMetaBundle act'
+--                     Opaque (Bundle (There (There pr')) act') ->
+--                       propagate (Bundle pr' act')
+--                   There pr' -> propagateUsing (There (There (There pr'))) act
+--             outermeta -> propagate outermeta
+
+--         case toKnownList slist of
+--           Dict ->
+--             interp (runIt2 . n1) (runIt1 . n2 depth) param
+--               & getRazer razer depth runIt2
+--               -- Opaque (Bundle (HigherOrder z t mt rPre rPost ': OuterMeta ': l)) ': r
+--               & fromOpaque
+--               -- Bundle (HigherOrder z t mt rPre rPost ': OuterMeta ': l) ': r
+--               & reinterpret3H \case
+--                   Bundle Here e -> propagate e
+--                   Bundle (There Here) e -> propagate e
+--                   Bundle (There (There pr)) e -> propagate (Bundle pr e)
+--               -- HigherOrder z t mt rPre rPost ': OuterMeta ': Bundle l ': r
+--               & interceptH handleOuterMetaBundle
+--               -- HigherOrder z t mt rPre rPost ': OuterMeta ': Bundle l ': r

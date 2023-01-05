@@ -6,6 +6,7 @@ module Polysemy.Internal.Scoped where
 
 import Data.Kind (Type)
 
+import Data.Unique
 import Control.Monad
 import Data.Proxy
 import Data.Coerce
@@ -180,51 +181,27 @@ newtype Razer rFinal extra m = Razer {
 --               -> b
 --             )
 --          -> Meta param m b
+-- WithSend
 
-data Meta (param :: EffectRow -> Effect -> Effect) :: Effect where
-  MetaBundle :: forall param rFinal m a
-              . Word -> Bundle rFinal m a -> Meta param m a
-  MetaRun :: forall param eff m a
-           . Word -> eff m a -> Meta param m a
-  ToMeta :: forall param extra eff z m a
-          . SList extra
-         -> param extra eff z a
-         -> (forall x. Word -> z x -> m x)
-         -> (forall rFinal. Razer rFinal extra m)
-         -> Meta param m a
+type MetaEffect = Effect -> (Type -> Type) -> Effect
 
-toMeta :: forall param extra eff r a
-        . (Member (Meta param) r, KnownList extra)
-       => param extra eff (Sem (eff ': Append extra r)) a
-       -> Sem (Append extra r) a
-toMeta p =
-      sendUsing (extendMembershipLeft @r (singList @extra) membership)
-    $ ToMeta
-        (singList @extra)
-        p
-        (\w -> transformUsing (extendMembershipLeft @r (singList @extra) membership) (MetaRun @param w))
-        razer
-  where
-    razer :: forall rFinal. Razer rFinal extra (Sem (Append extra r))
-    razer = Razer $ \w to (Sem m) -> Sem $ \k -> m $ \(Union pr wav) ->
-      case splitMembership @rFinal (singList @extra) pr of
-        Left pr' ->
-          usingSem k $ to $ liftSem $ hoist (backRazer w)
-          $ Union (extendMembershipRight @_ @r pr') wav
-        Right pr' -> k $ hoist (to . backRazer w) $ Union pr' wav
-      where
-        backRazer :: forall x
-                   . Word
-                  -> Sem (Append extra rFinal) x
-                  -> Sem (Append extra r) x
-        backRazer w = hoistSem $ \(Union pr wav@(Weaving act mkT lwr ex)) ->
-          hoist (backRazer w) $
-            case splitMembership @rFinal (singList @extra) pr of
-              Left pr' ->
-                Union (extendMembershipRight @_ @r pr') wav
-              Right pr' ->
-                Union (extendMembershipLeft @r (singList @extra) membership)
-                $ Weaving (MetaBundle @param w (Bundle pr' act)) mkT lwr ex
+data MetaRun :: Effect where
+  MetaRun :: forall eff m a. Unique -> eff m a -> MetaRun m a
+
+data Meta (metaeff :: MetaEffect) :: Effect where
+  MetaMetaRun :: forall metaeff m a
+               . MetaRun m a -> Meta metaeff m a
+  SendMeta :: forall metaeff eff z m a
+            . metaeff eff z m a
+           -> (forall x. Unique -> z x -> m x)
+           -> Meta metaeff m a
+
+sendMeta :: forall metaeff eff r a
+          . Member (Meta metaeff) r
+         => metaeff eff (Sem (eff ': r)) (Sem r) a
+         -> Sem r a
+sendMeta p =
+  send $ SendMeta p (\uniq -> transform (MetaMetaRun @metaeff . MetaRun uniq))
 
 data OuterMeta :: Effect where
   OuterMetaRun :: ∀ effect m a . Word -> effect m a -> OuterMeta m a
