@@ -1,19 +1,17 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE AllowAmbiguousTypes, FlexibleInstances, MultiParamTypeClasses #-}
 module Polysemy.TestMeta where
 
 import Data.Function
 import Polysemy
+import Polysemy.HigherOrder
 import Polysemy.Final
 import Polysemy.Trace
 import Polysemy.Async
 import Polysemy.Writer
 import Control.Concurrent (threadDelay)
-import Polysemy.Error
 import Polysemy.State
 import Polysemy.Bracket hiding (Bracket(..), generalBracket, bracketToIOFinal)
-import Polysemy.Scoped
-import Polysemy.Fatal
-import System.IO
+import Polysemy.Meta
 import qualified Control.Exception as X
 
 
@@ -24,7 +22,7 @@ data Bracket' :: MetaEffect where
     :: m a
     -> (a -> ExitCase b -> z c)
     -> (a -> m b)
-    -> Bracket' UninterruptibleMask z m (b, c)
+    -> Bracket' '[z :% UninterruptibleMask] m (b, c)
 
 generalBracket
     :: Member Bracket r
@@ -38,8 +36,8 @@ generalBracket alloc dealloc use =
 type UninterruptibleMask = Meta UninterruptibleMask'
 
 data UninterruptibleMask' :: MetaEffect where
-  Interruptible :: m a -> UninterruptibleMask' eff z m a
-  UninterruptibleMask :: z a -> UninterruptibleMask' MaskRestore z m a
+  Interruptible :: m a -> UninterruptibleMask' '[] m a
+  UninterruptibleMask :: z a -> UninterruptibleMask' '[z :% MaskRestore] m a
 
 interruptible :: Member UninterruptibleMask r => Sem r a -> Sem r a
 interruptible = sendMeta . Interruptible
@@ -55,7 +53,7 @@ maskRestore = send . MaskRestore
 
 uninterruptibleMaskToFinalIO :: Member (Final IO) r
                              => InterpreterFor UninterruptibleMask r
-uninterruptibleMaskToFinalIO = interpretMeta $ \e -> controlFinal $ \lwr ->
+uninterruptibleMaskToFinalIO = interpretMeta $ \e -> controlFinal @IO $ \lwr ->
   case e of
     Interruptible m -> X.interruptible (lwr (runH m))
     UninterruptibleMask m -> X.uninterruptibleMask $ \restore ->
@@ -110,6 +108,25 @@ testProgram = runM $ traceToStderr $ bracketToIOFinal $ asyncToIOFinal $ do
   cancel a
   trace "cancelled"
 
+data Constic (e :: Effect) :: MetaEffect where
+  Constic :: e m a -> Constic e '[] m a
+
+runWriteric :: Monoid o => Sem (Meta (Constic (Writer o)) ': r) a -> Sem r (o, a)
+runWriteric =
+    runState mempty
+  . interpretMeta \case
+      Constic (Tell o) -> modify' (<> o)
+      Constic (Listen m) -> do
+        (o, ta) <- runWriteric (runExposeH' m)
+        modify' (<> o)
+        a <- restoreH ta
+        return (o, a)
+      Constic (Pass m) -> do
+        (o, tfa) <- runWriteric (runExposeH' m)
+        let f = foldr (const . fst) id tfa
+        modify' (<> f o)
+        snd <$> restoreH tfa
+  . raiseUnder
 
 
 -- type Exceptional exc eff = Meta (ExceptionalParam exc eff)

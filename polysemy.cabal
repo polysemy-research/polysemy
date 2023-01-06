@@ -58,9 +58,9 @@ library
       Polysemy.Internal.HigherOrder
       Polysemy.Internal.Index
       Polysemy.Internal.Kind
+      Polysemy.Internal.Meta
       Polysemy.Internal.NonDet
       Polysemy.Internal.Opaque
-      Polysemy.Internal.Scoped
       Polysemy.Internal.Sing
       Polysemy.Internal.TH.Common
       Polysemy.Internal.TH.Effect
@@ -70,11 +70,11 @@ library
       Polysemy.Internal.Writer
       Polysemy.IO
       Polysemy.Membership
+      Polysemy.Meta
       Polysemy.NonDet
       Polysemy.Opaque
       Polysemy.Output
       Polysemy.Reader
-      Polysemy.Scoped
       Polysemy.State
       Polysemy.Tagged
       Polysemy.TestMeta

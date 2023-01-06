@@ -14,7 +14,6 @@ module Polysemy.Fail
   ) where
 
 import Data.Coerce
-import Control.Applicative
 import Polysemy
 import Polysemy.Fatal
 import Polysemy.Fail.Type

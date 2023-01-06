@@ -13,7 +13,6 @@ module Polysemy.Internal.Combinators
   , lazilyStateful
   ) where
 
-import           Control.Arrow ((>>>))
 import           Control.Monad
 import qualified Control.Monad.Trans.State.Lazy as LS
 import qualified Control.Monad.Trans.State.Strict as S
