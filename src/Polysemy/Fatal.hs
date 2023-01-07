@@ -147,7 +147,7 @@ noteFatal _ (Just a) = pure a
 
 
 ------------------------------------------------------------------------------
--- | Run an 'Fatal' effect in the style of
+-- | Run a 'Fatal' effect in the style of
 -- 'Control.Monad.Trans.Except.ExceptT'.
 runFatal
     :: Sem (Fatal e ': r) a

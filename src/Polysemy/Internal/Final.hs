@@ -103,7 +103,7 @@ makeSem ''Final
 
 -- | The 'Lowering' environment, which is a 'Polysemy.Sem' with a small
 -- effect stack containing the @'Lower' m t n@ effect, which provides the
--- various @-S@ combinators, as well as @'Embed' m@ and @'Final' m@ effects,
+-- various @-L@ combinators, as well as the @'Embed' m@ and @'Final' m@ effects,
 -- allowing you to embed actions of the final monad into 'Lowering'.
 --
 -- The type parameters of 'Lowering' represent the following:
@@ -112,7 +112,7 @@ makeSem ''Final
 -- * @t@: The type of final effectful state once /all/ interpreters -- past
 --   and future -- have been run, and @'Polysemy.Sem'@ has been reduced to the
 --   final monad.
--- * @n@: The type of the \"source monad\": the monad that can be lowered t
+-- * @n@: The type of the \"source monad\": the monad that can be lowered to
 --   @m@. When 'withLoweringToFinal' is used, @n@ is @Sem r@.
 --
 -- @since 2.0.0.0
@@ -296,7 +296,7 @@ controlWithProcessorL :: forall m t n r a
                       -> Sem (Lower m t n ': r) a
 controlWithProcessorL main = withProcessorL main >>= restoreL
 
--- | Lift an computation of the final monad by giving it access to a function
+-- | Lift a computation of the final monad by giving it access to a function
 -- that transforms any @'Sem' r@ computation into a compuation of the final
 -- monad returning a reified effectful state. The computation of the final
 -- monad must return a resulting effectful state.
