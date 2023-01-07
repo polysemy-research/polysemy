@@ -25,7 +25,7 @@ makeSem ''F
 handleE ::
   Members [F, Embed IO] r =>
   TVar Int ->
-  EffHandlerH E r r
+  EffHandlerH E r
 handleE tv = \case
   E1 -> do
     i1 <- embed (readTVarIO tv)
@@ -62,7 +62,7 @@ scopeHO :: () -> (() -> Sem r a) -> Sem r a
 scopeHO () use =
   use ()
 
-handleHO :: Int -> () -> EffHandlerH HO r r
+handleHO :: Int -> () -> EffHandlerH HO r
 handleHO n () = \case
   Inc ma -> interpretH (handleHO (n + 1) ()) (runH' ma)
   Ret -> return n
@@ -81,34 +81,29 @@ interpretIndirect = interpret \ Indirect -> esc
 handleEsc :: Int -> Esc m a -> Sem r a
 handleEsc i = \ Esc -> pure i
 
-test_escape :: Sem (Scoped Int Esc ': r) Int
+test_escape :: Sem (Scoped Esc Int ': r) Int
 test_escape =
-    scoped @Int @Esc 2
+    scoped @Esc @Int 2
   $ interpretIndirect
-  $ scoped @Int @Esc 1 indirect
+  $ scoped @Esc @Int 1 indirect
 
 spec :: Spec
 spec = parallel do
   describe "Scoped" do
     it "local effects" do
-      (i1, i2) <- runM $ interpretScopedWithH @'[F] @(TVar Int) @Par @E scope handleE do
-        scoped @Par @E 20 do
+      (i1, i2) <- runM $ runScoped (\r m -> scope r (\r' -> interpretH (handleE r') $ raiseUnder m)) $ do
+        scoped @E @Par 20 do
           i1 <- e1
-          i2 <- scoped @Par @E 23 e1
+          i2 <- scoped @E @Par 23 e1
           pure (i1, i2)
       i1 `shouldBe` 35
       i2 `shouldBe` 38
     it "switch interpreter" do
-      r <- runM $ interpretScopedH scopeHO (handleHO 1) do
+      r <- runM $ runScoped_ (interpretH (handleHO 1 ())) do
         scoped_ @HO do
           inc do
             ret
       r `shouldBe` 2
     it "scoped depth" do
-      r <- runM $ interpretScoped (flip ($)) handleEsc test_escape
+      r <- runM $ runScoped (\i -> interpret (handleEsc i)) $ test_escape
       r `shouldBe` 2
-      r' <- runM $ interpretScopedH'
-                    (\r h -> h r)
-                    handleEsc
-                 $ test_escape
-      r' `shouldBe` 2

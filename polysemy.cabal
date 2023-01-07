@@ -84,7 +84,6 @@ library
       Polysemy.State
       Polysemy.State.Manager
       Polysemy.Tagged
-      Polysemy.TestMeta
       Polysemy.Trace
       Polysemy.Writer
       Polysemy.Writer.Manager

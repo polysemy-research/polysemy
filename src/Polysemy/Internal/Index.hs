@@ -10,7 +10,7 @@
 module Polysemy.Internal.Index where
 
 import GHC.TypeLits (Nat)
-import Type.Errors (ErrorMessage (ShowType), TypeError)
+import Type.Errors (ErrorMessage (ShowType))
 
 import Polysemy.Internal.CustomErrors (type (%), type (<>))
 import Polysemy.Internal.Sing (SList (SCons, SEnd))
@@ -47,12 +47,6 @@ instance {-# INCOHERENT #-} TypeError (InsertAtFailure index oldTail head full)
   insertAtIndex = error "unreachable"
 
 #endif
-
-type family InsertAtUnprovidedIndex where
-  InsertAtUnprovidedIndex = TypeError (
-    "insertAt: You must provide the index at which the effects should be inserted as a type application."
-    % "Example: insertAt @5"
-    )
 
 type InsertAtFailure index soughtTail head full =
   "insertAt: Failed to insert effects at index " <> 'ShowType index
