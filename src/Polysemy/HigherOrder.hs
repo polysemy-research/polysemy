@@ -2,6 +2,8 @@
 module Polysemy.HigherOrder
   ( -- * 'HigherOrder' effect
     HigherOrder
+  , higherOrderIntoOpaque
+  , higherOrderFromOpaque
 
     -- * Ultrageneric 'interpretH'
   , genericInterpretH
@@ -38,4 +40,17 @@ module Polysemy.HigherOrder
   , getTypeParamsH
   ) where
 
+import Polysemy
+import Polysemy.Opaque
 import Polysemy.Internal.HigherOrder
+import Polysemy.Internal.Utils
+
+higherOrderIntoOpaque :: forall e z t eH rH r x
+                       . Sem (e ': HigherOrder z t eH rH ': r) x
+                      -> Sem (e ': Opaque (HigherOrder z t eH rH) ': r) x
+higherOrderIntoOpaque = coerceEffs
+
+higherOrderFromOpaque :: forall e z t eH rH r x
+                       . Sem (e ': Opaque (HigherOrder z t eH rH) ': r) x
+                      -> Sem (e ': HigherOrder z t eH rH ': r) x
+higherOrderFromOpaque = coerceEffs

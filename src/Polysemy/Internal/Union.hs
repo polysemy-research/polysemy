@@ -15,6 +15,7 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns            #-}
 
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 {-# OPTIONS_HADDOCK not-home, prune #-}
 
 -- | Description: 'Union', 'Weaving' and 'ElemOf', Polysemy's core types
@@ -109,17 +110,6 @@ data Weaving e mAfter resultType where
       , weaveLowering :: forall z' x. Monad z' => t z' x -> z' (StT t x)
       , weaveResult :: StT t a -> resultType
       } -> Weaving e mAfter resultType
-
--- data Weaving e mAfter resultType where
---   Weaving
---     :: forall t e z a resultType mAfter. (MonadTransWeave t)
---     => {
---         weaveEffect :: e z a
---       , (forall x. z x -> Sem r0 x)
---       , weaveTrans :: forall r' x. (forall y. mAfter y -> Sem r' y) -> z x -> t n x
---       , weaveLowering :: forall z' x. Monad z' => t z' x -> z' (StT t x)
---       , weaveResult :: StT t a -> resultType
---       } -> Weaving e mAfter resultType
 
 instance Functor (Weaving e m) where
   fmap f (Weaving e mkT lwr ex) = Weaving e mkT lwr (f . ex)

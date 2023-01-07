@@ -32,6 +32,8 @@ module Polysemy.Internal
   , subsume
   , subsumeUsing
   , insertAt
+  , sinkBelow
+  , floatAbove
   , expose
   , exposeUsing
   , Embed (..)
@@ -42,7 +44,6 @@ module Polysemy.Internal
   , Append
   , InterpreterFor
   , InterpretersFor
-  , genericInterpretWeaving
   ) where
 
 import Control.Applicative
@@ -60,12 +61,11 @@ import Data.Type.Equality
 import Polysemy.Embed.Type
 import Polysemy.Fail.Type
 import Polysemy.Internal.Fixpoint
-import Polysemy.Internal.Index (InsertAtUnprovidedIndex, InsertAtIndex(insertAtIndex))
+import Polysemy.Internal.Index (InsertAtIndex(insertAtIndex))
 import Polysemy.Internal.Kind
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.PluginLookup
 import Polysemy.Internal.Union
-import Type.Errors (WhenStuck)
 import Polysemy.Internal.Sing
 
 
@@ -639,8 +639,7 @@ expose = exposeUsing membership
 -- @since 1.6.0.0
 insertAt
   :: forall index inserted head oldTail tail old full a
-   . ( ListOfLength index head
-     , WhenStuck index InsertAtUnprovidedIndex
+   . ( ListOfLength "insertAt" index head
      , old ~ Append head oldTail
      , tail ~ Append inserted oldTail
      , full ~ Append head tail
@@ -650,7 +649,7 @@ insertAt
 insertAt = mapMembership $
   injectMembership
     @oldTail
-    (listOfLength @index @head)
+    (listOfLength @"insertAt" @index @head)
     (insertAtIndex @Effect @index @head @tail @oldTail @full @inserted)
 {-# INLINE insertAt #-}
 
@@ -758,21 +757,17 @@ type InterpreterFor e r = ∀ a. Sem (e ': r) a -> Sem r a
 type InterpretersFor es r = ∀ a. Sem (Append es r) a -> Sem r a
 
 
-genericInterpretWeaving :: forall e r' r a
-                         . (forall e'. ElemOf e' r -> ElemOf e' r')
-                        -> (forall t z x
-                             . MonadTransWeave t
-                            => (forall y. z y -> t (Sem (e ': r)) y)
-                            -> e z x -> t (Sem r') x
-                           )
-                        -> Sem (e ': r) a
-                        -> Sem r' a
-genericInterpretWeaving tPr h = go
-  where
-    go :: forall a'. Sem (e ': r) a' -> Sem r' a'
-    go (Sem sem) = Sem $ \(k :: forall x. Union r' (Sem r') x -> m x) ->
-      sem $ \u -> case decomp u of
-        Left (Union pr wav) ->
-          k $ hoist go (Union (tPr pr) wav)
-        Right (Weaving e mkT lwr ex) ->
-          fmap ex $ runSem (lwr $ h (mkT id) e) k
+sinkBelow :: forall l e r a
+           . KnownList l => Sem (e ': Append l r) a -> Sem (Append l (e ': r)) a
+sinkBelow = mapMembership \case
+  Here -> extendMembershipLeft @(e ': r) (singList @l) Here
+  There pr -> injectMembership @r (singList @l) (singList @'[e]) pr
+
+floatAbove :: forall l e r a
+           . KnownList l => Sem (Append l (e ': r)) a -> Sem (e ': Append l r) a
+floatAbove = mapMembership \pr ->
+  case splitMembership @(e ': r) (singList @l) pr of
+    Left pr' -> There (extendMembershipRight @_ @r pr')
+    Right Here -> Here
+    Right (There pr') ->
+      There (extendMembershipLeft @r (singList @l) pr')

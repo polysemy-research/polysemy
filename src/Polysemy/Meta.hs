@@ -9,26 +9,31 @@ module Polysemy.Meta (
   (:%),
   mkIntoMeta,
 
-  -- * Constructors
+  -- * Actions
   sendMeta,
+  sendMetaUsing,
 
-  -- * Last-resort constructor
+  -- ** Last-resort actions
   sendMetaVia,
+  sendMetaViaUsing,
 
   -- * Interpreters
   interpretMeta,
+  reinterpretMeta,
+  reinterpretMeta2,
+  reinterpretMeta3,
   metaToMeta,
   metaToMetaUsing,
   metaIntoMeta,
 
   -- * 'interpretMeta' Combinators
-  MetaHandler,
+  HandlingMeta,
   runMeta,
   runMeta',
   runExposeMeta,
   runExposeMeta',
 
-  -- * Last-resort 'interpretMeta' combinators
+  -- ** Last-resort 'interpretMeta' combinators
   runMetaUsing,
   runMetaUsing',
   runExposeMetaUsing,
@@ -45,25 +50,24 @@ import Control.Monad
 import Polysemy
 import Polysemy.Bundle
 import Polysemy.Membership
-import Polysemy.Internal
 import Polysemy.Internal.Utils
 import Polysemy.Internal.Meta
 import Polysemy.Internal.HigherOrder
 import System.IO.Unsafe
 import Unsafe.Coerce
 
-data MetaHandler metaeffect t rH l :: Effect where
-  MetaHandlerMetaRun
+data HandlingMeta metaeffect t rH l :: Effect where
+  HandlingMetaMetaRun
     :: forall metaeffect t rH l m a
-     . MetaRun m a -> MetaHandler metaeffect t rH l m a
+     . MetaRun m a -> HandlingMeta metaeffect t rH l m a
   ProcessMeta
     :: forall eff z metaeffect t rH l m a
      . Unique
     -> ElemOf '(z, eff) l
     -> t ()
     -> z a
-    -> MetaHandler metaeffect t rH l m
-        (Sem (Meta metaeffect ': MetaHandler metaeffect t rH l ': rH) (t a))
+    -> HandlingMeta metaeffect t rH l m
+        (Sem (Meta metaeffect ': HandlingMeta metaeffect t rH l ': rH) (t a))
 
 data Box where
   Box :: a -> Box
@@ -76,9 +80,9 @@ processMeta :: forall eff z metaeffect t rH l r a
              . ElemOf '(z, eff) l
             -> t ()
             -> z a
-            -> Sem (MetaHandler metaeffect t rH l ': r)
+            -> Sem (HandlingMeta metaeffect t rH l ': r)
                    (Unique,
-                    Sem (Meta metaeffect ': MetaHandler metaeffect t rH l ': rH)
+                    Sem (Meta metaeffect ': HandlingMeta metaeffect t rH l ': rH)
                         (t a))
 processMeta pr t z = do
   let !uniq = unsafePerformIO (newUnique' (Box z))
@@ -88,12 +92,12 @@ processMeta pr t z = do
 {-# NOINLINE processMeta #-}
 
 exposeMetaRun :: forall eff metaeffect t rH l r a
-               . ElemOf (MetaHandler metaeffect t rH l) r
+               . ElemOf (HandlingMeta metaeffect t rH l) r
               -> Unique -> Sem r a -> Sem (eff ': r) a
 exposeMetaRun pr uniq =
   raise
   >>> interceptUsingH (There pr) \case
-        MetaHandlerMetaRun (MetaRun uniq' act)
+        HandlingMetaMetaRun (MetaRun uniq' act)
           | uniq' == uniq -> propagateUsing Here (unsafeCoerce act)
         metarun -> propagateUsing (There pr) metarun
 
@@ -111,7 +115,7 @@ instance DepMember eff z l
 
 runMeta :: forall r eff q metaeff z t rH l a mh
          . ( DepMember eff q l, Raise (mh ': rH) r
-           , mh ~ MetaHandler metaeff t rH l)
+           , mh ~ HandlingMeta metaeff t rH l)
         => q a
         -> Sem (eff
                 ': HigherOrder z t (Meta metaeff) (mh ': rH)
@@ -119,7 +123,7 @@ runMeta :: forall r eff q metaeff z t rH l a mh
 runMeta = runMetaUsing depMembership
 
 runMetaUsing :: forall r eff q metaeff z t rH l a mh
-              . (Raise (mh ': rH) r, mh ~ MetaHandler metaeff t rH l)
+              . (Raise (mh ': rH) r, mh ~ HandlingMeta metaeff t rH l)
              => ElemOf '(q, eff) l
              -> q a
              -> Sem (eff
@@ -129,7 +133,7 @@ runMetaUsing pr = runExposeMetaUsing pr >=> raise . restoreH
 
 runMeta' :: forall r eff q metaeff z t rH l a mh
           . (DepMember eff q l, Raise (mh ': rH) r,
-             mh ~ MetaHandler metaeff t rH l)
+             mh ~ HandlingMeta metaeff t rH l)
          => q a
          -> Sem (eff
                  ': Meta metaeff
@@ -138,7 +142,7 @@ runMeta' :: forall r eff q metaeff z t rH l a mh
 runMeta' = runMetaUsing' depMembership
 
 runMetaUsing' :: forall r eff q metaeff z t rH l a mh
-               . (Raise (mh ': rH) r, mh ~ MetaHandler metaeff t rH l)
+               . (Raise (mh ': rH) r, mh ~ HandlingMeta metaeff t rH l)
               => ElemOf '(q, eff) l
               -> q a
               -> Sem (eff
@@ -149,7 +153,7 @@ runMetaUsing' pr = runExposeMetaUsing' pr >=> raise . raise . restoreH
 
 runExposeMeta :: forall r eff q metaeff z t rH l a mh
                . (DepMember eff q l, Raise (mh ': rH) r,
-                  mh ~ MetaHandler metaeff t rH l)
+                  mh ~ HandlingMeta metaeff t rH l)
               => q a
               -> Sem (eff
                       ': HigherOrder z t (Meta metaeff) (mh ': rH)
@@ -158,7 +162,7 @@ runExposeMeta = runExposeMetaUsing depMembership
 
 runExposeMeta' :: forall r eff q metaeff z t rH l a mh
                 . (DepMember eff q l, Raise (mh ': rH) r,
-                  mh ~ MetaHandler metaeff t rH l)
+                  mh ~ HandlingMeta metaeff t rH l)
                => q a
                -> Sem (eff
                        ': Meta metaeff
@@ -167,7 +171,7 @@ runExposeMeta' :: forall r eff q metaeff z t rH l a mh
 runExposeMeta' = runExposeMetaUsing' depMembership
 
 runExposeMetaUsing :: forall r eff q metaeff z t rH l a mh
-                    . (Raise (mh ': rH) r, mh ~ MetaHandler metaeff t rH l)
+                    . (Raise (mh ': rH) r, mh ~ HandlingMeta metaeff t rH l)
                    => ElemOf '(q, eff) l
                    -> q a
                    -> Sem (eff
@@ -181,7 +185,7 @@ runExposeMetaUsing pr q = do
   exposeMetaRun mhMembership uniq (raise_ (interp z))
 
 runExposeMetaUsing' :: forall r metaeff eff q z t rH l a mh
-                    . (Raise (mh ': rH) r, mh ~ MetaHandler metaeff t rH l)
+                    . (Raise (mh ': rH) r, mh ~ HandlingMeta metaeff t rH l)
                     => ElemOf '(q, eff) l
                     -> q a
                     -> Sem (eff
@@ -205,13 +209,16 @@ getProcessorH :: Sem (HigherOrder z t e rH ': r) (ProcessorH z t e rH)
 getProcessorH = liftWithH $ \lwr ->
   return $ ProcessorH $ \z t -> lwr (restoreH t >> runH z)
 
+type MetaHandler metaeff r =
+   (   forall l t z x mh
+     . (Traversable t, mh ~ HandlingMeta metaeff t r l)
+    => metaeff l z x
+    -> Sem (HigherOrder z t (Meta metaeff) (mh ': r) ': mh ': r) x
+   )
+
 interpretMeta
   :: forall metaeff r
-   . (   forall l t z x mh
-       . (Traversable t, mh ~ MetaHandler metaeff t r l)
-      => metaeff l z x
-      -> Sem (HigherOrder z t (Meta metaeff) (mh ': r) ': mh ': r) x
-     )
+   . MetaHandler metaeff r
   -> InterpreterFor (Meta metaeff) r
 interpretMeta h =
     interpretH \case
@@ -224,46 +231,46 @@ interpretMeta h =
         ProcessorH processor <- getProcessorH
         (_ :: TypeParamsH k t meta (MetaRun ': r)) <- getTypeParamsH
         let
-          metaRunToMetaHandler
+          metaRunToHandlingMeta
             :: forall y mh
-             . mh ~ MetaHandler metaeff t r l
+             . mh ~ HandlingMeta metaeff t r l
             => Sem (meta ': MetaRun ': r) y
             -> Sem (meta ': mh ': r) y
-          metaRunToMetaHandler =
+          metaRunToHandlingMeta =
             (raiseUnder2 . raiseUnder2)
             >>> interpretH \case
               MetaMetaRun metarun ->
-                propagateUsing (There (There Here)) (MetaHandlerMetaRun metarun)
+                propagateUsing (There (There Here)) (HandlingMetaMetaRun metarun)
               sendmeta -> propagate sendmeta
-            >>> transformUsing (There Here) MetaHandlerMetaRun
+            >>> transformUsing (There Here) HandlingMetaMetaRun
 
           metaHandlerToOther
             :: forall r'
              . (forall n y. MetaRun n y -> Bundle r' n y)
-            -> InterpreterFor (MetaHandler metaeff t r l) r'
+            -> InterpreterFor (HandlingMeta metaeff t r l) r'
           metaHandlerToOther toBdl = interpretH \case
-            MetaHandlerMetaRun metarun | Bundle pr act <- toBdl metarun ->
+            HandlingMetaMetaRun metarun | Bundle pr act <- toBdl metarun ->
               propagateUsing pr act
             ProcessMeta uniq pr t q -> return $
               processor (to2 uniq pr q) t
-              & metaRunToMetaHandler
+              & metaRunToHandlingMeta
 
           rewriteHigherOrder
             :: forall r' y mh
-             . mh ~ MetaHandler metaeff t r l
+             . mh ~ HandlingMeta metaeff t r l
             => Sem (HigherOrder z t meta (mh ': r) ': r') y
             -> Sem (HigherOrder k t meta (MetaRun ': r) ': r') y
           rewriteHigherOrder = reinterpret \case
             WithProcessorH main -> withProcessorH $ \lwr -> return $
-              main (metaRunToMetaHandler . lwr . to1)
+              main (metaRunToHandlingMeta . lwr . to1)
             GetInterpreterH -> do
               InterpreterH interp <- getInterpreterH
               return $ InterpreterH $
-                sink @'[_]
+                sinkBelow @'[_]
                 >>> raiseUnder2
                 >>> metaHandlerToOther (Bundle (There Here))
                 >>> interp
-                >>> rewrite MetaHandlerMetaRun
+                >>> rewrite HandlingMetaMetaRun
             LiftWithH main -> liftWithH $ \lwr -> return $
               main (lwr . rewriteHigherOrder)
             RestoreH t -> restoreH t
@@ -273,10 +280,21 @@ interpretMeta h =
           & rewriteHigherOrder
           & subsumeUsing (There Here)
           & metaHandlerToOther (Bundle membership)
-  where
-    sink :: forall mid l r' y before after
-          . (before ~ l ': (Append mid r'), after ~ Append mid (l ': r'),
-             Subsume before after
-            )
-         => Sem before y -> Sem after y
-    sink = subsume_
+
+reinterpretMeta
+  :: forall metaeff e2 r
+   . MetaHandler metaeff (e2 ': r)
+  -> (forall x. Sem (Meta metaeff ': r) x -> Sem (e2 ': r) x)
+reinterpretMeta h = interpretMeta h . raiseUnder
+
+reinterpretMeta2
+  :: forall metaeff e2 e3 r
+   . MetaHandler metaeff (e2 ': e3 ': r)
+  -> (forall x. Sem (Meta metaeff ': r) x -> Sem (e2 ': e3 ': r) x)
+reinterpretMeta2 h = interpretMeta h . raise2Under
+
+reinterpretMeta3
+  :: forall metaeff e2 e3 e4 r
+   . MetaHandler metaeff (e2 ': e3 ': e4 ': r)
+  -> (forall x. Sem (Meta metaeff ': r) x -> Sem (e2 ': e3 ': e4 ': r) x)
+reinterpretMeta3 h = interpretMeta h . raise3Under

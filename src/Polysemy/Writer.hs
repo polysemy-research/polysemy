@@ -19,7 +19,7 @@ module Polysemy.Writer
   , runWriterTVar
   , writerToIOFinal
   , writerToIOAssocRFinal
-  , writerToEndoWriter
+  , writerIntoEndoWriter
 
     -- * Interpretations for Other Effects
   , outputToWriter
@@ -130,8 +130,7 @@ runWriterAssocR
 runWriterAssocR =
     (fmap . first) (`appEndo` mempty)
   . runWriter
-  . writerToEndoWriter
-  . raiseUnder
+  . writerIntoEndoWriter
 
 
 -----------------------------------------------------------------------------
@@ -154,8 +153,7 @@ runLazyWriterAssocR
 runLazyWriterAssocR =
     (fmap . first) (`appEndo` mempty)
   . runLazyWriter
-  . writerToEndoWriter
-  . raiseUnder
+  . writerIntoEndoWriter
 
 --------------------------------------------------------------------
 -- | Transform a 'Writer' effect into atomic operations
@@ -213,5 +211,4 @@ writerToIOAssocRFinal :: (Monoid o, Member (Final IO) r)
 writerToIOAssocRFinal =
     (fmap . first) (`appEndo` mempty)
   . writerToIOFinal
-  . writerToEndoWriter
-  . raiseUnder
+  . writerIntoEndoWriter

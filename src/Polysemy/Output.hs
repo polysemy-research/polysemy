@@ -19,6 +19,7 @@ module Polysemy.Output
   , runOutputMonoidTVar
   , outputToIOMonoid
   , outputToIOMonoidAssocR
+  , outputIntoEndoOutput
   , ignoreOutput
   , runOutputBatched
   , runOutputSem
@@ -244,6 +245,12 @@ outputToIOMonoidAssocR
 outputToIOMonoidAssocR f =
     (fmap . first) (`appEndo` mempty)
   . outputToIOMonoid (\o -> let !o' = f o in Endo (o' <>))
+
+outputIntoEndoOutput
+  :: Monoid o
+  => Sem (Output o ': r) a
+  -> Sem (Output (Endo o) ': r) a
+outputIntoEndoOutput = rewrite (\(Output o) -> Output (Endo (o <>)))
 
 ------------------------------------------------------------------------------
 -- | Run an 'Output' effect by ignoring it.

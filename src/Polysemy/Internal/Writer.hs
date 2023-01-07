@@ -35,18 +35,18 @@ makeSem ''Writer
 -- using 'reinterpretH' + 'subsume'
 
 -----------------------------------------------------------------------------
--- | Transform a @'Writer' o@ effect into a  @'Writer' ('Endo' o)@ effect,
+-- | Rewrite a @'Writer' o@ effect into a  @'Writer' ('Endo' o)@ effect,
 -- right-associating all uses of '<>' for @o@.
 --
--- This can be used together with 'raiseUnder' in order to create
--- @-AssocR@ variants out of regular 'Writer' interpreters.
+-- This can be used in order to create @-AssocR@ variants out of regular
+-- 'Writer' interpreters.
 --
 -- @since 1.2.0.0
-writerToEndoWriter
-    :: (Monoid o, Member (Writer (Endo o)) r)
+writerIntoEndoWriter
+    :: Monoid o
     => Sem (Writer o ': r) a
-    -> Sem r a
-writerToEndoWriter = interpretH $ \case
+    -> Sem (Writer (Endo o) ': r) a
+writerIntoEndoWriter = reinterpretH $ \case
   Tell o   -> tell (Endo (o <>))
   Listen m -> do
     (o, a) <- listen (runH m)

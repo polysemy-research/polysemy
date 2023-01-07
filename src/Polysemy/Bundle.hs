@@ -10,15 +10,15 @@ module Polysemy.Bundle
     -- * Interpretations
   , runBundle
   , subsumeBundle
-  , consBundle
-  , unconsBundle
+  , collectBundle
   , mapMembershipBundle
     -- * Miscellaneous
+  , Append
   , KnownList
+  , ListOfLength
   ) where
 
 import Polysemy
-import Polysemy.HigherOrder
 import Polysemy.Internal
 import Polysemy.Internal.Union
 import Polysemy.Internal.Bundle (simpleSubsumeMembership)
@@ -63,26 +63,28 @@ sendBundleUsing
   -> Sem r a
 sendBundleUsing pr = transform (Bundle pr)
 
-------------------------------------------------------------------------------
--- | Send uses of @e@ and @'Bundle' l@ to @'Bundle' (e ': r)@
-consBundle :: forall e l r a
-            . Sem (e ': Bundle l ': r) a
-           -> Sem (Bundle (e ': l) ': r) a
-consBundle =
-    mapMembershipBundle @(e ': l) There
-  . sendBundleUsing (Here @e @(e ': l))
-  . raiseUnder2
-
-------------------------------------------------------------------------------
--- | Decompose @'Bundle' (e ': l)@ into @e@ and @Bundle l@ by placing uses
--- of @e@ on top of the effect stack, and sending uses of any effect of @l@ to
--- @'Bundle' l@
-unconsBundle :: forall e l r a
-              . Sem (Bundle (e ': l) ': r) a
-             -> Sem (e ': Bundle l ': r) a
-unconsBundle = reinterpret2H \case
-  Bundle Here e -> propagate e
-  Bundle (There pr) e -> propagateUsing (There Here) (Bundle pr e)
+-- | Rewrite the top effects of the effect stack into a `Bundle` of those
+-- effects.
+--
+-- The number of effects to be rewritten into the `Bundle` can be disambiguated
+-- using type applications whenever necessary. For example:
+--
+-- @
+-- transform2Bundle :: Member (Bundle '[e1, e2]) r
+--                  => Sem (e1 ': e2 ': r) a -> Sem r a
+-- transform2Bundle = subsume . collectBundle @'[_, _]
+-- @
+--
+collectBundle :: forall l r a
+               . KnownList l
+              => Sem (Append l r) a
+              -> Sem (Bundle l ': r) a
+collectBundle =
+  hoistSem \(Union pr wav@(Weaving act mkT lwr ex)) ->
+    hoist (collectBundle @l)
+      case splitMembership @r (singList @l) pr of
+        Left pr' -> Union Here (Weaving (Bundle pr' act) mkT lwr ex)
+        Right pr' -> Union (There pr') wav
 
 ------------------------------------------------------------------------------
 -- | Send uses of @'Bundle' l@ to @'Bundle' r@ given an explicit membership

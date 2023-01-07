@@ -12,6 +12,7 @@ module Polysemy.Internal.CustomErrors
   , FirstOrder
   , type (<>)
   , type (%)
+  , StuckCheck
   ) where
 
 import Data.Kind
@@ -56,3 +57,5 @@ type FirstOrder (e :: Effect) fn = UnlessStuck e (FirstOrderErrorFcf e fn)
 
 data DoError :: ErrorMessage -> Exp k
 type instance Eval (DoError a) = TypeError a
+
+type StuckCheck e = IfStuck e '() (Pure '())

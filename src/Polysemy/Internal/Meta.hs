@@ -44,7 +44,16 @@ sendMeta :: forall metaeff l r a
           . (Member (Meta metaeff) r, AllSemRaises l r)
          => metaeff l (Sem r) a
          -> Sem r a
-sendMeta = sendMetaVia id (\pr z -> case proveSemRaise @l @r pr of Refl -> z)
+sendMeta = sendMetaUsing membership
+
+sendMetaUsing :: forall metaeff l r a
+               . AllSemRaises l r
+              => ElemOf (Meta metaeff) r
+              -> metaeff l (Sem r) a
+              -> Sem r a
+sendMetaUsing pr = sendMetaViaUsing pr
+                    id
+                    (\pr' -> case proveSemRaise @l @r pr' of Refl -> id)
 
 sendMetaVia :: forall metaeff l m r a
              . Member (Meta metaeff) r
@@ -52,8 +61,16 @@ sendMetaVia :: forall metaeff l m r a
             -> (forall eff z x. ElemOf '(z, eff) l -> z x -> Sem (eff ': r) x)
             -> metaeff l m a
             -> Sem r a
-sendMetaVia to1 to2 p = send $ SendMeta p to1 $ \uniq pr ->
-  transform (MetaMetaRun @metaeff . MetaRun uniq) . to2 pr
+sendMetaVia = sendMetaViaUsing membership
+
+sendMetaViaUsing :: forall metaeff l m r a
+                  . ElemOf (Meta metaeff) r
+                 -> (forall x. m x -> Sem r x)
+                 -> (forall eff z x. ElemOf '(z, eff) l -> z x -> Sem (eff ': r) x)
+                 -> metaeff l m a
+                 -> Sem r a
+sendMetaViaUsing pr to1 to2 p = sendUsing pr $ SendMeta p to1 $ \uniq pr' ->
+  transformUsing pr (MetaMetaRun @metaeff . MetaRun uniq) . to2 pr'
 
 metaToMeta ::
   ∀ metaeff0 metaeff1 r.

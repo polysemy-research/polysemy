@@ -34,6 +34,12 @@ instance {-# INCOHERENT #-} (
 -- Broken on 9.2.
 -- It appears that instance matching is done with an abstract value for @oldTail@, thus not matching the correct
 -- instance and finding only this one, causing a false positive for the @TypeError@.
+--
+-- KingoftheHomeless: This is 100% a GHC bug. The coherent instance
+-- /is found and used/ when this instance is not present, and both the other
+-- instances are strictly more specific than this one. The presence of this
+-- instance should not change instance resolution in the cases where any of
+-- the other instances is a valid candidate, and yet it does!
 #if __GLASGOW_HASKELL__ < 902
 
 instance {-# INCOHERENT #-} TypeError (InsertAtFailure index oldTail head full)

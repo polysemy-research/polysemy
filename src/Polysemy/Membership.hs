@@ -10,6 +10,7 @@ module Polysemy.Membership
   , tryMembership
 
   -- * Using membership
+  , sendUsing
   , subsumeUsing
   , transformUsing
   , exposeUsing
@@ -25,6 +26,7 @@ module Polysemy.Membership
   , Raise(..)
 
     -- * Miscellaneous
+  , Append
   , KnownList(..)
   , SList(SEnd, SCons)
   ) where

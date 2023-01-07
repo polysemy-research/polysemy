@@ -13,14 +13,17 @@
 module Polysemy.Internal.Sing
   ( SList(.., SCons, SEnd)
   , KnownList(..)
-  , ListOfLength(..)
+  , ListOfLength
+  , listOfLength
   ) where
 
-import GHC.TypeLits (Nat, type (-), natVal', KnownNat)
+import GHC.TypeLits (Nat, Symbol, type (-), natVal', KnownNat)
 import GHC.Exts (proxy#)
+import Type.Errors (TypeError)
 import Unsafe.Coerce
 
 import Polysemy.Internal.Kind (Effect)
+import Polysemy.Internal.CustomErrors
 
 ------------------------------------------------------------------------------
 -- | A singleton type used as a witness for type-level lists.
@@ -68,9 +71,25 @@ instance KnownList xs => KnownList (x ': xs) where
 
 ------------------------------------------------------------------------------
 -- | A utility class for constructing a type-level list of a given length.
-class KnownNat n => ListOfLength (n :: Nat) (l :: [Effect]) where
-  listOfLength :: SList l
-  listOfLength = UnsafeMkSList (fromInteger (natVal' (proxy# @n)))
+class (KnownNat n, KnownList l)
+   => ListOfLength' (stuck :: ()) (s :: Symbol) (n :: Nat) (l :: [Effect]) where
+  listOfLength' :: SList l
+  listOfLength' = UnsafeMkSList (fromInteger (natVal' (proxy# @n)))
 
-instance {-# OVERLAPPING #-} (l ~ '[]) => ListOfLength 0 l
-instance (KnownNat n, ListOfLength (n - 1) xs, l ~ (x ': xs)) => ListOfLength n l
+instance {-# OVERLAPPING #-} (l ~ '[]) => ListOfLength' '() s 0 l
+instance (KnownNat n, ListOfLength' '() s (n - 1) xs, l ~ (x ': xs))
+      => ListOfLength' '() s n l
+instance {-# INCOHERENT #-} (UnprovidedIndex s, KnownNat n, KnownList l)
+      => ListOfLength' stuck s n l
+
+class    (ListOfLength' (StuckCheck n) s n l) => ListOfLength s n l
+instance (ListOfLength' (StuckCheck n) s n l) => ListOfLength s n l
+
+listOfLength :: forall s n l. ListOfLength s n l => SList l
+listOfLength = listOfLength' @(StuckCheck n) @s @n @l
+
+type family UnprovidedIndex name where
+  UnprovidedIndex name = TypeError (
+    name <> ": You must provide the length of the prefix as a type application."
+    % "Example: " <> name <> " @5"
+    )

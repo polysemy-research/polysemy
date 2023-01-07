@@ -32,6 +32,8 @@ module Polysemy
   , raise3Under
   , raiseUnder2
   , raiseUnder3
+  , sinkBelow
+  , floatAbove
   , raise_
   , subsume_
   , insertAt

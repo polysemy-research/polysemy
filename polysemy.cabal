@@ -36,11 +36,14 @@ library
       Polysemy
       Polysemy.Async
       Polysemy.AtomicState
+      Polysemy.AtomicState.Manager
       Polysemy.Bracket
       Polysemy.Bundle
       Polysemy.Embed
       Polysemy.Embed.Type
       Polysemy.Error
+      Polysemy.Error.Manager
+      Polysemy.Exceptional
       Polysemy.Fail
       Polysemy.Fail.Type
       Polysemy.Fatal
@@ -71,15 +74,20 @@ library
       Polysemy.IO
       Polysemy.Membership
       Polysemy.Meta
+      Polysemy.Newtype
       Polysemy.NonDet
       Polysemy.Opaque
       Polysemy.Output
+      Polysemy.Output.Manager
       Polysemy.Reader
+      Polysemy.Scoped
       Polysemy.State
+      Polysemy.State.Manager
       Polysemy.Tagged
       Polysemy.TestMeta
       Polysemy.Trace
       Polysemy.Writer
+      Polysemy.Writer.Manager
   other-modules:
       Polysemy.Internal.PluginLookup
       Paths_polysemy
