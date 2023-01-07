@@ -10,9 +10,11 @@
 module Polysemy.Internal.Index where
 
 import GHC.TypeLits (Nat)
-import Type.Errors (ErrorMessage (ShowType))
-
+#if __GLASGOW_HASKELL__ < 902
+import Type.Errors (ErrorMessage (ShowType), TypeError)
 import Polysemy.Internal.CustomErrors (type (%), type (<>))
+#endif
+
 import Polysemy.Internal.Sing (SList (SCons, SEnd))
 
 ------------------------------------------------------------------------------
@@ -41,12 +43,10 @@ instance {-# INCOHERENT #-} (
 -- instance should not change instance resolution in the cases where any of
 -- the other instances is a valid candidate, and yet it does!
 #if __GLASGOW_HASKELL__ < 902
-
 instance {-# INCOHERENT #-} TypeError (InsertAtFailure index oldTail head full)
        => InsertAtIndex index head tail oldTail full inserted where
   insertAtIndex = error "unreachable"
 
-#endif
 
 type InsertAtFailure index soughtTail head full =
   "insertAt: Failed to insert effects at index " <> 'ShowType index
@@ -60,3 +60,4 @@ type InsertAtFailure index soughtTail head full =
   % "\t" <> 'ShowType full
   % "Make sure that the index provided to insertAt is correct, and that the desired return type simply requires"
   <> " inserting effects."
+#endif
