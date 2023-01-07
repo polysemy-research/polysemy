@@ -271,7 +271,7 @@ processH z = withProcessorH $ \lower -> return (lower z)
 -- by turning it into a @'Sem' (e ': rH)@ action that returns a reified
 -- effectful state.
 --
--- /Note/: Processed actions makes use of the effectful state as it is by
+-- /Note/: Processed actions make use of the effectful state as it is by
 -- the time 'withProcessorH' is run, rather than what it is by the time the
 -- processed action is run.
 withProcessorH :: forall r z t e rH a
@@ -283,7 +283,7 @@ withProcessorH main = sendUsing Here (WithProcessorH main) >>= raise
 -- | A particularly useful composition:
 -- @'controlWithProcessorH' h = 'withProcessorH' h >>= 'restoreH'@
 --
--- /Note/: Processed actions makes use of the effectful state as it is by
+-- /Note/: Processed actions make use of the effectful state as it is by
 -- the time 'withProcessorH' is run, rather than what it is by the time the
 -- processed action is run.
 controlWithProcessorH :: forall r z t e rH a
