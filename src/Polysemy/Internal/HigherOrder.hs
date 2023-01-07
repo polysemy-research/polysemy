@@ -372,6 +372,7 @@ interpretH h = go
               go' = usingSem $ \u' -> case decomp u' of
                 Left g -> liftHandlerWithNat go' liftSem g
                 Right wav -> commonHandler wav
+              {-# NOINLINE go' #-}
           in
             fmap ex $ lwr $ runSem (h e) $ \u' -> case decomp u' of
               Left g -> liftHandlerWithNat go' k g
