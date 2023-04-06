@@ -52,6 +52,16 @@ import           Polysemy.Plugin.Fundep.Stuff
 import           Polysemy.Plugin.Fundep.Unification
 import           Polysemy.Plugin.Fundep.Utils
 
+#if __GLASGOW_HASKELL__ >= 906
+#define SUBST Subst
+#define GET_TYVAR getTyVar_maybe
+import           GHC.Core.TyCo.Subst (SUBST)
+import           GHC.Core.TyCo.Compare (eqType, nonDetCmpType)
+#else
+#define SUBST TCvSubst
+#define GET_TYVAR tcGetTyVar_maybe
+#endif
+
 #if __GLASGOW_HASKELL__ >= 900
 import           GHC.Builtin.Types.Prim (alphaTys)
 import           GHC.Plugins (idType, tyConClass_maybe, ppr, Outputable, sep, text, (<+>), parens, emptyUFM)
@@ -60,7 +70,7 @@ import           GHC.Tc.Plugin (TcPluginM, tcPluginIO)
 import           GHC.Tc.Types
 import           GHC.Tc.Types.Constraint
 import           GHC.Tc.Utils.Env (tcGetInstEnvs)
-import           GHC.Tc.Utils.TcType (tcSplitPhiTy, tcSplitTyConApp, tcGetTyVar_maybe, tcSplitAppTy_maybe)
+import           GHC.Tc.Utils.TcType (tcSplitPhiTy, tcSplitTyConApp, GET_TYVAR, tcSplitAppTy_maybe)
 import           GHC.Tc.Solver.Monad hiding (tcLookupClass)
 import           GHC.Core.Class (classTyCon)
 import           GHC.Core.InstEnv (lookupInstEnv, is_dfun)
@@ -80,13 +90,11 @@ import           MonadUtils (allM, anyM)
 import           TcEvidence
 import           TcPluginM (tcPluginIO)
 import           TcRnTypes
-import           TcType (tcSplitPhiTy, tcSplitTyConApp, tcGetTyVar_maybe, tcSplitAppTy_maybe)
+import           TcType (tcSplitPhiTy, tcSplitTyConApp, GET_TYVAR, tcSplitAppTy_maybe)
 import           TcSMonad hiding (tcLookupClass)
 import           Type
 import           TysPrim (alphaTys)
 #endif
-
-
 
 fundepPlugin :: TcPlugin
 fundepPlugin = TcPlugin
@@ -193,12 +201,15 @@ findMatchingEffectIfSingular
                 True -> pure $ Just eff
                 False -> pure Nothing
 
-
 ------------------------------------------------------------------------------
 -- | @checkExtraEvidence givens subst c@ returns 'True' iff we can prove that
 -- the constraint @c@ holds under the substitution @subst@ in the context of
 -- @givens@.
-checkExtraEvidence :: Set PredType' -> TCvSubst -> PredType -> TcM Bool
+checkExtraEvidence ::
+  Set PredType' ->
+  SUBST ->
+  PredType ->
+  TcM Bool
 checkExtraEvidence givens subst = flip evalStateT givens . getInstance . substTy subst
 
 
@@ -240,8 +251,8 @@ mkWantedForce fc given = do
 skolemsForInterpreter :: Type -> Set TyVar
 skolemsForInterpreter ty =
   case tcSplitAppTy_maybe ty of
-    Just (tcGetTyVar_maybe -> Just skolem, _) -> S.singleton skolem
-    _ -> maybe mempty S.singleton $ tcGetTyVar_maybe ty
+    Just (GET_TYVAR -> Just skolem, _) -> S.singleton skolem
+    _ -> maybe mempty S.singleton $ GET_TYVAR ty
 
 
 ------------------------------------------------------------------------------

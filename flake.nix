@@ -17,10 +17,11 @@
     ghcs = {
       "865" = hsPkgs nixpkgs_2009 "ghc865";
       "884" = hsPkgs nixpkgs_2105 "ghc884";
-      "8107" = hsPkgs unstable "ghc8107";
-      "902" = hsPkgs unstable "ghc902";
-      "925" = hsPkgs unstable "ghc925";
-      "943" = hsPkgs unstable "ghc943";
+      "810" = hsPkgs unstable "ghc810";
+      "90" = hsPkgs unstable "ghc90";
+      "92" = hsPkgs unstable "ghc92";
+      "94" = hsPkgs unstable "ghc94";
+      "96" = hsPkgs unstable "ghc96";
     };
 
     mkPackages = version: {
@@ -29,27 +30,28 @@
     };
 
     defaultPackages = {
-      inherit (ghcs."902") polysemy polysemy-plugin;
-      default = ghcs."902".polysemy;
+      inherit (ghcs."92") polysemy polysemy-plugin;
+      default = ghcs."92".polysemy;
     };
 
     packages = foldl' (l: r: l // r) defaultPackages (map mkPackages (attrNames ghcs));
 
-    mkDevShell = ghc: ghc.shellFor {
+    mkDevShell = name: ghc: ghc.shellFor {
       packages = p: [p.polysemy p.polysemy-plugin];
       buildInputs = with ghc; [
         cabal-install
+      ] ++ unstable.lib.optionals (name != "96") [
         (ghc.pkgs.haskell.lib.dontCheck ghcid)
         haskell-language-server
       ];
     };
 
-    devShells = mapAttrs' (n: g: nameValuePair "ghc${n}" (mkDevShell g)) ghcs;
+    devShells = mapAttrs' (n: g: nameValuePair "ghc${n}" (mkDevShell n g)) ghcs;
 
   in {
     inherit packages;
 
-    devShells = devShells // { default = devShells.ghc902; };
+    devShells = devShells // { default = devShells.ghc92; };
 
     checks = packages;
   });

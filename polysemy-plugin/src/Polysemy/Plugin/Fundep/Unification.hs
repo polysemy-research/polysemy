@@ -25,6 +25,14 @@ import           Unify
 import           GhcPlugins (Outputable, ppr, parens, text, (<+>))
 #endif
 
+#if __GLASGOW_HASKELL__ >= 906
+#define SUBST Subst
+import           GHC.Core.TyCo.Subst (SUBST)
+import           GHC.Core.TyCo.Compare (eqType, nonDetCmpType)
+#else
+#define SUBST TCvSubst
+#endif
+
 
 ------------------------------------------------------------------------------
 -- | The context in which we're attempting to solve a constraint.
@@ -64,7 +72,7 @@ unify
     :: SolveContext
     -> Type  -- ^ wanted
     -> Type  -- ^ given
-    -> Maybe TCvSubst
+    -> Maybe SUBST
 unify solve_ctx = tryUnifyUnivarsButNotSkolems skolems
   where
     skolems :: Set TyVar
@@ -81,7 +89,7 @@ unify solve_ctx = tryUnifyUnivarsButNotSkolems skolems
 #define APART Skolem
 #endif
 
-tryUnifyUnivarsButNotSkolems :: Set TyVar -> Type -> Type -> Maybe TCvSubst
+tryUnifyUnivarsButNotSkolems :: Set TyVar -> Type -> Type -> Maybe SUBST
 tryUnifyUnivarsButNotSkolems skolems goal inst =
   case tcUnifyTysFG
          (bool BINDME APART . flip S.member skolems)

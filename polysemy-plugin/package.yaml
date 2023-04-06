@@ -22,7 +22,7 @@ dependencies:
 - ghc-tcplugins-extra >= 0.3 && < 0.5
 - polysemy >= 1.7
 - syb >= 0.7 && < 0.8
-- transformers >= 0.5.2.0 && < 0.6
+- transformers >= 0.5.2.0 && < 0.7
 - containers >= 0.5 && < 0.7
 
 custom-setup:
@@ -63,7 +63,7 @@ tests:
     - hspec >= 2.6.0 && < 3
     - should-not-typecheck >= 2.1.0 && < 3
     - inspection-testing >= 0.4.2 && < 0.6
-    - doctest >= 0.16.0.1 && < 0.21
+    - doctest >= 0.16.0.1 && < 0.22
     generated-other-modules:
     - Build_doctests
 
