@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.4.5.0 (2023-04-09)
+
+### Other Changes
+
+* Support GHC 9.6
+
 ## 0.4.4.0 (2022-12-27)
 
 * Support GHC 9.4

@@ -1,5 +1,5 @@
 name:                polysemy
-version:             1.9.0.0
+version:             1.9.1.0
 github:              "polysemy-research/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -33,7 +33,7 @@ dependencies:
 custom-setup:
   dependencies:
     - base >= 4.9 && < 5
-    - Cabal
+    - Cabal <3.11
     - cabal-doctest >=1.0.6 && <1.1
 
 default-extensions:

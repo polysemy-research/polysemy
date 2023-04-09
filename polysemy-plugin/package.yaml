@@ -1,5 +1,5 @@
 name:                polysemy-plugin
-version:             0.4.4.0
+version:             0.4.5.0
 github:              "polysemy-research/polysemy"
 license:             BSD3
 author:              "Sandy Maguire"
@@ -28,7 +28,7 @@ dependencies:
 custom-setup:
   dependencies:
     - base >= 4.9 && < 5
-    - Cabal
+    - Cabal <3.11
     - cabal-doctest >=1.0.6 && <1.1
 
 library:

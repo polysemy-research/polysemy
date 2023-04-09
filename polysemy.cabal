@@ -1,11 +1,11 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.35.1.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
 name:           polysemy
-version:        1.9.0.0
+version:        1.9.1.0
 synopsis:       Higher-order, low-boilerplate free monads.
 description:    Please see the README on GitHub at <https://github.com/polysemy-research/polysemy#readme>
 category:       Language
@@ -27,7 +27,7 @@ source-repository head
 
 custom-setup
   setup-depends:
-      Cabal
+      Cabal <3.11
     , base >=4.9 && <5
     , cabal-doctest >=1.0.6 && <1.1
 
