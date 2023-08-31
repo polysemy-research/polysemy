@@ -2,26 +2,22 @@
   description = "Higher-order, low-boilerplate free monads.";
 
   inputs = {
-    nixpkgs_2009.url = github:nixos/nixpkgs/release-20.09;
-    nixpkgs_2105.url = github:nixos/nixpkgs/release-21.05;
-    unstable.url = github:nixos/nixpkgs/nixpkgs-unstable;
-    flake-utils.url = github:numtide/flake-utils;
+    nixpkgs.url = "github:nixos/nixpkgs/8b5b7def915305c7d4f5cf236c095bf898bc7995";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { nixpkgs_2009, nixpkgs_2105, unstable, flake-utils, ... }:
+  outputs = {nixpkgs, flake-utils, ...}:
   flake-utils.lib.eachSystem ["x86_64-linux"] (system:
-  with unstable.lib;
+  with nixpkgs.lib;
   let
     hsPkgs = nixpkgs: compiler: import ./nix/overlay.nix { inherit system nixpkgs compiler; };
 
     ghcs = {
-      "865" = hsPkgs nixpkgs_2009 "ghc865";
-      "884" = hsPkgs nixpkgs_2105 "ghc884";
-      "810" = hsPkgs unstable "ghc810";
-      "90" = hsPkgs unstable "ghc90";
-      "92" = hsPkgs unstable "ghc92";
-      "94" = hsPkgs unstable "ghc94";
-      "96" = hsPkgs unstable "ghc96";
+      "810" = hsPkgs nixpkgs "ghc810";
+      "90" = hsPkgs nixpkgs "ghc90";
+      "92" = hsPkgs nixpkgs "ghc92";
+      "94" = hsPkgs nixpkgs "ghc94";
+      "96" = hsPkgs nixpkgs "ghc96";
     };
 
     mkPackages = version: {
@@ -40,7 +36,7 @@
       packages = p: [p.polysemy p.polysemy-plugin];
       buildInputs = with ghc; [
         cabal-install
-      ] ++ unstable.lib.optionals (name != "96") [
+      ] ++ nixpkgs.lib.optionals (name != "96") [
         (ghc.pkgs.haskell.lib.dontCheck ghcid)
         haskell-language-server
       ];

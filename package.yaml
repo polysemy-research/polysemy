@@ -82,7 +82,7 @@ tests:
     - polysemy
     - inspection-testing >= 0.4.2 && < 0.6
     - hspec >= 2.6.0 && < 3
-    - doctest >= 0.16.0.1 && < 0.22
+    - doctest >= 0.16.0.1 && < 0.23
     - hspec-discover >= 2.0
     generated-other-modules:
     - Build_doctests
