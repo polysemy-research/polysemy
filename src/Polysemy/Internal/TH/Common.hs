@@ -216,7 +216,9 @@ missingEffArgs name = fail $ show
       )
   where
     base = capturableBase name
-#if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,21,0)
+    args = flip PlainTV BndrInvis . mkName <$> ["m", "a"]
+#elif MIN_VERSION_template_haskell(2,17,0)
     args = flip PlainTV () . mkName <$> ["m", "a"]
 #else
     args = PlainTV . mkName <$> ["m", "a"]
