@@ -143,7 +143,11 @@ instance Outputable FindConstraint where
 -- | Given a list of constraints, filter out the 'FindConstraint's.
 getFindConstraints :: PolysemyStuff 'Things -> [Ct] -> [FindConstraint]
 getFindConstraints (findClass -> cls) cts = do
+#if MIN_VERSION_GLASGOW_HASKELL(9,8,0,0)
+  cd@(CDictCan(DictCt{di_cls = cls', di_tys = [eff, r]})) <- cts
+#else
   cd@CDictCan{cc_class = cls', cc_tyargs = [eff, r]} <- cts
+#endif
   guard $ cls == cls'
   pure $ FindConstraint
     { fcLoc = ctLoc cd
@@ -157,7 +161,11 @@ getFindConstraints (findClass -> cls) cts = do
 -- | Get evidence in scope that aren't the 'FindConstraint's.
 getExtraEvidence :: PolysemyStuff 'Things -> [Ct] -> [PredType]
 getExtraEvidence things cts = do
+#if MIN_VERSION_GLASGOW_HASKELL(9,8,0,0)
+  CDictCan(DictCt{di_cls = cls, di_tys = as}) <- cts
+#else
   CDictCan{cc_class = cls, cc_tyargs = as} <- cts
+#endif
   guard $ cls /= findClass things
   pure $ mkAppTys (mkTyConTy $ classTyCon cls) as
 
