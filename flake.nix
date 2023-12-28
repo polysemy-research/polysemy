@@ -2,7 +2,7 @@
   description = "Higher-order, low-boilerplate free monads.";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/8b5b7def915305c7d4f5cf236c095bf898bc7995";
+    nixpkgs.url = "github:nixos/nixpkgs/54ce5abce7e1531376455c7b32a195329c2587f0";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -18,7 +18,10 @@
       "92" = hsPkgs nixpkgs "ghc92";
       "94" = hsPkgs nixpkgs "ghc94";
       "96" = hsPkgs nixpkgs "ghc96";
+      "98" = hsPkgs nixpkgs "ghc98";
     };
+
+    default = "96";
 
     mkPackages = version: {
       "polysemy-${version}" = ghcs.${version}.polysemy;
@@ -26,8 +29,8 @@
     };
 
     defaultPackages = {
-      inherit (ghcs."92") polysemy polysemy-plugin;
-      default = ghcs."92".polysemy;
+      inherit (ghcs.${default}) polysemy polysemy-plugin;
+      default = ghcs.${default}.polysemy;
     };
 
     packages = foldl' (l: r: l // r) defaultPackages (map mkPackages (attrNames ghcs));
@@ -36,7 +39,7 @@
       packages = p: [p.polysemy p.polysemy-plugin];
       buildInputs = with ghc; [
         cabal-install
-      ] ++ nixpkgs.lib.optionals (name != "96") [
+      ] ++ nixpkgs.lib.optionals (name != "98" && name != "810") [
         (ghc.pkgs.haskell.lib.dontCheck ghcid)
         haskell-language-server
       ];
@@ -47,7 +50,7 @@
   in {
     inherit packages;
 
-    devShells = devShells // { default = devShells.ghc92; };
+    devShells = devShells // { default = devShells."ghc${default}"; };
 
     checks = packages;
   });
