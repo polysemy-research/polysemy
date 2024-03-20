@@ -22,8 +22,8 @@ let
     type-errors = pkgs.haskell.lib.doJailbreak super.type-errors;
     th-abstraction = self.callHackageDirect {
       pkg = "th-abstraction";
-      ver = "0.6.0.0";
-      sha256 = "1w07ysxrbjm1rhlg9nhlq5y72s5wr4vqmcy99chvyb56wka0grbq";
+      ver = "0.7.0.0";
+      sha256 = "sha256-YNCvJ9C8PsOTT+B4NoRT6kA2bOFk4F6ygm8hzWMH+1I=";
     } {};
     tagged = self.callHackageDirect {
       pkg = "tagged";
