@@ -352,4 +352,4 @@ implementation:
 [oleg:more]: http://okmij.org/ftp/Haskell/extensible/more.pdf
 [schrijvers:fusion]: https://people.cs.kuleuven.be/~tom.schrijvers/Research/papers/mpc2015.pdf
 [wu:scope]: https://www.cs.ox.ac.uk/people/nicolas.wu/papers/Scope.pdf
-[flake]: https://nixos.wiki/wiki/Flakes
+[flake]: https://wiki.nixos.org/wiki/Flakes
