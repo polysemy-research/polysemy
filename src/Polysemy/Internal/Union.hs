@@ -295,7 +295,11 @@ extract (Union (There _) _) = error "Unsafe use of UnsafeMkElemOf"
 ------------------------------------------------------------------------------
 -- | An empty union contains nothing, so this function is uncallable.
 absurdU :: Union '[] m a -> b
-absurdU (Union _ _) = error "Unsafe use of UnsafeMkElemOf"
+#if __GLASGOW_HASKELL__ >= 902
+absurdU = \case
+#else
+absurdU _ = error "Unsafe use of UnsafeMkElemOf"
+#endif
 
 
 ------------------------------------------------------------------------------
