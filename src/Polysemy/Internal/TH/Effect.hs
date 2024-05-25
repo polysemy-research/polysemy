@@ -136,8 +136,8 @@ genFreer should_mk_sigs type_name = do
 -- | Generates signature for lifting function and type arguments to apply in
 -- its body on effect's data constructor.
 genSig :: ConLiftInfo -> [Dec]
-genSig cli
-  =  maybe [] (pure . flip InfixD (cliFunName cli)) (cliFunFixity cli)
+genSig cli =
+  infixDecl
   ++ [ SigD (cliFunName cli) $ quantifyType
        $ ForallT [] (member_cxt : cliFunCxt cli)
        $ foldArrowTs sem
@@ -145,6 +145,13 @@ genSig cli
        $ cliFunArgs cli
      ]
   where
+    infixDecl = case cliFunFixity cli of
+#if __GLASGOW_HASKELL__ >= 910
+      Just fixity -> [InfixD fixity NoNamespaceSpecifier (cliFunName cli)]
+#else
+      Just fixity -> [InfixD fixity (cliFunName cli)]
+#endif
+      Nothing -> []
     member_cxt = makeMemberConstraint (cliUnionName cli) cli
     sem        = makeSemType (cliUnionName cli) (cliEffRes cli)
 
