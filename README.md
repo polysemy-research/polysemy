@@ -261,7 +261,7 @@ nix develop -i -c cabal v2-haddock polysemy
 nix develop -i -c haskell-language-server-wrapper # start HLS for your IDE
 ```
 
-## *What about performance?* ([TL;DR](#tldr))
+## *What about performance?*
 
 Previous versions of this `README` mentioned **the library being**
 ***zero-cost***, as in having no visible effect on performance. While this was
@@ -290,40 +290,6 @@ ourselves. Many of these effects
 libraries are used in production and they're doing just fine, because maximum
 performance usually matters in small, controlled areas of code, that often
 don't use features of effect systems at all.
-
-*What can we do about this?*
-
-Luckily, the same person that uncovered this problems proposed a
-[solution](https://github.com/lexi-lambda/ghc-proposals/blob/delimited-continuation-primops/proposals/0000-delimited-continuation-primops.md) -
-set of primops that will allow interpretation of effects at runtime, with
-minimal overhead. It's not *zero-cost* as we hoped for with `polysemy` at
-first, but it should have negligible effect on performance in real life and
-compared to current solutions, it should be much more predictable and even
-resolve some problems with behaviour of
-[specific effects](https://github.com/polysemy-research/polysemy/issues/246).
-You can try out experimental library that uses proposed features
-[here](https://github.com/hasura/eff).
-
-When it comes to `polysemy`, once GHC proposal lands, we will consider the option of
-switching to an implementation based on it. This will probably require some
-breaking changes, but should resolve performance issues and maybe even make
-implementation of higher-order effects easier.
-
-If you're interested in more details, see
-Alexis King's
-[talk about the problem](https://www.youtube.com/watch?v=0jI-AlWEwYI),
-Sandy Maguire's
-[followup about how it relates to `polysemy`](https://reasonablypolymorphic.com/blog/mea-culpa/) and
-[GHC proposal](https://github.com/ghc-proposals/ghc-proposals/pull/313) that
-adds features needed for new type of implementation.
-
-### TL;DR
-
-Basically all current effects libraries (including `polysemy` and
-even `mtl`) got performance wrong - **but**, there's ongoing work on extending
-GHC with features that will allow for creation of effects implementation with
-stable and strong performance. It's what `polysemy` may choose at some point,
-but it will probably require few breaking changes.
 
 ## Acknowledgements, citations, and related work
 
