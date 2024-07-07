@@ -23,12 +23,12 @@ dependencies:
 - polysemy >= 1.7
 - syb >= 0.7 && < 0.8
 - transformers >= 0.5.2.0 && < 0.7
-- containers >= 0.5 && < 0.7
+- containers >= 0.5 && < 0.8
 
 custom-setup:
   dependencies:
     - base >= 4.9 && < 5
-    - Cabal <3.11
+    - Cabal <3.13
     - cabal-doctest >=1.0.6 && <1.1
 
 library:

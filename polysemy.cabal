@@ -27,7 +27,7 @@ source-repository head
 
 custom-setup
   setup-depends:
-      Cabal <3.11
+      Cabal <3.13
     , base >=4.9 && <5
     , cabal-doctest >=1.0.6 && <1.1
 
@@ -100,7 +100,7 @@ library
   build-depends:
       async >=2.2 && <3
     , base >=4.9 && <5
-    , containers >=0.5 && <0.7
+    , containers >=0.5 && <0.8
     , first-class-families >=0.5.0.0 && <0.9
     , mtl >=2.2.2 && <3
     , stm ==2.*
@@ -166,7 +166,7 @@ test-suite polysemy-test
   build-depends:
       async >=2.2 && <3
     , base >=4.9 && <5
-    , containers >=0.5 && <0.7
+    , containers >=0.5 && <0.8
     , doctest >=0.16.0.1 && <0.23
     , first-class-families >=0.5.0.0 && <0.9
     , hspec >=2.6.0 && <3
