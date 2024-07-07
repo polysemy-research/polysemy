@@ -2,7 +2,7 @@
   description = "Higher-order, low-boilerplate free monads.";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/54ce5abce7e1531376455c7b32a195329c2587f0";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -13,12 +13,12 @@
     hsPkgs = nixpkgs: compiler: import ./nix/overlay.nix { inherit system nixpkgs compiler; };
 
     ghcs = {
-      "810" = hsPkgs nixpkgs "ghc810";
       "90" = hsPkgs nixpkgs "ghc90";
       "92" = hsPkgs nixpkgs "ghc92";
       "94" = hsPkgs nixpkgs "ghc94";
       "96" = hsPkgs nixpkgs "ghc96";
       "98" = hsPkgs nixpkgs "ghc98";
+      "910" = hsPkgs nixpkgs "ghc910";
     };
 
     default = "96";
@@ -39,7 +39,7 @@
       packages = p: [p.polysemy p.polysemy-plugin];
       buildInputs = with ghc; [
         cabal-install
-      ] ++ nixpkgs.lib.optionals (name != "98" && name != "810") [
+      ] ++ nixpkgs.lib.optionals (name != "910" && name != "98" && name != "90") [
         (ghc.pkgs.haskell.lib.dontCheck ghcid)
         haskell-language-server
       ];
