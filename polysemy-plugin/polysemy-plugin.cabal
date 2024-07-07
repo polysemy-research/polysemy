@@ -27,7 +27,7 @@ source-repository head
 
 custom-setup
   setup-depends:
-      Cabal <3.11
+      Cabal <3.13
     , base >=4.9 && <5
     , cabal-doctest >=1.0.6 && <1.1
 
@@ -65,7 +65,7 @@ library
       UnicodeSyntax
   build-depends:
       base >=4.9 && <5
-    , containers >=0.5 && <0.7
+    , containers >=0.5 && <0.8
     , ghc >=8.6.5 && <10
     , ghc-tcplugins-extra >=0.3 && <0.5
     , polysemy >=1.7
@@ -110,7 +110,7 @@ test-suite polysemy-plugin-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -fplugin=Polysemy.Plugin
   build-depends:
       base >=4.9 && <5
-    , containers >=0.5 && <0.7
+    , containers >=0.5 && <0.8
     , doctest >=0.16.0.1 && <0.23
     , ghc >=8.6.5 && <10
     , ghc-tcplugins-extra >=0.3 && <0.5

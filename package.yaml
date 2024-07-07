@@ -18,7 +18,7 @@ description:         Please see the README on GitHub at <https://github.com/poly
 
 dependencies:
 - base >= 4.9 && < 5
-- containers >= 0.5 && < 0.7
+- containers >= 0.5 && < 0.8
 - mtl >= 2.2.2 && < 3
 - syb >= 0.7 && < 0.8
 - stm >= 2 && < 3
@@ -33,7 +33,7 @@ dependencies:
 custom-setup:
   dependencies:
     - base >= 4.9 && < 5
-    - Cabal <3.11
+    - Cabal <3.13
     - cabal-doctest >=1.0.6 && <1.1
 
 default-extensions:
