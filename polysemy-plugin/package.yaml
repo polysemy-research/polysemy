@@ -62,7 +62,7 @@ tests:
     - polysemy-plugin
     - hspec >= 2.6.0 && < 3
     - should-not-typecheck >= 2.1.0 && < 3
-    - inspection-testing >= 0.4.2 && < 0.6
+    - inspection-testing >= 0.4.2 && < 0.7
     - doctest >= 0.16.0.1 && < 0.23
     generated-other-modules:
     - Build_doctests
