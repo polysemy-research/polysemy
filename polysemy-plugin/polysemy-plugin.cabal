@@ -1,6 +1,6 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.36.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -111,7 +111,7 @@ test-suite polysemy-plugin-test
   build-depends:
       base >=4.9 && <5
     , containers >=0.5 && <0.8
-    , doctest >=0.16.0.1 && <0.23
+    , doctest >=0.16.0.1 && <0.24
     , ghc >=8.6.5 && <10
     , ghc-tcplugins-extra >=0.3 && <0.5
     , hspec >=2.6.0 && <3

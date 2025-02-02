@@ -19,6 +19,7 @@
       "96" = hsPkgs nixpkgs "ghc96";
       "98" = hsPkgs nixpkgs "ghc98";
       "910" = hsPkgs nixpkgs "ghc910";
+      "latest" = hsPkgs nixpkgs "ghc9101";
     };
 
     default = "96";
@@ -39,7 +40,7 @@
       packages = p: [p.polysemy p.polysemy-plugin];
       buildInputs = with ghc; [
         cabal-install
-      ] ++ nixpkgs.lib.optionals (name != "910" && name != "98" && name != "90") [
+      ] ++ nixpkgs.lib.optionals (name != "latest" && name != "910" && name != "98" && name != "90") [
         (ghc.pkgs.haskell.lib.dontCheck ghcid)
         haskell-language-server
       ];
