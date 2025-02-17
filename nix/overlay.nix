@@ -20,8 +20,8 @@ let
 
     doctest = hlib.dontCheck (self.callHackageDirect {
       pkg = "doctest";
-      ver = "0.23.0";
-      sha256 = "sha256-fDCOM5CSRmDjFKK3kOA06JYIBWbaQf+11fciTEPIZlk=";
+      ver = "0.24.0";
+      sha256 = "sha256-29IfIrJ4jI+ycwQci+MCdKCEJW1m9DQGxNipvfxmMtI=";
     } {});
 
   };
