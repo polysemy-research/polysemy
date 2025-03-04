@@ -19,7 +19,7 @@ description:         Please see the README on GitHub at <https://github.com/poly
 dependencies:
 - base >= 4.9 && < 5
 - ghc >= 8.6.5 && < 10
-- ghc-tcplugins-extra >= 0.3 && < 0.5
+- ghc-tcplugins-extra >= 0.3 && < 0.6
 - polysemy >= 1.7
 - syb >= 0.7 && < 0.8
 - transformers >= 0.5.2.0 && < 0.7

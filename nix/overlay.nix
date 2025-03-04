@@ -25,6 +25,12 @@ let
       sha256 = "sha256-29IfIrJ4jI+ycwQci+MCdKCEJW1m9DQGxNipvfxmMtI=";
     } {});
 
+    ghc-tcplugins-extra = hlib.dontCheck (self.callHackageDirect {
+      pkg = "ghc-tcplugins-extra";
+      ver = "0.5";
+      sha256 = "sha256-mOzdicJevaXZdZS4/RA1hU3CWJXMFwMUfmEH3YxX4Q8=";
+    } {});
+
   };
 in
   pkgs.haskell.packages.${compiler}.override { inherit overrides; } // { inherit pkgs; }
