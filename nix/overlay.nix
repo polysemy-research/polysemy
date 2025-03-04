@@ -1,6 +1,7 @@
 {
   system,
   nixpkgs,
+  name,
   compiler,
 }:
 let
@@ -16,7 +17,7 @@ let
   in {
     polysemy = c2n "polysemy" ../.;
     polysemy-plugin = c2n "polysemy-plugin" ../polysemy-plugin;
-  } // pkgs.lib.optionalAttrs (compiler == "ghc9101") {
+  } // pkgs.lib.optionalAttrs (name == "latest") {
 
     doctest = hlib.dontCheck (self.callHackageDirect {
       pkg = "doctest";
