@@ -62,6 +62,10 @@ import           GHC.Core.TyCo.Compare (eqType, nonDetCmpType)
 #define GET_TYVAR tcGetTyVar_maybe
 #endif
 
+#if __GLASGOW_HASKELL__ >= 912
+import           GHC.Tc.Types.CtLoc
+#endif
+
 #if __GLASGOW_HASKELL__ >= 900
 import           GHC.Builtin.Types.Prim (alphaTys)
 import           GHC.Plugins (idType, tyConClass_maybe, ppr, Outputable, sep, text, (<+>), parens, emptyUFM)
