@@ -20,7 +20,9 @@
       "96" = "ghc96";
       "98" = "ghc98";
       "910" = "ghc910";
-      "latest" = "ghc9101";
+      "912" = "ghc912";
+      # For testing new versions of dependencies
+      "latest" = "ghc9121";
     };
 
     ghcs = lib.mapAttrs (hsPkgs nixpkgs) conf;
@@ -43,7 +45,7 @@
       packages = p: [p.polysemy p.polysemy-plugin];
       buildInputs = with ghc; [
         cabal-install
-      ] ++ nixpkgs.lib.optionals (name != "latest" && name != "910" && name != "98" && name != "90") [
+      ] ++ nixpkgs.lib.optionals (name != "latest" && name != "912" && name != "910" && name != "98" && name != "90") [
         (ghc.pkgs.haskell.lib.dontCheck ghcid)
         haskell-language-server
       ];
