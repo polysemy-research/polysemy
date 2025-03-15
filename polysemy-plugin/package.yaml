@@ -28,7 +28,7 @@ dependencies:
 custom-setup:
   dependencies:
     - base >= 4.9 && < 5
-    - Cabal <3.13
+    - Cabal <3.15
     - cabal-doctest >=1.0.6 && <1.1
 
 library:
