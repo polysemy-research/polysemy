@@ -1,5 +1,9 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DeriveAnyClass  #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Description: Interpreters for 'NonDet'
 module Polysemy.NonDet
@@ -18,6 +22,7 @@ import Data.Maybe
 
 import Polysemy
 import Polysemy.Error
+import Polysemy.Final (Final, interpretFinal, liftS, runS)
 import Polysemy.Internal
 import Polysemy.Internal.NonDet
 import Polysemy.Internal.Union
@@ -70,6 +75,18 @@ nonDetToError (e :: e) = interpretH $ \case
     right' <- nonDetToError e <$> runT right
     raise (left' `catch` \(_ :: e) -> right')
 {-# INLINE nonDetToError #-}
+
+
+------------------------------------------------------------------------------
+-- | Run a 'NonDet' effect in terms of the 'Final' 'Alternative' @m@.
+runNonDetFinal :: (Member (Final m) r, Alternative m) => Sem (NonDet ': r) a -> Sem r a
+runNonDetFinal = interpretFinal $ \case
+  Empty -> liftS empty
+  Choose semA semB -> do
+    a <- runS semA
+    b <- runS semB
+    pure $ a <|> b
+{-# INLINE runNonDetFinal #-}
 
 
 --------------------------------------------------------------------------------
