@@ -23,8 +23,8 @@ let
 
     doctest = hackage {
       pkg = "doctest";
-      ver = "0.24.0";
-      sha256 = "sha256-29IfIrJ4jI+ycwQci+MCdKCEJW1m9DQGxNipvfxmMtI=";
+      ver = "0.25.0";
+      sha256 = "sha256-bhmvruOhdq1jeNH2YOSvRMdWBETA9o76gIWUiC4kkz4";
     };
 
     ghc-tcplugins-extra = hackage {
