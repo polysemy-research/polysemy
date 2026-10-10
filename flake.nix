@@ -14,20 +14,19 @@
     hsPkgs = nixpkgs: name: compiler: import ./nix/overlay.nix { inherit system name nixpkgs compiler; };
 
     conf = {
-      "90" = "ghc90";
-      "92" = "ghc92";
       "94" = "ghc94";
       "96" = "ghc96";
       "98" = "ghc98";
       "910" = "ghc910";
       "912" = "ghc912";
+      "914" = "ghc914";
       # For testing new versions of dependencies
-      "latest" = "ghc9121";
+      "latest" = "ghc9141";
     };
 
     ghcs = lib.mapAttrs (hsPkgs nixpkgs) conf;
 
-    default = "96";
+    default = "914";
 
     mkPackages = version: {
       "polysemy-${version}" = ghcs.${version}.polysemy;
@@ -45,7 +44,7 @@
       packages = p: [p.polysemy p.polysemy-plugin];
       buildInputs = with ghc; [
         cabal-install
-      ] ++ nixpkgs.lib.optionals (name != "latest" && name != "912" && name != "910" && name != "98" && name != "90") [
+      ] ++ nixpkgs.lib.optionals (name != "latest" && name != "912" && name != "910" && name != "98" && name != "94") [
         (ghc.pkgs.haskell.lib.dontCheck ghcid)
         haskell-language-server
       ];

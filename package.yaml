@@ -18,7 +18,7 @@ description:         Please see the README on GitHub at <https://github.com/poly
 
 dependencies:
 - base >= 4.9 && < 5
-- containers >= 0.5 && < 0.8
+- containers >= 0.5 && < 0.9
 - mtl >= 2.2.2 && < 3
 - syb >= 0.7 && < 0.8
 - stm >= 2 && < 3

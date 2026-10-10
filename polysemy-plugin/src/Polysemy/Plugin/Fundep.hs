@@ -100,6 +100,10 @@ import           Type
 import           TysPrim (alphaTys)
 #endif
 
+#if __GLASGOW_HASKELL__ >= 914
+import           GHC.Core.Predicate (tyCoVarsOfTypeWellScoped)
+#endif
+
 fundepPlugin :: TcPlugin
 fundepPlugin = TcPlugin
   { tcPluginInit =
@@ -249,7 +253,11 @@ mkWantedForce fc given = do
            $ newWantedEq (fcLoc fc) Nominal wanted given
 #endif
   pure ( Unification (OrdType wanted) (OrdType given)
+#if __GLASGOW_HASKELL__ >= 914
+       , CNonCanonical (CtWanted ev)
+#else
        , CNonCanonical ev
+#endif
        )
   where
     wanted = fcEffect fc
