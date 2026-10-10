@@ -26,7 +26,7 @@
 
     ghcs = lib.mapAttrs (hsPkgs nixpkgs) conf;
 
-    default = "914";
+    default = "912";
 
     mkPackages = version: {
       "polysemy-${version}" = ghcs.${version}.polysemy;
