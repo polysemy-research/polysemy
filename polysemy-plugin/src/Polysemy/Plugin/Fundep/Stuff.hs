@@ -8,7 +8,6 @@ module Polysemy.Plugin.Fundep.Stuff
 
 import Data.Kind (Type)
 import GHC (Name, Class, TyCon, mkModuleName)
-import GHC.TcPluginM.Extra (lookupModule, lookupName)
 #if __GLASGOW_HASKELL__ >= 900
 import GHC.Data.FastString (fsLit)
 import GHC.Types.Name.Occurrence (mkTcOcc)
@@ -36,6 +35,39 @@ import Packages (lookupModuleWithSuggestions, LookupResult (..))
 import Outputable (pprPanic, text, (<+>), ($$))
 #endif
 
+#if __GLASGOW_HASKELL__ >= 914
+import GHC (Module, ModuleName)
+import GHC.Data.FastString (FastString)
+import GHC.Driver.Env (hsc_home_unit_maybe)
+import GHC.Tc.Plugin (findImportedModule, lookupOrig, tcPluginIO)
+import GHC.Types.Name (OccName)
+import GHC.Types.PkgQual (PkgQual (ThisPkg))
+import GHC.Unit.Finder (FindResult (Found), findPluginModule)
+import GHC.Unit.Home (homeUnitId)
+import GHC.Utils.Outputable (ppr)
+import GHC.Utils.Panic (panicDoc)
+#else
+import GHC.TcPluginM.Extra (lookupModule, lookupName)
+#endif
+
+#if __GLASGOW_HASKELL__ >= 914
+
+-- | Port of @lookupModule@ from the abandoned @ghc-tcplugins-extra@.
+lookupModule :: ModuleName -> FastString -> TcPluginM Module
+lookupModule mod_nm _pkg = do
+  hsc_env <- getTopEnv
+  tcPluginIO (findPluginModule hsc_env mod_nm) >>= \case
+    Found _ m -> pure m
+    _ -> do
+      let pkg_qual = maybe NoPkgQual (ThisPkg . homeUnitId) (hsc_home_unit_maybe hsc_env)
+      findImportedModule mod_nm pkg_qual >>= \case
+        Found _ m -> pure m
+        _ -> panicDoc "Couldn't find module" (ppr mod_nm)
+
+lookupName :: Module -> OccName -> TcPluginM Name
+lookupName = lookupOrig
+
+#endif
 
 
 ------------------------------------------------------------------------------

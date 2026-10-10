@@ -1,6 +1,6 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.36.1.
+-- This file has been generated from package.yaml by hpack version 0.38.3.
 --
 -- see: https://github.com/sol/hpack
 
@@ -65,13 +65,15 @@ library
       UnicodeSyntax
   build-depends:
       base >=4.9 && <5
-    , containers >=0.5 && <0.8
+    , containers >=0.5 && <0.9
     , ghc >=8.6.5 && <10
-    , ghc-tcplugins-extra >=0.3 && <0.6
     , polysemy >=1.7
     , syb ==0.7.*
     , transformers >=0.5.2.0 && <0.7
   default-language: Haskell2010
+  if impl(ghc < 9.14)
+    build-depends:
+        ghc-tcplugins-extra >=0.3 && <0.6
 
 test-suite polysemy-plugin-test
   type: exitcode-stdio-1.0
@@ -110,10 +112,9 @@ test-suite polysemy-plugin-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -fplugin=Polysemy.Plugin
   build-depends:
       base >=4.9 && <5
-    , containers >=0.5 && <0.8
+    , containers >=0.5 && <0.9
     , doctest >=0.16.0.1 && <0.26
     , ghc >=8.6.5 && <10
-    , ghc-tcplugins-extra >=0.3 && <0.6
     , hspec >=2.6.0 && <3
     , hspec-discover
     , inspection-testing >=0.4.2 && <0.7

@@ -19,11 +19,10 @@ description:         Please see the README on GitHub at <https://github.com/poly
 dependencies:
 - base >= 4.9 && < 5
 - ghc >= 8.6.5 && < 10
-- ghc-tcplugins-extra >= 0.3 && < 0.6
 - polysemy >= 1.7
 - syb >= 0.7 && < 0.8
 - transformers >= 0.5.2.0 && < 0.7
-- containers >= 0.5 && < 0.8
+- containers >= 0.5 && < 0.9
 
 custom-setup:
   dependencies:
@@ -33,6 +32,10 @@ custom-setup:
 
 library:
   source-dirs: src
+  when:
+  - condition: impl(ghc < 9.14)
+    dependencies:
+    - ghc-tcplugins-extra >= 0.3 && < 0.6
   generated-other-modules:
   - Paths_polysemy_plugin
 

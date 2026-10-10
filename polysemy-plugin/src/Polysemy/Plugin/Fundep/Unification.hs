@@ -81,22 +81,41 @@ unify solve_ctx = tryUnifyUnivarsButNotSkolems skolems
         InterpreterUse _ s -> s
         FunctionDef s      -> s
 
+#if __GLASGOW_HASKELL__ < 914
+
 #if __GLASGOW_HASKELL__ >= 902
+
 #define BINDME (const BindMe)
 #define APART (const Apart)
+
 #else
+
 #define BINDME BindMe
 #define APART Skolem
+
+#endif
+
 #endif
 
 tryUnifyUnivarsButNotSkolems :: Set TyVar -> Type -> Type -> Maybe SUBST
 tryUnifyUnivarsButNotSkolems skolems goal inst =
+#if __GLASGOW_HASKELL__ >= 914
+  -- the tyfam case only distinguishes MaybeApart from SurelyApart anyway, so it doesn't matter what we do..
+  case tcUnifyTysFG
+         alwaysBindFam
+         (\ tv _ -> bool BindMe DontBindMe (S.member tv skolems))
+         [inst]
+         [goal] of
+    Unifiable subst -> pure subst
+    _               -> Nothing
+#else
   case tcUnifyTysFG
          (bool BINDME APART . flip S.member skolems)
          [inst]
          [goal] of
     Unifiable subst -> pure subst
     _               -> Nothing
+#endif
 
 ------------------------------------------------------------------------------
 -- | A wrapper for two types that we want to say have been unified.

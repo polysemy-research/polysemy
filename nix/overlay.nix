@@ -19,32 +19,7 @@ let
   in {
     polysemy = c2n "polysemy" ../.;
     polysemy-plugin = c2n "polysemy-plugin" ../polysemy-plugin;
-  } // pkgs.lib.optionalAttrs (name == "latest" || name == "912") {
-
-    doctest = hackage {
-      pkg = "doctest";
-      ver = "0.25.0";
-      sha256 = "sha256-bhmvruOhdq1jeNH2YOSvRMdWBETA9o76gIWUiC4kkz4";
-    };
-
-    ghc-tcplugins-extra = hackage {
-      pkg = "ghc-tcplugins-extra";
-      ver = "0.5";
-      sha256 = "sha256-mOzdicJevaXZdZS4/RA1hU3CWJXMFwMUfmEH3YxX4Q8=";
-    };
-
-    hashable = hlib.doJailbreak (hackage {
-      pkg = "hashable";
-      ver = "1.5.0.0";
-      sha256 = "sha256-IYAGl8K4Fo1DGSE2kok3HMtwUOJ/mwGHzVJfNYQTAsI=";
-    });
-
-    th-abstraction = hackage {
-      pkg = "th-abstraction";
-      ver = "0.7.1.0";
-      sha256 = "sha256-XZ8f1KnMszsFitzN1qsWEOLN09yqhhaR9tn/u1I/mSc=";
-    };
-
+  } // pkgs.lib.optionalAttrs (name == "912") {
   };
 in
   pkgs.haskell.packages.${compiler}.override { inherit overrides; } // { inherit pkgs; }
